@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { calculateCriminal, leadPart, searchArticles, type ChargeItem, type Mode, type SearchHit, type ServerPack, type Stage } from '../core';
+import {
+  calculateDetention,
+  leadPart,
+  searchArticles,
+  type Charge,
+  type ChargeItem,
+  type Mode,
+  type Offender,
+  type SearchHit,
+  type ServerPack,
+} from '../core';
 import { usePlatform } from '../platform/PlatformContext';
 import { ArticleView } from './ArticleView';
-import { CalculatorPanel } from './CalculatorPanel';
+import { CalculatorPanel, type ChargeFields, type ChargePatch, type CopyState } from './CalculatorPanel';
 import { CloseIcon, MenuIcon, SearchIcon, SettingsIcon } from './icons';
 import { DEFAULT_OPACITY, OPACITY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
 import type { Profile } from './profile';
@@ -24,11 +34,23 @@ const hitKey = (hit: SearchHit) => `${hit.article.id}#${hit.part?.number ?? ''}`
 /** Width of the calculator panel plus the gap to the overlay, in CSS pixels. */
 const CALCULATOR_WIDTH = 400 + 12;
 
-interface Charge {
+/** A charge in the calculator, with what the officer typed for it. */
+interface Entry extends ChargeFields, Omit<ChargePatch, keyof ChargeFields> {
   key: string;
   hit: SearchHit;
-  stage: Stage;
-  wantedLevel?: number;
+}
+
+/** «15 000» → 15000; an empty field is no number. */
+function typedNumber(text: string): number | undefined {
+  const digits = text.replace(/\D/g, '');
+  return digits ? Number(digits) : undefined;
+}
+
+/** Whether the user has selected some text, which Ctrl+C should copy instead of the charges. */
+function hasSelectedText(): boolean {
+  const active = document.activeElement;
+  if ((active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) && active.selectionStart !== active.selectionEnd) return true;
+  return !!window.getSelection()?.toString();
 }
 
 export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; profile: Profile; onEditProfile: () => void }) {
@@ -45,30 +67,77 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
   const summary = [pack.server.name, organization && organization.id !== 'none' ? organization.name : null].filter(Boolean).join(' · ');
   const open = openKey ? hits.find((hit) => hitKey(hit) === openKey) : undefined;
 
-  // Calculator: charges from the criminal code, the mode for the whole detention, the fine typed in.
-  const [charges, setCharges] = useState<Charge[]>([]);
+  // Calculator: charges of both codes, the mode and the offender for the whole detention, the fine typed in.
+  const [charges, setCharges] = useState<Entry[]>([]);
   const [mode, setMode] = useState<Mode>('custody');
+  const [offender, setOffender] = useState<Offender>('citizen');
   const [fineInput, setFineInput] = useState('');
   const [side, setSide] = useState<'left' | 'right'>('left');
-  const addable = (hit: SearchHit) => hit.document.id === pack.calculator.criminalCode && !!(hit.part ?? leadPart(hit.article))?.punishment;
+  const calculable = [pack.calculator.criminalCode, pack.calculator.administrative.code];
+  const addable = (hit: SearchHit) => calculable.includes(hit.document.id) && !!(hit.part ?? leadPart(hit.article))?.punishment;
   const toggleCharge = (hit: SearchHit) => {
     const key = hitKey(hit);
-    setCharges((list) => (list.some((c) => c.key === key) ? list.filter((c) => c.key !== key) : [...list, { key, hit, stage: 'done' }]));
+    setCharges((list) =>
+      list.some((c) => c.key === key) ? list.filter((c) => c.key !== key) : [...list, { key, hit, stage: 'done', amount: '', days: '', unpaid: '' }],
+    );
     searchRef.current?.focus();
   };
-  const updateCharge = (index: number, patch: Partial<Charge>) =>
-    setCharges((list) => list.map((c, i) => (i === index ? { ...c, ...patch } : c)));
-  const result = useMemo(() => {
-    const items: ChargeItem[] = charges.map((c) => ({
-      article: c.hit.article,
-      document: c.hit.document,
-      part: c.hit.part ?? leadPart(c.hit.article)!,
-      stage: c.stage,
-      wantedLevel: c.wantedLevel,
-    }));
-    return calculateCriminal(items, mode, pack.calculator);
-  }, [charges, mode, pack.calculator]);
+  const items = useMemo(
+    () =>
+      charges.map(
+        (c): Charge => ({
+          article: c.hit.article,
+          document: c.hit.document,
+          part: c.hit.part ?? leadPart(c.hit.article)!,
+          stage: c.stage ?? 'done',
+          wantedLevel: c.wantedLevel,
+          choice: c.choice,
+          amount: typedNumber(c.amount),
+          days: typedNumber(c.days),
+          unpaid: typedNumber(c.unpaid),
+        }),
+      ),
+    [charges],
+  );
+  const result = useMemo(() => calculateDetention(items, { mode, offender }, pack.calculator), [items, mode, offender, pack.calculator]);
+  /** The calculator's entry behind a charge of the result. */
+  const entryOf = (item: ChargeItem) => charges[items.findIndex((c) => c === item)];
+  const updateCharge = (item: ChargeItem, patch: ChargePatch) => {
+    const key = entryOf(item)?.key;
+    setCharges((list) => list.map((c) => (c.key === key ? { ...c, ...patch } : c)));
+  };
   const calculatorOpen = charges.length > 0;
+
+  // An emptied calculator is a new detention: nothing carries over from the last one.
+  useEffect(() => {
+    if (calculatorOpen) return;
+    setMode('custody');
+    setOffender('citizen');
+    setFineInput('');
+  }, [calculatorOpen]);
+
+  const [copyState, setCopyState] = useState<CopyState>('idle');
+  const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(copyTimer.current), []);
+  const copyCharges = () => {
+    if (!result.charge) return;
+    const show = (state: CopyState) => {
+      setCopyState(state);
+      clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopyState('idle'), 1500);
+    };
+    platform.writeClipboard(result.charge).then(
+      () => show('copied'),
+      () => show('failed'),
+    );
+  };
+  /** Ctrl+C copies the charges, unless there is text selected to copy. Says whether it did. */
+  const copyShortcut = useRef<() => boolean>(() => false);
+  copyShortcut.current = () => {
+    if (!result.charge || hasSelectedText()) return false;
+    copyCharges();
+    return true;
+  };
 
   // The window grows towards the centre of the screen for the panel, and shrinks back when it closes.
   useEffect(() => {
@@ -110,6 +179,12 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
   // On the window, not an element: a clicked result disappears and takes the focus with it.
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
+      // By the physical key, or by the letter in either layout when the key is unknown.
+      const isC = e.code === 'KeyC' || (!e.code && (e.key === 'c' || e.key === 'с'));
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && isC) {
+        if (copyShortcut.current()) e.preventDefault();
+        return;
+      }
       if (e.key !== 'Escape') return;
       e.preventDefault();
       stepBack.current();
@@ -151,12 +226,18 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
         <CalculatorPanel
           result={result}
           onMode={setMode}
-          onStage={(index, stage) => updateCharge(index, { stage })}
-          onWantedLevel={(index, wantedLevel) => updateCharge(index, { wantedLevel })}
-          onRemove={(index) => setCharges((list) => list.filter((_, i) => i !== index))}
+          onOffender={setOffender}
+          fieldsOf={(item) => entryOf(item) ?? { amount: '', days: '', unpaid: '' }}
+          onUpdate={updateCharge}
+          onRemove={(item) => {
+            const key = entryOf(item)?.key;
+            setCharges((list) => list.filter((c) => c.key !== key));
+          }}
           onClear={() => setCharges([])}
           fineInput={fineInput}
           onFineInput={setFineInput}
+          onCopy={copyCharges}
+          copyState={copyState}
         />
       )}
     <div className="overlay glass">

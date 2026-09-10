@@ -142,6 +142,21 @@ export interface CalculatorRules {
   bail: Based & { amounts: Record<string, number> };
   /** Jurisdiction tag → what the officer should know when a charge has only that tag. */
   jurisdictionWarnings: Partial<Record<Jurisdiction, string>>;
+  administrative: AdministrativeRules;
+}
+
+/** The server's rules for administrative punishments: each is set on its own and they add up. */
+export interface AdministrativeRules {
+  /** Document the calculator treats as the administrative code. */
+  code: string;
+  /** Several violations: a punishment for each, added up. */
+  sum: Based;
+  /** Limits of any one fine, for whoever it is set on; they narrow an article's own limits. */
+  fine: Based & { min: number; max: Partial<Record<Subject, number>> };
+  /** Longest arrest for one violation. */
+  arrest: Based & { maxDays: number };
+  /** Bail to be released from an arrest, per day of it. */
+  bail: Based & { perDay: number };
 }
 
 export interface ServerPack {

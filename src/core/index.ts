@@ -15,6 +15,18 @@ export {
   type Stage,
 } from './calculator';
 export {
+  OFFENDER_DATIVE,
+  calculateAdministrative,
+  type AdministrativeArrest,
+  type AdministrativeFine,
+  type AdministrativeItem,
+  type AdministrativeItemResult,
+  type AdministrativeResult,
+  type Choice,
+  type Offender,
+} from './administrative';
+export { calculateDetention, type Charge, type DetentionOptions, type DetentionResult, type DetentionStars } from './detention';
+export {
   SUBJECT_LABELS,
   articleLabel,
   articleTitle,
