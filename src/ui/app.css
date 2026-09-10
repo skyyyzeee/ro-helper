@@ -304,10 +304,13 @@ input {
   min-width: 0;
 }
 
-.more {
-  font-size: 13px;
-  color: var(--text-faint);
-  flex: none;
+.row__excerpt {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .empty {
@@ -401,11 +404,32 @@ input {
   text-wrap: pretty;
 }
 
+.part-card--focus {
+  box-shadow: inset 0 0 0 1.5px oklch(0.78 0.1 245 / 0.7);
+}
+
 .part-card__pen {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.part-card__pen p {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
   color: var(--accent-text);
+}
+
+.part-card__who {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.part-card__pen .part-card__extra {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .part {

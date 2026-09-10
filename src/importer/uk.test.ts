@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseCriminalCode } from './criminalCode';
+import { parseLawText } from './lawText';
 
 const root = join(import.meta.dirname, '..', '..');
 const text = readFileSync(join(root, 'data', 'tverskoi', 'sources', 'uk.txt'), 'utf8');
-const uk = parseCriminalCode(text, 'uk');
+const uk = parseLawText(text, 'uk', 'criminal-code');
 const article = (number: string) => {
   const found = uk.articles.find((a) => a.number === number);
   if (!found) throw new Error(`ст. ${number} not parsed`);
@@ -74,7 +74,7 @@ describe('Уголовный кодекс Тверского (real forum text)',
   it('keeps general-part structure: numbered parts with lettered points', () => {
     const kinds = article('33').parts[0];
     expect(kinds.number).toBe('1');
-    expect(kinds.points.map((p) => p.letter)).toEqual(['а', 'б', 'в', 'г', 'д', 'е']);
+    expect(kinds.points.map((p) => p.marker)).toEqual(['а', 'б', 'в', 'г', 'д', 'е']);
   });
 
   it('puts the chapter preface and the adoption footer where they belong', () => {

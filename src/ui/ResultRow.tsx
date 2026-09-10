@@ -1,29 +1,28 @@
-import { formatPunishment, leadPart, type SearchHit } from '../core';
+import { articleLabel, articleTitle, formatPunishment, leadPart, type SearchHit } from '../core';
 import { DocBadge, JurisdictionPill, Stars } from './lawBits';
 
 export function ResultRow({ hit, onOpen }: { hit: SearchHit; onOpen: () => void }) {
   const { article, document } = hit;
-  const lead = leadPart(article);
-  const morePenalParts = article.parts.filter((part) => part.punishment).length - 1;
+  const part = hit.part ?? leadPart(article);
   const chapter = document.chapters.find((c) => c.number === article.chapter);
 
   return (
     <button className="row" type="button" onClick={onOpen}>
       <span className="row__line">
         <DocBadge document={document} />
-        <span className="num">ст. {article.number}</span>
-        <span className="ttl">{article.title}</span>
+        <span className="num">{articleLabel(article, hit.part)}</span>
+        <span className="ttl">{articleTitle(article)}</span>
         <span className="sp" />
-        {lead?.jurisdiction && <JurisdictionPill jurisdiction={lead.jurisdiction} />}
-        {lead?.stars && <Stars stars={lead.stars} />}
+        {part?.jurisdiction && <JurisdictionPill jurisdiction={part.jurisdiction} />}
+        {part?.stars && <Stars stars={part.stars} />}
       </span>
+      {hit.part && article.title && <span className="row__excerpt">{hit.part.text}</span>}
       <span className="row__line">
-        {lead?.punishment ? (
-          <span className="pen">{formatPunishment(lead.punishment)}</span>
+        {part?.punishment ? (
+          <span className="pen">{formatPunishment(part.punishment)}</span>
         ) : (
           <span className="pen pen--muted">{chapter ? `Глава ${chapter.number}. ${chapter.title}` : document.title}</span>
         )}
-        {morePenalParts > 0 && <span className="more">+ ещё {morePenalParts} ч.</span>}
       </span>
     </button>
   );

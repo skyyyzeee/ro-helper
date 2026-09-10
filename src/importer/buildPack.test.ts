@@ -16,6 +16,9 @@ describe('bundled Тверской pack', () => {
     const uk = TVERSKOI_PACK.documents.find((d) => d.id === 'uk');
     expect(uk?.source).toMatchObject({ thread: 1176, lastEdited: '2026-09-06T19:38:37+03:00' });
     expect(uk).toMatchObject({ kind: 'penal-code', category: 'codes' });
+    expect(TVERSKOI_PACK.documents.map((d) => `${d.short}:${d.kind}`)).toEqual(['УК:penal-code', 'КоАП:penal-code', 'ПДД:law']);
+    expect(TVERSKOI_PACK.documents.find((d) => d.id === 'koap')?.source.lastEdited).toBe('2026-08-27T23:08:51+03:00');
+    expect(TVERSKOI_PACK.documents.find((d) => d.id === 'pdd')?.source.lastEdited).toBe('2026-08-30T23:07:15+03:00');
     expect(TVERSKOI_PACK.server).toEqual({ id: 'tverskoi', name: 'Тверской', status: 'active' });
     expect(TVERSKOI_PACK.version).toBe('2026-09-06');
   });

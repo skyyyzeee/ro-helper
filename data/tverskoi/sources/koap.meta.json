@@ -1,0 +1,14 @@
+{
+  "id": "koap",
+  "short": "КоАП",
+  "title": "Кодекс об административных правонарушениях",
+  "aliases": ["коап"],
+  "kind": "penal-code",
+  "category": "codes",
+  "format": "administrative-code",
+  "thread": 1178,
+  "url": "https://forum.russia.online/threads/kodeks-ob-administrativnykh-pravonarusheniyakh.1178/",
+  "posted": "2026-08-21T20:05:17+03:00",
+  "lastEdited": "2026-08-27T23:08:51+03:00",
+  "snapshotAt": "2026-09-10"
+}

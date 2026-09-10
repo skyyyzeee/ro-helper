@@ -1,7 +1,8 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { DocumentCategory, DocumentKind, LawDocument, ServerPack } from '../core/model';
-import { parseCriminalCode, type ParseIssue } from './criminalCode';
+import { parseLawText, type LawFormat, type ParseIssue } from './lawText';
+import { applyOverrides, type Overrides } from './overrides';
 
 /** Contents of `<id>.meta.json` next to each `<id>.txt` snapshot. */
 export interface SourceMeta {
@@ -11,7 +12,7 @@ export interface SourceMeta {
   aliases: string[];
   kind: DocumentKind;
   category: DocumentCategory;
-  format: 'criminal-code';
+  format: LawFormat;
   thread: number;
   url: string;
   posted: string;
@@ -29,16 +30,17 @@ export interface ServerSources {
 
 export interface BuildResult {
   pack: ServerPack;
-  issues: (ParseIssue & { document: string })[];
+  issues: (ParseIssue & { document?: string })[];
 }
 
-const PARSERS = {
-  'criminal-code': parseCriminalCode,
-};
-
-/** Builds a server pack from `<serverDir>/sources/*.txt` snapshots and their metadata. */
+/**
+ * Builds a server pack from `<serverDir>/sources/*.txt` snapshots and their metadata,
+ * then lays the manual fixes from `<serverDir>/overrides.json` over the parser output.
+ */
 export function buildPack(serverDir: string, server: ServerSources): BuildResult {
   const sourcesDir = join(serverDir, 'sources');
+  const overridesFile = join(serverDir, 'overrides.json');
+  const overrides: Overrides = existsSync(overridesFile) ? JSON.parse(readFileSync(overridesFile, 'utf8')) : {};
   const available = new Set(readdirSync(sourcesDir).filter((f) => f.endsWith('.meta.json')).map((f) => f.replace('.meta.json', '')));
   const issues: BuildResult['issues'] = [];
   const documents: LawDocument[] = [];
@@ -47,8 +49,9 @@ export function buildPack(serverDir: string, server: ServerSources): BuildResult
     if (!available.has(id)) continue;
     const meta = JSON.parse(readFileSync(join(sourcesDir, `${id}.meta.json`), 'utf8')) as SourceMeta;
     const text = readFileSync(join(sourcesDir, `${id}.txt`), 'utf8');
-    const parsed = PARSERS[meta.format](text, meta.id);
-    issues.push(...parsed.issues.map((issue) => ({ ...issue, document: id })));
+    const parsed = parseLawText(text, meta.id, meta.format);
+    const fixed = applyOverrides(parsed.articles, parsed.issues, overrides);
+    issues.push(...[...fixed.issues, ...fixed.stale].map((issue) => ({ ...issue, document: id })));
     documents.push({
       id: meta.id,
       short: meta.short,
@@ -60,6 +63,11 @@ export function buildPack(serverDir: string, server: ServerSources): BuildResult
       chapters: parsed.chapters,
       articles: parsed.articles,
     });
+  }
+
+  const knownArticles = new Set(documents.flatMap((d) => d.articles.map((a) => a.id)));
+  for (const articleId of Object.keys(overrides)) {
+    if (!knownArticles.has(articleId)) issues.push({ article: articleId, line: articleId, reason: 'Правка для несуществующей статьи' });
   }
 
   // The pack version is the newest law edit it contains, so it only changes when a law does.

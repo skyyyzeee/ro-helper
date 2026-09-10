@@ -2,4 +2,17 @@
 // Pure TypeScript with no UI, Tauri or importer imports (enforced by boundary.test.ts).
 export type * from './model';
 export { searchArticles, type SearchHit } from './search';
-export { formatJurisdiction, formatPunishment, formatRubles, formatSanction, leadPart, starCount } from './format';
+export {
+  SUBJECT_LABELS,
+  articleLabel,
+  articleTitle,
+  formatJurisdiction,
+  formatPunishment,
+  formatRubles,
+  formatSanction,
+  leadPart,
+  penalParts,
+  punishmentBySubject,
+  starCount,
+  type SubjectLine,
+} from './format';

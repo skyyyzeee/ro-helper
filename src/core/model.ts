@@ -9,34 +9,47 @@ export type DocumentCategory = 'codes' | 'fkz' | 'fz' | 'moscow' | 'charters' | 
 /** What the document is: only penal codes carry punishments the calculator can use. */
 export type DocumentKind = 'penal-code' | 'law' | 'charter' | 'rules';
 
+/** Who an administrative sanction applies to (КоАП): граждане, должностные лица, юридические лица. */
+export type Subject = 'citizen' | 'official' | 'legal';
+
 /** Wanted level in stars; usually min === max, a range only where the law gives one. */
 export interface StarRange {
   min: number;
   max: number;
 }
 
-export type Sanction =
+type SanctionBody =
   /** Fine in rubles: "до N" has only max, "от N до M" has both, a fixed amount has min === max. */
   | { kind: 'fine'; min?: number; max: number }
+  /** A multiple of an unpaid fine (КоАП 10.2: «в двукратном размере …, но не менее 3.000 рублей»). */
+  | { kind: 'fine-multiple'; multiplier: number; min?: number }
   | { kind: 'imprisonment'; months: number }
   /** Term set by the current wanted level (УК ст. 100.1): monthsPerStar × stars. */
-  | { kind: 'imprisonment-by-stars'; monthsPerStar: number };
+  | { kind: 'imprisonment-by-stars'; monthsPerStar: number }
+  /** Administrative arrest in days: "до N суток" has only max, a fixed term has min === max. */
+  | { kind: 'arrest'; min?: number; max: number }
+  | { kind: 'warning' }
+  | { kind: 'license-revocation' }
+  | { kind: 'evacuation' };
+
+/** A sanction; `subject` is set only when the law names who it applies to. */
+export type Sanction = SanctionBody & { subject?: Subject };
 
 export interface Punishment {
-  /** Alternatives joined by «либо»: the officer or court picks one. */
+  /** Alternatives joined by «либо» / «или»: the officer or court picks one. */
   alternatives: Sanction[];
   /** Mandatory add-ons, e.g. «лишение воинского звания». */
   additional: string[];
 }
 
 export interface Point {
-  /** Letter as written: «а», «б», … */
-  letter: string;
+  /** List marker as written: «а», «б» or «1», «2» (for «1)»). */
+  marker: string;
   text: string;
 }
 
 export interface Part {
-  /** «1», «2»… Numbered in the text, or by position for tagged parts of the special part. Absent for plain paragraphs. */
+  /** «1», «2», «15.5.1»… Numbered in the text, or by position for tagged parts of the УК special part. Absent for plain paragraphs. */
   number?: string;
   text: string;
   points: Point[];
@@ -46,7 +59,7 @@ export interface Part {
 }
 
 export interface Note {
-  /** «Примечание» or «Пояснение». */
+  /** «Примечание», «Примечание 1» or «Пояснение». */
   label: string;
   text: string;
 }
@@ -63,8 +76,11 @@ export interface Article {
   /** Unique within the pack: `${documentId}-${number}`, e.g. `uk-65`. */
   id: string;
   number: string;
+  /** Empty where the law gives articles no titles (ПДД). */
   title: string;
   chapter?: string;
+  /** Sub-heading inside the chapter that this article falls under (ПДД: «аварийные сигналы»). */
+  group?: string;
   parts: Part[];
   notes: Note[];
 }

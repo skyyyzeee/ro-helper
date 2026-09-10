@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { searchArticles, type ServerPack } from '../core';
+import { searchArticles, type SearchHit, type ServerPack } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
 import { ArticleView } from './ArticleView';
 import { CloseIcon, MenuIcon, SearchIcon, SettingsIcon } from './icons';
@@ -13,13 +13,16 @@ function resultCount(n: number): string {
   return `${n} результатов`;
 }
 
+/** Stable key of a hit: an article, or one part of it. */
+const hitKey = (hit: SearchHit) => `${hit.article.id}#${hit.part?.number ?? ''}`;
+
 export function Overlay({ pack }: { pack: ServerPack }) {
   const platform = usePlatform();
   const searchRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openKey, setOpenKey] = useState<string | null>(null);
   const hits = useMemo(() => searchArticles(pack, query), [pack, query]);
-  const open = openId ? hits.find((hit) => hit.article.id === openId) : undefined;
+  const open = openKey ? hits.find((hit) => hitKey(hit) === openKey) : undefined;
 
   // The search field takes focus on first render and every time the overlay is shown again.
   useEffect(() => {
@@ -63,7 +66,7 @@ export function Overlay({ pack }: { pack: ServerPack }) {
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
-            setOpenId(null);
+            setOpenKey(null);
           }}
         />
         <span className="kbd">Esc</span>
@@ -71,7 +74,7 @@ export function Overlay({ pack }: { pack: ServerPack }) {
 
       <div className="overlay__content">
         {open ? (
-          <ArticleView article={open.article} document={open.document} onBack={() => setOpenId(null)} />
+          <ArticleView article={open.article} document={open.document} focusPart={open.part} onBack={() => setOpenKey(null)} />
         ) : (
           query.trim() && (
             <>
@@ -81,8 +84,8 @@ export function Overlay({ pack }: { pack: ServerPack }) {
               </div>
               <div className="list" role="list" aria-label="Результаты поиска">
                 {hits.map((hit) => (
-                  <div role="listitem" key={hit.article.id}>
-                    <ResultRow hit={hit} onOpen={() => setOpenId(hit.article.id)} />
+                  <div role="listitem" key={hitKey(hit)}>
+                    <ResultRow hit={hit} onOpen={() => setOpenKey(hitKey(hit))} />
                   </div>
                 ))}
               </div>

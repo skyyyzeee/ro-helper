@@ -16,7 +16,12 @@ for (const doc of pack.documents) {
 }
 if (issues.length) {
   console.log(`\nНе разобрано: ${issues.length}`);
-  for (const issue of issues) console.log(`- [${issue.document}${issue.article ? ' ' + issue.article : ''}] ${issue.reason}\n  ${issue.line}`);
+  for (const issue of issues) {
+    const where = [issue.document, issue.article, issue.part ? `ч. ${issue.part}` : issue.partIndex ? `#${issue.partIndex}` : '']
+      .filter(Boolean)
+      .join(' ');
+    console.log(`- [${where}] ${issue.reason}\n  ${issue.line}`);
+  }
   process.exitCode = 1;
 } else {
   console.log('\nВсё разобрано.');

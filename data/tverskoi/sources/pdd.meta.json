@@ -1,0 +1,14 @@
+{
+  "id": "pdd",
+  "short": "ПДД",
+  "title": "Правила дорожного движения (15-ФЗ)",
+  "aliases": ["пдд"],
+  "kind": "law",
+  "category": "codes",
+  "format": "traffic-rules",
+  "thread": 8721,
+  "url": "https://forum.russia.online/threads/federal-nyi-zakon-no-15-fz-o-pravilakh-dorozhnogo-dvizheniya-ro.8721/",
+  "posted": "2026-08-27T22:59:37+03:00",
+  "lastEdited": "2026-08-30T23:07:15+03:00",
+  "snapshotAt": "2026-09-10"
+}

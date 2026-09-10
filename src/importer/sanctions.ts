@@ -1,4 +1,4 @@
-import type { Jurisdiction, Punishment, Sanction, StarRange } from '../core/model';
+import type { Jurisdiction, Punishment, Sanction, StarRange, Subject } from '../core/model';
 
 /** «50.000» / «50 000» → 50000. */
 export function parseAmount(raw: string): number {
@@ -105,6 +105,100 @@ export function parsePunishment(clause: string): ParsedPunishment {
       alternatives.push({ kind: 'imprisonment-by-stars', monthsPerStar: Number(byStars[1]) });
     } else {
       unparsed.push(alt);
+    }
+  }
+
+  return { punishment: { alternatives, additional }, unparsed };
+}
+
+const WORD_NUMBERS: Record<string, number> = { пяти: 5, десяти: 10, пятнадцати: 15, двадцати: 20, тридцати: 30 };
+const MULTIPLIERS: Record<string, number> = { дву: 2, трех: 3, трёх: 3, пяти: 5, десяти: 10 };
+
+/** A number written with digits («15», «50.000») or as a word in the genitive («пятнадцати»). */
+function readNumber(raw: string): number | undefined {
+  return /^\d/.test(raw) ? parseAmount(raw) : WORD_NUMBERS[raw];
+}
+
+const SUBJECT_PHRASES: [RegExp, Subject][] = [
+  [/\s*(?:на|для)\s+граждан(?=[\s,;-]|$)/, 'citizen'],
+  [/\s*(?:на|для)\s+должностных\s+лиц(?=[\s,;-]|$)/, 'official'],
+  [/\s*(?:на|для)\s+юридических\s+лиц(?=[\s,;-]|$)/, 'legal'],
+  [/\s+гражданам$/, 'citizen'],
+  [/\s+должностным\s+лицам$/, 'official'],
+  [/\s+юридическим\s+лицам$/, 'legal'],
+];
+
+const AMOUNT = String.raw`(?:в\s+размере\s+)?(?:от\s+([\d.\s]+?)\s+до\s+([\d.\s]+?)|до\s+([\d.\s]+?)|([\d.\s]+?))\s+рубл\S*`;
+const ADMIN_FINE = new RegExp(String.raw`^(?:наложени\S+\s+)?(?:административн\S+\s+)?(?:штраф\S*\s+)?` + AMOUNT + '$');
+const ADMIN_MULTIPLE = /^(?:наложени\S+\s+)?(?:административн\S+\s+)?штраф\S*\s+в\s+(\S+?)кратном\s+размере\s+суммы\s+неуплаченного\s+административного\s+штрафа(?:,\s*но\s+не\s+менее\s+([\d.\s]+?)\s+рубл\S*)?$/;
+const ADMIN_ARREST = /^административн\S+\s+арест\S*\s+на\s+срок\s+(до\s+)?(\d+|[а-яё]+)\s+сут\S*$/;
+const ADMIN_LICENSE = /^лишени\S+\s+права\s+(?:на\s+)?управлени\S*\s+(?:транспортными\s+средствами|ТС)$/;
+const ADMIN_EVACUATION = /^эвакуаци\S+\s+транспортного\s+средства$/;
+const ADMIN_WARNING = /^предупреждени\S*$/;
+const ADMIN_SUSPENSION = /\s+с\s+административным\s+приостановлением\s+деятельности\s+(?:данного\s+)?юридического\s+лица\s+на\s+срок\s+до\s+(\S+)\s+месяц\S*$/;
+const MONTH_WORDS: Record<string, number> = { одного: 1, двух: 2, трех: 3, трёх: 3, шести: 6 };
+
+function readAdministrativeAlternative(alt: string): Sanction | null {
+  let m: RegExpMatchArray | null;
+  if (ADMIN_WARNING.test(alt)) return { kind: 'warning' };
+  if ((m = alt.match(ADMIN_MULTIPLE))) {
+    const multiplier = MULTIPLIERS[m[1]];
+    if (!multiplier) return null;
+    return m[2] ? { kind: 'fine-multiple', multiplier, min: parseAmount(m[2]) } : { kind: 'fine-multiple', multiplier };
+  }
+  if ((m = alt.match(ADMIN_FINE))) {
+    const [, from, to, upTo, fixed] = m;
+    if (from && to) return { kind: 'fine', min: parseAmount(from), max: parseAmount(to) };
+    if (upTo) return { kind: 'fine', max: parseAmount(upTo) };
+    return { kind: 'fine', min: parseAmount(fixed), max: parseAmount(fixed) };
+  }
+  if ((m = alt.match(ADMIN_ARREST))) {
+    const days = readNumber(m[2]);
+    if (days === undefined) return null;
+    return m[1] ? { kind: 'arrest', max: days } : { kind: 'arrest', min: days, max: days };
+  }
+  if (ADMIN_LICENSE.test(alt)) return { kind: 'license-revocation' };
+  if (ADMIN_EVACUATION.test(alt)) return { kind: 'evacuation' };
+  return null;
+}
+
+/**
+ * Reads a КоАП sanction line after «влечет» / «влекут»: segments separated by «;» name who they
+ * apply to («на граждан», «на должностных лиц - …», «юридическим лицам»), and each segment holds
+ * alternatives separated by «или», «либо», «и/или».
+ */
+export function parseAdministrativeSanction(clause: string): ParsedPunishment {
+  const alternatives: Sanction[] = [];
+  const additional: string[] = [];
+  const unparsed: string[] = [];
+  let rest = clause.trim().replace(/[.;,\s]+$/, '');
+
+  const suspension = rest.match(ADMIN_SUSPENSION);
+  if (suspension && suspension.index !== undefined) {
+    const months = readNumber(suspension[1]) ?? MONTH_WORDS[suspension[1]];
+    additional.push(months ? `приостановление деятельности юрлица до ${months} мес` : 'приостановление деятельности юрлица');
+    rest = rest.slice(0, suspension.index);
+  }
+
+  for (const rawSegment of rest.split(/\s*;\s*/)) {
+    let segment = rawSegment.trim();
+    let subject: Subject | undefined;
+    for (const [pattern, who] of SUBJECT_PHRASES) {
+      if (pattern.test(segment)) {
+        subject = who;
+        segment = segment.replace(pattern, '').trim();
+        break;
+      }
+    }
+    segment = segment.replace(/^[-—–]\s*/, '');
+    if (!segment) continue;
+
+    for (const rawAlt of segment.split(/\s*,?\s+(?:или|либо|и\/или)\s+/)) {
+      const alt = rawAlt.trim().replace(/[.;,\s]+$/, '');
+      if (!alt) continue;
+      const sanction = readAdministrativeAlternative(alt);
+      if (sanction) alternatives.push(subject ? { ...sanction, subject } : sanction);
+      else unparsed.push(alt);
     }
   }
 
