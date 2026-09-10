@@ -1,0 +1,998 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap">
+  <style>
+body{margin:0;background:#0c0d10}
+a{color:oklch(0.82 0.09 245)}a:hover{color:#fff}
+button{font:inherit;color:inherit;border:0;background:none;padding:0;margin:0;cursor:pointer;text-shadow:inherit}
+button:disabled{cursor:not-allowed}
+input{font-family:'Onest',system-ui,sans-serif}
+.scr{position:relative;width:1920px;height:1080px;overflow:hidden;font-family:'Onest',system-ui,sans-serif;color:#fff;-webkit-font-smoothing:antialiased}
+.game{position:absolute;inset:0;cursor:pointer;background:radial-gradient(ellipse 30% 18% at 22% 64%,rgba(255,160,70,.55),transparent 70%),radial-gradient(ellipse 22% 14% at 48% 70%,rgba(90,150,255,.45),transparent 70%),radial-gradient(ellipse 20% 12% at 70% 66%,rgba(255,80,90,.35),transparent 70%),radial-gradient(ellipse 60% 30% at 50% 58%,rgba(255,140,90,.28),transparent 70%),linear-gradient(180deg,#121826 0%,#232a3c 38%,#46394a 58%,#1a1c26 76%,#0d0e13 100%)}
+.game svg.city{position:absolute;left:0;bottom:0;width:1920px;height:620px}
+.minimap{position:absolute;left:36px;bottom:36px;width:290px;height:180px;border-radius:14px;background:radial-gradient(circle at 48% 56%,rgba(140,190,140,.35),rgba(24,34,28,.82) 70%);box-shadow:0 0 0 3px rgba(0,0,0,.4);opacity:.85}
+.proto-hint{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);font-size:13px;color:rgba(255,255,255,.8);background:rgba(0,0,0,.5);padding:7px 14px;border-radius:99px;pointer-events:none;white-space:nowrap}
+
+.glass{background:rgba(15,15,18,.62);backdrop-filter:blur(28px) saturate(115%);-webkit-backdrop-filter:blur(28px) saturate(115%);border:1px solid rgba(255,255,255,.10);box-shadow:0 30px 80px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06);text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.muted{color:rgba(255,255,255,.58)}
+.sp{flex:1}
+.kbd{font-size:12px;font-weight:500;color:rgba(255,255,255,.65);background:rgba(255,255,255,.08);border-radius:7px;padding:3px 7px;text-shadow:none}
+.brand{font-size:17px;font-weight:700;letter-spacing:.01em}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;color:rgba(255,255,255,.75);flex:none}
+.icon-btn:hover{background:rgba(255,255,255,.08);color:#fff}
+.icon-btn.on{background:rgba(255,255,255,.14);color:#fff}
+.chip{font-size:13px;font-weight:500;color:rgba(255,255,255,.82);background:rgba(255,255,255,.08);padding:6px 12px;border-radius:99px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:46px;padding:0 18px;border-radius:14px;background:rgba(255,255,255,.10);font-size:15px;font-weight:600;color:#fff}
+.btn:hover{background:rgba(255,255,255,.16)}
+.btn.pri{background:oklch(0.78 0.10 245);color:#0d1118;text-shadow:none}
+.btn.pri:hover{background:oklch(0.83 0.09 245)}
+.btn.pri .kbd{color:#0d1118;background:rgba(13,17,24,.14)}
+.btn.grow{flex:1}
+.btn.icon{width:46px;padding:0;flex:none}
+.btn.ghost{background:transparent}
+.btn.ghost:hover{background:rgba(255,255,255,.08)}
+.btn.fav.on{color:oklch(0.88 0.09 80)}
+.btn.fav.on svg{fill:currentColor}
+.badge{font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;flex:none;text-shadow:none;white-space:nowrap}
+.b-codes{color:oklch(0.87 0.07 245);background:oklch(0.78 0.10 245 / .22)}
+.b-fkz{color:oklch(0.87 0.07 300);background:oklch(0.78 0.10 300 / .22)}
+.b-fz{color:oklch(0.87 0.07 195);background:oklch(0.78 0.10 195 / .22)}
+.b-moscow{color:oklch(0.89 0.07 80);background:oklch(0.80 0.10 80 / .22)}
+.b-charters{color:oklch(0.87 0.07 150);background:oklch(0.78 0.10 150 / .22)}
+.b-rules{color:rgba(255,255,255,.88);background:rgba(255,255,255,.13)}
+.jur{font-size:12px;font-weight:600;color:rgba(255,255,255,.8);background:rgba(255,255,255,.09);padding:3px 8px;border-radius:99px;flex:none;text-shadow:none}
+.jur.f{color:oklch(0.90 0.06 35);background:oklch(0.78 0.10 30 / .24)}
+.stars{display:inline-flex;gap:2px;color:#fff;flex:none}
+.stars.big svg{width:15px;height:15px}
+.num{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;flex:none}
+.ttl{font-size:16px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.sec-t{font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.5);padding:14px 10px 8px}
+.empty{padding:28px 12px;font-size:14px;color:rgba(255,255,255,.55);text-align:center}
+.warn{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:14px;background:oklch(0.78 0.10 30 / .20);color:oklch(0.92 0.05 35);font-size:14px;font-weight:500;line-height:1.4}
+.warn svg{flex:none;margin-top:1px}
+.hidden{opacity:0;transform:translateX(24px);pointer-events:none}
+
+/* Overlay */
+.ov{position:absolute;right:24px;top:24px;width:600px;height:1032px;border-radius:22px;display:flex;flex-direction:column;overflow:hidden;transition:opacity .22s ease,transform .22s ease}
+.ov-head{display:flex;align-items:center;gap:10px;height:64px;padding:0 14px 0 12px;flex:none}
+.search{display:flex;align-items:center;gap:12px;margin:0 16px 12px;padding:0 14px 0 16px;height:56px;border-radius:16px;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px oklch(0.78 0.10 245 / .65);color:rgba(255,255,255,.6);flex:none}
+.search input{flex:1;min-width:0;background:transparent;border:0;outline:0;font-size:18px;font-weight:500;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);caret-color:oklch(0.80 0.10 245)}
+.search input::placeholder{color:rgba(255,255,255,.4)}
+.scope{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#0d1118;background:oklch(0.78 0.10 245);padding:4px 8px 4px 10px;border-radius:99px;text-shadow:none;flex:none}
+.content{flex:1;overflow-y:auto;padding:0 10px 12px}
+.content::-webkit-scrollbar,.dr-list::-webkit-scrollbar,.c-body::-webkit-scrollbar{width:8px}
+.content::-webkit-scrollbar-thumb,.dr-list::-webkit-scrollbar-thumb,.c-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:8px}
+.meta{display:flex;justify-content:space-between;padding:4px 10px 8px;font-size:13px;color:rgba(255,255,255,.55)}
+.list{display:flex;flex-direction:column;gap:4px}
+.row{display:flex;align-items:center;gap:8px;padding:4px 8px 4px 4px;border-radius:14px;transition:background .15s}
+.row:hover{background:rgba(255,255,255,.06)}
+.row.sel{background:rgba(255,255,255,.12)}
+.row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px;padding:10px 8px;cursor:pointer}
+.r1,.r2{display:flex;align-items:center;gap:9px;min-width:0}
+.pen{font-size:14.5px;color:rgba(255,255,255,.8)}
+.or{font-size:13.5px;color:rgba(255,255,255,.45)}
+.add{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:12px;flex:none;color:rgba(255,255,255,.85);background:rgba(255,255,255,.08)}
+.add:hover{background:rgba(255,255,255,.15)}
+.add.on{color:#0d1118;background:oklch(0.78 0.10 245)}
+.foot{display:flex;gap:18px;padding:14px 22px;border-top:1px solid rgba(255,255,255,.08);font-size:12.5px;color:rgba(255,255,255,.5);flex:none}
+.foot b{color:rgba(255,255,255,.85);font-weight:600}
+
+/* Article */
+.art{display:flex;flex-direction:column;gap:14px;padding:4px 12px 20px}
+.back{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;font-size:14px;color:rgba(255,255,255,.72);padding:6px 10px 6px 6px;border-radius:10px}
+.back:hover{background:rgba(255,255,255,.08);color:#fff}
+.crumb{display:flex;align-items:center;gap:8px;font-size:14px;color:rgba(255,255,255,.72)}
+.art-chapter{font-size:13.5px;color:rgba(255,255,255,.5);margin-top:-6px}
+.art-title{font-size:27px;font-weight:700;line-height:1.2;letter-spacing:-.01em}
+.art-tags{display:flex;align-items:center;gap:10px;font-size:13.5px}
+.pen-card{display:flex;align-items:stretch;border-radius:16px;background:rgba(255,255,255,.08);overflow:hidden}
+.pen-cell{flex:1;display:flex;flex-direction:column;gap:5px;padding:14px 16px}
+.pen-label{font-size:12.5px;color:rgba(255,255,255,.58)}
+.pen-val{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums}
+.pen-or{display:flex;align-items:center;padding:0 2px;font-size:13px;color:rgba(255,255,255,.45)}
+.parts{display:flex;flex-direction:column;gap:10px}
+.part{display:flex;gap:10px}
+.part-n{font-size:16px;font-weight:700;line-height:1.6;flex:none}
+.part p{margin:0;font-size:16px;line-height:1.6;color:rgba(255,255,255,.94);text-wrap:pretty}
+.note{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,.05)}
+.note-l{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.5)}
+.note p{margin:0;font-size:14.5px;line-height:1.55;color:rgba(255,255,255,.82)}
+.art-meta{display:flex;align-items:center;gap:8px;font-size:13.5px;color:rgba(255,255,255,.55)}
+.link{display:inline-flex;align-items:center;gap:4px;color:oklch(0.84 0.08 245);cursor:pointer}
+.art-actions{display:flex;gap:10px;padding-top:4px}
+
+/* Calculator */
+.calc{position:absolute;right:640px;top:24px;width:400px;max-height:1032px;border-radius:22px;display:flex;flex-direction:column;overflow:hidden;transition:opacity .25s ease,transform .25s ease}
+.calc.hidden{transform:translateX(40px)}
+.c-head{display:flex;align-items:center;gap:10px;height:64px;padding:0 12px 0 20px;flex:none}
+.c-title{font-size:17px;font-weight:700}
+.count{font-size:12.5px;font-weight:700;color:#0d1118;background:oklch(0.78 0.10 245);border-radius:99px;padding:2px 9px;text-shadow:none}
+.link-btn{font-size:13.5px;color:rgba(255,255,255,.62);padding:6px 10px;border-radius:9px}
+.link-btn:hover{color:#fff;background:rgba(255,255,255,.08)}
+.c-body{display:flex;flex-direction:column;gap:12px;padding:0 18px 18px;overflow-y:auto}
+.seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:4px;gap:4px;background:rgba(255,255,255,.07);border-radius:14px}
+.seg button{height:38px;border-radius:10px;font-size:14.5px;font-weight:600;color:rgba(255,255,255,.62)}
+.seg button.on{background:rgba(255,255,255,.18);color:#fff}
+.seg button:disabled{color:rgba(255,255,255,.25)}
+.seg.sm{padding:3px;gap:2px;border-radius:11px}
+.seg.sm button{height:28px;padding:0 10px;font-size:12.5px;border-radius:8px}
+.hint{font-size:13px;color:rgba(255,255,255,.58);margin-top:-4px}
+.c-body .sec-t{padding:6px 2px 0}
+.ci{display:flex;flex-direction:column;gap:8px;padding:10px 10px 10px 14px;border-radius:14px;background:rgba(255,255,255,.06)}
+.ci-row{display:flex;align-items:center;gap:8px;min-width:0}
+.ci .num{font-size:15px}
+.ci .ttl{font-size:14.5px}
+.val{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;flex:none}
+.ci.absorbed .num,.ci.absorbed .ttl,.ci.absorbed .val{color:rgba(255,255,255,.42);text-decoration:line-through}
+.x{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;color:rgba(255,255,255,.5);flex:none}
+.x:hover{background:rgba(255,255,255,.1);color:#fff}
+.mods{display:flex;align-items:center;gap:6px}
+.mod{font-size:12.5px;color:rgba(255,255,255,.62);padding:4px 10px;border-radius:99px;background:rgba(255,255,255,.06)}
+.mod:hover{background:rgba(255,255,255,.12)}
+.mod.on{color:#0d1118;background:oklch(0.78 0.10 245);text-shadow:none}
+.total{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;border-radius:16px;background:rgba(255,255,255,.09)}
+.t-big{font-size:40px;font-weight:700;line-height:1;color:oklch(0.86 0.08 245);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.t-sub{font-size:13px;color:rgba(255,255,255,.58);margin-top:8px}
+.t-stars{display:flex;flex-direction:column;align-items:flex-end;gap:8px;font-size:13px}
+.why{font-size:13.5px;line-height:1.45;color:rgba(255,255,255,.78)}
+.bail{display:flex;align-items:center;font-size:14px;color:rgba(255,255,255,.78)}
+.sec-row{display:flex;align-items:center;gap:8px;padding-top:6px}
+.sec-row .sec-t{padding:0}
+.amt-wrap{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.10);border-radius:10px;padding:0 10px;height:34px;flex:none;font-weight:600}
+.amt{width:70px;background:transparent;border:0;outline:0;font-size:15px;font-weight:600;color:#fff;text-align:right;font-variant-numeric:tabular-nums;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.amt-wrap.big{height:54px;padding:0 14px;font-size:24px;align-self:flex-start}
+.amt.big{width:150px;font-size:30px;text-align:left}
+.lim{font-size:12.5px;color:rgba(255,255,255,.52)}
+.lim.bad{color:oklch(0.86 0.09 30)}
+.fine-in{display:flex;flex-direction:column;gap:8px}
+.tot-s{display:flex;justify-content:space-between;font-size:15px;font-weight:600;padding:4px 2px 0}
+.c-copy{display:flex;flex-direction:column;gap:10px;padding:16px 18px 18px;border-top:1px solid rgba(255,255,255,.08);flex:none}
+.copy-str{font-size:15px;font-weight:500;padding:12px 14px;border-radius:12px;background:rgba(0,0,0,.24)}
+.btns{display:flex;gap:10px}
+
+/* Drawer */
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.38);opacity:0;pointer-events:none;transition:opacity .2s}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:absolute;left:0;top:0;bottom:0;width:390px;display:flex;flex-direction:column;background:rgba(11,11,13,.88);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border-right:1px solid rgba(255,255,255,.10);transform:translateX(-104%);transition:transform .25s ease}
+.drawer.on{transform:none}
+.dr-head{display:flex;align-items:center;gap:8px;height:64px;padding:0 12px 0 20px;flex:none}
+.dr-filter{display:flex;align-items:center;gap:10px;margin:0 14px 12px;padding:0 14px;height:46px;border-radius:14px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.5);flex:none}
+.dr-filter input{flex:1;min-width:0;background:transparent;border:0;outline:0;font-size:15px;font-weight:500;color:#fff}
+.dr-filter input::placeholder{color:rgba(255,255,255,.4)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 8px;flex:none}
+.tag{font-size:13px;font-weight:500;padding:6px 12px;border-radius:99px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.78)}
+.tag:hover{background:rgba(255,255,255,.12)}
+.tag.on{background:#fff;color:#0d1118;text-shadow:none}
+.dr-list{flex:1;overflow-y:auto;padding:0 8px 14px}
+.dr-sec{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.45);padding:14px 12px 6px}
+.dr-row{display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;border-radius:12px;text-align:left}
+.dr-row:hover{background:rgba(255,255,255,.07)}
+.dr-row.on{background:rgba(255,255,255,.13)}
+.dr-name{flex:1;min-width:0;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dr-count{font-size:12.5px;color:rgba(255,255,255,.45);font-variant-numeric:tabular-nums}
+
+/* Pinned card */
+.pin{position:absolute;left:40px;top:300px;width:380px;display:flex;flex-direction:column;gap:10px;padding:16px 18px 18px;border-radius:18px;background:rgba(14,14,17,.52);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);text-shadow:0 1px 2px rgba(0,0,0,.65);pointer-events:none;opacity:.94;transition:box-shadow .2s}
+.pin.live{pointer-events:auto;box-shadow:0 0 0 2px oklch(0.78 0.10 245 / .55)}
+.pin-head{display:flex;align-items:center;gap:8px;font-size:12.5px;color:rgba(255,255,255,.58)}
+.pin-l{display:inline-flex;align-items:center;gap:6px}
+.grip{display:inline-flex;color:rgba(255,255,255,.45);cursor:grab}
+.pin-big{display:flex;align-items:center;gap:12px;font-size:34px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.pin-charge{font-size:15.5px;font-weight:600}
+.pin-line{font-size:14px;color:rgba(255,255,255,.82)}
+.pin-warn{font-size:13.5px;color:oklch(0.90 0.06 35)}
+.pin-title{font-size:18px;font-weight:700}
+.pin-pen{font-size:15px;font-weight:600;color:oklch(0.86 0.08 245)}
+.pin-text{font-size:14px;line-height:1.5;color:rgba(255,255,255,.86)}
+
+/* Onboarding */
+.ob-scrim{position:absolute;inset:0;background:rgba(0,0,0,.32)}
+.ob{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:640px;border-radius:26px;display:flex;flex-direction:column;gap:18px;padding:28px 30px 26px}
+.ob-head{display:flex;align-items:center;justify-content:space-between;font-size:14px}
+.ob-prog{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.ob-prog span{height:4px;border-radius:4px;background:rgba(255,255,255,.14)}
+.ob-prog span.on{background:oklch(0.78 0.10 245)}
+.ob-title{font-size:28px;font-weight:700;letter-spacing:-.01em;padding-top:6px}
+.ob-sub{font-size:15.5px;line-height:1.5;color:rgba(255,255,255,.74);margin-top:-8px;text-wrap:pretty}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{display:flex;align-items:center;gap:12px;height:60px;padding:0 20px;border-radius:16px;background:rgba(255,255,255,.07);text-align:left}
+.opt:hover{background:rgba(255,255,255,.11)}
+.opt.on{background:rgba(255,255,255,.14);box-shadow:inset 0 0 0 1.5px oklch(0.78 0.10 245)}
+.opt:disabled{opacity:.45}
+.opt:disabled:hover{background:rgba(255,255,255,.07)}
+.opt-name{font-size:17px;font-weight:600}
+.opt-note{font-size:13px;color:rgba(255,255,255,.58)}
+.radio{width:18px;height:18px;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35);flex:none}
+.opt.on .radio{box-shadow:inset 0 0 0 5px oklch(0.78 0.10 245)}
+.org-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.org{height:50px;padding:0 12px;border-radius:14px;background:rgba(255,255,255,.07);font-size:14.5px;font-weight:500;text-align:center}
+.org:hover{background:rgba(255,255,255,.12)}
+.org.on{background:oklch(0.78 0.10 245);color:#0d1118;text-shadow:none;font-weight:600}
+.hk{display:flex;align-items:center;justify-content:center;gap:10px;height:100px;width:100%;border-radius:18px;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.14);outline:0}
+.hk.listen{box-shadow:inset 0 0 0 1.5px oklch(0.78 0.10 245);background:rgba(255,255,255,.10)}
+.key{font-size:22px;font-weight:600;padding:10px 18px;border-radius:12px;background:rgba(255,255,255,.13);box-shadow:inset 0 -2px 0 rgba(0,0,0,.3)}
+.ob-hint{font-size:14px;line-height:1.5;color:rgba(255,255,255,.6)}
+.setting-row{display:flex;align-items:center;gap:12px;height:60px;padding:0 20px;border-radius:16px;background:rgba(255,255,255,.07);font-size:16px}
+.setting-val{font-weight:600}
+.chev{display:inline-flex;color:rgba(255,255,255,.5)}
+.ob-sum{font-size:14px;line-height:1.5;color:rgba(255,255,255,.75);padding:12px 16px;border-radius:14px;background:rgba(255,255,255,.05)}
+.ob-foot{display:flex;align-items:center;gap:10px;padding-top:6px}
+.ob-foot .btn.pri{min-width:140px}
+  </style>
+</helmet>
+<div class="scr">
+  <div class="game" onClick="{{ onGame }}">
+    <svg class="city" viewBox="0 0 1920 620" preserveAspectRatio="none"><defs><pattern id="win" width="16" height="20" patternUnits="userSpaceOnUse"><rect x="5" y="6" width="5" height="7" fill="#ffcf8a"></rect></pattern><pattern id="win2" width="22" height="26" patternUnits="userSpaceOnUse"><rect x="8" y="8" width="6" height="8" fill="#a9c6ff"></rect></pattern><filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"></feGaussianBlur></filter></defs><rect x="-20" y="139" width="60" height="481" fill="#1a1e2b"></rect><rect x="-14" y="145" width="48" height="391" fill="url(#win2)" opacity="0.25"></rect><rect x="42" y="232" width="126" height="388" fill="#1a1e2b"></rect><rect x="48" y="238" width="114" height="298" fill="url(#win2)" opacity="0.27"></rect><rect x="174" y="230" width="128" height="390" fill="#1a1e2b"></rect><rect x="180" y="236" width="116" height="300" fill="url(#win2)" opacity="0.39"></rect><rect x="307" y="302" width="134" height="318" fill="#1a1e2b"></rect><rect x="313" y="308" width="122" height="228" fill="url(#win2)" opacity="0.28"></rect><rect x="447" y="347" width="123" height="273" fill="#1a1e2b"></rect><rect x="453" y="353" width="111" height="183" fill="url(#win2)" opacity="0.39"></rect><rect x="574" y="166" width="143" height="454" fill="#1a1e2b"></rect><rect x="580" y="172" width="131" height="364" fill="url(#win2)" opacity="0.19"></rect><rect x="721" y="195" width="143" height="425" fill="#1a1e2b"></rect><rect x="727" y="201" width="131" height="335" fill="url(#win2)" opacity="0.38"></rect><rect x="869" y="142" width="142" height="478" fill="#1a1e2b"></rect><rect x="875" y="148" width="130" height="388" fill="url(#win2)" opacity="0.28"></rect><rect x="1014" y="280" width="135" height="340" fill="#1a1e2b"></rect><rect x="1020" y="286" width="123" height="250" fill="url(#win2)" opacity="0.20"></rect><rect x="1151" y="289" width="99" height="331" fill="#1a1e2b"></rect><rect x="1157" y="295" width="87" height="241" fill="url(#win2)" opacity="0.48"></rect><rect x="1254" y="149" width="126" height="471" fill="#1a1e2b"></rect><rect x="1260" y="155" width="114" height="381" fill="url(#win2)" opacity="0.17"></rect><rect x="1382" y="238" width="110" height="382" fill="#1a1e2b"></rect><rect x="1388" y="244" width="98" height="292" fill="url(#win2)" opacity="0.30"></rect><rect x="1494" y="347" width="142" height="273" fill="#1a1e2b"></rect><rect x="1500" y="353" width="130" height="183" fill="url(#win2)" opacity="0.28"></rect><rect x="1639" y="138" width="120" height="482" fill="#1a1e2b"></rect><rect x="1645" y="144" width="108" height="392" fill="url(#win2)" opacity="0.33"></rect><rect x="1760" y="292" width="97" height="328" fill="#1a1e2b"></rect><rect x="1766" y="298" width="85" height="238" fill="url(#win2)" opacity="0.28"></rect><rect x="1860" y="232" width="90" height="388" fill="#1a1e2b"></rect><rect x="1866" y="238" width="78" height="298" fill="url(#win2)" opacity="0.36"></rect><rect x="-30" y="380" width="170" height="240" fill="#0b0d13"></rect><rect x="-24" y="386" width="158" height="170" fill="url(#win)" opacity="0.63"></rect><rect x="149" y="366" width="140" height="254" fill="#0b0d13"></rect><rect x="155" y="372" width="128" height="184" fill="url(#win)" opacity="0.45"></rect><rect x="299" y="395" width="173" height="225" fill="#0b0d13"></rect><rect x="305" y="401" width="161" height="155" fill="url(#win)" opacity="0.55"></rect><rect x="476" y="406" width="135" height="214" fill="#0b0d13"></rect><rect x="482" y="412" width="123" height="144" fill="url(#win)" opacity="0.37"></rect><rect x="616" y="279" width="157" height="341" fill="#0b0d13"></rect><rect x="622" y="285" width="145" height="271" fill="url(#win)" opacity="0.26"></rect><rect x="784" y="392" width="79" height="228" fill="#0b0d13"></rect><rect x="790" y="398" width="67" height="158" fill="url(#win)" opacity="0.28"></rect><rect x="864" y="437" width="180" height="183" fill="#0b0d13"></rect><rect x="870" y="443" width="168" height="113" fill="url(#win)" opacity="0.52"></rect><rect x="1046" y="348" width="120" height="272" fill="#0b0d13"></rect><rect x="1052" y="354" width="108" height="202" fill="url(#win)" opacity="0.27"></rect><rect x="1179" y="276" width="167" height="344" fill="#0b0d13"></rect><rect x="1185" y="282" width="155" height="274" fill="url(#win)" opacity="0.64"></rect><rect x="1359" y="424" width="154" height="196" fill="#0b0d13"></rect><rect x="1365" y="430" width="142" height="126" fill="url(#win)" opacity="0.21"></rect><rect x="1516" y="490" width="78" height="130" fill="#0b0d13"></rect><rect x="1522" y="496" width="66" height="60" fill="url(#win)" opacity="0.51"></rect><rect x="1597" y="373" width="152" height="247" fill="#0b0d13"></rect><rect x="1603" y="379" width="140" height="177" fill="url(#win)" opacity="0.54"></rect><rect x="1752" y="434" width="167" height="186" fill="#0b0d13"></rect><rect x="1758" y="440" width="155" height="116" fill="url(#win)" opacity="0.39"></rect><rect x="1932" y="373" width="83" height="247" fill="#0b0d13"></rect><rect x="1938" y="379" width="71" height="177" fill="url(#win)" opacity="0.20"></rect><rect x="0" y="560" width="1920" height="60" fill="#07080b"></rect><circle cx="85" cy="571" r="9" fill="#ff6b6b" opacity=".75" filter="url(#glow)"></circle><circle cx="236" cy="564" r="15" fill="#ffc07a" opacity=".75" filter="url(#glow)"></circle><circle cx="363" cy="569" r="11" fill="#ffe2b0" opacity=".75" filter="url(#glow)"></circle><circle cx="489" cy="564" r="12" fill="#ff6b6b" opacity=".75" filter="url(#glow)"></circle><circle cx="622" cy="570" r="13" fill="#ffc07a" opacity=".75" filter="url(#glow)"></circle><circle cx="789" cy="567" r="9" fill="#ffe2b0" opacity=".75" filter="url(#glow)"></circle><circle cx="904" cy="571" r="10" fill="#ff6b6b" opacity=".75" filter="url(#glow)"></circle><circle cx="1068" cy="571" r="9" fill="#ffc07a" opacity=".75" filter="url(#glow)"></circle><circle cx="1215" cy="571" r="15" fill="#ffe2b0" opacity=".75" filter="url(#glow)"></circle><circle cx="1358" cy="570" r="12" fill="#ff6b6b" opacity=".75" filter="url(#glow)"></circle><circle cx="1470" cy="569" r="14" fill="#ffc07a" opacity=".75" filter="url(#glow)"></circle><circle cx="1616" cy="564" r="11" fill="#ffe2b0" opacity=".75" filter="url(#glow)"></circle><circle cx="1775" cy="568" r="11" fill="#ff6b6b" opacity=".75" filter="url(#glow)"></circle><circle cx="1905" cy="569" r="11" fill="#ffc07a" opacity=".75" filter="url(#glow)"></circle></svg>
+    <div class="minimap"></div>
+  </div>
+  <div class="proto-hint">Прототип · клик по пустому месту игры = горячая клавиша {{ hotkeyText }}</div>
+
+  <sc-if value="{{ isOnboarding }}" hint-placeholder-val="{{ false }}">
+    <div class="ob-scrim"></div>
+    <div class="ob glass">
+      <div class="ob-head">
+        <span class="brand">{{ obTitle }}</span>
+        <span class="muted">Шаг {{ step }} из 4</span>
+      </div>
+      <div class="ob-prog"><sc-for list="{{ progress }}" as="p" hint-placeholder-count="1"><span class="{{ p.cls }}"></span></sc-for></div>
+
+      <sc-if value="{{ step1 }}" hint-placeholder-val="{{ false }}">
+        <div class="ob-title">Выберите сервер</div>
+        <div class="ob-sub">Законы и правила берутся из законодательной базы выбранного сервера.</div>
+        <div class="opts">
+          <sc-for list="{{ servers }}" as="s" hint-placeholder-count="1">
+            <button class="{{ s.cls }}" onClick="{{ s.pick }}" disabled="{{ s.disabled }}">
+              <span class="opt-name">{{ s.name }}</span>
+              <span class="sp"></span>
+              <span class="opt-note">{{ s.note }}</span>
+              <span class="radio"></span>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ step2 }}" hint-placeholder-val="{{ false }}">
+        <div class="ob-title">Ваша организация</div>
+        <div class="ob-sub">Её законы и устав будут первыми в поиске и в меню. Документы остальных организаций тоже доступны.</div>
+        <div class="org-grid">
+          <sc-for list="{{ orgs }}" as="o" hint-placeholder-count="1"><button class="{{ o.cls }}" onClick="{{ o.pick }}">{{ o.name }}</button></sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ step3 }}" hint-placeholder-val="{{ false }}">
+        <div class="ob-title">Горячая клавиша</div>
+        <div class="ob-sub">Открывает и скрывает оверлей прямо в игре.</div>
+        <button class="{{ hkCls }}" onClick="{{ listen }}" onKeyDown="{{ onHotkey }}">
+          <sc-if value="{{ listening }}" hint-placeholder-val="{{ false }}"><span class="muted">Нажмите сочетание клавиш…</span></sc-if>
+          <sc-if value="{{ notListening }}" hint-placeholder-val="{{ false }}"><sc-for list="{{ hotkey }}" as="k" hint-placeholder-count="1"><span class="key">{{ k }}</span></sc-for></sc-if>
+        </button>
+        <div class="ob-hint">Нажмите на поле, затем нужное сочетание. Лучше с Ctrl, Alt или Shift.</div>
+        <sc-if value="{{ hkWarn }}" hint-placeholder-val="{{ false }}"><div class="warn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l9 16H3z"></path><path d="M12 10v4.5"></path><path d="M12 17.6v.4"></path></svg><span>Без Ctrl, Alt или Shift клавиша может пересечься с управлением в игре.</span></div></sc-if>
+      </sc-if>
+
+      <sc-if value="{{ step4 }}" hint-placeholder-val="{{ false }}">
+        <div class="ob-title">Режим экрана GTA</div>
+        <div class="ob-sub">Оверлей виден поверх игры только в режиме «Оконный без рамки». Поверх полноэкранного режима Windows не показывает другие окна.</div>
+        <div class="setting-row"><span>Тип экрана</span><span class="sp"></span><span class="chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></span><span class="setting-val">Оконный без рамки</span><span class="chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></span></div>
+        <div class="ob-hint">Где это: настройки GTA V → «Графика».</div>
+        <div class="ob-sum">{{ summary }}</div>
+      </sc-if>
+
+      <div class="ob-foot">
+        <sc-if value="{{ canBack }}" hint-placeholder-val="{{ false }}"><button class="btn ghost" onClick="{{ back }}">Назад</button></sc-if>
+        <span class="sp"></span>
+        <button class="btn pri" onClick="{{ next }}">{{ nextLabel }}</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isApp }}" hint-placeholder-val="{{ false }}">
+    <sc-if value="{{ hasPin }}" hint-placeholder-val="{{ false }}">
+      <div class="{{ pinCls }}">
+        <div class="pin-head">
+          <span class="pin-l"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6l-1 6.5 3.5 3.5h-11L10 9.5z"></path><path d="M12 13v8"></path></svg><span>Закреплено</span></span>
+          <span class="sp"></span>
+          <sc-if value="{{ overlayOn }}" hint-placeholder-val="{{ false }}"><span class="grip"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg></span><button class="x" onClick="{{ unpin }}" title="Открепить"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></sc-if>
+        </div>
+        <sc-if value="{{ pin.isCalc }}" hint-placeholder-val="{{ false }}">
+          <div class="pin-big"><span>{{ pin.term }}</span><span class="stars big"><sc-for list="{{ pin.stars }}" as="s" hint-placeholder-count="1"><svg width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"></path></svg></sc-for></span></div>
+          <div class="pin-charge">{{ pin.charge }}</div>
+          <sc-if value="{{ pin.hasKoap }}" hint-placeholder-val="{{ false }}"><div class="pin-line">КоАП: {{ pin.koapTotal }}</div></sc-if>
+          <sc-if value="{{ pin.hasWarn }}" hint-placeholder-val="{{ false }}"><div class="pin-warn">{{ pin.warn }}</div></sc-if>
+        </sc-if>
+        <sc-if value="{{ pin.isArticle }}" hint-placeholder-val="{{ false }}">
+          <div class="pin-title">{{ pin.heading }}</div>
+          <div class="pin-pen">{{ pin.pen }}</div>
+          <div class="pin-text">{{ pin.text }}</div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <div class="{{ calcCls }}">
+      <div class="c-head">
+        <span class="c-title">Калькулятор</span>
+        <span class="count">{{ calcCount }}</span>
+        <span class="sp"></span>
+        <button class="link-btn" onClick="{{ clearCalc }}">Очистить</button>
+      </div>
+      <div class="c-body">
+        <sc-if value="{{ c.hasUk }}" hint-placeholder-val="{{ false }}">
+          <div class="seg">
+            <button class="{{ c.kpzCls }}" onClick="{{ c.setKpz }}">КПЗ</button>
+            <button class="{{ c.fineCls }}" onClick="{{ c.setFine }}" disabled="{{ c.fineDisabled }}">Штраф</button>
+          </div>
+          <sc-if value="{{ c.fineDisabled }}" hint-placeholder-val="{{ false }}"><div class="hint">{{ c.fineHint }}</div></sc-if>
+          <div class="sec-t">УК · поглощение</div>
+          <sc-for list="{{ c.uk }}" as="u" hint-placeholder-count="1">
+            <div class="{{ u.cls }}">
+              <div class="ci-row">
+                <span class="num">{{ u.num }}</span>
+                <span class="ttl">{{ u.title }}</span>
+                <span class="sp"></span>
+                <span class="val">{{ u.val }}</span>
+                <button class="x" onClick="{{ u.remove }}" title="Убрать"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+              </div>
+              <div class="mods">
+                <button class="{{ u.attCls }}" onClick="{{ u.att }}">покушение</button>
+                <button class="{{ u.prepCls }}" onClick="{{ u.prep }}">приготовление</button>
+                <span class="sp"></span>
+                <sc-if value="{{ u.hasJur }}" hint-placeholder-val="{{ false }}"><span class="{{ u.jurCls }}">{{ u.jur }}</span></sc-if>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ c.isKpz }}" hint-placeholder-val="{{ false }}">
+            <div class="total">
+              <div>
+                <div class="t-big">{{ c.term }}</div>
+                <div class="t-sub">{{ c.termNote }}</div>
+              </div>
+              <div class="t-stars"><span class="muted">выдать</span><span class="stars big"><sc-for list="{{ c.stars }}" as="s" hint-placeholder-count="1"><svg width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"></path></svg></sc-for></span></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ c.isFine }}" hint-placeholder-val="{{ false }}">
+            <div class="total">
+              <div class="fine-in">
+                <span class="muted">Сумма штрафа</span>
+                <div class="amt-wrap big"><input class="amt big" value="{{ c.fineAmount }}" onChange="{{ c.onFine }}"><span>₽</span></div>
+                <span class="{{ c.fineLimitCls }}">{{ c.fineLimit }}</span>
+              </div>
+            </div>
+          </sc-if>
+          <sc-for list="{{ c.why }}" as="w" hint-placeholder-count="1"><div class="why">{{ w }}</div></sc-for>
+          <sc-if value="{{ c.hasBail }}" hint-placeholder-val="{{ false }}"><div class="bail"><span>Залог</span><span class="sp"></span><span class="val">{{ c.bail }}</span></div></sc-if>
+          <sc-if value="{{ c.hasWarn }}" hint-placeholder-val="{{ false }}"><div class="warn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l9 16H3z"></path><path d="M12 10v4.5"></path><path d="M12 17.6v.4"></path></svg><span>{{ c.warn }}</span></div></sc-if>
+        </sc-if>
+        <sc-if value="{{ c.hasKoap }}" hint-placeholder-val="{{ false }}">
+          <div class="sec-row">
+            <span class="sec-t">КоАП · сумма</span>
+            <span class="sp"></span>
+            <div class="seg sm">
+              <button class="{{ c.citCls }}" onClick="{{ c.setCit }}">гражданин</button>
+              <button class="{{ c.offCls }}" onClick="{{ c.setOff }}">должн. лицо</button>
+            </div>
+          </div>
+          <sc-for list="{{ c.koap }}" as="k" hint-placeholder-count="1">
+            <div class="ci">
+              <div class="ci-row">
+                <span class="num">{{ k.num }}</span>
+                <span class="ttl">{{ k.title }}</span>
+                <span class="sp"></span>
+                <div class="amt-wrap"><input class="amt" value="{{ k.amount }}" onChange="{{ k.onAmount }}"><span>₽</span></div>
+                <button class="x" onClick="{{ k.remove }}" title="Убрать"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+              </div>
+              <div class="{{ k.limitCls }}">{{ k.limit }}</div>
+            </div>
+          </sc-for>
+          <div class="tot-s"><span>Итого КоАП</span><span>{{ c.koapTotal }}</span></div>
+        </sc-if>
+      </div>
+      <div class="c-copy">
+        <div class="copy-str">{{ c.charge }}</div>
+        <div class="btns">
+          <button class="btn pri grow" onClick="{{ copy }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V6a2 2 0 0 1 2-2h9"></path></svg><span>{{ copyLabel }}</span><span class="kbd">Ctrl+C</span></button>
+          <button class="btn icon" onClick="{{ pinCalc }}" title="Закрепить поверх игры"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6l-1 6.5 3.5 3.5h-11L10 9.5z"></path><path d="M12 13v8"></path></svg></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="{{ ovCls }}">
+      <div class="ov-head">
+        <button class="{{ menuCls }}" onClick="{{ toggleDrawer }}" title="Все документы"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"></path></svg></button>
+        <span class="brand">РО Хелпер</span>
+        <span class="sp"></span>
+        <span class="chip">{{ chip }}</span>
+        <button class="icon-btn" onClick="{{ openSettings }}" title="Настройки"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"></path><circle cx="15" cy="7" r="2"></circle><circle cx="9" cy="17" r="2"></circle></svg></button>
+        <button class="icon-btn" onClick="{{ hideOverlay }}" title="Скрыть оверлей"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+      </div>
+      <div class="search">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.6-3.6"></path></svg>
+        <sc-if value="{{ hasScope }}" hint-placeholder-val="{{ false }}"><button class="scope" onClick="{{ clearScope }}"><span>{{ scopeBadge }}</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></sc-if>
+        <input class="q" value="{{ query }}" placeholder="{{ placeholder }}" onChange="{{ onQuery }}" onKeyDown="{{ onKey }}">
+        <span class="kbd">Esc</span>
+      </div>
+      <div class="content">
+        <sc-if value="{{ showArticle }}" hint-placeholder-val="{{ false }}">
+          <div class="art">
+            <button class="back" onClick="{{ closeArticle }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg><span>{{ backLabel }}</span></button>
+            <div class="crumb"><span class="{{ art.badgeCls }}">{{ art.badge }}</span><span>{{ art.docName }}</span></div>
+            <div class="art-chapter">{{ art.chapter }}</div>
+            <div class="art-title">{{ art.heading }}</div>
+            <sc-if value="{{ art.hasTags }}" hint-placeholder-val="{{ false }}">
+              <div class="art-tags">
+                <sc-if value="{{ art.hasJur }}" hint-placeholder-val="{{ false }}"><span class="{{ art.jurCls }}">{{ art.jurLong }}</span></sc-if>
+                <sc-if value="{{ art.hasStars }}" hint-placeholder-val="{{ false }}"><span class="stars big"><sc-for list="{{ art.stars }}" as="s" hint-placeholder-count="1"><svg width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"></path></svg></sc-for></span><span class="muted">{{ art.starsNote }}</span></sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{ art.hasPen }}" hint-placeholder-val="{{ false }}">
+              <div class="pen-card">
+                <sc-for list="{{ art.pens }}" as="p" hint-placeholder-count="1">
+                  <sc-if value="{{ p.isSep }}" hint-placeholder-val="{{ false }}"><div class="pen-or">либо</div></sc-if>
+                  <sc-if value="{{ p.isCell }}" hint-placeholder-val="{{ false }}"><div class="pen-cell"><span class="pen-label">{{ p.label }}</span><span class="pen-val">{{ p.value }}</span></div></sc-if>
+                </sc-for>
+              </div>
+            </sc-if>
+            <div class="parts">
+              <sc-for list="{{ art.parts }}" as="pt" hint-placeholder-count="1">
+                <div class="part"><sc-if value="{{ pt.hasN }}" hint-placeholder-val="{{ false }}"><span class="part-n">{{ pt.n }}</span></sc-if><p>{{ pt.t }}</p></div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ art.hasNote }}" hint-placeholder-val="{{ false }}"><div class="note"><span class="note-l">Примечание</span><p>{{ art.note }}</p></div></sc-if>
+            <div class="art-meta"><span>Актуально на {{ art.updated }}</span><span>·</span><span class="link">Тема на форуме <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"></path></svg></span></div>
+            <div class="art-actions">
+              <sc-if value="{{ art.canAdd }}" hint-placeholder-val="{{ false }}"><button class="{{ art.addCls }}" onClick="{{ art.add }}">{{ art.addLabel }}</button></sc-if>
+              <button class="btn" onClick="{{ art.pin }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6l-1 6.5 3.5 3.5h-11L10 9.5z"></path><path d="M12 13v8"></path></svg><span>Закрепить</span></button>
+              <button class="{{ art.favCls }}" onClick="{{ art.fav }}" title="Избранное"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"></path></svg></button>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showHome }}" hint-placeholder-val="{{ false }}">
+          <div class="sec-t">Избранное</div>
+          <div class="list"><sc-for list="{{ favRows }}" as="r" hint-placeholder-count="1"><div class="{{ r.cls }}">
+  <div class="row-main" onClick="{{ r.open }}">
+    <div class="r1"><span class="{{ r.badgeCls }}">{{ r.badge }}</span><span class="num">{{ r.num }}</span><span class="ttl">{{ r.title }}</span><span class="sp"></span><sc-if value="{{ r.hasJur }}" hint-placeholder-val="{{ false }}"><span class="jur">{{ r.jur }}</span></sc-if><span class="stars"><sc-for list="{{ r.stars }}" as="s" hint-placeholder-count="1"><svg width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"></path></svg></sc-for></span></div>
+    <div class="r2"><span class="pen">{{ r.penMain }}</span><sc-if value="{{ r.hasOr }}" hint-placeholder-val="{{ false }}"><span class="or">либо</span><span class="pen">{{ r.penAlt }}</span></sc-if></div>
+  </div>
+  <sc-if value="{{ r.canAdd }}" hint-placeholder-val="{{ false }}"><button class="{{ r.addCls }}" onClick="{{ r.add }}" title="{{ r.addTitle }}"><sc-if value="{{ r.added }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if><sc-if value="{{ r.notAdded }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg></sc-if></button></sc-if>
+</div></sc-for></div>
+          <div class="sec-t">Недавние</div>
+          <div class="list"><sc-for list="{{ recentRows }}" as="r" hint-placeholder-count="1"><div class="{{ r.cls }}">
+  <div class="row-main" onClick="{{ r.open }}">
+    <div class="r1"><span class="{{ r.badgeCls }}">{{ r.badge }}</span><span class="num">{{ r.num }}</span><span class="ttl">{{ r.title }}</span><span class="sp"></span><sc-if value="{{ r.hasJur }}" hint-placeholder-val="{{ false }}"><span class="jur">{{ r.jur }}</span></sc-if><span class="stars"><sc-for list="{{ r.stars }}" as="s" hint-placeholder-count="1"><svg width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"></path></svg></sc-for></span></div>
+    <div class="r2"><span class="pen">{{ r.penMain }}</span><sc-if value="{{ r.hasOr }}" hint-placeholder-val="{{ false }}"><span class="or">либо</span><span class="pen">{{ r.penAlt }}</span></sc-if></div>
+  </div>
+  <sc-if value="{{ r.canAdd }}" hint-placeholder-val="{{ false }}"><button class="{{ r.addCls }}" onClick="{{ r.add }}" title="{{ r.addTitle }}"><sc-if value="{{ r.added }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if><sc-if value="{{ r.notAdded }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg></sc-if></button></sc-if>
+</div></sc-for></div>
+        </sc-if>
+
+        <sc-if value="{{ showResults }}" hint-placeholder-val="{{ false }}">
+          <div class="meta"><span>{{ metaLeft }}</span><span>{{ metaRight }}</span></div>
+          <div class="list"><sc-for list="{{ resultRows }}" as="r" hint-placeholder-count="1"><div class="{{ r.cls }}">
+  <div class="row-main" onClick="{{ r.open }}">
+    <div class="r1"><span class="{{ r.badgeCls }}">{{ r.badge }}</span><span class="num">{{ r.num }}</span><span class="ttl">{{ r.title }}</span><span class="sp"></span><sc-if value="{{ r.hasJur }}" hint-placeholder-val="{{ false }}"><span class="jur">{{ r.jur }}</span></sc-if><span class="stars"><sc-for list="{{ r.stars }}" as="s" hint-placeholder-count="1"><svg width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"></path></svg></sc-for></span></div>
+    <div class="r2"><span class="pen">{{ r.penMain }}</span><sc-if value="{{ r.hasOr }}" hint-placeholder-val="{{ false }}"><span class="or">либо</span><span class="pen">{{ r.penAlt }}</span></sc-if></div>
+  </div>
+  <sc-if value="{{ r.canAdd }}" hint-placeholder-val="{{ false }}"><button class="{{ r.addCls }}" onClick="{{ r.add }}" title="{{ r.addTitle }}"><sc-if value="{{ r.added }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if><sc-if value="{{ r.notAdded }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg></sc-if></button></sc-if>
+</div></sc-for></div>
+          <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}"><div class="empty">{{ emptyText }}</div></sc-if>
+        </sc-if>
+      </div>
+      <div class="foot"><span><b>↑↓</b> выбор</span><span><b>Enter</b> в калькулятор</span><span><b>→</b> открыть</span><span><b>Esc</b> назад</span></div>
+
+      <div class="{{ scrimCls }}" onClick="{{ toggleDrawer }}"></div>
+      <div class="{{ drawerCls }}">
+        <div class="dr-head">
+          <span class="c-title">Все документы</span>
+          <span class="sp"></span>
+          <button class="icon-btn" onClick="{{ toggleDrawer }}" title="Закрыть"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+        </div>
+        <div class="dr-filter"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.6-3.6"></path></svg><input value="{{ drFilter }}" placeholder="Фильтр документов" onChange="{{ onDrFilter }}"></div>
+        <div class="tags"><sc-for list="{{ drTags }}" as="t" hint-placeholder-count="1"><button class="{{ t.cls }}" onClick="{{ t.pick }}">{{ t.name }}</button></sc-for></div>
+        <div class="dr-list">
+          <sc-for list="{{ drGroups }}" as="g" hint-placeholder-count="1">
+            <div class="dr-sec">{{ g.title }}</div>
+            <sc-for list="{{ g.docs }}" as="d" hint-placeholder-count="1">
+              <button class="{{ d.cls }}" onClick="{{ d.pick }}"><span class="{{ d.badgeCls }}">{{ d.badge }}</span><span class="dr-name">{{ d.name }}</span><span class="dr-count">{{ d.count }}</span></button>
+            </sc-for>
+          </sc-for>
+          <sc-if value="{{ drEmpty }}" hint-placeholder-val="{{ false }}"><div class="empty">Ничего не найдено</div></sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"screen":{"editor":"enum","options":["Первый запуск","Поиск","Статья","Калькулятор","Закреплено","Меню"],"default":"Первый запуск","section":"Прототип"},"$preview":{"width":1920,"height":1080}}'>
+// Prototype data. Real (from the Tverskoi forum): document list and article counts,
+// the text of УК ст. 65 and КоАП 8.6 ч. 1, calculator rules. Everything else is sample.
+const CATS = {
+  codes: 'Кодексы и Конституция',
+  fkz: 'Федеральные конституционные законы',
+  fz: 'Федеральные законы',
+  moscow: 'Законы Москвы',
+  charters: 'Уставы организаций',
+  rules: 'Правила проекта',
+};
+const TAGS = [['all', 'Все'], ['codes', 'Кодексы'], ['fkz', 'ФКЗ'], ['fz', 'ФЗ'], ['moscow', 'Москва'], ['charters', 'Уставы'], ['rules', 'Правила']];
+const DOC_LIST = [
+  ['const', 'Конституция', 'Конституция РО', 'codes', 117],
+  ['uk', 'УК', 'Уголовный кодекс', 'codes', 117],
+  ['koap', 'КоАП', 'Кодекс об административных правонарушениях', 'codes', 136],
+  ['pdd', 'ПДД', 'Правила дорожного движения (15-ФЗ)', 'codes', 116],
+  ['upk', 'УПК', 'Уголовно-процессуальный кодекс', 'codes', 165],
+  ['tk', 'ТК', 'Трудовой кодекс', 'codes', 40],
+  ['ethics', 'Этика', 'Кодекс этики и служебного поведения', 'codes', 27],
+  ['fkz1', '1-ФКЗ', 'О Правительстве', 'fkz', 46],
+  ['fkz2', '2-ФКЗ', 'О Государственной Думе', 'fkz', 35],
+  ['fkz3', '3-ФКЗ', 'О вводимых правовых режимах', 'fkz', 14],
+  ['fkz4', '4-ФКЗ', 'О судебной системе и судопроизводстве', 'fkz', 135],
+  ['fz1', '1-ФЗ', 'О государственной службе', 'fz', 42],
+  ['fz2', '2-ФЗ', 'Об обороне', 'fz', 23],
+  ['fz3', '3-ФЗ', 'О прокуратуре', 'fz', 37],
+  ['fz4', '4-ФЗ', 'О Следственном комитете', 'fz', 20],
+  ['fz5', '5-ФЗ', 'О ФСБ', 'fz', 26],
+  ['fz6', '6-ФЗ', 'О полиции', 'fz', 32],
+  ['fz7', '7-ФЗ', 'О государственной охране', 'fz', 31],
+  ['fz8', '8-ФЗ', 'О регулировании оружия', 'fz', 40],
+  ['fz9', '9-ФЗ', 'О политических партиях', 'fz', 20],
+  ['fz10', '10-ФЗ', 'Об особом правовом статусе должностных лиц', 'fz', 4],
+  ['fz11', '11-ФЗ', 'О Министерстве юстиции', 'fz', 18],
+  ['fz12', '12-ФЗ', 'О государственной тайне', 'fz', 10],
+  ['fz13', '13-ФЗ', 'Об адвокатуре', 'fz', 65],
+  ['fz14', '14-ФЗ', 'Об оперативно-розыскной деятельности', 'fz', 15],
+  ['fz16', '16-ФЗ', 'О собраниях, митингах и шествиях', 'fz', 13],
+  ['msk1', 'Москва', 'Устав города Москвы', 'moscow', 21],
+  ['msk2', 'Москва', 'О здравоохранении', 'moscow', 17],
+  ['msk3', 'Москва', 'О «Вести Москвы»', 'moscow', 26],
+  ['msk4', 'Москва', 'О статусе гос. собственности и территорий', 'moscow', 51],
+  ['ch-mvd', 'Устав', 'Внутренний устав МВД', 'charters', null],
+  ['ch-gibdd', 'Устав', 'Устав ГИБДД', 'charters', null],
+  ['ch-fso', 'Регламент', 'Внутренний регламент сотрудников ФСО', 'charters', null],
+  ['ch-army', 'Устав', 'Устав Вооружённых сил', 'charters', null],
+  ['ch-army2', 'Устав', 'Дисциплинарный устав', 'charters', null],
+  ['ch-army3', 'Устав', 'Устав караульной службы', 'charters', null],
+  ['ch-sk', 'Положения', 'Положения Следственного комитета', 'charters', null],
+  ['ch-hosp', 'Устав', 'Устав больницы', 'charters', null],
+  ['ch-news', 'Устав', 'Устав «Вести Москвы»', 'charters', null],
+  ['r-main', 'Правила', 'Основные правила проекта', 'rules', null],
+  ['r-gov', 'Правила', 'Правила государственных организаций', 'rules', null],
+  ['r-crime', 'Правила', 'Правила криминальных организаций', 'rules', null],
+];
+const DOCS = {};
+DOC_LIST.forEach(([id, badge, name, cat, count]) => { DOCS[id] = { id, badge, name, cat, count }; });
+
+const ORGS = [
+  ['mvd', 'МВД', ['fz6', 'upk', 'ch-mvd']],
+  ['gibdd', 'ГИБДД', ['pdd', 'koap', 'ch-gibdd', 'fz6']],
+  ['fsb', 'ФСБ', ['fz5', 'fz14', 'fz12', 'upk']],
+  ['fso', 'ФСО', ['fz7', 'ch-fso']],
+  ['army', 'Армия / Росгвардия', ['fz2', 'ch-army', 'ch-army2', 'ch-army3']],
+  ['sk', 'Следственный комитет', ['fz4', 'upk', 'ch-sk']],
+  ['prok', 'Прокуратура', ['fz3', 'upk']],
+  ['court', 'Суд', ['fkz4', 'upk']],
+  ['gov', 'Правительство', ['fkz1', 'fz1', 'ethics']],
+  ['hosp', 'Больница', ['msk2', 'ch-hosp']],
+  ['news', 'Вести Москвы', ['msk3', 'ch-news']],
+  ['opg', 'ОПГ', ['r-crime']],
+  ['none', 'Без организации', []],
+];
+const ORG = {};
+ORGS.forEach(([id, name, docs]) => { ORG[id] = { id, name, docs }; });
+
+const SERVERS = [['tver', 'Тверской', ''], ['arbat', 'Арбатский', 'скоро'], ['kutuz', 'Кутузовский', 'скоро · для новичков']];
+
+const ARTS = [
+  { id: 'uk-65', doc: 'uk', num: '65', title: 'Кража', jur: 'Р/Ф', stars: 3, term: 30, fine: 50000, cat: 'medium', chapter: 'Глава 14. Преступления против собственности', updated: '06.09.2026', syn: ['воровство', 'украл', 'хищение'],
+    parts: [{ n: '', t: 'Кража, то есть тайное хищение чужого имущества, — наказывается штрафом в размере до 50.000 рублей, либо лишением свободы на срок 30 месяцев.' }],
+    note: 'Хищение имущества стоимостью до 5 000 рублей квалифицируется как мелкое хищение по ст. 7.27 КоАП.' },
+  { id: 'uk-65.1', doc: 'uk', num: '65.1', title: 'Кража в крупном размере', jur: 'Р/Ф', stars: 4, term: 40, cat: 'grave', chapter: 'Глава 14. Преступления против собственности', updated: '06.09.2026', syn: ['хищение'],
+    parts: [{ n: '', t: 'Кража, совершённая в крупном размере, — наказывается лишением свободы на срок 40 месяцев.' }],
+    note: 'Крупным размером признаётся стоимость имущества свыше 500 000 рублей.' },
+  { id: 'uk-70', doc: 'uk', num: '70', title: 'Грабёж', jur: 'Р/Ф', stars: 4, term: 40, cat: 'grave', chapter: 'Глава 14. Преступления против собственности', updated: '06.09.2026', syn: ['хищение', 'отобрал'],
+    parts: [{ n: '', t: 'Грабёж, то есть открытое хищение чужого имущества, — наказывается лишением свободы на срок 40 месяцев.' }] },
+  { id: 'uk-88', doc: 'uk', num: '88', title: 'Незаконный оборот оружия', jur: 'Ф', stars: 4, term: 40, cat: 'grave', chapter: 'Глава 17. Преступления против общественной безопасности', updated: '06.09.2026', syn: ['оружие', 'ствол', 'пушка'],
+    parts: [{ n: '', t: 'Незаконные приобретение, передача, сбыт, хранение, перевозка или ношение оружия — наказываются лишением свободы на срок 40 месяцев.' }] },
+  { id: 'uk-96', doc: 'uk', num: '96', title: 'Хулиганство', jur: 'Р', stars: 2, term: 20, fine: 30000, cat: 'small', chapter: 'Глава 17. Преступления против общественной безопасности', updated: '06.09.2026', syn: ['хулиган', 'порядок'],
+    parts: [{ n: '', t: 'Хулиганство, то есть грубое нарушение общественного порядка, — наказывается штрафом в размере до 30.000 рублей, либо лишением свободы на срок 20 месяцев.' }] },
+  { id: 'uk-104', doc: 'uk', num: '104', title: 'Оскорбление представителя власти', jur: 'Р', stars: 1, term: 10, fine: 20000, cat: 'small', chapter: 'Глава 20. Преступления против порядка управления', updated: '06.09.2026', syn: ['оскорбил', 'мат', 'сотрудник'],
+    parts: [{ n: '', t: 'Публичное оскорбление представителя власти при исполнении им своих должностных обязанностей — наказывается штрафом в размере до 20.000 рублей, либо лишением свободы на срок 10 месяцев.' }] },
+  { id: 'koap-8.6-1', doc: 'koap', num: '8.6', part: 'ч. 1', title: 'Превышение скорости более 15 км/ч', max: 10000, maxOff: 20000, chapter: 'Глава 8. Правонарушения в области дорожного движения', updated: '27.08.2026', syn: ['скорость', 'превышение', 'гонки'],
+    parts: [{ n: '1.', t: 'Превышение установленной скорости движения транспортного средства на величину более 15 км/ч - влечет наложение административного штрафа в размере до 10.000 рублей.' }] },
+  { id: 'koap-8.6-2', doc: 'koap', num: '8.6', part: 'ч. 2', title: 'Превышение скорости более 40 км/ч', max: 25000, maxOff: 40000, chapter: 'Глава 8. Правонарушения в области дорожного движения', updated: '27.08.2026', syn: ['скорость', 'превышение', 'гонки'],
+    parts: [{ n: '2.', t: 'Превышение установленной скорости движения транспортного средства на величину более 40 км/ч - влечет наложение административного штрафа в размере до 25.000 рублей.' }] },
+  { id: 'koap-7.27', doc: 'koap', num: '7.27', title: 'Мелкое хищение', max: 5000, maxOff: 10000, chapter: 'Глава 7. Правонарушения в области охраны собственности', updated: '27.08.2026', syn: ['кража', 'хищение', 'украл'],
+    parts: [{ n: '1.', t: 'Мелкое хищение чужого имущества стоимостью до 5 000 рублей - влечет наложение административного штрафа в размере до 5.000 рублей.' }] },
+  { id: 'koap-8.12', doc: 'koap', num: '8.12', title: 'Тонированные стёкла', max: 5000, maxOff: 10000, chapter: 'Глава 8. Правонарушения в области дорожного движения', updated: '27.08.2026', syn: ['тонировка', 'тонированные', 'стекла'],
+    parts: [{ n: '1.', t: 'Управление транспортным средством, на котором установлены стёкла со светопропускаемостью ниже допустимой, - влечет наложение административного штрафа в размере до 5.000 рублей.' }] },
+  { id: 'koap-20.1', doc: 'koap', num: '20.1', title: 'Мелкое хулиганство', max: 5000, maxOff: 5000, arrest: 5, chapter: 'Глава 20. Правонарушения против общественного порядка', updated: '27.08.2026', syn: ['хулиган', 'порядок'],
+    parts: [{ n: '1.', t: 'Мелкое хулиганство - влечет наложение административного штрафа в размере до 5.000 рублей или административный арест на срок до 5 суток.' }] },
+  { id: 'pdd-10.1', doc: 'pdd', num: '10.1', title: 'Скорость движения', chapter: 'X. Скорость движения', updated: '30.08.2026', syn: ['скорость'],
+    parts: [{ n: '', t: 'Водитель должен вести транспортное средство со скоростью, не превышающей установленного ограничения, учитывая интенсивность движения и дорожные условия.' }] },
+  { id: 'fz6-13', doc: 'fz6', num: '13', title: 'Права полиции', chapter: 'Глава 3. Обязанности и права полиции', updated: '26.08.2026', syn: ['полиция', 'документы'],
+    parts: [
+      { n: '1.', t: 'Полиции для выполнения возложенных на неё обязанностей предоставляется право требовать от граждан прекращения противоправных действий.' },
+      { n: '2.', t: 'Проверять документы, удостоверяющие личность, если имеются основания подозревать граждан в совершении правонарушения.' },
+    ] },
+];
+const ART = {};
+ARTS.forEach((a, i) => { a.order = i; ART[a.id] = a; });
+
+const START = { 'Первый запуск': 'onboarding', 'Поиск': 'search', 'Статья': 'article', 'Калькулятор': 'calculator', 'Закреплено': 'pinned', 'Меню': 'menu' };
+const CALC0 = [{ id: 'uk-88', mod: 'none' }, { id: 'uk-65', mod: 'none' }, { id: 'koap-8.6-1', amount: '5000' }];
+const ALIAS = { 'ук': 'uk', 'коап': 'koap', 'пдд': 'pdd', 'упк': 'upk', 'тк': 'tk' };
+const MOD = { none: 1, att: 0.75, prep: 0.5 };
+const BAIL = { small: 50000, medium: 75000 };
+
+const fmt = (n) => Math.round(n).toLocaleString('ru-RU') + ' ₽';
+const norm = (s) => s.toLowerCase().replace(/ё/g, 'е');
+const stem = (w) => (w.length > 5 ? w.slice(0, -2) : w.length > 3 ? w.slice(0, -1) : w);
+const nArr = (n) => Array.from({ length: Math.max(0, n) }, (_, i) => i);
+const label = (a) => 'ст. ' + a.num + (a.part ? ' ' + a.part : '');
+const isPenal = (a) => a.doc === 'uk' || a.doc === 'koap';
+const numKey = (a) => a.num.split('.').map(Number);
+const byNum = (x, y) => { const p = numKey(x), q = numKey(y); for (let i = 0; i < Math.max(p.length, q.length); i++) { const d = (p[i] || 0) - (q[i] || 0); if (d) return d; } return (x.part || '').localeCompare(y.part || ''); };
+const money = (v) => { const n = parseInt(String(v).replace(/\D/g, ''), 10); return isNaN(n) ? 0 : n; };
+
+function initial(start) {
+  const base = {
+    screen: 'app', step: 1, settings: false, server: 'tver', org: 'mvd', hotkey: ['Alt', 'X'], listening: false,
+    overlay: true, query: '', sel: 0, article: null, scope: null, drawer: false, drTag: 'all', drFilter: '',
+    calc: [], mode: 'kpz', subject: 'citizen', fine: '', pinned: null,
+    favs: ['uk-65', 'koap-8.6-1', 'uk-104'], recent: ['uk-88', 'koap-7.27', 'fz6-13'], copied: false,
+  };
+  switch (start) {
+    case 'onboarding': return { ...base, screen: 'onboarding' };
+    case 'article': return { ...base, query: 'кража', article: 'uk-65' };
+    case 'calculator': return { ...base, query: '65', calc: CALC0.map((c) => ({ ...c })) };
+    case 'pinned': return { ...base, overlay: false, query: '65', calc: CALC0.map((c) => ({ ...c })), pinned: { kind: 'calc' } };
+    case 'menu': return { ...base, drawer: true };
+    default: return { ...base, query: 'кража' };
+  }
+}
+
+function search(q, scope, org) {
+  const toks = norm(q).trim().split(/\s+/).filter(Boolean);
+  if (!toks.length && !scope) return [];
+  let docF = scope, part = null, partNext = false;
+  const nums = [], words = [];
+  for (const t of toks) {
+    if (ALIAS[t] && !docF) { docF = ALIAS[t]; continue; }
+    if (t === 'ч' || t === 'ч.') { partNext = true; continue; }
+    if (t === 'ст' || t === 'ст.') continue;
+    if (partNext && /^\d+$/.test(t)) { part = 'ч. ' + t; partNext = false; continue; }
+    if (/^\d+(\.\d+)*$/.test(t)) nums.push(t); else words.push(stem(t));
+  }
+  const boost = (ORG[org] || ORG.none).docs;
+  const out = [];
+  for (const a of ARTS) {
+    if (docF && a.doc !== docF) continue;
+    if (part && a.part !== part) continue;
+    let score = 0, ok = true;
+    for (const n of nums) {
+      if (a.num === n) score += 100; else if (a.num.startsWith(n)) score += 40; else { ok = false; break; }
+    }
+    if (!ok) continue;
+    const title = norm(a.title), syn = norm((a.syn || []).join(' ')), text = norm(a.parts.map((p) => p.t).join(' '));
+    for (const w of words) {
+      if (title.includes(w)) score += 30; else if (syn.includes(w)) score += 20; else if (text.includes(w)) score += 10; else { ok = false; break; }
+    }
+    if (!ok) continue;
+    if (boost.includes(a.doc)) score += 5;
+    if (a.doc === 'uk' || a.doc === 'koap') score += 3;
+    out.push({ a, score });
+  }
+  out.sort((x, y) => y.score - x.score || x.a.order - y.a.order);
+  return out.map((x) => x.a);
+}
+
+function penOf(a) {
+  if (a.doc === 'uk') return a.fine ? { main: 'штраф до ' + fmt(a.fine), alt: a.term + ' мес' } : { main: a.term + ' мес' };
+  if (a.doc === 'koap') return { main: 'штраф до ' + fmt(a.max), alt: a.arrest ? 'арест до ' + a.arrest + ' сут' : null };
+  return { main: 'без наказания' };
+}
+
+function chargeOf(items) {
+  const groups = [];
+  const uk = items.filter((x) => x.a.doc === 'uk').map((x) => x.a).sort(byNum);
+  const koap = items.filter((x) => x.a.doc === 'koap').map((x) => x.a).sort(byNum);
+  if (uk.length) groups.push('ст. ' + uk.map((a) => a.num).join(', ') + ' УК');
+  if (koap.length) groups.push('ст. ' + koap.map((a) => a.num + (a.part ? ' ' + a.part : '')).join(', ') + ' КоАП');
+  return groups.join('; ');
+}
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = initial(START[props.screen] || 'search');
+  }
+  componentDidUpdate(prev) {
+    if (prev.screen !== this.props.screen) this.setState(initial(START[this.props.screen] || 'search'));
+  }
+  componentWillUnmount() { clearTimeout(this._t); }
+
+  inCalc(id) { return this.state.calc.some((c) => c.id === id); }
+  toggleCalc(id) {
+    const calc = this.inCalc(id) ? this.state.calc.filter((c) => c.id !== id) : [...this.state.calc, { id, mod: 'none' }];
+    this.setState({ calc, pinned: this.state.pinned && this.state.pinned.kind === 'calc' && !calc.length ? null : this.state.pinned });
+  }
+  updateItem(id, patch) { this.setState({ calc: this.state.calc.map((c) => (c.id === id ? { ...c, ...patch } : c)) }); }
+  openArticle(id) {
+    const recent = [id, ...this.state.recent.filter((r) => r !== id)].slice(0, 20);
+    this.setState({ article: id, recent, drawer: false });
+  }
+  toggleFav(id) {
+    const favs = this.state.favs.includes(id) ? this.state.favs.filter((f) => f !== id) : [...this.state.favs, id];
+    this.setState({ favs });
+  }
+  copyCharge() {
+    try { if (navigator.clipboard) navigator.clipboard.writeText(this._charge || '').catch(() => {}); } catch (e) { /* sandboxed */ }
+    this.setState({ copied: true });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ copied: false }), 1500);
+  }
+
+  rowVM(a, selected) {
+    const p = penOf(a), added = this.inCalc(a.id), d = DOCS[a.doc];
+    return {
+      cls: selected ? 'row sel' : 'row', badge: d.badge, badgeCls: 'badge b-' + d.cat, num: label(a), title: a.title,
+      hasJur: !!a.jur, jur: a.jur || '', stars: nArr(a.stars || 0), penMain: p.main, hasOr: !!p.alt, penAlt: p.alt || '',
+      canAdd: isPenal(a), added, notAdded: !added, addCls: added ? 'add on' : 'add', addTitle: added ? 'Убрать из калькулятора' : 'Добавить в калькулятор',
+      open: () => this.openArticle(a.id), add: () => this.toggleCalc(a.id),
+    };
+  }
+
+  calcVM() {
+    const s = this.state;
+    const items = s.calc.map((c) => ({ ...c, a: ART[c.id] }));
+    const uk = items.filter((x) => x.a.doc === 'uk').map((x) => {
+      const m = MOD[x.mod || 'none'];
+      return { ...x, term: Math.round(x.a.term * m), fine: x.a.fine ? Math.round(x.a.fine * m) : null };
+    });
+    const koap = items.filter((x) => x.a.doc === 'koap');
+    const charge = chargeOf(items);
+    this._charge = charge;
+
+    const noFine = uk.filter((x) => !x.fine);
+    const fineDisabled = noFine.length > 0;
+    const mode = fineDisabled ? 'kpz' : s.mode;
+    const main = uk.filter((x) => x.a.num !== '104');
+    const add104 = uk.find((x) => x.a.num === '104');
+    const byTerm = [...main].sort((x, y) => y.term - x.term);
+    const byFine = [...main].sort((x, y) => (y.fine || 0) - (x.fine || 0));
+    const strict = (mode === 'kpz' ? byTerm[0] : byFine[0]) || add104;
+    const absorbed = main.filter((x) => x !== strict);
+    const stacked = add104 && strict && strict !== add104 ? add104 : null;
+
+    let term = strict ? strict.term + (stacked ? stacked.term : 0) : 0;
+    const capped = term > 100;
+    if (capped) term = 100;
+    const fineLimit = strict ? (strict.fine || 0) + (stacked ? stacked.fine || 0 : 0) : 0;
+    const fineAmount = s.fine === '' ? String(fineLimit) : s.fine;
+    const fineOver = money(fineAmount) > fineLimit;
+
+    const why = [];
+    if (strict && absorbed.length) why.push(label(strict.a) + ' поглощает ' + absorbed.map((x) => label(x.a)).join(', ') + ' — УК ст. 41 ч. 2');
+    if (stacked) why.push('ст. 104 добавлена сверху один раз — УК ст. 41 ч. 4');
+    uk.filter((x) => x.mod && x.mod !== 'none').forEach((x) => why.push(label(x.a) + ': ' + (x.mod === 'att' ? 'покушение — ¾ наказания' : 'приготовление — ½ наказания') + ' — УК ст. 45'));
+    if (capped && mode === 'kpz') why.push('Срок ограничен 100 месяцами — УК ст. 39 ч. 2');
+
+    const fOnly = uk.filter((x) => x.a.jur === 'Ф');
+    const bail = mode === 'kpz' && strict ? BAIL[strict.a.cat] : null;
+    const subjOff = s.subject === 'official';
+    const koapVM = koap.map((x) => {
+      const max = subjOff ? x.a.maxOff : x.a.max;
+      const amount = x.amount == null ? String(max) : x.amount;
+      const over = money(amount) > max;
+      return {
+        num: label(x.a), title: x.a.title, amount, limit: over ? 'Больше предела: до ' + fmt(max) : 'до ' + fmt(max),
+        limitCls: over ? 'lim bad' : 'lim', onAmount: (e) => this.updateItem(x.id, { amount: e.target.value.replace(/[^\d ]/g, '') }),
+        remove: () => this.toggleCalc(x.id),
+      };
+    });
+    const koapTotal = koapVM.reduce((sum, k) => sum + money(k.amount), 0);
+
+    return {
+      hasUk: uk.length > 0, hasKoap: koap.length > 0, charge,
+      kpzCls: mode === 'kpz' ? 'on' : '', fineCls: mode === 'fine' ? 'on' : '', fineDisabled,
+      fineHint: fineDisabled ? 'Штраф недоступен: у ' + noFine.map((x) => label(x.a)).join(', ') + ' нет штрафа' : '',
+      setKpz: () => this.setState({ mode: 'kpz' }), setFine: () => this.setState({ mode: 'fine', fine: '' }),
+      isKpz: mode === 'kpz', isFine: mode === 'fine',
+      uk: uk.map((x) => {
+        const isAbs = absorbed.includes(x);
+        return {
+          cls: isAbs ? 'ci absorbed' : 'ci', num: label(x.a), title: x.a.title,
+          val: mode === 'kpz' ? x.term + ' мес' : x.fine ? 'до ' + fmt(x.fine) : '—',
+          attCls: x.mod === 'att' ? 'mod on' : 'mod', prepCls: x.mod === 'prep' ? 'mod on' : 'mod',
+          att: () => this.updateItem(x.id, { mod: x.mod === 'att' ? 'none' : 'att' }),
+          prep: () => this.updateItem(x.id, { mod: x.mod === 'prep' ? 'none' : 'prep' }),
+          hasJur: !!x.a.jur, jur: x.a.jur, jurCls: x.a.jur === 'Ф' ? 'jur f' : 'jur',
+          remove: () => this.toggleCalc(x.id),
+        };
+      }),
+      term: term + ' мес', termNote: capped ? 'потолок по УК ст. 39 ч. 2' : 'итог по УК', stars: nArr(Math.round(term / 10)),
+      fineAmount, onFine: (e) => this.setState({ fine: e.target.value.replace(/[^\d ]/g, '') }),
+      fineLimit: fineOver ? 'Больше предела: до ' + fmt(fineLimit) : 'до ' + fmt(fineLimit), fineLimitCls: fineOver ? 'lim bad' : 'lim',
+      fineValue: fmt(money(fineAmount)),
+      why, hasBail: !!strict && mode === 'kpz', bail: bail ? fmt(bail) + ' · УК ст. 50.1' : 'не предусмотрен',
+      hasWarn: fOnly.length > 0, warn: fOnly.map((x) => label(x.a)).join(', ') + ' — федеральная подследственность. Дело ФСБ.',
+      citCls: subjOff ? '' : 'on', offCls: subjOff ? 'on' : '',
+      setCit: () => this.setState({ subject: 'citizen' }), setOff: () => this.setState({ subject: 'official' }),
+      koap: koapVM, koapTotal: fmt(koapTotal),
+    };
+  }
+
+  articleVM(a) {
+    const d = DOCS[a.doc], added = this.inCalc(a.id), fav = this.state.favs.includes(a.id);
+    const pens = [];
+    if (a.doc === 'uk') {
+      if (a.fine) pens.push({ isCell: true, isSep: false, label: 'Штраф', value: 'до ' + fmt(a.fine) }, { isCell: false, isSep: true });
+      pens.push({ isCell: true, isSep: false, label: 'Лишение свободы', value: a.term + ' мес' });
+    } else if (a.doc === 'koap') {
+      pens.push({ isCell: true, isSep: false, label: 'Штраф, гражданин', value: 'до ' + fmt(a.max) });
+      if (a.maxOff !== a.max) pens.push({ isCell: true, isSep: false, label: 'Должностное лицо', value: 'до ' + fmt(a.maxOff) });
+      if (a.arrest) pens.push({ isCell: false, isSep: true }, { isCell: true, isSep: false, label: 'Арест', value: 'до ' + a.arrest + ' сут' });
+    }
+    const jurLong = a.jur === 'Ф' ? 'Ф · федеральная' : a.jur === 'Р' ? 'Р · региональная' : a.jur === 'Р/Ф' ? 'Р/Ф · любая подследственность' : '';
+    return {
+      badge: d.badge, badgeCls: 'badge b-' + d.cat, docName: d.name, chapter: a.chapter,
+      heading: (a.doc === 'pdd' ? 'Пункт ' : 'Статья ') + a.num + (a.part ? ', ' + a.part : '') + '. ' + a.title,
+      hasTags: !!a.jur || !!a.stars, hasJur: !!a.jur, jurLong, jurCls: a.jur === 'Ф' ? 'jur f' : 'jur',
+      hasStars: !!a.stars, stars: nArr(a.stars || 0), starsNote: a.stars ? a.stars + ' ★ = ' + a.stars * 10 + ' мес' : '',
+      hasPen: pens.length > 0, pens, parts: a.parts.map((p) => ({ ...p, hasN: !!p.n })),
+      hasNote: !!a.note, note: a.note || '', updated: a.updated,
+      canAdd: isPenal(a), addCls: added ? 'btn grow' : 'btn pri grow', addLabel: added ? 'Убрать из калькулятора' : 'Добавить в калькулятор',
+      add: () => this.toggleCalc(a.id), pin: () => this.setState({ pinned: { kind: 'article', id: a.id }, overlay: false, drawer: false }),
+      favCls: fav ? 'btn icon fav on' : 'btn icon fav', fav: () => this.toggleFav(a.id),
+    };
+  }
+
+  drawerVM() {
+    const s = this.state;
+    const f = norm(s.drFilter.trim());
+    const match = (d) => (s.drTag === 'all' || d.cat === s.drTag) && (!f || norm(d.name + ' ' + d.badge).includes(f));
+    const docRow = (d) => ({
+      cls: s.scope === d.id ? 'dr-row on' : 'dr-row', badge: d.badge, badgeCls: 'badge b-' + d.cat, name: d.name,
+      count: d.count ? String(d.count) : '', pick: () => this.setState({ scope: d.id, query: '', sel: 0, drawer: false, article: null }),
+    });
+    const groups = [];
+    const org = ORG[s.org];
+    if (org && org.docs.length && s.drTag === 'all' && !f) groups.push({ title: org.name + ' · ваша организация', docs: org.docs.map((id) => docRow(DOCS[id])) });
+    Object.keys(CATS).forEach((cat) => {
+      const docs = DOC_LIST.map(([id]) => DOCS[id]).filter((d) => d.cat === cat && match(d));
+      if (docs.length) groups.push({ title: CATS[cat], docs: docs.map(docRow) });
+    });
+    return {
+      groups, empty: groups.length === 0,
+      tags: TAGS.map(([id, name]) => ({ name, cls: s.drTag === id ? 'tag on' : 'tag', pick: () => this.setState({ drTag: id }) })),
+    };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const org = ORG[s.org] || ORG.none;
+    const hotkeyText = s.hotkey.join(' + ');
+
+    // Onboarding
+    const obNext = () => {
+      if (s.step < 4) this.setState({ step: s.step + 1, listening: false });
+      else this.setState({ screen: 'app', overlay: true, step: 1, settings: false });
+    };
+    const onHotkey = (e) => {
+      if (!s.listening) return;
+      e.preventDefault();
+      if (['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) return;
+      const keys = [];
+      if (e.ctrlKey) keys.push('Ctrl');
+      if (e.altKey) keys.push('Alt');
+      if (e.shiftKey) keys.push('Shift');
+      keys.push(e.key === ' ' ? 'Space' : e.key.length === 1 ? e.key.toUpperCase() : e.key);
+      this.setState({ hotkey: keys, listening: false });
+    };
+
+    // Search / results
+    const inHome = !s.query.trim() && !s.scope;
+    const results = inHome ? [] : search(s.query, s.scope, s.org);
+    const homeList = inHome ? [...s.favs, ...s.recent.filter((r) => !s.favs.includes(r))].map((id) => ART[id]) : [];
+    const nav = inHome ? homeList : results;
+    this._nav = nav;
+    const sel = Math.min(s.sel, Math.max(0, nav.length - 1));
+    const favRows = s.favs.map((id, i) => this.rowVM(ART[id], inHome && i === sel && !s.article));
+    const recentOnly = s.recent.filter((r) => !s.favs.includes(r));
+    const recentRows = recentOnly.map((id, i) => this.rowVM(ART[id], inHome && s.favs.length + i === sel && !s.article));
+    const resultRows = results.map((a, i) => this.rowVM(a, i === sel && !s.article));
+    const scopeDoc = s.scope ? DOCS[s.scope] : null;
+
+    const onKey = (e) => {
+      const cur = this._nav[Math.min(this.state.sel, this._nav.length - 1)];
+      if (e.key === 'ArrowDown') { e.preventDefault(); this.setState({ sel: Math.min(this.state.sel + 1, this._nav.length - 1) }); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); this.setState({ sel: Math.max(this.state.sel - 1, 0) }); }
+      else if (e.key === 'Enter') {
+        e.preventDefault();
+        const a = this.state.article ? ART[this.state.article] : cur;
+        if (a) { if (isPenal(a)) this.toggleCalc(a.id); else this.openArticle(a.id); }
+      } else if (e.key === 'ArrowRight' && cur && !this.state.article && e.target.selectionStart === e.target.value.length) { e.preventDefault(); this.openArticle(cur.id); }
+      else if (e.key === 'Escape') {
+        e.preventDefault();
+        if (this.state.drawer) this.setState({ drawer: false });
+        else if (this.state.article) this.setState({ article: null });
+        else if (this.state.query || this.state.scope) this.setState({ query: '', scope: null, sel: 0 });
+        else this.setState({ overlay: false });
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'с') && e.target.selectionStart === e.target.selectionEnd && this.state.calc.length) {
+        e.preventDefault(); this.copyCharge();
+      }
+    };
+
+    const c = this.calcVM();
+    const art = s.article ? this.articleVM(ART[s.article]) : null;
+    const dr = this.drawerVM();
+
+    // Pinned card
+    const pinned = s.pinned && (s.pinned.kind === 'article' || s.calc.length) ? s.pinned : null;
+    let pin = { isCalc: false, isArticle: false };
+    if (pinned && pinned.kind === 'calc') {
+      pin = { isCalc: true, isArticle: false, term: c.isKpz ? c.term : c.fineValue, stars: c.isKpz ? c.stars : [], charge: c.charge,
+        hasKoap: c.hasKoap, koapTotal: c.koapTotal, hasWarn: c.hasWarn, warn: c.warn };
+    } else if (pinned) {
+      const a = ART[pinned.id], p = penOf(a);
+      pin = { isCalc: false, isArticle: true, heading: DOCS[a.doc].badge + ' ' + label(a) + '. ' + a.title,
+        pen: p.alt ? p.main + ' либо ' + p.alt : p.main, text: a.parts.map((x) => x.t).join(' ') };
+    }
+
+    return {
+      hotkeyText,
+      isOnboarding: s.screen === 'onboarding', isApp: s.screen === 'app',
+      obTitle: s.settings ? 'Настройки' : 'РО Хелпер', step: s.step,
+      progress: [1, 2, 3, 4].map((n) => ({ cls: n <= s.step ? 'on' : '' })),
+      step1: s.step === 1, step2: s.step === 2, step3: s.step === 3, step4: s.step === 4,
+      servers: SERVERS.map(([id, name, note]) => ({ name, note, disabled: !!note, cls: s.server === id ? 'opt on' : 'opt', pick: () => this.setState({ server: id }) })),
+      orgs: ORGS.map(([id, name]) => ({ name, cls: s.org === id ? 'org on' : 'org', pick: () => this.setState({ org: id }) })),
+      hkCls: s.listening ? 'hk listen' : 'hk', listening: s.listening, notListening: !s.listening, hotkey: s.hotkey,
+      listen: () => this.setState({ listening: true }), onHotkey, hkWarn: s.hotkey.length === 1,
+      summary: 'Тверской · ' + org.name + ' · ' + hotkeyText + '. Всё это можно поменять в настройках.',
+      canBack: s.step > 1, back: () => this.setState({ step: s.step - 1, listening: false }),
+      next: obNext, nextLabel: s.step < 4 ? 'Далее' : s.settings ? 'Сохранить' : 'Готово',
+
+      onGame: () => { if (s.screen === 'app') this.setState({ overlay: !s.overlay, drawer: false }); },
+      overlayOn: s.overlay,
+      ovCls: s.overlay ? 'ov glass' : 'ov glass hidden',
+      calcCls: s.overlay && s.calc.length ? 'calc glass' : 'calc glass hidden',
+      calcCount: String(s.calc.length),
+      menuCls: s.drawer ? 'icon-btn on' : 'icon-btn',
+      toggleDrawer: () => this.setState({ drawer: !s.drawer }),
+      openSettings: () => this.setState({ screen: 'onboarding', settings: true, step: 1 }),
+      hideOverlay: () => this.setState({ overlay: false, drawer: false }),
+      chip: 'Тверской · ' + (s.org === 'none' ? 'без организации' : org.name),
+      hasScope: !!scopeDoc, scopeBadge: scopeDoc ? scopeDoc.badge : '', clearScope: () => this.setState({ scope: null, sel: 0 }),
+      query: s.query, placeholder: scopeDoc ? 'Поиск: ' + scopeDoc.name : 'Номер или слова: 65, коап 8.6, кража',
+      onQuery: (e) => this.setState({ query: e.target.value, sel: 0, article: null }), onKey,
+
+      showArticle: !!art, showHome: !art && inHome, showResults: !art && !inHome, art: art || {},
+      backLabel: inHome ? 'Избранное и недавние' : 'Результаты', closeArticle: () => this.setState({ article: null }),
+      favRows, recentRows, resultRows,
+      metaLeft: scopeDoc ? scopeDoc.name : results.length + ' ' + (results.length === 1 ? 'результат' : results.length > 1 && results.length < 5 ? 'результата' : 'результатов'),
+      metaRight: scopeDoc ? (scopeDoc.count ? scopeDoc.count + ' статей' : '') : 'все документы',
+      noResults: results.length === 0,
+      emptyText: scopeDoc ? 'В прототипе статьи этого документа не заполнены' : 'Ничего не найдено',
+
+      c, copy: () => this.copyCharge(), copyLabel: s.copied ? 'Скопировано' : 'Скопировать',
+      clearCalc: () => this.setState({ calc: [], pinned: s.pinned && s.pinned.kind === 'calc' ? null : s.pinned }),
+      pinCalc: () => this.setState({ pinned: { kind: 'calc' }, overlay: false, drawer: false }),
+
+      hasPin: !!pinned, pin, pinCls: s.overlay ? 'pin live' : 'pin', unpin: () => this.setState({ pinned: null }),
+
+      scrimCls: s.drawer ? 'scrim on' : 'scrim', drawerCls: s.drawer ? 'drawer on' : 'drawer',
+      drFilter: s.drFilter, onDrFilter: (e) => this.setState({ drFilter: e.target.value }),
+      drTags: dr.tags, drGroups: dr.groups, drEmpty: dr.empty,
+    };
+  }
+}
+</script>
+</body>
+</html>

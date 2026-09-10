@@ -1,0 +1,263 @@
+<div class="scr">
+  <div class="game" onClick="{{ onGame }}">
+    %SKYLINE%
+    <div class="minimap"></div>
+  </div>
+  <div class="proto-hint">Прототип · клик по пустому месту игры = горячая клавиша {{ hotkeyText }}</div>
+
+  <sc-if value="{{ isOnboarding }}">
+    <div class="ob-scrim"></div>
+    <div class="ob glass">
+      <div class="ob-head">
+        <span class="brand">{{ obTitle }}</span>
+        <span class="muted">Шаг {{ step }} из 4</span>
+      </div>
+      <div class="ob-prog"><sc-for list="{{ progress }}" as="p"><span class="{{ p.cls }}"></span></sc-for></div>
+
+      <sc-if value="{{ step1 }}">
+        <div class="ob-title">Выберите сервер</div>
+        <div class="ob-sub">Законы и правила берутся из законодательной базы выбранного сервера.</div>
+        <div class="opts">
+          <sc-for list="{{ servers }}" as="s">
+            <button class="{{ s.cls }}" onClick="{{ s.pick }}" disabled="{{ s.disabled }}">
+              <span class="opt-name">{{ s.name }}</span>
+              <span class="sp"></span>
+              <span class="opt-note">{{ s.note }}</span>
+              <span class="radio"></span>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ step2 }}">
+        <div class="ob-title">Ваша организация</div>
+        <div class="ob-sub">Её законы и устав будут первыми в поиске и в меню. Документы остальных организаций тоже доступны.</div>
+        <div class="org-grid">
+          <sc-for list="{{ orgs }}" as="o"><button class="{{ o.cls }}" onClick="{{ o.pick }}">{{ o.name }}</button></sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ step3 }}">
+        <div class="ob-title">Горячая клавиша</div>
+        <div class="ob-sub">Открывает и скрывает оверлей прямо в игре.</div>
+        <button class="{{ hkCls }}" onClick="{{ listen }}" onKeyDown="{{ onHotkey }}">
+          <sc-if value="{{ listening }}"><span class="muted">Нажмите сочетание клавиш…</span></sc-if>
+          <sc-if value="{{ notListening }}"><sc-for list="{{ hotkey }}" as="k"><span class="key">{{ k }}</span></sc-for></sc-if>
+        </button>
+        <div class="ob-hint">Нажмите на поле, затем нужное сочетание. Лучше с Ctrl, Alt или Shift.</div>
+        <sc-if value="{{ hkWarn }}"><div class="warn">%WARN%<span>Без Ctrl, Alt или Shift клавиша может пересечься с управлением в игре.</span></div></sc-if>
+      </sc-if>
+
+      <sc-if value="{{ step4 }}">
+        <div class="ob-title">Режим экрана GTA</div>
+        <div class="ob-sub">Оверлей виден поверх игры только в режиме «Оконный без рамки». Поверх полноэкранного режима Windows не показывает другие окна.</div>
+        <div class="setting-row"><span>Тип экрана</span><span class="sp"></span><span class="chev">%CHEV_L%</span><span class="setting-val">Оконный без рамки</span><span class="chev">%CHEV_R%</span></div>
+        <div class="ob-hint">Где это: настройки GTA V → «Графика».</div>
+        <div class="ob-sum">{{ summary }}</div>
+      </sc-if>
+
+      <div class="ob-foot">
+        <sc-if value="{{ canBack }}"><button class="btn ghost" onClick="{{ back }}">Назад</button></sc-if>
+        <span class="sp"></span>
+        <button class="btn pri" onClick="{{ next }}">{{ nextLabel }}</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isApp }}">
+    <sc-if value="{{ hasPin }}">
+      <div class="{{ pinCls }}">
+        <div class="pin-head">
+          <span class="pin-l">%PIN_S%<span>Закреплено</span></span>
+          <span class="sp"></span>
+          <sc-if value="{{ overlayOn }}"><span class="grip">%GRIP%</span><button class="x" onClick="{{ unpin }}" title="Открепить">%CLOSE_S%</button></sc-if>
+        </div>
+        <sc-if value="{{ pin.isCalc }}">
+          <div class="pin-big"><span>{{ pin.term }}</span><span class="stars big"><sc-for list="{{ pin.stars }}" as="s">%STAR%</sc-for></span></div>
+          <div class="pin-charge">{{ pin.charge }}</div>
+          <sc-if value="{{ pin.hasKoap }}"><div class="pin-line">КоАП: {{ pin.koapTotal }}</div></sc-if>
+          <sc-if value="{{ pin.hasWarn }}"><div class="pin-warn">{{ pin.warn }}</div></sc-if>
+        </sc-if>
+        <sc-if value="{{ pin.isArticle }}">
+          <div class="pin-title">{{ pin.heading }}</div>
+          <div class="pin-pen">{{ pin.pen }}</div>
+          <div class="pin-text">{{ pin.text }}</div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <div class="{{ calcCls }}">
+      <div class="c-head">
+        <span class="c-title">Калькулятор</span>
+        <span class="count">{{ calcCount }}</span>
+        <span class="sp"></span>
+        <button class="link-btn" onClick="{{ clearCalc }}">Очистить</button>
+      </div>
+      <div class="c-body">
+        <sc-if value="{{ c.hasUk }}">
+          <div class="seg">
+            <button class="{{ c.kpzCls }}" onClick="{{ c.setKpz }}">КПЗ</button>
+            <button class="{{ c.fineCls }}" onClick="{{ c.setFine }}" disabled="{{ c.fineDisabled }}">Штраф</button>
+          </div>
+          <sc-if value="{{ c.fineDisabled }}"><div class="hint">{{ c.fineHint }}</div></sc-if>
+          <div class="sec-t">УК · поглощение</div>
+          <sc-for list="{{ c.uk }}" as="u">
+            <div class="{{ u.cls }}">
+              <div class="ci-row">
+                <span class="num">{{ u.num }}</span>
+                <span class="ttl">{{ u.title }}</span>
+                <span class="sp"></span>
+                <span class="val">{{ u.val }}</span>
+                <button class="x" onClick="{{ u.remove }}" title="Убрать">%CLOSE_S%</button>
+              </div>
+              <div class="mods">
+                <button class="{{ u.attCls }}" onClick="{{ u.att }}">покушение</button>
+                <button class="{{ u.prepCls }}" onClick="{{ u.prep }}">приготовление</button>
+                <span class="sp"></span>
+                <sc-if value="{{ u.hasJur }}"><span class="{{ u.jurCls }}">{{ u.jur }}</span></sc-if>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ c.isKpz }}">
+            <div class="total">
+              <div>
+                <div class="t-big">{{ c.term }}</div>
+                <div class="t-sub">{{ c.termNote }}</div>
+              </div>
+              <div class="t-stars"><span class="muted">выдать</span><span class="stars big"><sc-for list="{{ c.stars }}" as="s">%STAR%</sc-for></span></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ c.isFine }}">
+            <div class="total">
+              <div class="fine-in">
+                <span class="muted">Сумма штрафа</span>
+                <div class="amt-wrap big"><input class="amt big" value="{{ c.fineAmount }}" onChange="{{ c.onFine }}"><span>₽</span></div>
+                <span class="{{ c.fineLimitCls }}">{{ c.fineLimit }}</span>
+              </div>
+            </div>
+          </sc-if>
+          <sc-for list="{{ c.why }}" as="w"><div class="why">{{ w }}</div></sc-for>
+          <sc-if value="{{ c.hasBail }}"><div class="bail"><span>Залог</span><span class="sp"></span><span class="val">{{ c.bail }}</span></div></sc-if>
+          <sc-if value="{{ c.hasWarn }}"><div class="warn">%WARN%<span>{{ c.warn }}</span></div></sc-if>
+        </sc-if>
+        <sc-if value="{{ c.hasKoap }}">
+          <div class="sec-row">
+            <span class="sec-t">КоАП · сумма</span>
+            <span class="sp"></span>
+            <div class="seg sm">
+              <button class="{{ c.citCls }}" onClick="{{ c.setCit }}">гражданин</button>
+              <button class="{{ c.offCls }}" onClick="{{ c.setOff }}">должн. лицо</button>
+            </div>
+          </div>
+          <sc-for list="{{ c.koap }}" as="k">
+            <div class="ci">
+              <div class="ci-row">
+                <span class="num">{{ k.num }}</span>
+                <span class="ttl">{{ k.title }}</span>
+                <span class="sp"></span>
+                <div class="amt-wrap"><input class="amt" value="{{ k.amount }}" onChange="{{ k.onAmount }}"><span>₽</span></div>
+                <button class="x" onClick="{{ k.remove }}" title="Убрать">%CLOSE_S%</button>
+              </div>
+              <div class="{{ k.limitCls }}">{{ k.limit }}</div>
+            </div>
+          </sc-for>
+          <div class="tot-s"><span>Итого КоАП</span><span>{{ c.koapTotal }}</span></div>
+        </sc-if>
+      </div>
+      <div class="c-copy">
+        <div class="copy-str">{{ c.charge }}</div>
+        <div class="btns">
+          <button class="btn pri grow" onClick="{{ copy }}">%COPY%<span>{{ copyLabel }}</span><span class="kbd">Ctrl+C</span></button>
+          <button class="btn icon" onClick="{{ pinCalc }}" title="Закрепить поверх игры">%PIN%</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="{{ ovCls }}">
+      <div class="ov-head">
+        <button class="{{ menuCls }}" onClick="{{ toggleDrawer }}" title="Все документы">%MENU%</button>
+        <span class="brand">РО Хелпер</span>
+        <span class="sp"></span>
+        <span class="chip">{{ chip }}</span>
+        <button class="icon-btn" onClick="{{ openSettings }}" title="Настройки">%GEAR%</button>
+        <button class="icon-btn" onClick="{{ hideOverlay }}" title="Скрыть оверлей">%CLOSE%</button>
+      </div>
+      <div class="search">
+        %SEARCH%
+        <sc-if value="{{ hasScope }}"><button class="scope" onClick="{{ clearScope }}"><span>{{ scopeBadge }}</span>%CLOSE_XS%</button></sc-if>
+        <input class="q" value="{{ query }}" placeholder="{{ placeholder }}" onChange="{{ onQuery }}" onKeyDown="{{ onKey }}">
+        <span class="kbd">Esc</span>
+      </div>
+      <div class="content">
+        <sc-if value="{{ showArticle }}">
+          <div class="art">
+            <button class="back" onClick="{{ closeArticle }}">%BACK%<span>{{ backLabel }}</span></button>
+            <div class="crumb"><span class="{{ art.badgeCls }}">{{ art.badge }}</span><span>{{ art.docName }}</span></div>
+            <div class="art-chapter">{{ art.chapter }}</div>
+            <div class="art-title">{{ art.heading }}</div>
+            <sc-if value="{{ art.hasTags }}">
+              <div class="art-tags">
+                <sc-if value="{{ art.hasJur }}"><span class="{{ art.jurCls }}">{{ art.jurLong }}</span></sc-if>
+                <sc-if value="{{ art.hasStars }}"><span class="stars big"><sc-for list="{{ art.stars }}" as="s">%STAR%</sc-for></span><span class="muted">{{ art.starsNote }}</span></sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{ art.hasPen }}">
+              <div class="pen-card">
+                <sc-for list="{{ art.pens }}" as="p">
+                  <sc-if value="{{ p.isSep }}"><div class="pen-or">либо</div></sc-if>
+                  <sc-if value="{{ p.isCell }}"><div class="pen-cell"><span class="pen-label">{{ p.label }}</span><span class="pen-val">{{ p.value }}</span></div></sc-if>
+                </sc-for>
+              </div>
+            </sc-if>
+            <div class="parts">
+              <sc-for list="{{ art.parts }}" as="pt">
+                <div class="part"><sc-if value="{{ pt.hasN }}"><span class="part-n">{{ pt.n }}</span></sc-if><p>{{ pt.t }}</p></div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ art.hasNote }}"><div class="note"><span class="note-l">Примечание</span><p>{{ art.note }}</p></div></sc-if>
+            <div class="art-meta"><span>Актуально на {{ art.updated }}</span><span>·</span><span class="link">Тема на форуме %EXT%</span></div>
+            <div class="art-actions">
+              <sc-if value="{{ art.canAdd }}"><button class="{{ art.addCls }}" onClick="{{ art.add }}">{{ art.addLabel }}</button></sc-if>
+              <button class="btn" onClick="{{ art.pin }}">%PIN%<span>Закрепить</span></button>
+              <button class="{{ art.favCls }}" onClick="{{ art.fav }}" title="Избранное">%STAR_O%</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showHome }}">
+          <div class="sec-t">Избранное</div>
+          <div class="list"><sc-for list="{{ favRows }}" as="r">%ROW%</sc-for></div>
+          <div class="sec-t">Недавние</div>
+          <div class="list"><sc-for list="{{ recentRows }}" as="r">%ROW%</sc-for></div>
+        </sc-if>
+
+        <sc-if value="{{ showResults }}">
+          <div class="meta"><span>{{ metaLeft }}</span><span>{{ metaRight }}</span></div>
+          <div class="list"><sc-for list="{{ resultRows }}" as="r">%ROW%</sc-for></div>
+          <sc-if value="{{ noResults }}"><div class="empty">{{ emptyText }}</div></sc-if>
+        </sc-if>
+      </div>
+      <div class="foot"><span><b>↑↓</b> выбор</span><span><b>Enter</b> в калькулятор</span><span><b>→</b> открыть</span><span><b>Esc</b> назад</span></div>
+
+      <div class="{{ scrimCls }}" onClick="{{ toggleDrawer }}"></div>
+      <div class="{{ drawerCls }}">
+        <div class="dr-head">
+          <span class="c-title">Все документы</span>
+          <span class="sp"></span>
+          <button class="icon-btn" onClick="{{ toggleDrawer }}" title="Закрыть">%CLOSE%</button>
+        </div>
+        <div class="dr-filter">%SEARCH%<input value="{{ drFilter }}" placeholder="Фильтр документов" onChange="{{ onDrFilter }}"></div>
+        <div class="tags"><sc-for list="{{ drTags }}" as="t"><button class="{{ t.cls }}" onClick="{{ t.pick }}">{{ t.name }}</button></sc-for></div>
+        <div class="dr-list">
+          <sc-for list="{{ drGroups }}" as="g">
+            <div class="dr-sec">{{ g.title }}</div>
+            <sc-for list="{{ g.docs }}" as="d">
+              <button class="{{ d.cls }}" onClick="{{ d.pick }}"><span class="{{ d.badgeCls }}">{{ d.badge }}</span><span class="dr-name">{{ d.name }}</span><span class="dr-count">{{ d.count }}</span></button>
+            </sc-for>
+          </sc-for>
+          <sc-if value="{{ drEmpty }}"><div class="empty">Ничего не найдено</div></sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>

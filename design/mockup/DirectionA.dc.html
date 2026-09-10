@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+  <style>
+body{margin:0;background:#0b0c0f}
+.scr{position:relative;width:1280px;height:720px;overflow:hidden;display:flex;justify-content:flex-end;align-items:flex-start;gap:12px;padding:24px;box-sizing:border-box;background:radial-gradient(ellipse 38% 30% at 16% 80%,rgba(255,168,76,.42),transparent 70%),radial-gradient(ellipse 26% 22% at 40% 64%,rgba(88,140,255,.34),transparent 70%),radial-gradient(ellipse 22% 18% at 62% 88%,rgba(255,88,88,.26),transparent 70%),radial-gradient(ellipse 50% 30% at 30% 20%,rgba(120,150,210,.18),transparent 70%),linear-gradient(180deg,#1a2130 0%,#272c38 55%,#12151b 100%)}
+.game{position:absolute;left:24px;bottom:20px;font-size:11px;letter-spacing:.08em;color:rgba(255,255,255,.4)}
+.ov,.calc{display:flex;flex-direction:column;box-sizing:border-box}
+.ov{width:440px}.calc{width:340px}
+.bar,.c-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.bar-r{display:flex;align-items:center;gap:12px}.ic{display:flex}
+.search{display:flex;align-items:center;gap:10px}.sp{flex:1}
+.meta{display:flex;justify-content:space-between}
+.list{display:flex;flex-direction:column}
+.row{display:flex;flex-direction:column;gap:6px}
+.r1,.r2{display:flex;align-items:center;gap:8px}
+.stars{display:inline-flex;gap:1px}
+.add{display:inline-flex;align-items:center;gap:5px;margin-left:auto}
+.foot{display:flex;gap:14px}
+.body{display:flex;flex-direction:column;gap:10px}
+.seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.seg span{text-align:center}
+.item{display:flex;align-items:baseline;gap:8px}
+.total{display:flex;align-items:center;justify-content:space-between}
+.t-stars{display:inline-flex;align-items:center;gap:6px}
+.warn{display:flex;gap:8px;align-items:flex-start}.warn svg{flex:none;margin-top:1px}
+.tot-s{display:flex;justify-content:space-between}
+.copy{display:flex;flex-direction:column;gap:8px}
+.btns{display:flex;gap:8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px}.btn.pri{flex:1}.btn.pri .kbd{margin-left:4px}
+
+a{color:#f0a830}a:hover{color:#ffc766}
+.scr{font-family:'IBM Plex Sans',system-ui,sans-serif;color:#e8e6df}
+.game,.brand,.chip,.kbd,.meta,.doc,.num,.jur,.add,.foot,.count,.link,.seg span,.sec,.val,.t-big,.t-stars,.input,.sub,.tot-s,.copy-str,.btn{font-family:'JetBrains Mono',ui-monospace,monospace}
+.game{text-transform:uppercase}
+.ov,.calc{background:rgba(17,17,15,.95);border:1px solid #2c2b26;border-radius:3px;box-shadow:0 24px 60px rgba(0,0,0,.55)}
+.bar,.c-head{height:40px;padding:0 14px;border-bottom:1px solid #2c2b26}
+.brand{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#f0a830}
+.bar-r{color:#8f8c82}
+.chip{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#8f8c82;border:1px solid #2c2b26;padding:3px 7px;border-radius:2px}
+.search{margin:14px;padding:0 12px;height:44px;border:1px solid #f0a830;border-radius:3px;background:#0c0c0b;color:#8f8c82}
+.q{font-size:16px;font-weight:500;color:#f6f4ee}
+.caret{width:2px;height:20px;background:#f0a830;margin-left:-9px}
+.kbd{font-size:10px;color:#8f8c82;border:1px solid #3a3932;border-radius:2px;padding:2px 5px}
+.meta{padding:0 14px 8px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#6d6a61}
+.row{padding:12px 14px;border-top:1px solid #23221e}
+.row.sel{background:#1d1c18}
+.doc{font-size:10px;font-weight:700;letter-spacing:.06em;color:#11110f;background:#f0a830;padding:2px 5px;border-radius:2px}
+.doc.alt{background:transparent;color:#f0a830;box-shadow:inset 0 0 0 1px #6b5520}
+.num{font-size:13px;font-weight:600;color:#f6f4ee}
+.ttl{font-size:14px;font-weight:500;color:#e8e6df}
+.jur{font-size:10.5px;font-weight:600;color:#8f8c82;border:1px solid #3a3932;padding:1px 5px;border-radius:2px}
+.stars{color:#f0a830}
+.pen{font-size:13px;color:#b3b0a6}
+.pen b{font-family:'JetBrains Mono',monospace;font-weight:600;color:#f6f4ee}
+.or{color:#6d6a61;font-style:italic}
+.add{font-size:11px;color:#8f8c82;border:1px solid #3a3932;padding:3px 8px;border-radius:2px}
+.add.on{color:#f0a830;border-color:#6b5520}
+.foot{padding:10px 14px;border-top:1px solid #2c2b26;font-size:10.5px;color:#6d6a61}
+.foot b{color:#b3b0a6;font-weight:600}
+.count{font-size:10px;font-weight:700;color:#11110f;background:#f0a830;border-radius:2px;padding:1px 5px}
+.link{font-size:11px;color:#8f8c82}
+.body{padding:14px}
+.seg{border:1px solid #3a3932;border-radius:3px;overflow:hidden}
+.seg span{padding:8px 0;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.seg-on{background:#f0a830;color:#11110f}
+.seg-off{color:#55534b}
+.hint{font-size:11.5px;color:#8f8c82;margin-top:-4px}
+.sec{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#6d6a61;padding-top:6px}
+.item .ttl{font-size:13px}
+.val{font-size:13px;font-weight:600;color:#f6f4ee}
+.absorbed .num,.absorbed .ttl,.absorbed .val{color:#5e5c55;text-decoration:line-through}
+.total{padding:12px;background:#0c0c0b;border:1px solid #2c2b26;border-radius:3px}
+.t-big{font-size:28px;font-weight:700;color:#f0a830}
+.t-stars{font-size:11px;color:#b3b0a6}
+.why{font-size:12px;color:#b3b0a6}
+.warn{padding:9px 10px;border:1px solid oklch(0.62 0.14 35);border-radius:3px;background:rgba(210,90,60,.08);color:oklch(0.82 0.12 40);font-size:12px;font-weight:500;line-height:1.4}
+.input{font-size:13px;font-weight:600;color:#f6f4ee;border-bottom:1px solid #f0a830;padding:0 2px 1px}
+.sub{font-size:11px;color:#6d6a61;margin-top:-6px}
+.tot-s{font-size:12px;font-weight:600;color:#e8e6df;border-top:1px dashed #3a3932;padding-top:8px}
+.copy{padding:12px 14px 14px;border-top:1px solid #2c2b26}
+.copy-str{font-size:12px;color:#e8e6df;background:#0c0c0b;border:1px solid #2c2b26;padding:8px 10px;border-radius:2px}
+.btn{height:36px;padding:0 12px;border:1px solid #3a3932;border-radius:3px;font-size:12px;font-weight:600;color:#e8e6df}
+.btn.pri{background:#f0a830;border-color:#f0a830;color:#11110f}
+.btn.pri .kbd{color:#4a3508;border-color:rgba(0,0,0,.25)}
+</style>
+</helmet>
+<div class="scr">
+  <div class="game">Игра · GTA 5, оконный без рамки</div>
+  <div class="calc">
+    <div class="c-head">
+      <span class="brand">Калькулятор</span>
+      <span class="count">3</span>
+      <span class="sp"></span>
+      <span class="link">Очистить</span>
+    </div>
+    <div class="body">
+      <div class="seg"><span class="seg-on">КПЗ</span><span class="seg-off">Штраф</span></div>
+      <div class="hint">Штраф недоступен: у ст. 88 нет штрафа</div>
+      <div class="sec">УК · поглощение</div>
+      <div class="item"><span class="num">ст. 88</span><span class="ttl">Незаконный оборот оружия</span><span class="sp"></span><span class="val">40 мес</span></div>
+      <div class="item absorbed"><span class="num">ст. 65</span><span class="ttl">Кража</span><span class="sp"></span><span class="val">30 мес</span></div>
+      <div class="total">
+        <span class="t-big">40 мес</span>
+        <span class="t-stars"><span>выдать</span><span class="stars"><svg width="11" height="11" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"></path></svg><svg width="11" height="11" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"></path></svg><svg width="11" height="11" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"></path></svg><svg width="11" height="11" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"></path></svg></span></span>
+      </div>
+      <div class="why">ст. 88 поглощает ст. 65 — УК ст. 41 ч. 2</div>
+      <div class="warn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l9 16H3z"></path><path d="M12 10v4.5"></path><path d="M12 17.6v.4"></path></svg><span>Ст. 88 — федеральная подследственность. Дело ФСБ.</span></div>
+      <div class="sec">КоАП · сумма</div>
+      <div class="item"><span class="num">ст. 8.6 ч. 1</span><span class="ttl">Превышение скорости</span><span class="sp"></span><span class="input">5 000 ₽</span></div>
+      <div class="sub">до 10 000 ₽ · гражданин</div>
+      <div class="tot-s"><span>Итого КоАП</span><span>5 000 ₽</span></div>
+    </div>
+    <div class="copy">
+      <div class="copy-str">ст. 65, 88 УК; ст. 8.6 ч. 1 КоАП</div>
+      <div class="btns">
+        <span class="btn pri"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V6a2 2 0 0 1 2-2h9"></path></svg><span>Скопировать</span><span class="kbd">Ctrl+C</span></span>
+        <span class="btn icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6l-1 6.5 3.5 3.5h-11L10 9.5z"></path><path d="M12 13v8"></path></svg></span>
+      </div>
+    </div>
+  </div>
+  <div class="ov">
+    <div class="bar">
+      <span class="brand">РО Хелпер</span>
+      <div class="bar-r"><span class="chip">Тверской · МВД</span><span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></span></div>
+    </div>
+    <div class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.6-3.6"></path></svg><span class="q">кража</span><span class="caret"></span><span class="sp"></span><span class="kbd">Esc</span></div>
+    <div class="meta"><span>3 результата</span><span>все документы</span></div>
+    <div class="list">
+      <div class="row sel">
+        <div class="r1"><span class="doc">УК</span><span class="num">ст. 65</span><span class="ttl">Кража</span><span class="sp"></span><span class="jur">Р/Ф</span><span class="stars"><svg width="11" height="11" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"></path></svg><svg width="11" height="11" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"></path></svg><svg width="11" height="11" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"></path></svg></span></div>
+        <div class="r2"><span class="pen">штраф до <b>50 000 ₽</b> <span class="or">либо</span> <b>30 мес</b></span><span class="add on"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="stroke-width:2.4"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span>в калькуляторе</span></span></div>
+      </div>
+      <div class="row">
+        <div class="r1"><span class="doc">УК</span><span class="num">ст. 65.1</span><span class="ttl">Кража в крупном размере</span><span class="sp"></span><span class="jur">Р/Ф</span><span class="stars"><svg width="11" height="11" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"></path></svg><svg width="11" height="11" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"></path></svg><svg width="11" height="11" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"></path></svg><svg width="11" height="11" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"></path></svg></span></div>
+        <div class="r2"><span class="pen"><b>40 мес</b></span><span class="add"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="stroke-width:2.2"><path d="M12 5v14M5 12h14"></path></svg><span>добавить</span></span></div>
+      </div>
+      <div class="row">
+        <div class="r1"><span class="doc alt">КоАП</span><span class="num">ст. 7.27</span><span class="ttl">Мелкое хищение</span><span class="sp"></span></div>
+        <div class="r2"><span class="pen">штраф до <b>5 000 ₽</b></span><span class="add"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="stroke-width:2.2"><path d="M12 5v14M5 12h14"></path></svg><span>добавить</span></span></div>
+      </div>
+    </div>
+    <div class="foot"><span><b>↑↓</b> выбор</span><span><b>Enter</b> в калькулятор</span><span><b>→</b> открыть</span><span><b>Esc</b> скрыть</span></div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
