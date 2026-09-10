@@ -39,8 +39,9 @@ export interface BuildResult {
  */
 export function buildPack(serverDir: string, server: ServerSources): BuildResult {
   const sourcesDir = join(serverDir, 'sources');
-  const overridesFile = join(serverDir, 'overrides.json');
-  const overrides: Overrides = existsSync(overridesFile) ? JSON.parse(readFileSync(overridesFile, 'utf8')) : {};
+  const readJson = <T,>(file: string, fallback: T): T => (existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : fallback);
+  const overrides = readJson<Overrides>(join(serverDir, 'overrides.json'), {});
+  const synonyms = readJson<Record<string, string[]>>(join(serverDir, 'synonyms.json'), {});
   const available = new Set(readdirSync(sourcesDir).filter((f) => f.endsWith('.meta.json')).map((f) => f.replace('.meta.json', '')));
   const issues: BuildResult['issues'] = [];
   const documents: LawDocument[] = [];
@@ -72,5 +73,5 @@ export function buildPack(serverDir: string, server: ServerSources): BuildResult
 
   // The pack version is the newest law edit it contains, so it only changes when a law does.
   const version = documents.map((d) => d.source.lastEdited.slice(0, 10)).sort().at(-1) ?? '0000-00-00';
-  return { pack: { server: { id: server.id, name: server.name, status: server.status }, version, documents }, issues };
+  return { pack: { server: { id: server.id, name: server.name, status: server.status }, version, documents, synonyms }, issues };
 }

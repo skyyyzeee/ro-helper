@@ -119,4 +119,6 @@ export interface ServerPack {
   /** Date-based version of the pack. */
   version: string;
   documents: LawDocument[];
+  /** Words players use → phrases the law uses for the same thing: «ствол» → «огнестрельное оружие». */
+  synonyms: Record<string, string[]>;
 }

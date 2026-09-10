@@ -89,6 +89,28 @@ describe('finding an article by number', () => {
     expect(view).toHaveTextContent('не более 60 км/ч');
   });
 
+  it('finds an article by a word in any form', async () => {
+    const { user } = renderApp();
+    await user.type(search(), 'кражу');
+    expect(results()[0]).toHaveTextContent('ст. 65 ч. 1');
+    expect(results()[0]).toHaveTextContent('Кража');
+  });
+
+  it('moves the selection with ↑↓ and starts again from the top on a new query', async () => {
+    const { user } = renderApp();
+    await user.type(search(), 'коап 8.6');
+    const current = () => results().findIndex((item) => within(item).getByRole('button').getAttribute('aria-current') === 'true');
+    expect(current()).toBe(0);
+
+    await user.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}');
+    expect(current()).toBe(2); // stops at the last result
+    await user.keyboard('{ArrowUp}');
+    expect(current()).toBe(1);
+
+    await user.type(search(), ' ч 1');
+    expect(current()).toBe(0);
+  });
+
   it('says so when nothing matches', async () => {
     const { user } = renderApp();
     await user.type(search(), '999');
