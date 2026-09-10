@@ -121,8 +121,32 @@ export interface Organization {
   documents: string[];
 }
 
+/** A rule of the calculator with the article it comes from. */
+interface Based {
+  basis: string;
+}
+
+/** The server's rules for combining criminal punishments; data, so other servers can differ. */
+export interface CalculatorRules {
+  /** Document the calculator treats as the criminal code. */
+  criminalCode: string;
+  /** Several crimes: the strictest punishment absorbs the rest. */
+  absorption: Based;
+  /** An article whose punishment may be added once on top of the strictest one. */
+  stackOnce?: Based & { article: string };
+  stages: Record<'attempt' | 'preparation', Based & { factor: number; label: string }>;
+  maxTotalMonths: Based & { value: number };
+  stars: Based & { monthsPerStar: number; max: number };
+  /** Crime categories by the article's maximum term, lightest first; the last one has no limit. */
+  categories: Based & { list: { name: string; label: string; maxMonths?: number }[] };
+  bail: Based & { amounts: Record<string, number> };
+  /** Jurisdiction tag → what the officer should know when a charge has only that tag. */
+  jurisdictionWarnings: Partial<Record<Jurisdiction, string>>;
+}
+
 export interface ServerPack {
   server: ServerInfo;
+  calculator: CalculatorRules;
   /** What the user can pick as their organisation, «Без организации» included. */
   organizations: Organization[];
   /** Date-based version of the pack. */

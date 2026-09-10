@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { searchArticles, type SearchHit, type ServerPack } from '../core';
+import { calculateCriminal, leadPart, searchArticles, type ChargeItem, type Mode, type SearchHit, type ServerPack, type Stage } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
 import { ArticleView } from './ArticleView';
+import { CalculatorPanel } from './CalculatorPanel';
 import { CloseIcon, MenuIcon, SearchIcon, SettingsIcon } from './icons';
 import { DEFAULT_OPACITY, OPACITY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
 import type { Profile } from './profile';
@@ -20,6 +21,16 @@ function resultCount(n: number): string {
 /** Stable key of a hit: an article, or one part of it. */
 const hitKey = (hit: SearchHit) => `${hit.article.id}#${hit.part?.number ?? ''}`;
 
+/** Width of the calculator panel plus the gap to the overlay, in CSS pixels. */
+const CALCULATOR_WIDTH = 400 + 12;
+
+interface Charge {
+  key: string;
+  hit: SearchHit;
+  stage: Stage;
+  wantedLevel?: number;
+}
+
 export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; profile: Profile; onEditProfile: () => void }) {
   const platform = usePlatform();
   const searchRef = useRef<HTMLInputElement>(null);
@@ -34,6 +45,38 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
   const summary = [pack.server.name, organization && organization.id !== 'none' ? organization.name : null].filter(Boolean).join(' · ');
   const open = openKey ? hits.find((hit) => hitKey(hit) === openKey) : undefined;
 
+  // Calculator: charges from the criminal code, the mode for the whole detention, the fine typed in.
+  const [charges, setCharges] = useState<Charge[]>([]);
+  const [mode, setMode] = useState<Mode>('custody');
+  const [fineInput, setFineInput] = useState('');
+  const [side, setSide] = useState<'left' | 'right'>('left');
+  const addable = (hit: SearchHit) => hit.document.id === pack.calculator.criminalCode && !!(hit.part ?? leadPart(hit.article))?.punishment;
+  const toggleCharge = (hit: SearchHit) => {
+    const key = hitKey(hit);
+    setCharges((list) => (list.some((c) => c.key === key) ? list.filter((c) => c.key !== key) : [...list, { key, hit, stage: 'done' }]));
+    searchRef.current?.focus();
+  };
+  const updateCharge = (index: number, patch: Partial<Charge>) =>
+    setCharges((list) => list.map((c, i) => (i === index ? { ...c, ...patch } : c)));
+  const result = useMemo(() => {
+    const items: ChargeItem[] = charges.map((c) => ({
+      article: c.hit.article,
+      document: c.hit.document,
+      part: c.hit.part ?? leadPart(c.hit.article)!,
+      stage: c.stage,
+      wantedLevel: c.wantedLevel,
+    }));
+    return calculateCriminal(items, mode, pack.calculator);
+  }, [charges, mode, pack.calculator]);
+  const calculatorOpen = charges.length > 0;
+
+  // The window grows towards the centre of the screen for the panel, and shrinks back when it closes.
+  useEffect(() => {
+    if (calculatorOpen) void platform.extendWindow(CALCULATOR_WIDTH).then(setSide);
+    else void platform.retractWindow();
+  }, [calculatorOpen, platform]);
+  useEffect(() => () => void platform.retractWindow(), [platform]);
+
   const onSearchKey = (e: KeyboardEvent<HTMLInputElement>) => {
     if (open || !hits.length) return;
     if (e.key === 'ArrowDown') {
@@ -42,6 +85,13 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSelected((i) => Math.max(i - 1, 0));
+    } else if (e.key === 'Enter') {
+      // Enter puts a punished article into the calculator; an article without a punishment opens instead.
+      e.preventDefault();
+      const hit = hits[selected];
+      if (!hit) return;
+      if (addable(hit)) toggleCharge(hit);
+      else openHit(hit);
     }
   };
 
@@ -95,8 +145,21 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
   };
 
   return (
-    <div className="overlay glass">
+    <div className={`shell shell--${side}`}>
       {platform.kind === 'tauri' && <ResizeEdges />}
+      {calculatorOpen && (
+        <CalculatorPanel
+          result={result}
+          onMode={setMode}
+          onStage={(index, stage) => updateCharge(index, { stage })}
+          onWantedLevel={(index, wantedLevel) => updateCharge(index, { wantedLevel })}
+          onRemove={(index) => setCharges((list) => list.filter((_, i) => i !== index))}
+          onClear={() => setCharges([])}
+          fineInput={fineInput}
+          onFineInput={setFineInput}
+        />
+      )}
+    <div className="overlay glass">
       <div className="overlay__head" data-tauri-drag-region>
         <button className="icon-btn" type="button" aria-label="Все документы" title="Все документы">
           <MenuIcon />
@@ -175,7 +238,12 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
               <div className="list" role="list" aria-label="Результаты поиска">
                 {hits.map((hit, i) => (
                   <div role="listitem" key={hitKey(hit)}>
-                    <ResultRow hit={hit} selected={i === selected} onOpen={() => openHit(hit)} />
+                    <ResultRow
+                      hit={hit}
+                      selected={i === selected}
+                      onOpen={() => openHit(hit)}
+                      calculator={addable(hit) ? { added: charges.some((c) => c.key === hitKey(hit)), onToggle: () => toggleCharge(hit) } : undefined}
+                    />
                   </div>
                 ))}
               </div>
@@ -199,6 +267,7 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
           <b>Esc</b> назад
         </span>
       </div>
+    </div>
     </div>
   );
 }

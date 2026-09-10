@@ -3,6 +3,18 @@
 export type * from './model';
 export { searchArticles, type SearchHit } from './search';
 export {
+  calculateCriminal,
+  chargeLabel,
+  crimeCategory,
+  fineFits,
+  type ChargeItem,
+  type CriminalResult,
+  type FineRange,
+  type ItemResult,
+  type Mode,
+  type Stage,
+} from './calculator';
+export {
   SUBJECT_LABELS,
   articleLabel,
   articleTitle,

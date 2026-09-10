@@ -92,6 +92,13 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
     async startResize(edge: ResizeEdge) {
       record('startResize', edge);
     },
+    async extendWindow(width) {
+      record('extendWindow', width);
+      return 'left';
+    },
+    async retractWindow() {
+      record('retractWindow');
+    },
     async setAlwaysOnTop(on) {
       record('setAlwaysOnTop', on);
     },

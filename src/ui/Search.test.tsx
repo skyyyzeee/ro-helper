@@ -27,7 +27,7 @@ describe('finding an article by number', () => {
   it('opens the article on the part that was clicked and goes back to the results', async () => {
     const { user, platform } = await renderApp();
     await user.type(search(), '65');
-    await user.click(screen.getByRole('button', { name: /ст\. 65 ч\. 2/ }));
+    await user.click(screen.getByRole('button', { name: /ст\. 65 ч\. 2\s*Кража/ }));
 
     const view = screen.getByRole('article', { name: 'Статья 65. Кража' });
     expect(within(view).getByRole('heading', { name: 'Статья 65. Кража' })).toBeInTheDocument();
@@ -54,7 +54,7 @@ describe('finding an article by number', () => {
     expect(only).toHaveTextContent('ст. 5.4 ч. 1');
     expect(only).toHaveTextContent('штраф от 10 000 до 25 000 ₽ либо арест до 20 сут');
 
-    await user.click(within(only).getByRole('button'));
+    await user.click(within(only).getByRole('button', { name: /^КоАП/ }));
     const part = screen.getByRole('region', { name: 'Часть 1' });
     expect(part).toHaveTextContent('Гражданам: штраф от 10 000 до 25 000 ₽ либо арест до 20 сут');
     expect(part).toHaveTextContent('Должностным лицам: штраф от 30 000 до 50 000 ₽ либо арест до 20 сут');
@@ -70,7 +70,7 @@ describe('finding an article by number', () => {
     expect(only).toHaveTextContent('ст. 8.2');
     expect(only).toHaveTextContent('В населенных пунктах разрешается движение');
 
-    await user.click(within(only).getByRole('button'));
+    await user.click(within(only).getByRole('button', { name: /^ПДД/ }));
     const view = screen.getByRole('article', { name: 'Статья 8.2' });
     expect(view).toHaveTextContent('Глава VIII. Скорость движения');
     expect(view).toHaveTextContent('не более 60 км/ч');
@@ -86,7 +86,7 @@ describe('finding an article by number', () => {
   it('moves the selection with ↑↓ and starts again from the top on a new query', async () => {
     const { user } = await renderApp();
     await user.type(search(), 'коап 8.6');
-    const current = () => results().findIndex((item) => within(item).getByRole('button').getAttribute('aria-current') === 'true');
+    const current = () => results().findIndex((item) => item.querySelector('[aria-current="true"]') !== null);
     expect(current()).toBe(0);
 
     await user.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}');

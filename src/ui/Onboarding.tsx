@@ -75,8 +75,9 @@ export function Onboarding({
   };
 
   return (
-    <div className="overlay glass onboarding">
+    <div className="shell">
       {platform.kind === 'tauri' && <ResizeEdges />}
+      <div className="overlay glass onboarding">
       <div className="ob__head" data-tauri-drag-region>
         <span className="brand" data-tauri-drag-region>
           {mode === 'first' ? 'РО Хелпер' : 'Настройки'}
@@ -211,6 +212,7 @@ export function Onboarding({
         <button className="btn btn--primary" type="button" onClick={next}>
           {step < STEPS ? 'Далее' : mode === 'settings' ? 'Сохранить' : 'Готово'}
         </button>
+      </div>
       </div>
     </div>
   );

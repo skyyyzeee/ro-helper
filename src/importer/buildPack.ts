@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import type { DocumentCategory, DocumentKind, LawDocument, Organization, ServerPack } from '../core/model';
+import type { CalculatorRules, DocumentCategory, DocumentKind, LawDocument, Organization, ServerPack } from '../core/model';
 import { parseLawText, type LawFormat, type ParseIssue } from './lawText';
 import { applyOverrides, type Overrides } from './overrides';
 
@@ -43,6 +43,7 @@ export function buildPack(serverDir: string, server: ServerSources): BuildResult
   const overrides = readJson<Overrides>(join(serverDir, 'overrides.json'), {});
   const synonyms = readJson<Record<string, string[]>>(join(serverDir, 'synonyms.json'), {});
   const organizations = readJson<Organization[]>(join(serverDir, 'organizations.json'), []);
+  const calculator = JSON.parse(readFileSync(join(serverDir, 'calculator.json'), 'utf8')) as CalculatorRules;
   const available = new Set(readdirSync(sourcesDir).filter((f) => f.endsWith('.meta.json')).map((f) => f.replace('.meta.json', '')));
   const issues: BuildResult['issues'] = [];
   const documents: LawDocument[] = [];
@@ -82,5 +83,5 @@ export function buildPack(serverDir: string, server: ServerSources): BuildResult
   // The pack version is the newest law edit it contains, so it only changes when a law does.
   const version = documents.map((d) => d.source.lastEdited.slice(0, 10)).sort().at(-1) ?? '0000-00-00';
   const info = { id: server.id, name: server.name, status: server.status };
-  return { pack: { server: info, organizations, version, documents, synonyms }, issues };
+  return { pack: { server: info, calculator, organizations, version, documents, synonyms }, issues };
 }

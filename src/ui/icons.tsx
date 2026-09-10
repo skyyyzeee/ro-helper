@@ -45,6 +45,18 @@ export const BackIcon = ({ size = 18 }: { size?: number }) => (
   </Icon>
 );
 
+export const PlusIcon = ({ size = 18 }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M12 5v14M5 12h14" />
+  </Icon>
+);
+
+export const CheckIcon = ({ size = 18 }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M5 12.5l4.5 4.5L19 7.5" />
+  </Icon>
+);
+
 export const ChevronLeftIcon = ({ size = 16 }: { size?: number }) => (
   <Icon size={size}>
     <path d="M15 5l-7 7 7 7" />

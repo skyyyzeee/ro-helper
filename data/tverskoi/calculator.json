@@ -1,0 +1,25 @@
+{
+  "criminalCode": "uk",
+  "absorption": { "basis": "УК ст. 41 ч. 2" },
+  "stackOnce": { "article": "104", "basis": "УК ст. 41 ч. 4" },
+  "stages": {
+    "attempt": { "factor": 0.75, "label": "покушение", "basis": "УК ст. 45 ч. 3" },
+    "preparation": { "factor": 0.5, "label": "приготовление", "basis": "УК ст. 45 ч. 2" }
+  },
+  "maxTotalMonths": { "value": 100, "basis": "УК ст. 39 ч. 2" },
+  "stars": { "monthsPerStar": 10, "max": 5, "basis": "УК ст. 100.1" },
+  "categories": {
+    "basis": "УК ст. 11",
+    "list": [
+      { "name": "small", "label": "небольшой тяжести", "maxMonths": 20 },
+      { "name": "medium", "label": "средней тяжести", "maxMonths": 30 },
+      { "name": "grave", "label": "тяжкое", "maxMonths": 40 },
+      { "name": "especially-grave", "label": "особо тяжкое" }
+    ]
+  },
+  "bail": { "basis": "УК ст. 50.1", "amounts": { "small": 50000, "medium": 75000 } },
+  "jurisdictionWarnings": {
+    "Ф": "федеральная подследственность — дело ФСБ",
+    "В": "военная подследственность — дело военной полиции"
+  }
+}

@@ -58,10 +58,38 @@ export async function createTauriPlatform(): Promise<PlatformAdapter> {
   const saved = await store.get<WindowBounds>(BOUNDS_KEY);
   await applyBounds(saved && (await onSomeScreen(saved)) ? saved : await defaultBounds());
 
+  /** While the calculator is out, the window is wider than the overlay by this much (physical px). */
+  let extension: { side: 'left' | 'right'; width: number; cssWidth: number } | null = null;
+  /** The overlay's own bounds, without the side panel. */
+  const baseOf = (b: WindowBounds): WindowBounds => {
+    if (!extension) return b;
+    const width = b.width - extension.width;
+    return extension.side === 'left' ? { ...b, x: b.x + extension.width, width } : { ...b, width };
+  };
+
   let saveTimer: number | undefined;
   const saveBoundsSoon = () => {
     window.clearTimeout(saveTimer);
-    saveTimer = window.setTimeout(async () => store.set(BOUNDS_KEY, await currentBounds()), 400);
+    saveTimer = window.setTimeout(async () => store.set(BOUNDS_KEY, baseOf(await currentBounds())), 400);
+  };
+
+  const extendWindow = async (cssWidth: number): Promise<'left' | 'right'> => {
+    if (extension) return extension.side;
+    const width = Math.round(cssWidth * (await win.scaleFactor()));
+    const b = await currentBounds();
+    const monitor = (await currentMonitor()) ?? (await primaryMonitor());
+    const centre = monitor ? monitor.position.x + monitor.size.width / 2 : b.x;
+    const side = b.x + b.width / 2 > centre ? 'left' : 'right';
+    extension = { side, width, cssWidth };
+    await applyBounds(side === 'left' ? { ...b, x: b.x - width, width: b.width + width } : { ...b, width: b.width + width });
+    return side;
+  };
+  const retractWindow = async () => {
+    if (!extension) return;
+    const base = baseOf(await currentBounds());
+    extension = null;
+    await applyBounds(base);
+    await store.set(BOUNDS_KEY, base);
   };
   await win.onMoved(saveBoundsSoon);
   await win.onResized(saveBoundsSoon);
@@ -120,11 +148,16 @@ export async function createTauriPlatform(): Promise<PlatformAdapter> {
       await store.set(BOUNDS_KEY, bounds);
     },
     async resetWindowBounds() {
+      const open = extension;
+      extension = null;
       const bounds = await defaultBounds();
       await applyBounds(bounds);
       await store.set(BOUNDS_KEY, bounds);
+      if (open) await extendWindow(open.cssWidth);
     },
     startResize: (edge) => win.startResizeDragging(edge),
+    extendWindow,
+    retractWindow,
     setAlwaysOnTop: (on) => win.setAlwaysOnTop(on),
 
     // The pinned card window arrives with ticket 12.

@@ -40,6 +40,13 @@ export interface PlatformAdapter {
   resetWindowBounds(): Promise<void>;
   /** Starts resizing the frameless window from an edge, following the mouse until it is released. */
   startResize(edge: ResizeEdge): Promise<void>;
+  /**
+   * Widens the window by `width` CSS pixels towards the centre of the screen, for a side panel
+   * (the calculator), and says which side it grew on. The saved position stays that of the overlay alone.
+   */
+  extendWindow(width: number): Promise<'left' | 'right'>;
+  /** Undoes `extendWindow`. */
+  retractWindow(): Promise<void>;
   setAlwaysOnTop(on: boolean): Promise<void>;
 
   /** Pinned card: a separate transparent always-on-top window. */

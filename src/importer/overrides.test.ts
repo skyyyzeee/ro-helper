@@ -48,6 +48,7 @@ describe('manual fixes in a server build', () => {
   it('report a fix for an article that no longer exists', () => {
     dir = mkdtempSync(join(tmpdir(), 'ro-helper-'));
     cpSync(join(root, 'data', 'tverskoi', 'sources'), join(dir, 'sources'), { recursive: true });
+    cpSync(join(root, 'data', 'tverskoi', 'calculator.json'), join(dir, 'calculator.json'));
     writeFileSync(join(dir, 'overrides.json'), JSON.stringify({ 'uk-999': { reason: 'test', title: 'x' } }));
     const { issues } = buildPack(dir, { id: 't', name: 'T', status: 'active', documents: ['uk'] });
     expect(issues).toEqual([{ article: 'uk-999', line: 'uk-999', reason: 'Правка для несуществующей статьи' }]);
