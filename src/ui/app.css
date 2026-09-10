@@ -208,3 +208,266 @@ input {
 .badge--moscow { color: var(--badge-moscow-text); background: var(--badge-moscow-bg); }
 .badge--charters { color: var(--badge-charters-text); background: var(--badge-charters-bg); }
 .badge--rules { color: var(--badge-rules-text); background: var(--badge-rules-bg); }
+
+/* Results */
+.meta {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 10px 8px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: var(--radius-card);
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.row:hover,
+.row:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+  outline: none;
+}
+
+.row__line {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.num {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.ttl {
+  font-size: 16px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.jur {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.09);
+  padding: 3px 8px;
+  border-radius: 99px;
+  flex: none;
+  text-shadow: none;
+}
+
+.jur--federal {
+  color: var(--warn-text);
+  background: var(--warn-bg);
+}
+
+.stars {
+  display: inline-flex;
+  gap: 2px;
+  color: var(--text);
+  flex: none;
+}
+
+.stars__optional {
+  opacity: 0.35;
+}
+
+.pen {
+  font-size: 14.5px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.pen--muted {
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.more {
+  font-size: 13px;
+  color: var(--text-faint);
+  flex: none;
+}
+
+.empty {
+  padding: 28px 12px;
+  font-size: 14px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Article */
+.art {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 12px 20px;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.72);
+  padding: 6px 10px 6px 6px;
+  border-radius: 10px;
+}
+
+.back:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.art__crumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.art__chapter {
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: -6px;
+}
+
+.art__title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
+}
+
+.art__parts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.part-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.part-card__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.part-card__num {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.part-card__text,
+.part__body p,
+.note p {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.94);
+  text-wrap: pretty;
+}
+
+.part-card__pen {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.part {
+  display: flex;
+  gap: 10px;
+}
+
+.part__num {
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.6;
+  flex: none;
+}
+
+.part__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.part__body .part__point {
+  padding-left: 4px;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.note {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.note__label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.note p {
+  font-size: 14.5px;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.art__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent-text);
+}
+
+.link:hover {
+  color: var(--text);
+}

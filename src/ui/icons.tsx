@@ -39,6 +39,28 @@ export const SettingsIcon = ({ size = 19 }: { size?: number }) => (
   </Icon>
 );
 
+export const BackIcon = ({ size = 18 }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M15 5l-7 7 7 7" />
+  </Icon>
+);
+
+export const ExternalIcon = ({ size = 13 }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M7 17L17 7M9 7h8v8" />
+  </Icon>
+);
+
+/** Filled star for wanted levels. */
+export const StarIcon = ({ size = 12 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      fill="currentColor"
+      d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"
+    />
+  </svg>
+);
+
 export const CloseIcon = ({ size = 18 }: { size?: number }) => (
   <Icon size={size}>
     <path d="M6 6l12 12M18 6L6 18" />

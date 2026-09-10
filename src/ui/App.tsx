@@ -1,3 +1,4 @@
+import { TVERSKOI_PACK } from '../data';
 import { usePlatform } from '../platform/PlatformContext';
 import { Overlay } from './Overlay';
 
@@ -7,7 +8,7 @@ export function App() {
   const preview = platform.kind === 'browser';
   return (
     <div className={preview ? 'stage stage--preview' : 'stage'}>
-      <Overlay />
+      <Overlay pack={TVERSKOI_PACK} />
     </div>
   );
 }

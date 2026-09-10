@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const coreDir = join(import.meta.dirname, '.');
-const forbidden = [/from ['"]react/, /from ['"]react-dom/, /from ['"]@tauri-apps\//, /from ['"]\.\.\/(ui|platform)\b/];
+const forbidden = [/from ['"]react/, /from ['"]react-dom/, /from ['"]@tauri-apps\//, /from ['"]\.\.\/(ui|platform|importer)\b/];
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -14,7 +14,7 @@ function sourceFiles(dir: string): string[] {
 }
 
 describe('law core boundary', () => {
-  it('does not depend on the UI, React or Tauri', () => {
+  it('does not depend on the UI, React, Tauri or the importer', () => {
     const offenders = sourceFiles(coreDir).filter((file) => {
       const text = readFileSync(file, 'utf8');
       return forbidden.some((pattern) => pattern.test(text));
