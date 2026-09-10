@@ -1,4 +1,4 @@
-import type { PinCard, PlatformAdapter, WindowBounds } from './types';
+import type { PinCard, PlatformAdapter, ResizeEdge, WindowBounds } from './types';
 
 export interface FakeCall {
   method: keyof PlatformAdapter;
@@ -63,6 +63,15 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
       record('hideOverlay');
       state.overlayVisible = false;
     },
+    async toggleOverlay() {
+      record('toggleOverlay');
+      if (state.overlayVisible) {
+        state.overlayVisible = false;
+      } else {
+        state.overlayVisible = true;
+        shownListeners.forEach((listener) => listener());
+      }
+    },
     onOverlayShown(listener) {
       shownListeners.add(listener);
       return () => shownListeners.delete(listener);
@@ -79,6 +88,9 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
     async resetWindowBounds() {
       record('resetWindowBounds');
       bounds = null;
+    },
+    async startResize(edge: ResizeEdge) {
+      record('startResize', edge);
     },
     async setAlwaysOnTop(on) {
       record('setAlwaysOnTop', on);

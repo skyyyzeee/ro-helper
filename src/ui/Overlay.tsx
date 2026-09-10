@@ -3,7 +3,10 @@ import { searchArticles, type SearchHit, type ServerPack } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
 import { ArticleView } from './ArticleView';
 import { CloseIcon, MenuIcon, SearchIcon, SettingsIcon } from './icons';
+import { DEFAULT_OPACITY, OPACITY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
+import { ResizeEdges } from './ResizeEdges';
 import { ResultRow } from './ResultRow';
+import { SettingsPanel } from './SettingsPanel';
 
 function resultCount(n: number): string {
   const mod10 = n % 10;
@@ -22,6 +25,8 @@ export function Overlay({ pack }: { pack: ServerPack }) {
   const [query, setQuery] = useState('');
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [selected, setSelected] = useState(0);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [opacity, setOpacity] = useState(DEFAULT_OPACITY);
   const hits = useMemo(() => searchArticles(pack, query), [pack, query]);
   const open = openKey ? hits.find((hit) => hitKey(hit) === openKey) : undefined;
 
@@ -36,22 +41,77 @@ export function Overlay({ pack }: { pack: ServerPack }) {
     }
   };
 
+  /** Esc steps back one layer at a time: settings → article → search text → hide the overlay. */
+  const stepBack = useRef<() => void>(() => {});
+  stepBack.current = () => {
+    if (settingsOpen) setSettingsOpen(false);
+    else if (open) setOpenKey(null);
+    else if (query) {
+      setQuery('');
+      setSelected(0);
+    } else void platform.hideOverlay();
+    searchRef.current?.focus();
+  };
+
+  // On the window, not an element: a clicked result disappears and takes the focus with it.
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      stepBack.current();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const openHit = (hit: SearchHit) => {
+    setOpenKey(hitKey(hit));
+    searchRef.current?.focus();
+  };
+
   // The search field takes focus on first render and every time the overlay is shown again.
   useEffect(() => {
     searchRef.current?.focus();
     return platform.onOverlayShown(() => searchRef.current?.focus());
   }, [platform]);
 
+  useEffect(() => {
+    void platform.readSetting<number>(OPACITY_KEY).then((saved) => {
+      const value = clampOpacity(saved ?? DEFAULT_OPACITY);
+      setOpacity(value);
+      applyOpacity(value);
+    });
+  }, [platform]);
+
+  const changeOpacity = (value: number) => {
+    const clamped = clampOpacity(value);
+    setOpacity(clamped);
+    applyOpacity(clamped);
+    void platform.writeSetting(OPACITY_KEY, clamped);
+  };
+
   return (
     <div className="overlay glass">
-      <div className="overlay__head">
+      {platform.kind === 'tauri' && <ResizeEdges />}
+      <div className="overlay__head" data-tauri-drag-region>
         <button className="icon-btn" type="button" aria-label="Все документы" title="Все документы">
           <MenuIcon />
         </button>
-        <span className="brand">РО Хелпер</span>
-        <span className="sp" />
-        <span className="chip">{pack.server.name}</span>
-        <button className="icon-btn" type="button" aria-label="Настройки" title="Настройки">
+        <span className="brand" data-tauri-drag-region>
+          РО Хелпер
+        </span>
+        <span className="sp" data-tauri-drag-region />
+        <span className="chip" data-tauri-drag-region>
+          {pack.server.name}
+        </span>
+        <button
+          className={settingsOpen ? 'icon-btn icon-btn--on' : 'icon-btn'}
+          type="button"
+          aria-label="Настройки"
+          aria-expanded={settingsOpen}
+          title="Настройки"
+          onClick={() => setSettingsOpen((v) => !v)}
+        >
           <SettingsIcon />
         </button>
         <button
@@ -64,6 +124,8 @@ export function Overlay({ pack }: { pack: ServerPack }) {
           <CloseIcon />
         </button>
       </div>
+
+      {settingsOpen && <SettingsPanel opacity={opacity} onOpacity={changeOpacity} />}
 
       <div className="search">
         <SearchIcon />
@@ -88,7 +150,15 @@ export function Overlay({ pack }: { pack: ServerPack }) {
 
       <div className="overlay__content">
         {open ? (
-          <ArticleView article={open.article} document={open.document} focusPart={open.part} onBack={() => setOpenKey(null)} />
+          <ArticleView
+            article={open.article}
+            document={open.document}
+            focusPart={open.part}
+            onBack={() => {
+              setOpenKey(null);
+              searchRef.current?.focus();
+            }}
+          />
         ) : (
           query.trim() && (
             <>
@@ -99,7 +169,7 @@ export function Overlay({ pack }: { pack: ServerPack }) {
               <div className="list" role="list" aria-label="Результаты поиска">
                 {hits.map((hit, i) => (
                   <div role="listitem" key={hitKey(hit)}>
-                    <ResultRow hit={hit} selected={i === selected} onOpen={() => setOpenKey(hitKey(hit))} />
+                    <ResultRow hit={hit} selected={i === selected} onOpen={() => openHit(hit)} />
                   </div>
                 ))}
               </div>
