@@ -4,6 +4,7 @@ import { usePlatform } from '../platform/PlatformContext';
 import { ArticleView } from './ArticleView';
 import { CloseIcon, MenuIcon, SearchIcon, SettingsIcon } from './icons';
 import { DEFAULT_OPACITY, OPACITY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
+import type { Profile } from './profile';
 import { ResizeEdges } from './ResizeEdges';
 import { ResultRow } from './ResultRow';
 import { SettingsPanel } from './SettingsPanel';
@@ -19,7 +20,7 @@ function resultCount(n: number): string {
 /** Stable key of a hit: an article, or one part of it. */
 const hitKey = (hit: SearchHit) => `${hit.article.id}#${hit.part?.number ?? ''}`;
 
-export function Overlay({ pack }: { pack: ServerPack }) {
+export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; profile: Profile; onEditProfile: () => void }) {
   const platform = usePlatform();
   const searchRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
@@ -27,7 +28,10 @@ export function Overlay({ pack }: { pack: ServerPack }) {
   const [selected, setSelected] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [opacity, setOpacity] = useState(DEFAULT_OPACITY);
-  const hits = useMemo(() => searchArticles(pack, query), [pack, query]);
+  const organization = pack.organizations.find((o) => o.id === profile.organization);
+  const boostDocuments = organization?.documents;
+  const hits = useMemo(() => searchArticles(pack, query, { boostDocuments }), [pack, query, boostDocuments]);
+  const summary = [pack.server.name, organization && organization.id !== 'none' ? organization.name : null].filter(Boolean).join(' · ');
   const open = openKey ? hits.find((hit) => hitKey(hit) === openKey) : undefined;
 
   const onSearchKey = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -102,7 +106,7 @@ export function Overlay({ pack }: { pack: ServerPack }) {
         </span>
         <span className="sp" data-tauri-drag-region />
         <span className="chip" data-tauri-drag-region>
-          {pack.server.name}
+          {summary}
         </span>
         <button
           className={settingsOpen ? 'icon-btn icon-btn--on' : 'icon-btn'}
@@ -125,7 +129,9 @@ export function Overlay({ pack }: { pack: ServerPack }) {
         </button>
       </div>
 
-      {settingsOpen && <SettingsPanel opacity={opacity} onOpacity={changeOpacity} />}
+      {settingsOpen && (
+        <SettingsPanel summary={summary} hotkey={profile.hotkey} opacity={opacity} onOpacity={changeOpacity} onEditProfile={onEditProfile} />
+      )}
 
       <div className="search">
         <SearchIcon />

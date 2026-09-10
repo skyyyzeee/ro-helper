@@ -22,4 +22,12 @@ describe('bundled Тверской pack', () => {
     expect(TVERSKOI_PACK.server).toEqual({ id: 'tverskoi', name: 'Тверской', status: 'active' });
     expect(TVERSKOI_PACK.version).toBe('2026-09-06');
   });
+
+  it('lists the thirteen organisations to choose from, each pointing at Тверской documents', () => {
+    expect(TVERSKOI_PACK.organizations.map((o) => o.name)).toEqual([
+      'МВД', 'ГИБДД', 'ФСБ', 'ФСО', 'Армия / Росгвардия', 'Следственный комитет', 'Прокуратура',
+      'Суд', 'Правительство', 'Больница', 'Вести Москвы', 'ОПГ', 'Без организации',
+    ]);
+    expect(TVERSKOI_PACK.organizations.find((o) => o.id === 'gibdd')?.documents).toEqual(['pdd', 'koap', 'ch-gibdd', 'fz6']);
+  });
 });

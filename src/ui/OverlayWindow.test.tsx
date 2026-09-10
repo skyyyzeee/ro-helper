@@ -1,21 +1,7 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createFakePlatform, type FakeOptions } from '../platform/fake';
-import { PlatformProvider } from '../platform/PlatformContext';
-import { App } from './App';
+import { renderApp } from '../test/renderApp';
 import { DEFAULT_HOTKEY, OPACITY_KEY } from './overlaySettings';
-
-function renderApp(options: FakeOptions = {}, settings: Record<string, unknown> = {}) {
-  const platform = createFakePlatform(options);
-  for (const [key, value] of Object.entries(settings)) platform.settings.set(key, value);
-  render(
-    <PlatformProvider platform={platform}>
-      <App />
-    </PlatformProvider>,
-  );
-  return { platform, user: userEvent.setup() };
-}
 
 const search = () => screen.getByRole('searchbox', { name: 'Поиск по законам' });
 
@@ -23,7 +9,7 @@ afterEach(() => document.documentElement.style.removeProperty('--glass-alpha'));
 
 describe('overlay window', () => {
   it('registers the hotkey, which hides the overlay and brings it back with the cursor in the search field', async () => {
-    const { platform } = renderApp();
+    const { platform } = await renderApp();
     await act(async () => {});
     expect(platform.state.hotkey).toBe(DEFAULT_HOTKEY);
 
@@ -37,7 +23,7 @@ describe('overlay window', () => {
   });
 
   it('steps back one layer per Esc: article → search text → hidden overlay', async () => {
-    const { platform, user } = renderApp();
+    const { platform, user } = await renderApp();
     await user.type(search(), 'ук 104');
     await user.click(screen.getByRole('button', { name: /ст\. 104/ }));
     expect(screen.getByRole('article', { name: /Статья 104/ })).toBeInTheDocument();
@@ -56,7 +42,7 @@ describe('overlay window', () => {
   });
 
   it('adjusts the background transparency, saves it and closes the settings on Esc', async () => {
-    const { platform, user } = renderApp();
+    const { platform, user } = await renderApp();
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
     const settings = screen.getByRole('group', { name: 'Настройки' });
     const slider = within(settings).getByRole('slider', { name: 'Прозрачность фона' });
@@ -73,13 +59,13 @@ describe('overlay window', () => {
   });
 
   it('starts with the saved transparency', async () => {
-    renderApp({}, { [OPACITY_KEY]: 0.8 });
+    await renderApp({ settings: { [OPACITY_KEY]: 0.8 } });
     await act(async () => {});
     expect(document.documentElement.style.getPropertyValue('--glass-alpha')).toBe('0.8');
   });
 
   it('in the app, offers to reset the window position and resizes the frameless window from its edges', async () => {
-    const { platform, user } = renderApp({ kind: 'tauri' });
+    const { platform, user } = await renderApp({ platform: { kind: 'tauri' } });
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
     await user.click(screen.getByRole('button', { name: 'Сбросить положение окна' }));
     expect(platform.calls.some((call) => call.method === 'resetWindowBounds')).toBe(true);
@@ -90,7 +76,7 @@ describe('overlay window', () => {
   });
 
   it('in the browser preview, has no window to reset or resize', async () => {
-    const { user } = renderApp({ kind: 'browser' });
+    const { user } = await renderApp({ platform: { kind: 'browser' } });
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
     expect(screen.queryByRole('button', { name: 'Сбросить положение окна' })).not.toBeInTheDocument();
     expect(document.querySelector('.resize')).toBeNull();

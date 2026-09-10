@@ -114,8 +114,17 @@ export interface ServerInfo {
   status: 'active' | 'soon';
 }
 
+export interface Organization {
+  id: string;
+  name: string;
+  /** Documents that rank first for its members; ids of documents the pack may not have yet. */
+  documents: string[];
+}
+
 export interface ServerPack {
   server: ServerInfo;
+  /** What the user can pick as their organisation, «Без организации» included. */
+  organizations: Organization[];
   /** Date-based version of the pack. */
   version: string;
   documents: LawDocument[];

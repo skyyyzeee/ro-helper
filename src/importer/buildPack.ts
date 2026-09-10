@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import type { DocumentCategory, DocumentKind, LawDocument, ServerPack } from '../core/model';
+import type { DocumentCategory, DocumentKind, LawDocument, Organization, ServerPack } from '../core/model';
 import { parseLawText, type LawFormat, type ParseIssue } from './lawText';
 import { applyOverrides, type Overrides } from './overrides';
 
@@ -42,6 +42,7 @@ export function buildPack(serverDir: string, server: ServerSources): BuildResult
   const readJson = <T,>(file: string, fallback: T): T => (existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : fallback);
   const overrides = readJson<Overrides>(join(serverDir, 'overrides.json'), {});
   const synonyms = readJson<Record<string, string[]>>(join(serverDir, 'synonyms.json'), {});
+  const organizations = readJson<Organization[]>(join(serverDir, 'organizations.json'), []);
   const available = new Set(readdirSync(sourcesDir).filter((f) => f.endsWith('.meta.json')).map((f) => f.replace('.meta.json', '')));
   const issues: BuildResult['issues'] = [];
   const documents: LawDocument[] = [];
@@ -71,7 +72,15 @@ export function buildPack(serverDir: string, server: ServerSources): BuildResult
     if (!knownArticles.has(articleId)) issues.push({ article: articleId, line: articleId, reason: 'Правка для несуществующей статьи' });
   }
 
+  const knownDocuments = new Set(server.documents);
+  for (const organization of organizations) {
+    for (const id of organization.documents) {
+      if (!knownDocuments.has(id)) issues.push({ line: organization.name, reason: `Организация ссылается на неизвестный документ «${id}»` });
+    }
+  }
+
   // The pack version is the newest law edit it contains, so it only changes when a law does.
   const version = documents.map((d) => d.source.lastEdited.slice(0, 10)).sort().at(-1) ?? '0000-00-00';
-  return { pack: { server: { id: server.id, name: server.name, status: server.status }, version, documents, synonyms }, issues };
+  const info = { id: server.id, name: server.name, status: server.status };
+  return { pack: { server: info, organizations, version, documents, synonyms }, issues };
 }

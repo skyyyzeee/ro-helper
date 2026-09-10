@@ -4,6 +4,117 @@
     "name": "Тверской",
     "status": "active"
   },
+  "organizations": [
+    {
+      "id": "mvd",
+      "name": "МВД",
+      "documents": [
+        "fz6",
+        "upk",
+        "ch-mvd"
+      ]
+    },
+    {
+      "id": "gibdd",
+      "name": "ГИБДД",
+      "documents": [
+        "pdd",
+        "koap",
+        "ch-gibdd",
+        "fz6"
+      ]
+    },
+    {
+      "id": "fsb",
+      "name": "ФСБ",
+      "documents": [
+        "fz5",
+        "fz14",
+        "fz12",
+        "upk"
+      ]
+    },
+    {
+      "id": "fso",
+      "name": "ФСО",
+      "documents": [
+        "fz7",
+        "ch-fso"
+      ]
+    },
+    {
+      "id": "army",
+      "name": "Армия / Росгвардия",
+      "documents": [
+        "fz2",
+        "ch-army",
+        "ch-army-discipline",
+        "ch-army-guard"
+      ]
+    },
+    {
+      "id": "sk",
+      "name": "Следственный комитет",
+      "documents": [
+        "fz4",
+        "upk",
+        "ch-sk"
+      ]
+    },
+    {
+      "id": "prosecutor",
+      "name": "Прокуратура",
+      "documents": [
+        "fz3",
+        "upk"
+      ]
+    },
+    {
+      "id": "court",
+      "name": "Суд",
+      "documents": [
+        "fkz4",
+        "upk"
+      ]
+    },
+    {
+      "id": "government",
+      "name": "Правительство",
+      "documents": [
+        "fkz1",
+        "fz1",
+        "ethics"
+      ]
+    },
+    {
+      "id": "hospital",
+      "name": "Больница",
+      "documents": [
+        "msk-health",
+        "ch-hospital"
+      ]
+    },
+    {
+      "id": "news",
+      "name": "Вести Москвы",
+      "documents": [
+        "msk-news",
+        "ch-news"
+      ]
+    },
+    {
+      "id": "opg",
+      "name": "ОПГ",
+      "documents": [
+        "rules-crime"
+      ]
+    },
+    {
+      "id": "none",
+      "name": "Без организации",
+      "documents": []
+    }
+  ],
   "version": "2026-09-06",
   "documents": [
     {

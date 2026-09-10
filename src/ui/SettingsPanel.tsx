@@ -1,13 +1,35 @@
 import { usePlatform } from '../platform/PlatformContext';
-import { DEFAULT_HOTKEY, MAX_OPACITY, MIN_OPACITY, formatHotkey } from './overlaySettings';
+import { MAX_OPACITY, MIN_OPACITY } from './overlaySettings';
+import { formatHotkey } from './profile';
 
-/** Overlay settings for now: background transparency and window position. Server, organisation and hotkey come with ticket 07. */
-export function SettingsPanel({ opacity, onOpacity }: { opacity: number; onOpacity: (value: number) => void }) {
+/** Overlay settings: server, organisation and hotkey (changed in the first-launch steps), transparency, window position. */
+export function SettingsPanel({
+  summary,
+  hotkey,
+  opacity,
+  onOpacity,
+  onEditProfile,
+}: {
+  /** «Тверской · МВД». */
+  summary: string;
+  hotkey: string;
+  opacity: number;
+  onOpacity: (value: number) => void;
+  onEditProfile: () => void;
+}) {
   const platform = usePlatform();
   const transparency = Math.round((1 - opacity) * 100);
 
   return (
     <div className="settings" role="group" aria-label="Настройки">
+      <div className="settings__row">
+        <span>{summary}</span>
+        <span className="kbd">{formatHotkey(hotkey)}</span>
+        <span className="sp" />
+        <button className="settings__button" type="button" onClick={onEditProfile}>
+          Изменить
+        </button>
+      </div>
       <label className="settings__row">
         <span>Прозрачность фона</span>
         <span className="sp" />
@@ -28,11 +50,6 @@ export function SettingsPanel({ opacity, onOpacity }: { opacity: number; onOpaci
           Сбросить положение окна
         </button>
       )}
-      <div className="settings__row settings__row--muted">
-        <span>Горячая клавиша</span>
-        <span className="sp" />
-        <span className="kbd">{formatHotkey(DEFAULT_HOTKEY)}</span>
-      </div>
     </div>
   );
 }

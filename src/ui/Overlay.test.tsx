@@ -1,29 +1,16 @@
-import { act, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { act, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { createFakePlatform } from '../platform/fake';
-import { PlatformProvider } from '../platform/PlatformContext';
-import { App } from './App';
-
-function renderApp() {
-  const platform = createFakePlatform();
-  render(
-    <PlatformProvider platform={platform}>
-      <App />
-    </PlatformProvider>,
-  );
-  return platform;
-}
+import { renderApp } from '../test/renderApp';
 
 describe('overlay', () => {
-  it('opens with the brand and the cursor in the search field', () => {
-    renderApp();
+  it('opens with the brand and the cursor in the search field', async () => {
+    await renderApp();
     expect(screen.getByText('РО Хелпер')).toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'Поиск по законам' })).toHaveFocus();
   });
 
   it('puts the cursor back in the search field when the overlay is shown again', async () => {
-    const platform = renderApp();
+    const { platform } = await renderApp();
     const search = screen.getByRole('searchbox', { name: 'Поиск по законам' });
     search.blur();
     expect(search).not.toHaveFocus();
@@ -33,8 +20,8 @@ describe('overlay', () => {
   });
 
   it('hides the overlay through the platform', async () => {
-    const platform = renderApp();
-    await userEvent.click(screen.getByRole('button', { name: 'Скрыть оверлей' }));
+    const { platform, user } = await renderApp();
+    await user.click(screen.getByRole('button', { name: 'Скрыть оверлей' }));
     expect(platform.state.overlayVisible).toBe(false);
   });
 });

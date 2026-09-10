@@ -1,4 +1,7 @@
-/** Temporary default until the first-launch flow lets the user choose (ticket 07). */
+/**
+ * Default hotkey. Alt+Q was checked in game on Тверской (ticket 06): GTA V leaves the Alt+Q combination
+ * free (Q alone, «cover», still reaches the game) and nothing in Russia Online collided with it.
+ */
 export const DEFAULT_HOTKEY = 'Alt+Q';
 
 export const OPACITY_KEY = 'overlay.opacity';
@@ -14,9 +17,4 @@ export function clampOpacity(value: number): number {
 /** Applies the glass opacity to the whole overlay through the `--glass-alpha` token. */
 export function applyOpacity(value: number): void {
   document.documentElement.style.setProperty('--glass-alpha', String(clampOpacity(value)));
-}
-
-/** «Alt+Q» → «Alt + Q». */
-export function formatHotkey(accelerator: string): string {
-  return accelerator.split('+').join(' + ');
 }

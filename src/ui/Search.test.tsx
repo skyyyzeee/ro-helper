@@ -1,26 +1,13 @@
-import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { createFakePlatform } from '../platform/fake';
-import { PlatformProvider } from '../platform/PlatformContext';
-import { App } from './App';
-
-function renderApp() {
-  const platform = createFakePlatform();
-  render(
-    <PlatformProvider platform={platform}>
-      <App />
-    </PlatformProvider>,
-  );
-  return { platform, user: userEvent.setup() };
-}
+import { renderApp } from '../test/renderApp';
 
 const results = () => within(screen.getByRole('list', { name: 'Результаты поиска' })).getAllByRole('listitem');
 const search = () => screen.getByRole('searchbox', { name: 'Поиск по законам' });
 
 describe('finding an article by number', () => {
   it('shows each punished part of an УК article with its jurisdiction, stars and punishment', async () => {
-    const { user } = renderApp();
+    const { user } = await renderApp();
     await user.type(search(), 'ук 65');
 
     const [first, second] = results();
@@ -38,7 +25,7 @@ describe('finding an article by number', () => {
   });
 
   it('opens the article on the part that was clicked and goes back to the results', async () => {
-    const { user, platform } = renderApp();
+    const { user, platform } = await renderApp();
     await user.type(search(), '65');
     await user.click(screen.getByRole('button', { name: /ст\. 65 ч\. 2/ }));
 
@@ -58,7 +45,7 @@ describe('finding an article by number', () => {
   });
 
   it('finds one КоАП part with «ч N» and lists sanctions by who they apply to', async () => {
-    const { user } = renderApp();
+    const { user } = await renderApp();
     await user.type(search(), 'коап 5.4 ч 1');
 
     const [only] = results();
@@ -75,7 +62,7 @@ describe('finding an article by number', () => {
   });
 
   it('shows a ПДД point, which has no title, by the start of its text', async () => {
-    const { user } = renderApp();
+    const { user } = await renderApp();
     await user.type(search(), 'пдд 8.2');
 
     const [only] = results();
@@ -90,14 +77,14 @@ describe('finding an article by number', () => {
   });
 
   it('finds an article by a word in any form', async () => {
-    const { user } = renderApp();
+    const { user } = await renderApp();
     await user.type(search(), 'кражу');
     expect(results()[0]).toHaveTextContent('ст. 65 ч. 1');
     expect(results()[0]).toHaveTextContent('Кража');
   });
 
   it('moves the selection with ↑↓ and starts again from the top on a new query', async () => {
-    const { user } = renderApp();
+    const { user } = await renderApp();
     await user.type(search(), 'коап 8.6');
     const current = () => results().findIndex((item) => within(item).getByRole('button').getAttribute('aria-current') === 'true');
     expect(current()).toBe(0);
@@ -112,7 +99,7 @@ describe('finding an article by number', () => {
   });
 
   it('says so when nothing matches', async () => {
-    const { user } = renderApp();
+    const { user } = await renderApp();
     await user.type(search(), '999');
     expect(screen.getByText('Ничего не найдено')).toBeInTheDocument();
   });

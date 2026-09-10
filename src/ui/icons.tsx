@@ -45,6 +45,26 @@ export const BackIcon = ({ size = 18 }: { size?: number }) => (
   </Icon>
 );
 
+export const ChevronLeftIcon = ({ size = 16 }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M15 5l-7 7 7 7" />
+  </Icon>
+);
+
+export const ChevronRightIcon = ({ size = 16 }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M9 5l7 7-7 7" />
+  </Icon>
+);
+
+export const WarnIcon = ({ size = 17 }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M12 3.5l9 16H3z" />
+    <path d="M12 10v4.5" />
+    <path d="M12 17.6v.4" />
+  </Icon>
+);
+
 export const ExternalIcon = ({ size = 13 }: { size?: number }) => (
   <Icon size={size}>
     <path d="M7 17L17 7M9 7h8v8" />
