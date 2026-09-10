@@ -1,2 +1,15 @@
-﻿# Assembled design canvas (large, rebuilt from design/mockup/*.dc.html)
+# Dependencies and builds
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
+*.tsbuildinfo
+
+# Local
+.vite/
+*.log
+.env
+.env.*
+
+# Assembled design canvas (large, rebuilt from design/mockup/*.dc.html)
 design/mockup/ro-helper-mockup.html

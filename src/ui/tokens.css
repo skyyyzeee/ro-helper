@@ -1,0 +1,50 @@
+/* Visual tokens from the approved mockup (style C: dark grey frosted glass, white text with shadow). */
+:root {
+  --font: 'Onest', system-ui, sans-serif;
+
+  /* Glass. --glass-alpha is the user-adjustable background opacity. */
+  --glass-alpha: 0.62;
+  --glass-bg: rgb(15 15 18 / var(--glass-alpha));
+  --glass-filter: blur(28px) saturate(115%);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 30px 80px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  /* Text: always white with a shadow so it never merges with the game behind. */
+  --text: #fff;
+  --text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  --text-muted: rgba(255, 255, 255, 0.58);
+  --text-faint: rgba(255, 255, 255, 0.42);
+
+  /* Surfaces inside glass. */
+  --surface: rgba(255, 255, 255, 0.07);
+  --surface-hover: rgba(255, 255, 255, 0.11);
+  --surface-active: rgba(255, 255, 255, 0.14);
+  --line: rgba(255, 255, 255, 0.08);
+
+  /* Accents share lightness and chroma; only hue differs. */
+  --accent: oklch(0.78 0.1 245);
+  --accent-hover: oklch(0.83 0.09 245);
+  --accent-text: oklch(0.86 0.08 245);
+  --on-accent: #0d1118;
+  --warn-bg: oklch(0.78 0.1 30 / 0.2);
+  --warn-text: oklch(0.92 0.05 35);
+
+  /* Document category badges. */
+  --badge-codes-text: oklch(0.87 0.07 245);
+  --badge-codes-bg: oklch(0.78 0.1 245 / 0.22);
+  --badge-fkz-text: oklch(0.87 0.07 300);
+  --badge-fkz-bg: oklch(0.78 0.1 300 / 0.22);
+  --badge-fz-text: oklch(0.87 0.07 195);
+  --badge-fz-bg: oklch(0.78 0.1 195 / 0.22);
+  --badge-moscow-text: oklch(0.89 0.07 80);
+  --badge-moscow-bg: oklch(0.8 0.1 80 / 0.22);
+  --badge-charters-text: oklch(0.87 0.07 150);
+  --badge-charters-bg: oklch(0.78 0.1 150 / 0.22);
+  --badge-rules-text: rgba(255, 255, 255, 0.88);
+  --badge-rules-bg: rgba(255, 255, 255, 0.13);
+
+  --radius-panel: 22px;
+  --radius-field: 16px;
+  --radius-card: 14px;
+  --radius-control: 12px;
+}
