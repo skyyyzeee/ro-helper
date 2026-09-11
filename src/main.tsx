@@ -9,11 +9,22 @@ import './ui/app.css';
 import { App } from './ui/App';
 import { createBrowserPlatform } from './platform/browser';
 import { PlatformProvider } from './platform/PlatformContext';
-import { createTauriPlatform, isTauri } from './platform/tauri';
+import { createPinBridge, createTauriPlatform, isPinWindow, isTauri } from './platform/tauri';
+import { PinWindow } from './ui/PinCardView';
 
 async function start() {
+  const root = createRoot(document.getElementById('root')!);
+  // The app has two windows on the same page: the overlay, and the card pinned over the game.
+  if (isPinWindow()) {
+    root.render(
+      <StrictMode>
+        <PinWindow bridge={createPinBridge()} />
+      </StrictMode>,
+    );
+    return;
+  }
   const platform = isTauri() ? await createTauriPlatform() : createBrowserPlatform();
-  createRoot(document.getElementById('root')!).render(
+  root.render(
     <StrictMode>
       <PlatformProvider platform={platform}>
         <App />

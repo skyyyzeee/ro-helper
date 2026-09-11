@@ -12,6 +12,8 @@ export interface FakePlatform extends PlatformAdapter {
   readonly state: { overlayVisible: boolean; hotkey: string | null; pin: PinCard | null; clipboard: string };
   /** Simulates the user pressing the registered global hotkey. */
   pressHotkey(): void;
+  /** Simulates the user closing the pinned card with its own cross. */
+  closePin(): void;
 }
 
 export interface FakeOptions {
@@ -25,6 +27,7 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
   const calls: FakeCall[] = [];
   const settings = new Map<string, unknown>();
   const shownListeners = new Set<() => void>();
+  const pinClosedListeners = new Set<() => void>();
   const state: FakePlatform['state'] = { overlayVisible: true, hotkey: null, pin: null, clipboard: '' };
   let onHotkey: (() => void) | null = null;
   let bounds: WindowBounds | null = null;
@@ -41,6 +44,10 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
 
     pressHotkey() {
       onHotkey?.();
+    },
+    closePin() {
+      state.pin = null;
+      pinClosedListeners.forEach((listener) => listener());
     },
 
     async registerHotkey(accelerator, onPress) {
@@ -111,8 +118,9 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
       record('hidePin');
       state.pin = null;
     },
-    async setPinClickThrough(on) {
-      record('setPinClickThrough', on);
+    onPinClosed(listener) {
+      pinClosedListeners.add(listener);
+      return () => pinClosedListeners.delete(listener);
     },
 
     async writeClipboard(text) {

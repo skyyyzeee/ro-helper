@@ -1,11 +1,11 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { PhysicalPosition, PhysicalSize, availableMonitors, currentMonitor, getCurrentWindow, primaryMonitor } from '@tauri-apps/api/window';
+import { LogicalSize, PhysicalPosition, PhysicalSize, availableMonitors, currentMonitor, getCurrentWindow, primaryMonitor } from '@tauri-apps/api/window';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { isRegistered, register, unregister } from '@tauri-apps/plugin-global-shortcut';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { load } from '@tauri-apps/plugin-store';
-import type { PlatformAdapter, WindowBounds } from './types';
+import type { PinCard, PlatformAdapter, WindowBounds } from './types';
 
 /** True inside the Tauri app, false in a plain browser. */
 export function isTauri(): boolean {
@@ -15,6 +15,42 @@ export function isTauri(): boolean {
 const BOUNDS_KEY = 'window.bounds';
 /** Emitted by the native side for the tray icon and a second launch of the app. */
 const TOGGLE_EVENT = 'overlay-toggle';
+/** The pinned card's window, and the events between it and the native side. */
+const PIN_LABEL = 'pin';
+const PIN_CARD_EVENT = 'pin-card';
+const PIN_LIVE_EVENT = 'pin-live';
+const PIN_CLOSED_EVENT = 'pin-closed';
+
+/** True in the pinned card's window, which renders the card instead of the overlay. */
+export function isPinWindow(): boolean {
+  return isTauri() && getCurrentWindow().label === PIN_LABEL;
+}
+
+/** What the pinned card's window needs from the native side. */
+export interface PinBridge {
+  /** The card pinned before the window loaded, and whether the overlay is open. */
+  state(): Promise<{ card: PinCard | null; live: boolean }>;
+  onCard(listener: (card: PinCard) => void): () => void;
+  onLive(listener: (live: boolean) => void): () => void;
+  /** The card's own cross. */
+  close(): Promise<void>;
+  /** Sizes the window to the card, so its empty corners do not cover the overlay. */
+  fit(width: number, height: number): Promise<void>;
+}
+
+export function createPinBridge(): PinBridge {
+  const subscribe = <T,>(event: string, listener: (payload: T) => void) => {
+    const unlisten = listen<T>(event, (e) => listener(e.payload));
+    return () => void unlisten.then((stop) => stop());
+  };
+  return {
+    state: () => invoke('pin_state'),
+    onCard: (listener) => subscribe(PIN_CARD_EVENT, listener),
+    onLive: (listener) => subscribe(PIN_LIVE_EVENT, listener),
+    close: () => invoke('pin_hide', { fromCard: true }),
+    fit: (width, height) => getCurrentWindow().setSize(new LogicalSize(width, height)),
+  };
+}
 
 /**
  * The real platform: a frameless, transparent, always-on-top window over the game.
@@ -100,11 +136,14 @@ export async function createTauriPlatform(): Promise<PlatformAdapter> {
     await win.setAlwaysOnTop(true);
     await win.setFocus();
     visible = true;
+    // While the overlay is open, the pinned card can be dragged and closed.
+    await invoke('pin_live', { live: true });
     shownListeners.forEach((listener) => listener());
   };
   const hideOverlay = async () => {
     await win.hide();
     visible = false;
+    await invoke('pin_live', { live: false });
     await invoke('restore_foreground');
   };
   const toggleOverlay = () => (visible ? hideOverlay() : showOverlay());
@@ -115,6 +154,8 @@ export async function createTauriPlatform(): Promise<PlatformAdapter> {
   const queueHotkey = (task: () => Promise<void>) => (hotkeyQueue = hotkeyQueue.then(task, task));
 
   await listen(TOGGLE_EVENT, () => void toggleOverlay());
+  const pinClosedListeners = new Set<() => void>();
+  await listen(PIN_CLOSED_EVENT, () => pinClosedListeners.forEach((listener) => listener()));
 
   const platform: PlatformAdapter = {
     kind: 'tauri',
@@ -160,10 +201,12 @@ export async function createTauriPlatform(): Promise<PlatformAdapter> {
     retractWindow,
     setAlwaysOnTop: (on) => win.setAlwaysOnTop(on),
 
-    // The pinned card window arrives with ticket 12.
-    async showPin() {},
-    async hidePin() {},
-    async setPinClickThrough() {},
+    showPin: (card) => invoke('pin_show', { card }),
+    hidePin: () => invoke('pin_hide'),
+    onPinClosed(listener) {
+      pinClosedListeners.add(listener);
+      return () => pinClosedListeners.delete(listener);
+    },
 
     writeClipboard: (text) => writeText(text),
     readSetting: <T,>(key: string) => store.get<T>(key),

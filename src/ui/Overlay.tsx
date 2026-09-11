@@ -1,13 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
-  articleLabel,
-  articleTitle,
   calculateDetention,
   documentContents,
-  formatPunishment,
   leadPart,
   searchArticles,
-  type CalculatorRules,
   type Charge,
   type ChargeItem,
   type Mode,
@@ -17,13 +13,14 @@ import {
   type ServerPack,
 } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
-import type { PinCard } from '../platform/types';
 import { ArticleView } from './ArticleView';
 import { CalculatorPanel, type ChargeFields, type ChargePatch, type CopyState } from './CalculatorPanel';
 import { DocumentsMenu } from './DocumentsMenu';
 import { CloseIcon, MenuIcon, SearchIcon, SettingsIcon } from './icons';
 import { DEFAULT_OPACITY, OPACITY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
 import type { Profile } from './profile';
+import { PinCardView } from './PinCardView';
+import { articlePinCard, calculatorPinCard } from './pinCards';
 import { ResizeEdges } from './ResizeEdges';
 import { ResultRow } from './ResultRow';
 import { RECENT_LIMIT, entryPart, favoritesKey, hitKey, recentKey, useHitLookup, useStoredKeys } from './saved';
@@ -38,19 +35,8 @@ function plural(n: number, [one, few, many]: [string, string, string]): string {
   return `${n} ${many}`;
 }
 
-/** What the pinned card shows for an article: its part's punishment and text, and whose case it is. */
-function articlePinCard(hit: SearchHit, rules: CalculatorRules): PinCard {
-  const part = entryPart(hit.article, hit.part) ?? leadPart(hit.article) ?? hit.part ?? hit.article.parts.find((p) => p.text);
-  const title = articleTitle(hit.article);
-  const lines = [part?.punishment && formatPunishment(part.punishment), part?.text].filter((line): line is string => !!line);
-  const only = part?.jurisdiction?.length === 1 ? part.jurisdiction[0] : undefined;
-  const warning = only && rules.jurisdictionWarnings[only];
-  return {
-    heading: `${hit.document.short} ${articleLabel(hit.article, entryPart(hit.article, hit.part))}` + (title ? `. ${title}` : ''),
-    lines,
-    ...(warning ? { warning } : {}),
-  };
-}
+/** What is pinned over the game: one article's part, or the calculator, whose card follows it. */
+type Pinned = { kind: 'article'; hit: SearchHit } | { kind: 'calculator' };
 
 /** Width of the calculator panel plus the gap to the overlay, in CSS pixels. */
 const CALCULATOR_WIDTH = 400 + 12;
@@ -171,6 +157,32 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
     setOffender('citizen');
     setFineInput('');
   }, [calculatorOpen]);
+
+  // Pinned card: pinning hides the overlay; the calculator's card follows the calculator and goes with it.
+  const [pinned, setPinned] = useState<Pinned | null>(null);
+  const articleCard = useMemo(() => (pinned?.kind === 'article' ? articlePinCard(pinned.hit, pack.calculator) : null), [pinned, pack.calculator]);
+  const calculatorCard = useMemo(
+    () => (pinned?.kind === 'calculator' && calculatorOpen ? calculatorPinCard(result, typedNumber(fineInput)) : null),
+    [pinned, calculatorOpen, result, fineInput],
+  );
+  const pinCard = articleCard ?? calculatorCard;
+  useEffect(() => {
+    if (pinCard) void platform.showPin(pinCard);
+  }, [pinCard, platform]);
+  useEffect(() => {
+    if (pinned?.kind !== 'calculator' || calculatorOpen) return;
+    setPinned(null);
+    void platform.hidePin();
+  }, [pinned, calculatorOpen, platform]);
+  useEffect(() => platform.onPinClosed(() => setPinned(null)), [platform]);
+  const pin = (next: Pinned) => {
+    setPinned(next);
+    void platform.hideOverlay();
+  };
+  const unpin = () => {
+    setPinned(null);
+    void platform.hidePin();
+  };
 
   const [copyState, setCopyState] = useState<CopyState>('idle');
   const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -326,6 +338,13 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
   };
 
   return (
+    <>
+    {/* In the browser there is no second window: the stand-in game scene shows the card itself. */}
+    {platform.kind === 'browser' && pinCard && (
+      <div className="pin-preview">
+        <PinCardView card={pinCard} live onClose={unpin} />
+      </div>
+    )}
     <div className={`shell shell--${side}`}>
       {platform.kind === 'tauri' && <ResizeEdges />}
       {calculatorOpen && (
@@ -344,6 +363,7 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
           onFineInput={setFineInput}
           onCopy={copyCharges}
           copyState={copyState}
+          onPin={() => pin({ kind: 'calculator' })}
         />
       )}
     <div className="overlay glass">
@@ -436,7 +456,7 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
             }
             favorite={favoriteKeys.includes(hitKey(open))}
             onFavorite={() => toggleFavorite(open)}
-            onPin={() => void platform.showPin(articlePinCard(open, pack.calculator))}
+            onPin={() => pin({ kind: 'article', hit: open })}
           />
         ) : home ? (
           <>
@@ -522,5 +542,6 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
       )}
     </div>
     </div>
+    </>
   );
 }

@@ -10,7 +10,13 @@ export interface WindowBounds {
 
 /** What the pinned card shows. Serializable: it is sent to a separate window. */
 export interface PinCard {
+  kind: 'article' | 'calculator';
+  /** Article: «УК ст. 88 ч. 1. Халатность»; calculator: the total, «30 мес». */
   heading: string;
+  /** Stars to set, beside the calculator's total. */
+  stars?: number;
+  /** In the accent colour under the heading: the article's punishment. */
+  accent?: string;
   lines: string[];
   warning?: string;
 }
@@ -49,10 +55,15 @@ export interface PlatformAdapter {
   retractWindow(): Promise<void>;
   setAlwaysOnTop(on: boolean): Promise<void>;
 
-  /** Pinned card: a separate transparent always-on-top window. */
+  /**
+   * Pinned card: a separate transparent window over the game that never takes the focus. Clicks go
+   * through it while the overlay is hidden; while it is shown, the card can be dragged and closed.
+   * Showing a card replaces the one pinned before.
+   */
   showPin(card: PinCard): Promise<void>;
   hidePin(): Promise<void>;
-  setPinClickThrough(on: boolean): Promise<void>;
+  /** Called when the card is closed from the card itself. Returns an unsubscribe function. */
+  onPinClosed(listener: () => void): () => void;
 
   writeClipboard(text: string): Promise<void>;
 

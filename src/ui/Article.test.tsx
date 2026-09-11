@@ -70,10 +70,12 @@ describe('an open article', () => {
     await user.click(within(article()).getByRole('button', { name: 'Закрепить' }));
 
     expect(platform.state.pin).toMatchObject({
+      kind: 'article',
       heading: 'УК ст. 88 ч. 1. Халатность',
+      accent: 'штраф от 60 000 до 80 000 ₽ либо 40 мес',
       warning: 'федеральная подследственность — дело ФСБ',
     });
-    expect(platform.state.pin!.lines).toHaveLength(2);
+    expect(platform.state.pin!.lines).toEqual([expect.stringMatching(/^Халатность, то есть/)]);
 
     await openFromSearch(user, 'ук 104');
     await user.click(within(article()).getByRole('button', { name: 'Закрепить' }));

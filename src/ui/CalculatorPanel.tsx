@@ -17,7 +17,7 @@ import {
   type Offender,
   type Stage,
 } from '../core';
-import { CloseIcon, WarnIcon } from './icons';
+import { CloseIcon, PinIcon, WarnIcon } from './icons';
 import { JurisdictionPill, Stars } from './lawBits';
 
 const digits = (n: number) => formatRubles(n).replace(/\s₽$/, '');
@@ -64,11 +64,13 @@ export interface CalculatorPanelProps {
   onFineInput: (value: string) => void;
   onCopy: () => void;
   copyState: CopyState;
+  /** Pins the total over the game, to read the charges out to the detainee. */
+  onPin: () => void;
 }
 
 /** The side panel: criminal and administrative charges, their totals by law, and the charges to copy. */
 export function CalculatorPanel(props: CalculatorPanelProps) {
-  const { result, onClear, onCopy, copyState } = props;
+  const { result, onClear, onCopy, copyState, onPin } = props;
   const count = (result.criminal?.items.length ?? 0) + (result.administrative?.items.length ?? 0);
 
   return (
@@ -89,12 +91,17 @@ export function CalculatorPanel(props: CalculatorPanelProps) {
 
       <div className="calc__copy">
         {result.charge ? <div className="copy-str">{result.charge}</div> : <div className="copy-str copy-str--empty">Обвинять не в чем</div>}
-        <button className="btn btn--primary calc__copy-btn" type="button" disabled={!result.charge} onClick={onCopy}>
-          <span>{copyState === 'copied' ? 'Скопировано' : copyState === 'failed' ? 'Не удалось скопировать' : 'Скопировать'}</span>
-          <span className="kbd kbd--on-accent" aria-hidden="true">
-            Ctrl+C
-          </span>
-        </button>
+        <div className="calc__copy-row">
+          <button className="btn btn--primary calc__copy-btn" type="button" disabled={!result.charge} onClick={onCopy}>
+            <span>{copyState === 'copied' ? 'Скопировано' : copyState === 'failed' ? 'Не удалось скопировать' : 'Скопировать'}</span>
+            <span className="kbd kbd--on-accent" aria-hidden="true">
+              Ctrl+C
+            </span>
+          </button>
+          <button className="btn btn--icon" type="button" aria-label="Закрепить итог поверх игры" title="Закрепить поверх игры" onClick={onPin}>
+            <PinIcon />
+          </button>
+        </div>
       </div>
     </aside>
   );
