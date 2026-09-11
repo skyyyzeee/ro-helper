@@ -1,8 +1,33 @@
 import { usePlatform } from '../platform/PlatformContext';
+import { APP_VERSION, AUTHOR, LINKS } from './about';
+import { DiscordIcon, GitHubIcon } from './icons';
 import { MAX_OPACITY, MIN_OPACITY } from './overlaySettings';
 import { formatHotkey } from './profile';
+import type { Updates } from './updates';
 
-/** Overlay settings: server, organisation and hotkey (changed in the first-launch steps), transparency, window position. */
+/** What a check from the settings found, beside its button. */
+function updateNote(status: Updates['status']): string | null {
+  switch (status.kind) {
+    case 'checking':
+      return 'Проверяю…';
+    case 'latest':
+      return 'Установлена последняя версия';
+    case 'offline':
+      return 'Нет связи с GitHub';
+    case 'available':
+    case 'failed':
+      return `Доступна версия ${status.update.version}`;
+    case 'installing':
+      return 'Обновляю…';
+    default:
+      return null;
+  }
+}
+
+/**
+ * Overlay settings: server, organisation and hotkey (changed in the first-launch steps), transparency, window
+ * position; «Что изменилось», updates, and about the app.
+ */
 export function SettingsPanel({
   summary,
   hotkey,
@@ -10,6 +35,7 @@ export function SettingsPanel({
   onOpacity,
   onEditProfile,
   onChanges,
+  updates,
 }: {
   /** «Тверской · МВД». */
   summary: string;
@@ -19,6 +45,7 @@ export function SettingsPanel({
   onEditProfile: () => void;
   /** Opens «Что изменилось» for the recent updates of the laws. */
   onChanges: () => void;
+  updates: Updates;
 }) {
   const platform = usePlatform();
   const transparency = Math.round((1 - opacity) * 100);
@@ -56,6 +83,26 @@ export function SettingsPanel({
           Сбросить положение окна
         </button>
       )}
+      <div className="settings__row settings__about">
+        <span>
+          РО Хелпер {APP_VERSION} · автор {AUTHOR}
+        </span>
+        <span className="sp" />
+        <button className="icon-btn icon-btn--sm" type="button" aria-label="GitHub" title="GitHub" onClick={() => void platform.openExternal(LINKS.repository)}>
+          <GitHubIcon />
+        </button>
+        <button className="icon-btn icon-btn--sm" type="button" aria-label="Discord" title="Discord" onClick={() => void platform.openExternal(LINKS.discord)}>
+          <DiscordIcon />
+        </button>
+      </div>
+      <div className="settings__row">
+        <button className="settings__button" type="button" disabled={updates.status.kind === 'checking' || updates.status.kind === 'installing'} onClick={updates.check}>
+          Проверить обновления
+        </button>
+        <span className="settings__note" role="status">
+          {updateNote(updates.status)}
+        </span>
+      </div>
     </div>
   );
 }

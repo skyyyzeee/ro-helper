@@ -224,6 +224,8 @@ pub fn run() {
     .plugin(tauri_plugin_store::Builder::default().build())
     .plugin(tauri_plugin_clipboard_manager::init())
     .plugin(tauri_plugin_opener::init())
+    // New versions come from the GitHub releases, signed with the project's key (endpoint and key in tauri.conf.json).
+    .plugin(tauri_plugin_updater::Builder::new().build())
     .manage(PreviousForeground::default())
     .manage(Pin::default())
     .invoke_handler(tauri::generate_handler![

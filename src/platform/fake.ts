@@ -1,4 +1,4 @@
-import type { PinCard, PlatformAdapter, ResizeEdge, WindowBounds } from './types';
+import type { AppUpdate, PinCard, PlatformAdapter, ResizeEdge, WindowBounds } from './types';
 
 export interface FakeCall {
   method: keyof PlatformAdapter;
@@ -9,7 +9,15 @@ export interface FakePlatform extends PlatformAdapter {
   /** Every adapter call, in order. */
   readonly calls: FakeCall[];
   readonly settings: Map<string, unknown>;
-  readonly state: { overlayVisible: boolean; hotkey: string | null; pin: PinCard | null; clipboard: string };
+  readonly state: {
+    overlayVisible: boolean;
+    hotkey: string | null;
+    pin: PinCard | null;
+    clipboard: string;
+    /** What the releases offer: a newer version, none, or no connection. */
+    update: AppUpdate | null | 'offline';
+    updateInstalled: boolean;
+  };
   /** Simulates the user pressing the registered global hotkey. */
   pressHotkey(): void;
   /** Simulates the user closing the pinned card with its own cross. */
@@ -20,6 +28,8 @@ export interface FakeOptions {
   kind?: PlatformAdapter['kind'];
   /** Backing store for settings; defaults to memory. */
   storage?: Pick<Storage, 'getItem' | 'setItem'>;
+  /** A newer version the releases offer; none by default. */
+  update?: AppUpdate | 'offline';
 }
 
 /** In-memory adapter for tests and the browser preview. Records every call. */
@@ -28,7 +38,14 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
   const settings = new Map<string, unknown>();
   const shownListeners = new Set<() => void>();
   const pinClosedListeners = new Set<() => void>();
-  const state: FakePlatform['state'] = { overlayVisible: true, hotkey: null, pin: null, clipboard: '' };
+  const state: FakePlatform['state'] = {
+    overlayVisible: true,
+    hotkey: null,
+    pin: null,
+    clipboard: '',
+    update: options.update ?? null,
+    updateInstalled: false,
+  };
   let onHotkey: (() => void) | null = null;
   let bounds: WindowBounds | null = null;
 
@@ -144,6 +161,18 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
 
     async openExternal(url) {
       record('openExternal', url);
+    },
+
+    async checkForUpdate() {
+      record('checkForUpdate');
+      if (state.update === 'offline') throw new Error('offline');
+      return state.update;
+    },
+    async installUpdate(onProgress) {
+      record('installUpdate');
+      onProgress({ downloaded: 0, total: 100 });
+      onProgress({ downloaded: 100, total: 100 });
+      state.updateInstalled = true;
     },
   };
 }

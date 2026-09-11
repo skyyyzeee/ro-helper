@@ -1,0 +1,55 @@
+# A tag «v1.2.3» builds the Windows installer, signs the update and puts both, with latest.json for the
+# app's updater, into a draft release. Check the draft, write what is new, and publish it: installed copies
+# see the new version only once the release is published.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - run: npm ci
+
+      - name: Tests
+        run: npm test
+
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # The key that signs updates; the app accepts only updates signed with it.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: РО Хелпер ${{ github.ref_name }}
+          releaseBody: |
+            ## Что нового
+
+            - …
+
+            ## Установка
+
+            Скачайте `RO-Helper_…_x64-setup.exe` ниже и запустите. Установщик без цифровой подписи, поэтому Windows может показать «Windows защитила ваш компьютер» — нажмите «Подробнее» → «Выполнить в любом случае».
+
+            Уже установленная программа предложит обновиться сама.
+          releaseDraft: true
+          releaseAssetNamePattern: RO-Helper_[version]_[arch][setup][ext]
+          updaterJsonPreferNsis: true

@@ -1,10 +1,10 @@
 [package]
 name = "ro-helper"
-version = "0.1.0"
+version = "1.0.0"
 description = "РО Хелпер — законы Russia Online поверх игры"
 authors = ["skyze"]
-license = ""
-repository = ""
+license = "MIT"
+repository = "https://github.com/skyyyzeee/ro-helper"
 edition = "2021"
 rust-version = "1.77.2"
 
@@ -26,6 +26,7 @@ tauri-plugin-store = "2"
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "2"
+tauri-plugin-updater = "2"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }

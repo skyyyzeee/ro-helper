@@ -1,5 +1,5 @@
 import { createFakePlatform } from './fake';
-import type { PlatformAdapter } from './types';
+import type { AppUpdate, PlatformAdapter } from './types';
 
 /** Settings survive reloads when the browser allows storage; otherwise they live in memory. */
 function safeLocalStorage(): Pick<Storage, 'getItem' | 'setItem'> | undefined {
@@ -13,9 +13,22 @@ function safeLocalStorage(): Pick<Storage, 'getItem' | 'setItem'> | undefined {
   }
 }
 
-/** Browser preview: no global hotkey or extra windows, but real clipboard, links and settings. */
+/** An update to show in the preview: `localStorage['preview.update'] = '{"version":"1.1.0"}'`. */
+function previewUpdate(): AppUpdate | undefined {
+  try {
+    const raw = window.localStorage.getItem('preview.update');
+    return raw ? (JSON.parse(raw) as AppUpdate) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Browser preview: no global hotkey or extra windows, but real clipboard, links and settings.
+ * There is nothing to update; an update can be staged to look at the offer.
+ */
 export function createBrowserPlatform(): PlatformAdapter {
-  const fake = createFakePlatform({ kind: 'browser', storage: safeLocalStorage() });
+  const fake = createFakePlatform({ kind: 'browser', storage: safeLocalStorage(), update: previewUpdate() });
   return {
     ...fake,
     async writeClipboard(text) {

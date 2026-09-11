@@ -31,6 +31,8 @@ import { ResizeEdges } from './ResizeEdges';
 import { ResultRow } from './ResultRow';
 import { RECENT_LIMIT, entryPart, favoritesKey, hitKey, recentKey, useHitLookup, useStoredKeys } from './saved';
 import { SettingsPanel } from './SettingsPanel';
+import { UpdateBanner } from './UpdateBanner';
+import { useUpdates } from './updates';
 
 /** «1 результат», «3 результата», «11 результатов». */
 function plural(n: number, [one, few, many]: [string, string, string]): string {
@@ -119,6 +121,9 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
     const key = hitKey(hit);
     updateFavorites((list) => (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]));
   };
+
+  // New versions of the app, offered under the header.
+  const updates = useUpdates();
 
   // «Что изменилось»: shown once after an update of the laws, and from the settings. Articles changed in the
   // last two weeks are marked in the results and lead to «было → стало».
@@ -462,8 +467,10 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
           onOpacity={changeOpacity}
           onEditProfile={onEditProfile}
           onChanges={showRecentChanges}
+          updates={updates}
         />
       )}
+      <UpdateBanner updates={updates} />
 
       <div className="search">
         <SearchIcon />

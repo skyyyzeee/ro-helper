@@ -1,8 +1,13 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
+// package.json holds the version for both the app (tauri.conf.json points at it) and the settings' «о программе».
+const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
+
 export default defineConfig({
   plugins: [react()],
+  define: { __APP_VERSION__: JSON.stringify(version) },
   clearScreen: false,
   // Tauri's dev window expects a fixed port.
   // Rust builds under src-tauri lock files the watcher would trip over.

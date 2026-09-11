@@ -21,6 +21,19 @@ export interface PinCard {
   warning?: string;
 }
 
+/** A newer version of the app, found in the GitHub releases. */
+export interface AppUpdate {
+  version: string;
+  /** When it was released (ISO), if the release says. */
+  date?: string;
+}
+
+/** Bytes of the update downloaded so far, and in all when the server says. */
+export interface UpdateProgress {
+  downloaded: number;
+  total?: number;
+}
+
 /** Edge or corner of the frameless overlay window being dragged to resize it. */
 export type ResizeEdge = 'East' | 'North' | 'NorthEast' | 'NorthWest' | 'South' | 'SouthEast' | 'SouthWest' | 'West';
 
@@ -72,4 +85,12 @@ export interface PlatformAdapter {
 
   /** Opens a link in the user's browser, outside the overlay. */
   openExternal(url: string): Promise<void>;
+
+  /** Asks the releases for a version newer than this one; `null` when this is the latest. Throws when offline. */
+  checkForUpdate(): Promise<AppUpdate | null>;
+  /**
+   * Downloads the update the last check found, checks its signature and installs it; the app closes
+   * for the installer and starts again as the new version.
+   */
+  installUpdate(onProgress: (progress: UpdateProgress) => void): Promise<void>;
 }

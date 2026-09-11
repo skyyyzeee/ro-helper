@@ -1,7 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "RO Helper",
-  "version": "0.1.0",
+  "productName": "РО Хелпер",
+  "mainBinaryName": "ro-helper",
+  "version": "../package.json",
   "identifier": "com.skyze.rohelper",
   "build": {
     "frontendDist": "../dist",
@@ -34,13 +35,41 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": [
+      "nsis"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": true,
+    "publisher": "skyze",
+    "copyright": "© 2026 skyze",
+    "category": "Utility",
+    "shortDescription": "Законы Russia Online поверх игры",
+    "longDescription": "Законы, уставы и правила сервера Тверской Russia Online в окне поверх игры: поиск, калькулятор срока и штрафа, закреплённая карточка.",
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": [
+          "Russian"
+        ],
+        "displayLanguageSelector": false
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE5NEIzRkQwOEE1MDAwOEYKUldTUEFGQ0swRDlMR1k2QnYyZ2FmVWdQdGRzT3BGU1RaUUtnb2tlT29qL2dPT1UvOEUybC96R2gK",
+      "endpoints": [
+        "https://github.com/skyyyzeee/ro-helper/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

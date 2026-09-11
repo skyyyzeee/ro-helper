@@ -7,6 +7,9 @@
 - `npm run build` — typecheck + production bundle
 - `npm run import` — rebuild `src/data/tverskoi.json` from the forum snapshots in `data/tverskoi/sources`, list anything the parser could not read and report what changed against the previous pack: changes to documents whose forum post was edited go into `data/tverskoi/changelog.json` (kept 90 days, shown in «Что изменилось»), other differences are the parser's and are only printed; `-- --check` reports without saving; a test fails if the bundled pack is stale
 
+- Releases: the version lives only in `package.json`; a pushed tag `v*` runs `.github/workflows/release.yml` (tests, NSIS installer, signed update, draft release with `latest.json` that installed copies poll). The update signing key is the user's (`%USERPROFILE%\.tauri\ro-helper.key`, GitHub secrets) — never generate or replace it
+- `node scripts/readme-screenshots.mjs` — retake the README's `docs/screenshots` from the running browser preview (headless Edge over the DevTools protocol)
+
 ## Architecture
 
 - `data/<server>/sources` — forum snapshots: `<doc>.txt` (the first post's text, copied from the forum) + `<doc>.meta.json` (thread, url, last-edit date, `format`)

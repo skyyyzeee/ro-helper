@@ -5,6 +5,7 @@ import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { isRegistered, register, unregister } from '@tauri-apps/plugin-global-shortcut';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { load } from '@tauri-apps/plugin-store';
+import { check, type Update } from '@tauri-apps/plugin-updater';
 import type { PinCard, PlatformAdapter, WindowBounds } from './types';
 
 /** True inside the Tauri app, false in a plain browser. */
@@ -157,6 +158,9 @@ export async function createTauriPlatform(): Promise<PlatformAdapter> {
   const pinClosedListeners = new Set<() => void>();
   await listen(PIN_CLOSED_EVENT, () => pinClosedListeners.forEach((listener) => listener()));
 
+  /** The update the last check found, to install. */
+  let found: Update | null = null;
+
   const platform: PlatformAdapter = {
     kind: 'tauri',
 
@@ -212,6 +216,22 @@ export async function createTauriPlatform(): Promise<PlatformAdapter> {
     readSetting: <T,>(key: string) => store.get<T>(key),
     writeSetting: (key, value) => store.set(key, value),
     openExternal: (url) => openUrl(url),
+
+    async checkForUpdate() {
+      found = await check();
+      return found && { version: found.version, date: found.date };
+    },
+    async installUpdate(onProgress) {
+      if (!found) throw new Error('No update to install: check first');
+      let downloaded = 0;
+      let total: number | undefined;
+      // On Windows the app exits as the installer starts; the installer starts the new version.
+      await found.downloadAndInstall((event) => {
+        if (event.event === 'Started') total = event.data.contentLength;
+        if (event.event === 'Progress') downloaded += event.data.chunkLength;
+        onProgress({ downloaded, total });
+      });
+    },
   };
 
   await showOverlay();
