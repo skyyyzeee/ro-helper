@@ -1,6 +1,6 @@
 # A tag «v1.2.3» builds the Windows installer, signs the update and puts both, with latest.json for the
-# app's updater, into a draft release. Check the draft, write what is new, and publish it: installed copies
-# see the new version only once the release is published.
+# app's updater, into a draft release whose notes come from CHANGELOG.md. Check the draft and publish it:
+# installed copies see the new version only once the release is published.
 name: Release
 
 on:
@@ -24,6 +24,19 @@ jobs:
             echo "::error::Tag ${{ github.ref_name }} does not match package.json ($version). Set the version with npm version, commit, then tag that commit."
             exit 1
           fi
+
+      # «Что нового» of this version from CHANGELOG.md: its «## 1.2.3» section, up to the next one.
+      - name: Release notes
+        id: notes
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          notes=$(awk -v v="## $version" '$0 == v { on = 1; next } /^## / { on = 0 } on' CHANGELOG.md | sed -e '/./,$!d')
+          if [ -z "$notes" ]; then
+            echo "::error::CHANGELOG.md has no «## $version» section: write what is new before tagging."
+            exit 1
+          fi
+          { echo "version=$version"; echo 'body<<NOTES_END'; echo "$notes"; echo 'NOTES_END'; } >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v4
         with:
@@ -53,11 +66,11 @@ jobs:
           releaseBody: |
             ## Что нового
 
-            - …
+            ${{ steps.notes.outputs.body }}
 
             ## Установка
 
-            Скачайте `RO-Helper_…_x64-setup.exe` ниже и запустите. Установщик без цифровой подписи, поэтому Windows может показать «Windows защитила ваш компьютер» — нажмите «Подробнее» → «Выполнить в любом случае».
+            Скачайте `RO-Helper_${{ steps.notes.outputs.version }}_x64-setup.exe` ниже и запустите. Установщик без цифровой подписи, поэтому Windows может показать «Windows защитила ваш компьютер» — нажмите «Подробнее» → «Выполнить в любом случае».
 
             Уже установленная программа предложит обновиться сама.
           releaseDraft: true
