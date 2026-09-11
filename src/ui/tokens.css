@@ -28,6 +28,7 @@
   --on-accent: #0d1118;
   --warn-bg: oklch(0.78 0.1 30 / 0.2);
   --warn-text: oklch(0.92 0.05 35);
+  --favorite: oklch(0.88 0.09 80);
 
   /* Document category badges. */
   --badge-codes-text: oklch(0.87 0.07 245);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TVERSKOI_PACK } from '../data';
-import { articleLabel, formatPunishment, leadPart } from './format';
-import { searchArticles } from './search';
+import { articleLabel, formatPunishment, leadPart, penalParts } from './format';
+import { documentContents, searchArticles } from './search';
 
 const labels = (query: string) =>
   searchArticles(TVERSKOI_PACK, query).map((hit) => `${hit.document.short} ${articleLabel(hit.article, hit.part)}`);
@@ -38,6 +38,24 @@ describe('search by article number (real Тверской data)', () => {
     const docs = new Set(searchArticles(TVERSKOI_PACK, '8').map((hit) => hit.document.short));
     expect(docs).toEqual(new Set(['УК', 'КоАП', 'ПДД']));
     expect(new Set(searchArticles(TVERSKOI_PACK, 'пдд 8').map((hit) => hit.document.short))).toEqual(new Set(['ПДД']));
+  });
+
+  it('keeps to the chosen document, unless the query names another by its alias', () => {
+    const inKoap = (query: string) => searchArticles(TVERSKOI_PACK, query, { document: 'koap' });
+    expect(new Set(inKoap('8').map((hit) => hit.document.short))).toEqual(new Set(['КоАП']));
+    expect(new Set(inKoap('скорость').map((hit) => hit.document.short))).toEqual(new Set(['КоАП']));
+    expect(inKoap('ук 65').map((hit) => `${hit.document.short} ${articleLabel(hit.article, hit.part)}`)).toEqual(['УК ст. 65 ч. 1', 'УК ст. 65 ч. 2']);
+  });
+
+  it('lists a document chapter by chapter, split by punished part as in search', () => {
+    const koap = TVERSKOI_PACK.documents.find((d) => d.id === 'koap')!;
+    const contents = documentContents(koap);
+    expect(contents.map((g) => g.chapter?.number)).toEqual(koap.chapters.map((c) => c.number).filter((n) => contents.some((g) => g.chapter?.number === n)));
+    expect(contents[0].chapter?.number).toBe('1');
+    const chapter8 = contents.find((g) => g.chapter?.number === '8')!;
+    const labels86 = chapter8.hits.filter((hit) => hit.article.number === '8.6').map((hit) => articleLabel(hit.article, hit.part));
+    expect(labels86).toEqual(['ст. 8.6 ч. 1', 'ст. 8.6 ч. 2', 'ст. 8.6 ч. 3']);
+    expect(contents.flatMap((g) => g.hits).filter((hit) => !hit.part)).toHaveLength(koap.articles.filter((a) => penalParts(a).length <= 1).length);
   });
 
   it('returns nothing for an empty query, a bare alias or a number that does not exist', () => {

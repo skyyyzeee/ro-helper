@@ -1,5 +1,5 @@
 import { penalParts } from './format';
-import type { Article, LawDocument, Part, ServerPack } from './model';
+import type { Article, Chapter, LawDocument, Part, ServerPack } from './model';
 import { cachedStem, matchWord, wordIndex, words, type WordMatcher } from './wordIndex';
 
 export interface SearchHit {
@@ -15,7 +15,31 @@ export interface SearchHit {
 export interface SearchOptions {
   /** Documents of the user's organisation; they rank above the rest. */
   boostDocuments?: string[];
+  /** Search only this document, unless the query names another one by its alias («ук 65»). */
+  document?: string;
   limit?: number;
+}
+
+export interface ChapterContents {
+  /** Absent for articles outside any chapter. */
+  chapter?: Chapter;
+  hits: SearchHit[];
+}
+
+/** The document as a table of contents: chapters in order, each with its articles, split by punished part as in search. */
+export function documentContents(document: LawDocument): ChapterContents[] {
+  const groups: ChapterContents[] = [];
+  for (const article of document.articles) {
+    let group = groups.at(-1);
+    if (!group || group.chapter?.number !== article.chapter) {
+      group = { chapter: document.chapters.find((c) => c.number === article.chapter), hits: [] };
+      groups.push(group);
+    }
+    const penal = penalParts(article);
+    if (penal.length > 1) group.hits.push(...penal.map((part) => ({ article, document, part })));
+    else group.hits.push({ article, document });
+  }
+  return groups;
 }
 
 /** Scores: a number match outranks any words; in words, title > synonym > text. */
@@ -111,6 +135,7 @@ function wordsScore(matchers: WordMatcher[], fields: Fields): number {
 export function searchArticles(pack: ServerPack, raw: string, options: SearchOptions = {}): SearchHit[] {
   const query = parseQuery(pack, raw);
   if (!query.number && !query.words.length) return [];
+  query.scope ??= pack.documents.find((d) => d.id === options.document);
   const index = wordIndex(pack);
   const matchers = query.words.map((word, i) => matchWord(index, word, query.typing && i === query.words.length - 1));
   const boost = new Set(options.boostDocuments ?? []);

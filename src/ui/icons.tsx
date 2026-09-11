@@ -93,7 +93,21 @@ export const StarIcon = ({ size = 12 }: { size?: number }) => (
   </svg>
 );
 
-export const CloseIcon = ({ size = 18 }: { size?: number }) => (
+export const PinIcon = ({ size = 18 }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M9 3h6l-1 6.5 3.5 3.5h-11L10 9.5z" />
+    <path d="M12 13v8" />
+  </Icon>
+);
+
+/** Outlined star for favourites; CSS fills it when on. */
+export const FavoriteIcon = ({ size = 20 }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z" />
+  </Icon>
+);
+
+export const CloseIcon =({ size = 18 }: { size?: number }) => (
   <Icon size={size}>
     <path d="M6 6l12 12M18 6L6 18" />
   </Icon>

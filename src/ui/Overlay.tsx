@@ -1,35 +1,56 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
+  articleLabel,
+  articleTitle,
   calculateDetention,
+  documentContents,
+  formatPunishment,
   leadPart,
   searchArticles,
+  type CalculatorRules,
   type Charge,
   type ChargeItem,
   type Mode,
   type Offender,
+  type Part,
   type SearchHit,
   type ServerPack,
 } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
+import type { PinCard } from '../platform/types';
 import { ArticleView } from './ArticleView';
 import { CalculatorPanel, type ChargeFields, type ChargePatch, type CopyState } from './CalculatorPanel';
+import { DocumentsMenu } from './DocumentsMenu';
 import { CloseIcon, MenuIcon, SearchIcon, SettingsIcon } from './icons';
 import { DEFAULT_OPACITY, OPACITY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
 import type { Profile } from './profile';
 import { ResizeEdges } from './ResizeEdges';
 import { ResultRow } from './ResultRow';
+import { RECENT_LIMIT, entryPart, favoritesKey, hitKey, recentKey, useHitLookup, useStoredKeys } from './saved';
 import { SettingsPanel } from './SettingsPanel';
 
-function resultCount(n: number): string {
+/** «1 результат», «3 результата», «11 результатов». */
+function plural(n: number, [one, few, many]: [string, string, string]): string {
   const mod10 = n % 10;
   const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return `${n} результат`;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} результата`;
-  return `${n} результатов`;
+  if (mod10 === 1 && mod100 !== 11) return `${n} ${one}`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} ${few}`;
+  return `${n} ${many}`;
 }
 
-/** Stable key of a hit: an article, or one part of it. */
-const hitKey = (hit: SearchHit) => `${hit.article.id}#${hit.part?.number ?? ''}`;
+/** What the pinned card shows for an article: its part's punishment and text, and whose case it is. */
+function articlePinCard(hit: SearchHit, rules: CalculatorRules): PinCard {
+  const part = entryPart(hit.article, hit.part) ?? leadPart(hit.article) ?? hit.part ?? hit.article.parts.find((p) => p.text);
+  const title = articleTitle(hit.article);
+  const lines = [part?.punishment && formatPunishment(part.punishment), part?.text].filter((line): line is string => !!line);
+  const only = part?.jurisdiction?.length === 1 ? part.jurisdiction[0] : undefined;
+  const warning = only && rules.jurisdictionWarnings[only];
+  return {
+    heading: `${hit.document.short} ${articleLabel(hit.article, entryPart(hit.article, hit.part))}` + (title ? `. ${title}` : ''),
+    lines,
+    ...(warning ? { warning } : {}),
+  };
+}
 
 /** Width of the calculator panel plus the gap to the overlay, in CSS pixels. */
 const CALCULATOR_WIDTH = 400 + 12;
@@ -57,15 +78,48 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
   const platform = usePlatform();
   const searchRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
-  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [open, setOpen] = useState<SearchHit | null>(null);
   const [selected, setSelected] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [opacity, setOpacity] = useState(DEFAULT_OPACITY);
   const organization = pack.organizations.find((o) => o.id === profile.organization);
   const boostDocuments = organization?.documents;
-  const hits = useMemo(() => searchArticles(pack, query, { boostDocuments }), [pack, query, boostDocuments]);
+  // A document picked in the menu narrows the search; with no query it shows as a table of contents.
+  const [scopeId, setScopeId] = useState<string | null>(null);
+  const scope = scopeId ? pack.documents.find((d) => d.id === scopeId) : undefined;
+  const hits = useMemo(
+    () => searchArticles(pack, query, { boostDocuments, document: scope?.id }),
+    [pack, query, boostDocuments, scope],
+  );
+  const contents = useMemo(() => (scope ? documentContents(scope) : []), [scope]);
+  /** Where each chapter's rows start in the list ↑↓ walk through. */
+  const chapterStarts = contents.map((_, g) => contents.slice(0, g).reduce((n, group) => n + group.hits.length, 0));
   const summary = [pack.server.name, organization && organization.id !== 'none' ? organization.name : null].filter(Boolean).join(' · ');
-  const open = openKey ? hits.find((hit) => hitKey(hit) === openKey) : undefined;
+
+  // An empty search shows the favourites, then the recent articles without them; ↑↓ go through both.
+  const lookup = useHitLookup(pack);
+  const [favoriteKeys, updateFavorites] = useStoredKeys(platform, favoritesKey(pack.server.id));
+  const [recentKeys, updateRecent] = useStoredKeys(platform, recentKey(pack.server.id));
+  const favorites = useMemo(() => favoriteKeys.map(lookup).filter((hit) => hit !== undefined), [favoriteKeys, lookup]);
+  const recent = useMemo(
+    () => recentKeys.filter((key) => !favoriteKeys.includes(key)).map(lookup).filter((hit) => hit !== undefined),
+    [recentKeys, favoriteKeys, lookup],
+  );
+  const view: 'home' | 'contents' | 'results' = query.trim() ? 'results' : scope ? 'contents' : 'home';
+  const home = view === 'home';
+  const listed = home ? [...favorites, ...recent] : view === 'contents' ? contents.flatMap((group) => group.hits) : hits;
+  const current = Math.min(selected, listed.length - 1);
+  const remember = (hit: SearchHit) => {
+    const key = hitKey(hit);
+    updateRecent((list) => [key, ...list.filter((k) => k !== key)].slice(0, RECENT_LIMIT));
+    // On the home lists the article moves to the top of the recent ones; the selection goes with it.
+    if (home && !favoriteKeys.includes(key)) setSelected(favorites.length);
+  };
+  const toggleFavorite = (hit: SearchHit) => {
+    const key = hitKey(hit);
+    updateFavorites((list) => (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]));
+  };
 
   // Calculator: charges of both codes, the mode and the offender for the whole detention, the fine typed in.
   const [charges, setCharges] = useState<Entry[]>([]);
@@ -75,8 +129,10 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
   const [side, setSide] = useState<'left' | 'right'>('left');
   const calculable = [pack.calculator.criminalCode, pack.calculator.administrative.code];
   const addable = (hit: SearchHit) => calculable.includes(hit.document.id) && !!(hit.part ?? leadPart(hit.article))?.punishment;
+  const inCalculator = (hit: SearchHit) => charges.some((c) => c.key === hitKey(hit));
   const toggleCharge = (hit: SearchHit) => {
     const key = hitKey(hit);
+    if (!inCalculator(hit)) remember(hit);
     setCharges((list) =>
       list.some((c) => c.key === key) ? list.filter((c) => c.key !== key) : [...list, { key, hit, stage: 'done', amount: '', days: '', unpaid: '' }],
     );
@@ -147,32 +203,68 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
   useEffect(() => () => void platform.retractWindow(), [platform]);
 
   const onSearchKey = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (open || !hits.length) return;
+    if (e.key === 'Backspace' && !query && scope) {
+      // Backspace in an empty field takes the document off, as if it were the first word.
+      e.preventDefault();
+      clearScope();
+      return;
+    }
+    if (open) {
+      // Enter in an open article puts its part into the calculator, or takes it out.
+      if (e.key === 'Enter' && addable(open)) {
+        e.preventDefault();
+        toggleCharge({ ...open, part: entryPart(open.article, open.part) });
+      }
+      return;
+    }
+    if (!listed.length) return;
+    const input = e.currentTarget;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelected((i) => Math.min(i + 1, hits.length - 1));
+      setSelected(Math.min(current + 1, listed.length - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setSelected((i) => Math.max(i - 1, 0));
+      setSelected(Math.max(current - 1, 0));
     } else if (e.key === 'Enter') {
       // Enter puts a punished article into the calculator; an article without a punishment opens instead.
       e.preventDefault();
-      const hit = hits[selected];
+      const hit = listed[current];
       if (!hit) return;
       if (addable(hit)) toggleCharge(hit);
       else openHit(hit);
+    } else if (e.key === 'ArrowRight' && input.selectionStart === input.value.length && input.selectionEnd === input.value.length) {
+      // → opens the article once the caret is at the end, so it still moves the caret through the text.
+      e.preventDefault();
+      openHit(listed[current]);
     }
   };
 
-  /** Esc steps back one layer at a time: settings → article → search text → hide the overlay. */
+  const clearScope = () => {
+    setScopeId(null);
+    setOpen(null);
+    setSelected(0);
+    searchRef.current?.focus();
+  };
+  const pickDocument = (id: string) => {
+    setScopeId(id);
+    setQuery('');
+    setOpen(null);
+    setSelected(0);
+    setMenuOpen(false);
+    searchRef.current?.focus();
+  };
+
+  /** Esc steps back one layer at a time: settings → menu → article → search text → document → hide the overlay. */
   const stepBack = useRef<() => void>(() => {});
   stepBack.current = () => {
     if (settingsOpen) setSettingsOpen(false);
-    else if (open) setOpenKey(null);
+    else if (menuOpen) setMenuOpen(false);
+    else if (open) setOpen(null);
     else if (query) {
       setQuery('');
       setSelected(0);
-    } else void platform.hideOverlay();
+    } else if (scope) clearScope();
+    else void platform.hideOverlay();
     searchRef.current?.focus();
   };
 
@@ -194,9 +286,23 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
   }, []);
 
   const openHit = (hit: SearchHit) => {
-    setOpenKey(hitKey(hit));
+    setOpen(hit);
+    remember(hit);
     searchRef.current?.focus();
   };
+  /** The article's part as a hit of its own, for the calculator. */
+  const partHit = (hit: SearchHit, part?: Part): SearchHit => ({ article: hit.article, document: hit.document, part: part ?? entryPart(hit.article) });
+  const rowFor = (hit: SearchHit, i: number, inChapter = false) => (
+    <div role="listitem" key={hitKey(hit)}>
+      <ResultRow
+        hit={hit}
+        selected={i === current}
+        inChapter={inChapter}
+        onOpen={() => openHit(hit)}
+        calculator={addable(hit) ? { added: inCalculator(hit), onToggle: () => toggleCharge(hit) } : undefined}
+      />
+    </div>
+  );
 
   // The search field takes focus on first render and every time the overlay is shown again.
   useEffect(() => {
@@ -242,7 +348,14 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
       )}
     <div className="overlay glass">
       <div className="overlay__head" data-tauri-drag-region>
-        <button className="icon-btn" type="button" aria-label="Все документы" title="Все документы">
+        <button
+          className={menuOpen ? 'icon-btn icon-btn--on' : 'icon-btn'}
+          type="button"
+          aria-label="Все документы"
+          aria-expanded={menuOpen}
+          title="Все документы"
+          onClick={() => setMenuOpen((v) => !v)}
+        >
           <MenuIcon />
         </button>
         <span className="brand" data-tauri-drag-region>
@@ -279,18 +392,24 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
 
       <div className="search">
         <SearchIcon />
+        {scope && (
+          <button className="scope" type="button" aria-label={`Искать во всех документах, а не только в ${scope.short}`} title="Искать во всех документах" onClick={clearScope}>
+            <span>{scope.short}</span>
+            <CloseIcon size={12} />
+          </button>
+        )}
         <input
           ref={searchRef}
           className="search__input"
           type="search"
           aria-label="Поиск по законам"
-          placeholder="Номер или слова: 65, коап 8.6, кража"
+          placeholder={scope ? `Поиск: ${scope.title}` : 'Номер или слова: 65, коап 8.6, кража'}
           autoComplete="off"
           spellCheck={false}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
-            setOpenKey(null);
+            setOpen(null);
             setSelected(0);
           }}
           onKeyDown={onSearchKey}
@@ -304,33 +423,73 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
             article={open.article}
             document={open.document}
             focusPart={open.part}
+            backLabel={home ? 'Избранное и недавние' : view === 'contents' ? 'Оглавление' : 'Результаты'}
             onBack={() => {
-              setOpenKey(null);
+              setOpen(null);
               searchRef.current?.focus();
             }}
+            monthsPerStar={open.document.id === pack.calculator.criminalCode ? pack.calculator.stars.monthsPerStar : undefined}
+            calculator={
+              addable(open)
+                ? { has: (part) => inCalculator(partHit(open, part)), toggle: (part) => toggleCharge(partHit(open, part)) }
+                : undefined
+            }
+            favorite={favoriteKeys.includes(hitKey(open))}
+            onFavorite={() => toggleFavorite(open)}
+            onPin={() => void platform.showPin(articlePinCard(open, pack.calculator))}
           />
-        ) : (
-          query.trim() && (
-            <>
-              <div className="meta">
-                <span>{resultCount(hits.length)}</span>
-                <span>все документы</span>
-              </div>
-              <div className="list" role="list" aria-label="Результаты поиска">
-                {hits.map((hit, i) => (
-                  <div role="listitem" key={hitKey(hit)}>
-                    <ResultRow
-                      hit={hit}
-                      selected={i === selected}
-                      onOpen={() => openHit(hit)}
-                      calculator={addable(hit) ? { added: charges.some((c) => c.key === hitKey(hit)), onToggle: () => toggleCharge(hit) } : undefined}
-                    />
+        ) : home ? (
+          <>
+            {favorites.length > 0 && (
+              <>
+                <div className="sec-t home__title">Избранное</div>
+                <div className="list" role="list" aria-label="Избранное">
+                  {favorites.map((hit, i) => rowFor(hit, i))}
+                </div>
+              </>
+            )}
+            {recent.length > 0 && (
+              <>
+                <div className="sec-t home__title">Недавние</div>
+                <div className="list" role="list" aria-label="Недавние">
+                  {recent.map((hit, i) => rowFor(hit, favorites.length + i))}
+                </div>
+              </>
+            )}
+            {listed.length === 0 && <div className="empty">Здесь появятся избранные и недавние статьи</div>}
+          </>
+        ) : view === 'contents' && scope ? (
+          <>
+            <div className="meta">
+              <span>{scope.title}</span>
+              <span>{plural(scope.articles.length, ['статья', 'статьи', 'статей'])}</span>
+            </div>
+            <div className="toc" aria-label={`Оглавление: ${scope.title}`}>
+              {contents.map((group, g) => (
+                <section key={group.chapter?.number ?? `none-${g}`} className="toc__chapter" aria-label={group.chapter ? `Глава ${group.chapter.number}` : 'Без главы'}>
+                  {group.chapter && (
+                    <h3 className="toc__title">
+                      Глава {group.chapter.number}. {group.chapter.title}
+                    </h3>
+                  )}
+                  <div className="list" role="list">
+                    {group.hits.map((hit, i) => rowFor(hit, chapterStarts[g] + i, true))}
                   </div>
-                ))}
-              </div>
-              {hits.length === 0 && <div className="empty">Ничего не найдено</div>}
-            </>
-          )
+                </section>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="meta">
+              <span>{plural(hits.length, ['результат', 'результата', 'результатов'])}</span>
+              <span>{scope ? scope.title : 'все документы'}</span>
+            </div>
+            <div className="list" role="list" aria-label="Результаты поиска">
+              {hits.map((hit, i) => rowFor(hit, i))}
+            </div>
+            {hits.length === 0 && <div className="empty">Ничего не найдено</div>}
+          </>
         )}
       </div>
 
@@ -348,6 +507,19 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
           <b>Esc</b> назад
         </span>
       </div>
+
+      {menuOpen && (
+        <DocumentsMenu
+          pack={pack}
+          organization={organization}
+          current={scope?.id}
+          onPick={(document) => pickDocument(document.id)}
+          onClose={() => {
+            setMenuOpen(false);
+            searchRef.current?.focus();
+          }}
+        />
+      )}
     </div>
     </div>
   );

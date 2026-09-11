@@ -9,16 +9,22 @@ export interface ResultRowProps {
   onOpen: () => void;
   /** Whether this hit can go into the calculator, and whether it is there already. */
   calculator?: { added: boolean; onToggle: () => void };
+  /** Under a chapter heading the chapter goes without saying: an article without a punishment shows its text instead. */
+  inChapter?: boolean;
 }
 
-export function ResultRow({ hit, selected, onOpen, calculator }: ResultRowProps) {
+export function ResultRow({ hit, selected, onOpen, calculator, inChapter }: ResultRowProps) {
   const { article, document } = hit;
   const part = hit.part ?? leadPart(article);
   const chapter = document.chapters.find((c) => c.number === article.chapter);
   const ref = useRef<HTMLButtonElement>(null);
+  const wasSelected = useRef(selected);
 
+  // Only when the selection moves here: a row selected as it appears is already at the top, and the list
+  // may not be laid out yet (a hidden window), where scrolling would push the section title out of sight.
   useEffect(() => {
-    if (selected) ref.current?.scrollIntoView?.({ block: 'nearest' });
+    if (selected && !wasSelected.current) ref.current?.scrollIntoView?.({ block: 'nearest' });
+    wasSelected.current = selected;
   }, [selected]);
 
   return (
@@ -37,7 +43,16 @@ export function ResultRow({ hit, selected, onOpen, calculator }: ResultRowProps)
           {part?.punishment ? (
             <span className="pen">{formatPunishment(part.punishment)}</span>
           ) : (
-            <span className="pen pen--muted">{chapter ? `Глава ${chapter.number}. ${chapter.title}` : document.title}</span>
+            <span className="pen pen--muted">
+              {inChapter
+                ? // An article without a title (ПДД) already shows its text as the title.
+                  article.title
+                  ? article.parts.find((p) => p.text)?.text
+                  : article.group
+                : chapter
+                  ? `Глава ${chapter.number}. ${chapter.title}`
+                  : document.title}
+            </span>
           )}
         </span>
       </button>
