@@ -71,6 +71,23 @@ mod pin_window {
   }
 }
 
+/// Windows 11 draws its own thin border and rounded corners around every window, frameless ones too:
+/// around the transparent overlay they show as a rectangle outside the panel's rounded corners.
+/// The panels draw their own edges, so the system's are turned off (Windows 10 has neither: no effect).
+#[cfg(windows)]
+fn no_system_frame(window: &WebviewWindow) {
+  use windows_sys::Win32::Graphics::Dwm::DwmSetWindowAttribute;
+  const DWMWA_WINDOW_CORNER_PREFERENCE: u32 = 33;
+  const DWMWA_BORDER_COLOR: u32 = 34;
+  const DWMWCP_DONOTROUND: u32 = 1;
+  const DWMWA_COLOR_NONE: u32 = 0xFFFF_FFFE;
+  let Ok(hwnd) = window.hwnd() else { return };
+  let hwnd = hwnd.0 as windows_sys::Win32::Foundation::HWND;
+  for (attribute, value) in [(DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_DONOTROUND), (DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE)] {
+    unsafe { DwmSetWindowAttribute(hwnd, attribute, &value as *const u32 as *const _, 4) };
+  }
+}
+
 fn pin_window(app: &AppHandle) -> Result<WebviewWindow, String> {
   app.get_webview_window(PIN_LABEL).ok_or_else(|| "no pin window".into())
 }
@@ -246,6 +263,12 @@ pub fn run() {
       }
 
       create_pin_window(app.handle())?;
+      #[cfg(windows)]
+      for label in ["main", PIN_LABEL] {
+        if let Some(window) = app.get_webview_window(label) {
+          no_system_frame(&window);
+        }
+      }
 
       // The overlay has no frame and no taskbar button, so the tray is how to reach it and quit.
       let toggle = MenuItem::with_id(app, "toggle", "Показать / скрыть", true, None::<&str>)?;

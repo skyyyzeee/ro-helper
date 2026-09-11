@@ -1,11 +1,8 @@
-import { usePlatform } from '../platform/PlatformContext';
-import { releaseUrl } from './about';
 import { CloseIcon, DownloadIcon } from './icons';
 import type { Updates } from './updates';
 
-/** The offer of a new version under the overlay's header: what is new, update now, or later. */
-export function UpdateBanner({ updates }: { updates: Updates }) {
-  const platform = usePlatform();
+/** The offer of a new version under the overlay's header: what is new (in the overlay), update now, or later. */
+export function UpdateBanner({ updates, onNotes }: { updates: Updates; onNotes: () => void }) {
   const { status } = updates;
   if (!updates.offered || (status.kind !== 'available' && status.kind !== 'installing' && status.kind !== 'failed')) return null;
   const { version } = status.update;
@@ -29,7 +26,7 @@ export function UpdateBanner({ updates }: { updates: Updates }) {
       <DownloadIcon />
       <div className="update__text">
         <strong>{status.kind === 'failed' ? 'Не удалось обновить' : `Доступна версия ${version}`}</strong>
-        <button className="link" type="button" onClick={() => void platform.openExternal(releaseUrl(version))}>
+        <button className="link" type="button" onClick={onNotes}>
           Что нового
         </button>
       </div>

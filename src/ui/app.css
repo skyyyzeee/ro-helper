@@ -91,6 +91,12 @@ input {
   text-shadow: var(--text-shadow);
 }
 
+/* In the app the window ends at the panels' edges: a drop shadow would be cut off by it into a hard-edged
+   band (between the overlay and the calculator), so only the inner highlight stays. */
+.stage:not(.stage--preview) .glass {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
 .overlay {
   position: relative;
   box-sizing: border-box;
@@ -231,19 +237,19 @@ input {
   font-size: 13px;
 }
 
-/* The privacy policy */
-.privacy {
+/* Markdown pages: the privacy policy, release notes */
+.md {
   gap: 10px;
 }
 
-.privacy__h {
+.md__h {
   margin: 8px 0 0;
   font-size: 17px;
   font-weight: 700;
 }
 
-.privacy__p,
-.privacy__list {
+.md__p,
+.md__list {
   margin: 0;
   font-size: 14.5px;
   line-height: 1.6;
@@ -251,14 +257,14 @@ input {
   text-wrap: pretty;
 }
 
-.privacy__list {
+.md__list {
   padding-left: 20px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.privacy code {
+.md code {
   font-family: ui-monospace, Consolas, monospace;
   font-size: 13px;
   padding: 1px 5px;
@@ -267,7 +273,7 @@ input {
   overflow-wrap: anywhere;
 }
 
-.privacy kbd {
+.md kbd {
   font: inherit;
   font-size: 12.5px;
   padding: 0 5px;
@@ -275,7 +281,19 @@ input {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.privacy .link {
+.md__when {
+  margin: -6px 0 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.md > .md__release {
+  display: inline-flex;
+  align-self: flex-start;
+  font-size: 14px;
+}
+
+.md .link {
   display: inline;
   font-size: inherit;
 }

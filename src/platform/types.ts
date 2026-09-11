@@ -26,6 +26,8 @@ export interface AppUpdate {
   version: string;
   /** When it was released (ISO), if the release says. */
   date?: string;
+  /** The release notes (Markdown): «Что нового», then how to install. */
+  notes?: string;
 }
 
 /** Bytes of the update downloaded so far, and in all when the server says. */

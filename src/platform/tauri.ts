@@ -219,7 +219,7 @@ export async function createTauriPlatform(): Promise<PlatformAdapter> {
 
     async checkForUpdate() {
       found = await check();
-      return found && { version: found.version, date: found.date };
+      return found && { version: found.version, date: found.date, notes: found.body };
     },
     async installUpdate(onProgress) {
       if (!found) throw new Error('No update to install: check first');

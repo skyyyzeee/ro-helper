@@ -22,13 +22,52 @@ describe('updates of the app', () => {
     const offer = await screen.findByRole('status', { name: 'Обновление' });
     expect(offer).toHaveTextContent('Доступна версия 1.1.0');
 
-    await user.click(within(offer).getByRole('button', { name: 'Что нового' }));
-    expect(platform.calls.at(-1)).toEqual({ method: 'openExternal', args: ['https://github.com/skyyyzeee/ro-helper/releases/tag/v1.1.0'] });
-
     await user.click(within(offer).getByRole('button', { name: 'Обновить' }));
     expect(platform.state.updateInstalled).toBe(true);
     expect(banner()).toHaveTextContent('Обновляю до версии 1.1.0');
     expect(banner()).toHaveTextContent('Загрузка… 100% Программа перезапустится сама.');
+  });
+
+  it('shows what is new in the version on offer inside the overlay, and updates from there', async () => {
+    const notes = [
+      '## Что нового',
+      '',
+      '- Закреплённая статья больше не закрывает хелпер.',
+      '- Регламент ФСО: подпункты списком.',
+      '',
+      '## Установка',
+      '',
+      'Скачайте установщик ниже.',
+    ].join('\n');
+    const { platform, user } = await renderApp({ platform: { update: { version: '1.1.0', date: '2026-09-20T10:00:00Z', notes } } });
+    await user.click(within(await screen.findByRole('status', { name: 'Обновление' })).getByRole('button', { name: 'Что нового' }));
+
+    const page = screen.getByRole('article', { name: 'Что нового в версии 1.1.0' });
+    expect(page).toHaveTextContent('Вышла 20.09.2026');
+    expect(within(page).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
+      'Закреплённая статья больше не закрывает хелпер.',
+      'Регламент ФСО: подпункты списком.',
+    ]);
+    // How to install is for the release page, not for an app that updates itself.
+    expect(page).not.toHaveTextContent('Скачайте установщик');
+    expect(platform.calls.some((c) => c.method === 'openExternal')).toBe(false);
+
+    await user.click(within(page).getByRole('button', { name: 'Страница релиза на GitHub' }));
+    expect(platform.calls.at(-1)).toEqual({ method: 'openExternal', args: ['https://github.com/skyyyzeee/ro-helper/releases/tag/v1.1.0'] });
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('article', { name: /^Что нового/ })).not.toBeInTheDocument();
+
+    await user.click(within(screen.getByRole('status', { name: 'Обновление' })).getByRole('button', { name: 'Что нового' }));
+    await user.click(screen.getByRole('button', { name: 'Обновить до 1.1.0' }));
+    expect(platform.state.updateInstalled).toBe(true);
+    expect(screen.queryByRole('article', { name: /^Что нового/ })).not.toBeInTheDocument();
+  });
+
+  it('says where to read about a release that came without notes', async () => {
+    const { user } = await renderApp({ platform: { update: { version: '1.1.0', notes: ['## Что нового', '', '- …', '', '## Установка', '', 'Скачайте.'].join('\n') } } });
+    await user.click(within(await screen.findByRole('status', { name: 'Обновление' })).getByRole('button', { name: 'Что нового' }));
+    expect(screen.getByRole('article', { name: 'Что нового в версии 1.1.0' })).toHaveTextContent('Список изменений есть на странице релиза.');
   });
 
   it('puts a version off with «Позже» until a newer one comes', async () => {

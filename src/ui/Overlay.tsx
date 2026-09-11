@@ -27,6 +27,7 @@ import { DEFAULT_OPACITY, OPACITY_KEY, applyOpacity, clampOpacity } from './over
 import type { Profile } from './profile';
 import { PinCardView } from './PinCardView';
 import { PrivacyView } from './PrivacyView';
+import { ReleaseNotesView } from './ReleaseNotesView';
 import { articlePinCard, calculatorPinCard } from './pinCards';
 import { ResizeEdges } from './ResizeEdges';
 import { ResultRow } from './ResultRow';
@@ -126,6 +127,10 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
   // New versions of the app, offered under the header; the privacy policy, opened from the settings.
   const updates = useUpdates();
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  // «Что нового» of the version on offer, opened from the offer.
+  const [notesOpen, setNotesOpen] = useState(false);
+  const offered = updates.status.kind === 'available' || updates.status.kind === 'failed' ? updates.status.update : null;
+  const notesFor = notesOpen ? offered : null;
 
   // «Что изменилось»: shown once after an update of the laws, and from the settings. Articles changed in the
   // last two weeks are marked in the results and lead to «было → стало».
@@ -273,7 +278,7 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
       return;
     }
     // «Что изменилось» and «было → стало» are read with the mouse; the list keys would move a hidden selection.
-    if (privacyOpen || diff || (changesView && !open)) return;
+    if (notesFor || privacyOpen || diff || (changesView && !open)) return;
     if (open) {
       // Enter in an open article puts its part into the calculator, or takes it out.
       if (e.key === 'Enter' && addable(open)) {
@@ -324,6 +329,7 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
   stepBack.current = () => {
     if (settingsOpen) setSettingsOpen(false);
     else if (menuOpen) setMenuOpen(false);
+    else if (notesFor) setNotesOpen(false);
     else if (privacyOpen) setPrivacyOpen(false);
     else if (diff) setDiff(null);
     else if (open) setOpen(null);
@@ -362,7 +368,7 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
   // what is opened starts at its own top.
   const contentRef = useRef<HTMLDivElement>(null);
   const listScroll = useRef(0);
-  const onList = !privacyOpen && !diff && !open && !changesView;
+  const onList = !notesFor && !privacyOpen && !diff && !open && !changesView;
   const wasOnList = useRef(onList);
   useLayoutEffect(() => {
     const content = contentRef.current;
@@ -490,7 +496,13 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
           }}
         />
       )}
-      <UpdateBanner updates={updates} />
+      <UpdateBanner
+        updates={updates}
+        onNotes={() => {
+          setSettingsOpen(false);
+          setNotesOpen(true);
+        }}
+      />
 
       <div className="search">
         <SearchIcon />
@@ -514,6 +526,7 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
             setOpen(null);
             setDiff(null);
             setPrivacyOpen(false);
+            setNotesOpen(false);
             setChangesView(null);
             setSelected(0);
           }}
@@ -529,7 +542,19 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
           if (onList) listScroll.current = e.currentTarget.scrollTop;
         }}
       >
-        {privacyOpen ? (
+        {notesFor ? (
+          <ReleaseNotesView
+            update={notesFor}
+            onBack={() => {
+              setNotesOpen(false);
+              searchRef.current?.focus();
+            }}
+            onInstall={() => {
+              setNotesOpen(false);
+              updates.install();
+            }}
+          />
+        ) : privacyOpen ? (
           <PrivacyView
             onBack={() => {
               setPrivacyOpen(false);
