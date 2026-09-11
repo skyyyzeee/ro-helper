@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
   calculateDetention,
   changedArticles,
@@ -358,6 +358,18 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
     remember(hit);
     searchRef.current?.focus();
   };
+  // Back from an article (or any screen over the list) the list is where it was left, not at its top;
+  // what is opened starts at its own top.
+  const contentRef = useRef<HTMLDivElement>(null);
+  const listScroll = useRef(0);
+  const onList = !privacyOpen && !diff && !open && !changesView;
+  const wasOnList = useRef(onList);
+  useLayoutEffect(() => {
+    const content = contentRef.current;
+    if (content && onList !== wasOnList.current) content.scrollTop = onList ? listScroll.current : 0;
+    wasOnList.current = onList;
+  }, [onList]);
+
   /** The article's part as a hit of its own, for the calculator. */
   const partHit = (hit: SearchHit, part?: Part): SearchHit => ({ article: hit.article, document: hit.document, part: part ?? entryPart(hit.article) });
   const rowFor = (hit: SearchHit, i: number, inChapter = false) => (
@@ -510,7 +522,13 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
         <span className="kbd">Esc</span>
       </div>
 
-      <div className="overlay__content">
+      <div
+        ref={contentRef}
+        className="overlay__content"
+        onScroll={(e) => {
+          if (onList) listScroll.current = e.currentTarget.scrollTop;
+        }}
+      >
         {privacyOpen ? (
           <PrivacyView
             onBack={() => {

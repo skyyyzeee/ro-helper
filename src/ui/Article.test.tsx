@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { renderApp } from '../test/renderApp';
 
@@ -96,6 +96,27 @@ describe('an open article', () => {
     await user.keyboard('{Escape}');
     expect(list('Результаты поиска')).toHaveLength(2);
     expect(search()).toHaveValue('ук 65');
+  });
+});
+
+describe('going back from an article', () => {
+  it('leaves the list where it was scrolled to, and the article starts at its top', async () => {
+    const { user } = await renderApp();
+    await user.type(search(), 'штраф');
+    const content = document.querySelector('.overlay__content')!;
+    content.scrollTop = 640;
+    fireEvent.scroll(content);
+
+    await user.click(within(screen.getAllByRole('listitem')[5]).getAllByRole('button')[0]);
+    expect(screen.getByRole('article')).toBeInTheDocument();
+    expect(content.scrollTop).toBe(0);
+    // Scrolling the article does not move the list's place.
+    content.scrollTop = 200;
+    fireEvent.scroll(content);
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('article')).not.toBeInTheDocument();
+    expect(content.scrollTop).toBe(640);
   });
 });
 
