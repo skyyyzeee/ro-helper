@@ -2,7 +2,7 @@
   "id": "pdd",
   "short": "ПДД",
   "title": "Правила дорожного движения (15-ФЗ)",
-  "aliases": ["пдд"],
+  "aliases": ["пдд", "15-фз", "15фз", "фз15"],
   "kind": "law",
   "category": "codes",
   "format": "traffic-rules",

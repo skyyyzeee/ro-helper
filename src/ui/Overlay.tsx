@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
   calculateDetention,
+  chapterHeading,
   documentContents,
   leadPart,
   searchArticles,
@@ -486,12 +487,12 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
             </div>
             <div className="toc" aria-label={`Оглавление: ${scope.title}`}>
               {contents.map((group, g) => (
-                <section key={group.chapter?.number ?? `none-${g}`} className="toc__chapter" aria-label={group.chapter ? `Глава ${group.chapter.number}` : 'Без главы'}>
-                  {group.chapter && (
-                    <h3 className="toc__title">
-                      Глава {group.chapter.number}. {group.chapter.title}
-                    </h3>
-                  )}
+                <section
+                  key={group.chapter?.number ?? `none-${g}`}
+                  className="toc__chapter"
+                  aria-label={group.chapter ? chapterHeading(group.chapter).replace(/\..*$/, '') : 'Без главы'}
+                >
+                  {group.chapter && <h3 className="toc__title">{chapterHeading(group.chapter)}</h3>}
                   <div className="list" role="list">
                     {group.hits.map((hit, i) => rowFor(hit, chapterStarts[g] + i, true))}
                   </div>

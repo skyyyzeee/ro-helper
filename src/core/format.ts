@@ -1,4 +1,4 @@
-import type { Article, Jurisdiction, Part, Punishment, Sanction, StarRange, Subject } from './model';
+import type { Article, Chapter, Jurisdiction, Part, Punishment, Sanction, StarRange, Subject } from './model';
 
 const NBSP = ' ';
 
@@ -92,6 +92,11 @@ export function leadPart(article: Article): Part | undefined {
 /** «ст. 65», «ст. 8.6 ч. 1». */
 export function articleLabel(article: Article, part?: Part): string {
   return `ст. ${article.number}` + (part?.number ? ` ч. ${part.number}` : '');
+}
+
+/** «Глава 14. Преступления против собственности», or «Раздел I. Общие положения» for a section standing in for a chapter. */
+export function chapterHeading(chapter: Chapter): string {
+  return `${chapter.kind === 'section' ? 'Раздел' : 'Глава'} ${chapter.number}. ${chapter.title}`;
 }
 
 /** A title for articles that have none (ПДД): the start of the first part. */

@@ -30,6 +30,7 @@ export {
   SUBJECT_LABELS,
   articleLabel,
   articleTitle,
+  chapterHeading,
   formatJurisdiction,
   formatPunishment,
   formatRubles,

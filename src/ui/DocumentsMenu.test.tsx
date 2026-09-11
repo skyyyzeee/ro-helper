@@ -26,14 +26,34 @@ describe('documents menu', () => {
     const { user } = await renderApp();
     await openMenu(user);
     expect(filter()).toHaveFocus();
-    expect(groups().map((g) => g.getAttribute('aria-label'))).toEqual(['Кодексы и Конституция']);
-    expect(documentRows().map((row) => row.textContent)).toEqual([
+    expect(groups().map((g) => g.getAttribute('aria-label'))).toEqual([
+      'Кодексы и Конституция',
+      'Федеральные конституционные законы',
+      'Федеральные законы',
+      'Законы Москвы',
+    ]);
+    expect(documentRows()).toHaveLength(30);
+    expect(documentRows().slice(0, 3).map((row) => row.textContent)).toEqual([
+      'КонституцияКонституция РО117',
       'УКУголовный кодекс117',
       'КоАПКодекс об административных правонарушениях136',
-      'ПДДПравила дорожного движения (15-ФЗ)116',
     ]);
-    // Tags only for the kinds the laws have so far.
-    expect(within(within(menu()).getByRole('group', { name: 'Виды документов' })).getAllByRole('button').map((b) => b.textContent)).toEqual(['Все', 'Кодексы']);
+    // Tags only for the kinds the laws have so far: charters and project rules come with ticket 15.
+    const tags = within(menu()).getByRole('group', { name: 'Виды документов' });
+    expect(within(tags).getAllByRole('button').map((b) => b.textContent)).toEqual(['Все', 'Кодексы', 'ФКЗ', 'ФЗ', 'Москва']);
+  });
+
+  it('shows one kind with its tag', async () => {
+    const { user } = await renderApp();
+    await openMenu(user);
+    await user.click(within(menu()).getByRole('button', { name: 'ФКЗ' }));
+    expect(groups().map((g) => g.getAttribute('aria-label'))).toEqual(['Федеральные конституционные законы']);
+    expect(documentRows().map((row) => row.textContent)).toEqual([
+      '1-ФКЗО Правительстве46',
+      '2-ФКЗО Государственной Думе35',
+      '3-ФКЗО вводимых правовых режимах14',
+      '4-ФКЗО судебной системе и судопроизводстве135',
+    ]);
   });
 
   it('puts the organisation’s documents first, in its order', async () => {
@@ -41,9 +61,11 @@ describe('documents menu', () => {
     await openMenu(user);
     const [own] = groups();
     expect(own).toHaveAccessibleName('ГИБДД · ваша организация');
+    // ГИБДД: ПДД, КоАП, its charter (not in the laws yet), 6-ФЗ.
     expect(within(own).getAllByRole('button').map((b) => b.textContent)).toEqual([
       'ПДДПравила дорожного движения (15-ФЗ)116',
       'КоАПКодекс об административных правонарушениях136',
+      '6-ФЗО полиции32',
     ]);
 
     // With a filter or a tag the list is by kind only.
@@ -52,9 +74,9 @@ describe('documents menu', () => {
   });
 
   it('has no organisation group when none of its documents are in the laws yet', async () => {
-    const { user } = await renderApp({ profile: { organization: 'mvd' } });
+    const { user } = await renderApp({ profile: { organization: 'opg' } });
     await openMenu(user);
-    expect(groups().map((g) => g.getAttribute('aria-label'))).toEqual(['Кодексы и Конституция']);
+    expect(groups()[0]).toHaveAccessibleName('Кодексы и Конституция');
   });
 
   it('filters by name or badge', async () => {
@@ -63,10 +85,13 @@ describe('documents menu', () => {
     await user.type(filter(), 'коап');
     expect(documentRows()).toHaveLength(1);
     await user.clear(filter());
-    await user.type(filter(), 'дорожн');
-    expect(documentRows().map((row) => row.textContent)).toEqual(['ПДДПравила дорожного движения (15-ФЗ)116']);
+    await user.type(filter(), '6-фз');
+    expect(documentRows().map((row) => row.textContent)).toEqual(['6-ФЗО полиции32', '16-ФЗО собраниях, митингах и шествиях13']);
     await user.clear(filter());
     await user.type(filter(), 'устав');
+    expect(documentRows().map((row) => row.textContent)).toEqual(['МоскваУстав города Москвы21']);
+    await user.clear(filter());
+    await user.type(filter(), 'регламент');
     expect(within(menu()).getByText('Ничего не найдено')).toBeInTheDocument();
   });
 
@@ -96,10 +121,11 @@ describe('documents menu', () => {
     expect(current()).toEqual(selected());
     expect(selected()[0]).toHaveTextContent('КоАП');
 
-    await user.hover(documentRows()[2]);
-    expect(selected()).toEqual([documentRows()[2]]);
+    // Rows: ПДД, КоАП, 6-ФЗ of ГИБДД, then Конституция, УК, КоАП… of the codes.
+    await user.hover(documentRows()[4]);
+    expect(selected()).toEqual([documentRows()[4]]);
     await user.keyboard('{ArrowDown}{Enter}');
-    expect(screen.getByRole('button', { name: /только в КоАП/ })).toBeInTheDocument(); // row 3 of «Кодексы»: КоАП
+    expect(screen.getByRole('button', { name: /только в КоАП/ })).toBeInTheDocument();
   });
 
   it('picks a document with ↓ and Enter', async () => {
@@ -107,7 +133,7 @@ describe('documents menu', () => {
     await openMenu(user);
     await user.keyboard('{ArrowDown}{Enter}');
     expect(queryMenu()).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /только в КоАП/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /только в УК/ })).toBeInTheDocument();
     expect(search()).toHaveFocus();
   });
 });

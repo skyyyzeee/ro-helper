@@ -9,7 +9,23 @@ const labels = (query: string) =>
 describe('search by article number (real Тверской data)', () => {
   it('finds an article by its number; an article with several punished parts gives one hit per part', () => {
     expect(labels('65').slice(0, 2)).toEqual(['УК ст. 65 ч. 1', 'УК ст. 65 ч. 2']);
-    expect(labels('104')).toEqual(['УК ст. 104']);
+    expect(labels('ук 104')).toEqual(['УК ст. 104']);
+  });
+
+  it('puts the penal codes and the organisation’s laws first for a bare number, then the same number elsewhere', () => {
+    expect(labels('50').slice(0, 3)).toEqual(['УК ст. 50', 'УК ст. 50.1', 'Конституция ст. 50']);
+    const police = searchArticles(TVERSKOI_PACK, '13', { boostDocuments: ['fz6', 'upk'] }).map((hit) => hit.document.short);
+    expect(police.indexOf('6-ФЗ')).toBeLessThan(police.indexOf('Конституция'));
+  });
+
+  it('finds an article of any law by its alias', () => {
+    expect(labels('6-фз 13')).toEqual(['6-ФЗ ст. 13']);
+    expect(labels('фз6 13')).toEqual(['6-ФЗ ст. 13']);
+    expect(labels('4-фкз 1')[0]).toBe('4-ФКЗ ст. 1');
+    expect(labels('упк 83.1')).toEqual(['УПК ст. 83.1']);
+    expect(labels('конституция 1')[0]).toBe('Конституция ст. 1');
+    expect(new Set(searchArticles(TVERSKOI_PACK, 'конституция 1').map((hit) => hit.document.short))).toEqual(new Set(['Конституция']));
+    expect(labels('15-фз 10.1')).toEqual(['ПДД ст. 10.1']);
   });
 
   it('accepts a document alias and «ст.» before the number', () => {
@@ -35,8 +51,8 @@ describe('search by article number (real Тверской data)', () => {
   });
 
   it('searches every document unless an alias narrows it', () => {
-    const docs = new Set(searchArticles(TVERSKOI_PACK, '8').map((hit) => hit.document.short));
-    expect(docs).toEqual(new Set(['УК', 'КоАП', 'ПДД']));
+    const docs = new Set(searchArticles(TVERSKOI_PACK, '8', { limit: 500 }).map((hit) => hit.document.short));
+    for (const short of ['УК', 'КоАП', 'ПДД', 'Конституция', 'УПК', '6-ФЗ', 'Москва']) expect(docs).toContain(short);
     expect(new Set(searchArticles(TVERSKOI_PACK, 'пдд 8').map((hit) => hit.document.short))).toEqual(new Set(['ПДД']));
   });
 

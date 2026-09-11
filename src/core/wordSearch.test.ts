@@ -21,7 +21,7 @@ describe('search by words (real Тверской data)', () => {
   it('finds the law’s term from a word players use, via the synonyms in the data', () => {
     expect(labels('ствол')[0]).toBe('УК ст. 74 ч. 1');
     expect(labels('наркота')[0]).toBe('УК ст. 75 ч. 1');
-    expect(labels('теракт')).toEqual(['УК ст. 70']);
+    expect(labels('теракт')[0]).toBe('УК ст. 70');
     expect(labels('мат')[0]).toBe('КоАП ст. 11.1');
     expect(labels('парковка')[0]).toBe('КоАП ст. 8.12 ч. 1');
   });

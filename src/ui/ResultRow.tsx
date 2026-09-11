@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { articleLabel, articleTitle, formatPunishment, leadPart, type SearchHit } from '../core';
+import { articleLabel, articleTitle, chapterHeading, formatPunishment, leadPart, type SearchHit } from '../core';
 import { CheckIcon, PlusIcon } from './icons';
 import { DocBadge, JurisdictionPill, Stars } from './lawBits';
 
@@ -50,7 +50,7 @@ export function ResultRow({ hit, selected, onOpen, calculator, inChapter }: Resu
                   ? article.parts.find((p) => p.text)?.text
                   : article.group
                 : chapter
-                  ? `Глава ${chapter.number}. ${chapter.title}`
+                  ? chapterHeading(chapter)
                   : document.title}
             </span>
           )}

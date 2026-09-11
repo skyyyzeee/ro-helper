@@ -42,8 +42,12 @@ export function documentContents(document: LawDocument): ChapterContents[] {
   return groups;
 }
 
-/** Scores: a number match outranks any words; in words, title > synonym > text. */
-const SCORE = { number: 1000, title: 30, synonymInTitle: 25, synonym: 20, text: 10, organisation: 5, penalCode: 3 };
+/**
+ * Scores: a number match outranks any words; in words, title > synonym > text. A bare number most often means
+ * a penal code or a law of the user's organisation: theirs rank a tier and a half up, so «50» gives УК 50,
+ * then УК 50.1, then ст. 50 of the other laws, then the numbers of УК that merely start with 50.
+ */
+const SCORE = { number: 1000, numberPriority: 1500, title: 30, synonymInTitle: 25, synonym: 20, text: 10, organisation: 5, penalCode: 3 };
 
 const SKIP = new Set(['ст', 'ст.', 'статья']);
 const NUMBER = /^\d+(?:\.\d+)*\.?$/;
@@ -157,7 +161,8 @@ export function searchArticles(pack: ServerPack, raw: string, options: SearchOpt
         order++;
         const score = numberScore(article.number, query.number);
         if (!score) continue;
-        const base = SCORE.number * score;
+        const priority = boost.has(document.id) || document.kind === 'penal-code' ? SCORE.numberPriority : 0;
+        const base = SCORE.number * score + priority;
         if (query.part) {
           // A part only narrows the exact article the user named.
           const part = score === 3 ? article.parts.find((p) => p.number === query.part) : undefined;

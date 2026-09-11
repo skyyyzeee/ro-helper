@@ -5,9 +5,11 @@ import { parseAdministrativeSanction, parseLeadingTags, parsePunishment, splitPe
  * How sanctions are written in a document:
  * - `criminal-code` (УК): tagged lines `[Р/Ф] [★★★] … — наказывается …` carry their own sanction;
  * - `administrative-code` (КоАП): an offence line (optionally tagged) is followed by a «влечет …» line;
- * - `traffic-rules` (ПДД): no sanctions; chapters in Roman numerals and sub-headings between articles.
+ * - `traffic-rules` (ПДД): no sanctions; chapters in Roman numerals and sub-headings between articles;
+ * - `law` (any other law, code or charter): no sanctions; sections and chapters in any numbering, and
+ *   articles that may start again from 1 in each chapter.
  */
-export type LawFormat = 'criminal-code' | 'administrative-code' | 'traffic-rules';
+export type LawFormat = 'criminal-code' | 'administrative-code' | 'traffic-rules' | 'law';
 
 export interface ParseIssue {
   article?: string;
@@ -39,19 +41,27 @@ export function cleanLines(text: string): string[] {
     .filter(Boolean);
 }
 
-const SECTION = /^РАЗДЕЛ\s+([IVXLC]+)\.\s*(.*)$/i;
-const CHAPTER = /^Глава\s+([IVXLC]+|\d+(?:\.\d+)*)\.\s*(.*)$/;
-const ARTICLE = /^Статья\s+(\d+(?:\.\d+)*)\.\s*(.*)$/;
+const SECTION = /^Раздел\s+([IVXLC]+|\d+)\.\s*(.*)$/i;
+const CHAPTER = /^Глава\s+([IVXLC]+|\d+(?:\.\d+)*)\.\s*(.*)$/i;
+/** «Статья 1. Название», «Статья 1», «Статья 17.1 Название»; without the full stop, only an empty or capitalised title, so a sentence «Статья 5 настоящего закона …» is not a heading. */
+const ARTICLE = /^Статья\s+(\d+(?:\.\d+)*)(?:\s*\.\s*(.*)|\s+([А-ЯЁA-Z«"].*)|)$/;
 const NOTE = /^(Примечани[ея]|Пояснени[ея])(?:\s+(\d+))?\s*[.:]?\s*(.*)$/;
 const SUBNUMBERED = /^(\d+(?:\.\d+)+)\.\s+(.*)$/;
+/** «ч. 1. Порядок …», «ч. 1 Судебная …», «Часть 1. На территории …». */
+const LABELLED_PART = /^(?:ч\.|Часть)\s*(\d+(?:\.\d+)*)\.?\s+(.*)$/;
 const NUMBERED = /^(\d+)\.\s+(.*)$/;
 const POINT = /^([а-яё]|\d+)\)\s+(.*)$/;
 const TAGGED = /^\[[^\]]*\]/;
 const SANCTION = /^(?:влеч[её]т|влекут)\s+(.*)$/;
 /** Part-of-code markers that carry no content of their own. */
 const MARKERS = /^(ОСОБЕННАЯ ЧАСТЬ|ОБЩАЯ ЧАСТЬ)$/i;
-/** Adoption lines and appendix references at the end: «Одобрен Государственной Думой …», «Приложение к ПДД …». */
-const FOOTER = /^(?:(?:Одобрен|Подписан|Принят)\S*\s|Приложение\s+к\s)/;
+/**
+ * Adoption lines and appendix references at the end: «Одобрен Государственной Думой …», «Приложение к ПДД …»,
+ * and the Moscow ones: «Настоящий Закон принят Московской городской Думой.», «Вступает в юридическую силу после
+ * подписания Мэром …», «Нормативно-правовой акт подписан …».
+ */
+const FOOTER =
+  /^(?:(?:Одобрен|Подписан|Принят)\S*\s|Приложение\s+к\s|(?:Настоящий\s+)?Закон\s+принят\s|Вступает\s+в\s+юридическую\s+силу\s+после\s|Нормативно-правовой\s+акт\s+подписан\s)/;
 /** Markup debris such as a stray code fence. */
 const JUNK = /^[`*_=~]{3,}$/;
 /** A short unpunctuated line right before an article heading (ПДД: «аварийные сигналы»). */
@@ -71,6 +81,8 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
   const issues: ParseIssue[] = [];
   let started = false;
   let section: string | undefined;
+  /** A section whose articles come before any chapter of it: it becomes their chapter. */
+  let openSection: { number: string; title: string } | undefined;
   let chapter: Chapter | undefined;
   let group: string | undefined;
   let article: Article | undefined;
@@ -98,7 +110,16 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
     }
     if ((m = line.match(SECTION))) {
       started = true;
-      section = `Раздел ${m[1]}. ${m[2]}`.trim();
+      const heading = `Раздел ${m[1]}. ${m[2]}`.trim();
+      if (chapter && /^\d+$/.test(m[1]) && format === 'law') {
+        // «Раздел 1.» inside a chapter (13-ФЗ) is a sub-heading of its articles, not a section of the law.
+        group = heading;
+      } else {
+        section = heading;
+        openSection = { number: m[1], title: m[2] };
+        chapter = undefined;
+        group = undefined;
+      }
       article = undefined;
       continue;
     }
@@ -106,13 +127,20 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
       started = true;
       chapter = { number: m[1], title: m[2], section, preface: [] };
       chapters.push(chapter);
+      openSection = undefined;
       group = undefined;
       article = undefined;
       continue;
     }
     if ((m = line.match(ARTICLE))) {
       started = true;
-      article = { id: `${documentId}-${m[1]}`, number: m[1], title: m[2].replace(/\.$/, ''), chapter: chapter?.number, parts: [], notes: [] };
+      if (!chapter && openSection) {
+        chapter = { number: openSection.number, title: openSection.title, kind: 'section', preface: [] };
+        chapters.push(chapter);
+        openSection = undefined;
+      }
+      const title = (m[2] ?? m[3] ?? '').replace(/\.$/, '');
+      article = { id: `${documentId}-${m[1]}`, number: m[1], title, chapter: chapter?.number, parts: [], notes: [] };
       if (group) article.group = group;
       articles.push(article);
       lastNote = undefined;
@@ -192,7 +220,7 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
       }
     }
 
-    if ((m = line.match(SUBNUMBERED)) || (m = line.match(NUMBERED))) {
+    if ((format === 'law' && (m = line.match(LABELLED_PART))) || (m = line.match(SUBNUMBERED)) || (m = line.match(NUMBERED))) {
       lastNote = undefined;
       article.parts.push({ number: m[1], text: m[2], points: [] });
       continue;
@@ -208,6 +236,12 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
     // A plain paragraph: continues an open note, otherwise it is an unnumbered part.
     if (lastNote) lastNote.text = `${lastNote.text} ${line}`.trim();
     else article.parts.push({ text: format === 'administrative-code' ? stripTrailingDash(line) : line, points: [] });
+  }
+
+  // Some laws number articles again in each chapter (8-ФЗ): ids then carry the chapter to stay unique.
+  const numbers = articles.map((a) => a.number);
+  if (new Set(numbers).size < numbers.length) {
+    for (const a of articles) a.id = `${documentId}-${a.chapter ?? '0'}-${a.number}`;
   }
 
   return { chapters, articles, header, footer, issues };

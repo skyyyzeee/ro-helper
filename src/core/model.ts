@@ -67,6 +67,8 @@ export interface Note {
 export interface Chapter {
   number: string;
   title: string;
+  /** A section of the law that has no chapters of its own stands in for one (3-ФЗ: «Раздел I. Общие положения»). */
+  kind?: 'section';
   section?: string;
   /** Text between the chapter heading and its first article. */
   preface: string[];

@@ -26,7 +26,7 @@ describe('finding an article by number', () => {
 
   it('opens the article on the part that was clicked and goes back to the results', async () => {
     const { user, platform } = await renderApp();
-    await user.type(search(), '65');
+    await user.type(search(), 'ук 65');
     await user.click(screen.getByRole('button', { name: /ст\. 65 ч\. 2\s*Кража/ }));
 
     const view = screen.getByRole('article', { name: 'Статья 65. Кража' });

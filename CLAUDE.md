@@ -11,11 +11,13 @@
 
 - `data/<server>/sources` — forum snapshots: `<doc>.txt` (the first post's text, copied from the forum) + `<doc>.meta.json` (thread, url, last-edit date, `format`)
 - `data/<server>/overrides.json` — manual fixes laid over the parser output, keyed by article id (part keys: number or `#<position>`); each has a `reason`
-- `src/importer` — `parseLawText` with per-format rules (`criminal-code` УК, `administrative-code` КоАП, `traffic-rules` ПДД); reports unparsed lines instead of dropping them
+- `src/importer` — `parseLawText` with per-format rules (`criminal-code` УК, `administrative-code` КоАП, `traffic-rules` ПДД, `law` for every other law); reports unparsed lines instead of dropping them
 
 ## Getting forum text
 
-The user wrote the Tverskoi law texts and allows copying them. The forum sits behind a JS anti-DDoS check — never bypass it; read threads in the user's Chrome (Claude in Chrome), in a tab you open yourself. Don't retype law text: in the page, take `document.querySelector('article.message .bbWrapper').innerText`, compute its FNV-1a checksum, return it in ~50k-char chunks (`{doc, from, to, total, parts: string[]}` with 800-char parts; pad small chunks with an array of short strings) so the tool saves each result to a file, then run `node scripts/snapshot-from-chunks.mjs <server> <doc> <fnv> <files…>` — it checks for gaps and the checksum before writing the snapshot.
+The user wrote the Tverskoi law texts and allows copying them. The forum sits behind a JS anti-DDoS check — never bypass it; read threads in the user's Chrome (Claude in Chrome), in a tab you open yourself. Don't retype law text: in the page, take `document.querySelector('article.message .bbWrapper').innerText`, compute its FNV-1a checksum, return it in ~50k-char chunks (`{doc, from, to, total, parts: string[]}` with 800-char parts) so the tool saves each result to a file, then run `node scripts/snapshot-from-chunks.mjs <server> <doc> <fnv> <files…>` — it checks for gaps and the checksum before writing the snapshot.
+- Each result must be 50,000–51,200 characters of pretty-printed JSON: a smaller one comes back inline instead of as a file, a larger one is cut at 50 KB by the browser tool. Pad a short chunk with a last key (`zz`) holding the document's own text repeated, sized by measuring `JSON.stringify(out, null, 2).length` (aim at ~50,800). Dashes or random letters don't work: too light or too heavy in tokens.
+- One chunk per call (a batch joins the outputs). Keep each thread's text in `sessionStorage` on the first visit, then return the chunks without opening the threads again.
 - `src/core` — law core: pure TypeScript, no React/Tauri/UI/importer imports (a boundary test enforces it)
 - `src/platform` — `PlatformAdapter` interface over everything native; `fake` for tests, `browser` for the preview, `tauri` for the app (window bounds and settings in the store plugin's `settings.json`)
 - `src-tauri` — native side: plugins (global-shortcut, store, clipboard, opener, single-instance), tray menu, and `remember_foreground` / `restore_foreground` commands that hand focus back to the game when the overlay hides

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { SUBJECT_LABELS, penalParts, punishmentBySubject, type Article, type LawDocument, type Part } from '../core';
+import { SUBJECT_LABELS, chapterHeading, penalParts, punishmentBySubject, type Article, type LawDocument, type Part } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
 import { BackIcon, CheckIcon, ExternalIcon, FavoriteIcon, PinIcon, PlusIcon } from './icons';
 import { DocBadge, JurisdictionPill, Stars, formatDate, jurisdictionText, starsHint } from './lawBits';
@@ -81,7 +81,7 @@ export function ArticleView({
       </div>
       {chapter && (
         <div className="art__chapter">
-          Глава {chapter.number}. {chapter.title}
+          {chapterHeading(chapter)}
           {article.group && ` · ${article.group}`}
         </div>
       )}
