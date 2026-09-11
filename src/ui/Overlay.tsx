@@ -26,6 +26,7 @@ import { CloseIcon, MenuIcon, SearchIcon, SettingsIcon } from './icons';
 import { DEFAULT_OPACITY, OPACITY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
 import type { Profile } from './profile';
 import { PinCardView } from './PinCardView';
+import { PrivacyView } from './PrivacyView';
 import { articlePinCard, calculatorPinCard } from './pinCards';
 import { ResizeEdges } from './ResizeEdges';
 import { ResultRow } from './ResultRow';
@@ -122,8 +123,9 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
     updateFavorites((list) => (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]));
   };
 
-  // New versions of the app, offered under the header.
+  // New versions of the app, offered under the header; the privacy policy, opened from the settings.
   const updates = useUpdates();
+  const [privacyOpen, setPrivacyOpen] = useState(false);
 
   // «Что изменилось»: shown once after an update of the laws, and from the settings. Articles changed in the
   // last two weeks are marked in the results and lead to «было → стало».
@@ -206,7 +208,8 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
     setFineInput('');
   }, [calculatorOpen]);
 
-  // Pinned card: pinning hides the overlay; the calculator's card follows the calculator and goes with it.
+  // Pinned card: an article stays pinned while the overlay stays open for the next search; pinning the
+  // calculator hides the overlay. The calculator's card follows the calculator and goes with it.
   const [pinned, setPinned] = useState<Pinned | null>(null);
   const articleCard = useMemo(() => (pinned?.kind === 'article' ? articlePinCard(pinned.hit, pack.calculator) : null), [pinned, pack.calculator]);
   const calculatorCard = useMemo(
@@ -225,7 +228,7 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
   useEffect(() => platform.onPinClosed(() => setPinned(null)), [platform]);
   const pin = (next: Pinned) => {
     setPinned(next);
-    void platform.hideOverlay();
+    if (next.kind === 'calculator') void platform.hideOverlay();
   };
   const unpin = () => {
     setPinned(null);
@@ -270,7 +273,7 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
       return;
     }
     // «Что изменилось» and «было → стало» are read with the mouse; the list keys would move a hidden selection.
-    if (diff || (changesView && !open)) return;
+    if (privacyOpen || diff || (changesView && !open)) return;
     if (open) {
       // Enter in an open article puts its part into the calculator, or takes it out.
       if (e.key === 'Enter' && addable(open)) {
@@ -321,6 +324,7 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
   stepBack.current = () => {
     if (settingsOpen) setSettingsOpen(false);
     else if (menuOpen) setMenuOpen(false);
+    else if (privacyOpen) setPrivacyOpen(false);
     else if (diff) setDiff(null);
     else if (open) setOpen(null);
     else if (changesView) setChangesView(null);
@@ -468,6 +472,10 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
           onEditProfile={onEditProfile}
           onChanges={showRecentChanges}
           updates={updates}
+          onPrivacy={() => {
+            setSettingsOpen(false);
+            setPrivacyOpen(true);
+          }}
         />
       )}
       <UpdateBanner updates={updates} />
@@ -493,6 +501,7 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
             setQuery(e.target.value);
             setOpen(null);
             setDiff(null);
+            setPrivacyOpen(false);
             setChangesView(null);
             setSelected(0);
           }}
@@ -502,7 +511,14 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
       </div>
 
       <div className="overlay__content">
-        {diff ? (
+        {privacyOpen ? (
+          <PrivacyView
+            onBack={() => {
+              setPrivacyOpen(false);
+              searchRef.current?.focus();
+            }}
+          />
+        ) : diff ? (
           <ChangeDiff
             pack={pack}
             target={diff}

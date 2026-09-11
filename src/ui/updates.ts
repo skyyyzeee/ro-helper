@@ -6,6 +6,8 @@ import type { AppUpdate } from '../platform/types';
 export const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
 /** The version the user put off with «Позже»: not offered again until a newer one. */
 export const DISMISSED_KEY = 'update.dismissed';
+/** Whether the app asks for new versions by itself; off, it goes online only when asked from the settings. */
+export const AUTO_KEY = 'update.auto';
 
 export type UpdateStatus =
   | { kind: 'idle' }
@@ -23,6 +25,9 @@ export interface Updates {
   offered: boolean;
   /** A check from the settings: says what it found, and offers even a version put off before. */
   check: () => void;
+  /** Checking by itself at start and every few hours; on unless turned off. */
+  auto: boolean;
+  setAuto: (on: boolean) => void;
   install: () => void;
   later: () => void;
 }
@@ -32,6 +37,7 @@ export function useUpdates(): Updates {
   const platform = usePlatform();
   const [status, setStatus] = useState<UpdateStatus>({ kind: 'idle' });
   const [dismissed, setDismissed] = useState<string | undefined>();
+  const [auto, setAutoState] = useState<boolean | undefined>();
   const busy = useRef(false);
 
   const run = useCallback(
@@ -57,10 +63,21 @@ export function useUpdates(): Updates {
 
   useEffect(() => {
     void platform.readSetting<string>(DISMISSED_KEY).then(setDismissed);
+    void platform.readSetting<boolean>(AUTO_KEY).then((on) => setAutoState(on ?? true));
+  }, [platform]);
+
+  // Only once the setting is known: turned off, the app does not go online by itself at all.
+  useEffect(() => {
+    if (!auto) return;
     void run(false);
     const timer = setInterval(() => void run(false), CHECK_EVERY_MS);
     return () => clearInterval(timer);
-  }, [platform, run]);
+  }, [auto, run]);
+
+  const setAuto = (on: boolean) => {
+    setAutoState(on);
+    void platform.writeSetting(AUTO_KEY, on);
+  };
 
   const install = () => {
     if (status.kind !== 'available' && status.kind !== 'failed') return;
@@ -87,5 +104,5 @@ export function useUpdates(): Updates {
   const offered =
     status.kind === 'installing' || status.kind === 'failed' || (status.kind === 'available' && status.update.version !== dismissed);
 
-  return { status, offered, check: () => void run(true), install, later };
+  return { status, offered, check: () => void run(true), auto: auto ?? true, setAuto, install, later };
 }

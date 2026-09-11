@@ -2,7 +2,7 @@ import { cleanup, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../test/renderApp';
 import { APP_VERSION } from './about';
-import { DISMISSED_KEY } from './updates';
+import { AUTO_KEY, DISMISSED_KEY } from './updates';
 
 const banner = () => screen.queryByRole('status', { name: 'Обновление' });
 const settings = () => screen.getByRole('group', { name: 'Настройки' });
@@ -72,5 +72,30 @@ describe('updates of the app', () => {
     expect(platform.calls.at(-1)?.args).toEqual(['https://github.com/skyyyzeee/ro-helper']);
     await user.click(within(settings()).getByRole('button', { name: 'Discord' }));
     expect(platform.calls.at(-1)?.args).toEqual(['https://discord.gg/VBNn86EmDd']);
+  });
+
+  it('does not go online by itself when automatic checks are off, but still checks when asked', async () => {
+    const { platform, user } = await renderApp({ platform: { update: { version: '1.1.0' } }, settings: { [AUTO_KEY]: false } });
+    await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    const auto = within(settings()).getByRole('checkbox', { name: 'Проверять обновления автоматически' });
+    expect(auto).not.toBeChecked();
+    expect(platform.calls.some((c) => c.method === 'checkForUpdate')).toBe(false);
+    expect(banner()).not.toBeInTheDocument();
+
+    await user.click(within(settings()).getByRole('button', { name: 'Проверить обновления' }));
+    expect(await within(settings()).findByText('Доступна версия 1.1.0')).toBeInTheDocument();
+
+    await user.click(auto);
+    expect(platform.settings.get(AUTO_KEY)).toBe(true);
+  });
+
+  it('checks by itself by default, and remembers when that is turned off', async () => {
+    const { platform, user } = await renderApp();
+    await vi.waitFor(() => expect(platform.calls.some((c) => c.method === 'checkForUpdate')).toBe(true));
+    await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    const auto = within(settings()).getByRole('checkbox', { name: 'Проверять обновления автоматически' });
+    expect(auto).toBeChecked();
+    await user.click(auto);
+    expect(platform.settings.get(AUTO_KEY)).toBe(false);
   });
 });

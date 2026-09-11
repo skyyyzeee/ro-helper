@@ -1,4 +1,4 @@
-import type { Article, Chapter, Jurisdiction, LawDocument, Part, Punishment, Sanction, StarRange, Subject } from './model';
+import type { Article, Chapter, Jurisdiction, LawDocument, Part, Point, Punishment, Sanction, StarRange, Subject } from './model';
 
 const NBSP = ' ';
 
@@ -88,6 +88,9 @@ export function penalParts(article: Article): Part[] {
 export function leadPart(article: Article): Part | undefined {
   return article.parts.find((part) => part.punishment);
 }
+
+/** A list item's marker as shown: «а)», «1)»; a sub-point keeps its number, «5.1.1.». */
+export const pointLabel = (point: Point) => (point.marker.includes('.') ? `${point.marker}.` : `${point.marker})`);
 
 /** «ст. 65», «ст. 8.6 ч. 1»; «п. 1.1» in a document written in points. */
 export function articleLabel(article: Article, part?: Part, unit?: LawDocument['unit']): string {

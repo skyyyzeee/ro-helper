@@ -4,6 +4,7 @@ import {
   formatPunishment,
   formatRubles,
   leadPart,
+  pointLabel,
   type AdministrativeResult,
   type CalculatorRules,
   type DetentionResult,
@@ -23,7 +24,8 @@ export function articlePinCard(hit: SearchHit, rules: CalculatorRules): PinCard 
     kind: 'article',
     heading: `${hit.document.short} ${articleLabel(hit.article, own, hit.document.unit)}` + (title ? `. ${title}` : ''),
     ...(part?.punishment ? { accent: formatPunishment(part.punishment) } : {}),
-    lines: part?.text ? [part.text] : [],
+    // A point written as a list (ФСО 5.1) shows its items too.
+    lines: [...(part?.text ? [part.text] : []), ...(part?.points.map((point) => `${pointLabel(point)} ${point.text}`) ?? [])],
     ...(warning ? { warning } : {}),
   };
 }

@@ -14,6 +14,8 @@ export interface SourceMeta {
   category: DocumentCategory;
   format: LawFormat;
   unit?: 'point';
+  /** Points docs: «list» keeps sub-points (5.1.1) inside their point (5.1) as its list, each on one line. */
+  subpoints?: 'list';
   thread: number;
   url: string;
   posted: string;
@@ -53,7 +55,7 @@ export function buildPack(serverDir: string, server: ServerSources): BuildResult
     if (!available.has(id)) continue;
     const meta = JSON.parse(readFileSync(join(sourcesDir, `${id}.meta.json`), 'utf8')) as SourceMeta;
     const text = readFileSync(join(sourcesDir, `${id}.txt`), 'utf8');
-    const parsed = parseLawText(text, meta.id, meta.format);
+    const parsed = parseLawText(text, meta.id, meta.format, { subpoints: meta.subpoints });
     const fixed = applyOverrides(parsed.articles, parsed.issues, overrides);
     issues.push(...[...fixed.issues, ...fixed.stale].map((issue) => ({ ...issue, document: id })));
     documents.push({

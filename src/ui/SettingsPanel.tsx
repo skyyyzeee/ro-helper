@@ -36,6 +36,7 @@ export function SettingsPanel({
   onEditProfile,
   onChanges,
   updates,
+  onPrivacy,
 }: {
   /** «Тверской · МВД». */
   summary: string;
@@ -46,6 +47,8 @@ export function SettingsPanel({
   /** Opens «Что изменилось» for the recent updates of the laws. */
   onChanges: () => void;
   updates: Updates;
+  /** Opens the privacy policy. */
+  onPrivacy: () => void;
 }) {
   const platform = usePlatform();
   const transparency = Math.round((1 - opacity) * 100);
@@ -103,6 +106,13 @@ export function SettingsPanel({
           {updateNote(updates.status)}
         </span>
       </div>
+      <label className="settings__row settings__check">
+        <input type="checkbox" checked={updates.auto} onChange={(e) => updates.setAuto(e.target.checked)} />
+        <span>Проверять обновления автоматически</span>
+      </label>
+      <button className="link settings__privacy" type="button" onClick={onPrivacy}>
+        Политика конфиденциальности
+      </button>
     </div>
   );
 }

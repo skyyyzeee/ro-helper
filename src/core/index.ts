@@ -39,6 +39,7 @@ export {
   formatSanction,
   leadPart,
   penalParts,
+  pointLabel,
   punishmentBySubject,
   starCount,
   type SubjectLine,

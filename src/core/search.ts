@@ -84,11 +84,16 @@ function parseQuery(pack: ServerPack, raw: string): Query {
   return query;
 }
 
-/** Exact number first, then its sub-articles (65 → 65.1), then numbers that merely start with it (6 → 60). */
-function numberScore(articleNumber: string, query: string): number {
-  if (articleNumber === query) return 3;
-  if (articleNumber.startsWith(query + '.')) return 2;
-  if (articleNumber.startsWith(query)) return 1;
+/**
+ * Exact number first, then its sub-articles (65 → 65.1) and the point whose list holds that sub-point
+ * (ФСО 5.1.1 → п. 5.1), then numbers that merely start with it (6 → 60).
+ */
+function numberScore(article: Article, query: string): number {
+  const { number } = article;
+  if (number === query) return 3;
+  if (number.startsWith(query + '.')) return 2;
+  if (query.includes('.') && article.parts.some((p) => p.points.some((point) => point.marker === query))) return 2;
+  if (number.startsWith(query)) return 1;
   return 0;
 }
 
@@ -159,7 +164,7 @@ export function searchArticles(pack: ServerPack, raw: string, options: SearchOpt
       if (query.scope && document !== query.scope) continue;
       for (const article of document.articles) {
         order++;
-        const score = numberScore(article.number, query.number);
+        const score = numberScore(article, query.number);
         if (!score) continue;
         const priority = boost.has(document.id) || document.kind === 'penal-code' ? SCORE.numberPriority : 0;
         const base = SCORE.number * score + priority;

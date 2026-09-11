@@ -215,6 +215,71 @@ input {
   border-radius: 9px;
 }
 
+.settings__check {
+  cursor: pointer;
+}
+
+.settings__check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.settings__privacy {
+  align-self: flex-start;
+  font-size: 13px;
+}
+
+/* The privacy policy */
+.privacy {
+  gap: 10px;
+}
+
+.privacy__h {
+  margin: 8px 0 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.privacy__p,
+.privacy__list {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.86);
+  text-wrap: pretty;
+}
+
+.privacy__list {
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.privacy code {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 13px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow-wrap: anywhere;
+}
+
+.privacy kbd {
+  font: inherit;
+  font-size: 12.5px;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.privacy .link {
+  display: inline;
+  font-size: inherit;
+}
+
 /* The offer of a new version */
 .update {
   display: flex;
@@ -680,6 +745,11 @@ input {
 .part__body .part__point {
   padding-left: 4px;
   color: rgba(255, 255, 255, 0.86);
+}
+
+.part__marker {
+  font-weight: 700;
+  color: var(--text);
 }
 
 .note {

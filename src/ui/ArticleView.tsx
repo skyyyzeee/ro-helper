@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { SUBJECT_LABELS, articleHeading, chapterHeading, penalParts, punishmentBySubject, type Article, type LawDocument, type Part } from '../core';
+import { SUBJECT_LABELS, articleHeading, chapterHeading, penalParts, pointLabel, punishmentBySubject, type Article, type LawDocument, type Part } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
 import { BackIcon, CheckIcon, ExternalIcon, FavoriteIcon, PinIcon, PlusIcon } from './icons';
 import { DocBadge, JurisdictionPill, Stars, formatDate, jurisdictionText, starsHint } from './lawBits';
@@ -107,7 +107,7 @@ export function ArticleView({
                   {part.text && <p>{part.text}</p>}
                   {part.points.map((point, j) => (
                     <p key={j} className="part__point">
-                      {point.marker}) {point.text}
+                      <span className="part__marker">{pointLabel(point)}</span> {point.text}
                     </p>
                   ))}
                 </div>

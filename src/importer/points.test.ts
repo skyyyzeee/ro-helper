@@ -100,3 +100,32 @@ describe('charters, regulations and project rules (real Тверской forum t
     expect(parse('sk-uniform', 'law').chapters[1].preface).toEqual(['Для личного состава СК РО устанавливаются следующие образцы служебной формы одежды:']);
   });
 });
+
+describe('sub-points as a list of their point (ФСО regulation)', () => {
+  const fso = parseLawText(readFileSync(join(root, 'data', 'tverskoi', 'sources', 'ch-fso.txt'), 'utf8'), 'ch-fso', 'points', { subpoints: 'list' });
+  const at = (number: string) => fso.articles.find((a) => a.number === number)!;
+
+  it('keeps 5.1.1–5.1.6 inside point 5.1 as its list, each with its lines on one line', () => {
+    expect(fso.issues).toEqual([]);
+    expect(at('5.1.1')).toBeUndefined();
+    const [part] = at('5.1').parts;
+    expect(part.text).toMatch(/^За нарушение положений настоящего Устава/);
+    expect(part.points.map((p) => p.marker)).toEqual(['5.1.1', '5.1.2', '5.1.3', '5.1.4', '5.1.5', '5.1.6']);
+    expect(part.points[0].text).toBe('Замечание (устное). Основания: Мелкое нарушение, совершённое впервые. Выносит: Командир подразделения.');
+  });
+
+  it("joins a sub-point's dashed list into its line", () => {
+    expect(at('6.1').parts[0].points[1]).toEqual({
+      marker: '6.1.2',
+      text: expect.stringMatching(/^К кандидатам предъявляются следующие требования: — отсутствие неснятой судимости .*; — успешное прохождение собеседования/),
+    });
+  });
+
+  it('leaves points without sub-points as they were: 47 points in all', () => {
+    expect(fso.articles).toHaveLength(47);
+    expect(['2.1', '2.2', '3.3', '4.1', '5.1', '5.2', '6.1', '6.2', '8.1', '8.2', '9.1', '10.2'].map((n) => at(n).parts[0].points.length)).toEqual([
+      4, 4, 2, 6, 6, 7, 3, 2, 4, 4, 4, 4,
+    ]);
+    expect(at('7.2').parts[0].points).toEqual([]);
+  });
+});

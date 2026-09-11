@@ -43,7 +43,7 @@ export interface Punishment {
 }
 
 export interface Point {
-  /** List marker as written: «а», «б» or «1», «2» (for «1)»). */
+  /** List marker as written: «а», «б» or «1», «2» (for «1)»), or a sub-point's number, «5.1.1». */
   marker: string;
   text: string;
 }

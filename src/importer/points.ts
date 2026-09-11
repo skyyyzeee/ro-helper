@@ -1,12 +1,20 @@
-import type { Article, Chapter, Note } from '../core/model';
+import type { Article, Chapter, Note, Point } from '../core/model';
 import { cleanLines, type ParsedLaw, type ParseIssue } from './lawText';
 
 /**
  * Charters, regulations and project rules written as numbered points instead of articles:
  * «Глава I. Общие положения» / «1.1. Текст» (уставы), «1. Текст» (положения СК), or no chapters at all
  * and «1.1 Текст | Demorgan 60 минут» under unnumbered section titles (правила проекта).
- * Every point, at any depth, is an article of its own.
+ * Every point, at any depth, is an article of its own — or, with `subpoints: 'list'`, a point at the third level
+ * (5.1.1) is an item of its point's list (5.1), its lines joined into one.
  */
+
+export interface PointsOptions {
+  subpoints?: 'list';
+}
+
+/** Joins a line to the text before it: a heading without a full stop («Замечание (устное)») gets one. */
+const joinLine = (text: string, line: string) => (/[.:;,!?—–-]$/.test(text) ? `${text} ${line}` : `${text}. ${line}`);
 
 /** «Глава I. …», «ГЛАВА 2. …», «Глава I | …», «Раздел II. …». */
 const CHAPTER = /^(?:Глава|Раздел)\s+([IVXLC]+|\d+)\s*(?:[.|]\s*(.*))?$/i;
@@ -62,7 +70,7 @@ const noteLabel = (word: string) => {
   return w.startsWith('пример') ? 'Пример' : w.charAt(0).toUpperCase() + w.slice(1, -1) + 'е';
 };
 
-export function parsePointsText(text: string, documentId: string): ParsedLaw {
+export function parsePointsText(text: string, documentId: string, options: PointsOptions = {}): ParsedLaw {
   const lines = cleanLines(text);
   const chapters: Chapter[] = [];
   const articles: Article[] = [];
@@ -76,6 +84,8 @@ export function parsePointsText(text: string, documentId: string): ParsedLaw {
   let group: string | undefined;
   let article: Article | undefined;
   let note: Note | undefined;
+  /** With sub-points as a list: the item being written, to which its following lines are joined. */
+  let item: Point | undefined;
   let ended = false;
   const filled = new Set<Chapter>();
   const chapterOf = new Map<Article, Chapter>();
@@ -126,10 +136,18 @@ export function parsePointsText(text: string, documentId: string): ParsedLaw {
       group = undefined;
       article = undefined;
       note = undefined;
+      item = undefined;
       continue;
     }
     if ((m = line.match(POINT)) && (!dotted || m[1].includes('.', m[1].indexOf('.') + 1) || /^\d+\.\d/.test(m[1]))) {
       const number = m[1].replace(/\.$/, '');
+      if (options.subpoints === 'list' && article && number.startsWith(`${article.number}.`)) {
+        item = { marker: number, text: m[2] };
+        article.parts[article.parts.length - 1].points.push(item);
+        note = undefined;
+        continue;
+      }
+      item = undefined;
       if (!explicitChapters) {
         // Project rules: the chapter is the point's first number, titled by the line before its first point.
         const first = number.split('.')[0];
@@ -173,6 +191,11 @@ export function parsePointsText(text: string, documentId: string): ParsedLaw {
     if ((m = line.match(NOTE))) {
       note = { label: noteLabel(m[1]), text: m[2] };
       article.notes.push(note);
+      item = undefined;
+      continue;
+    }
+    if (item) {
+      item.text = joinLine(item.text, line);
       continue;
     }
     if ((m = line.match(ITEM))) {

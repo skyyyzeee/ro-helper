@@ -112,7 +112,7 @@ describe('documents menu', () => {
     expect(documentRows().map((row) => row.textContent)).toEqual(['МоскваУстав города Москвы21']);
     await user.clear(filter());
     await user.type(filter(), 'регламент');
-    expect(documentRows().map((row) => row.textContent)).toEqual(['РегламентВнутренний регламент сотрудников ФСО97']);
+    expect(documentRows().map((row) => row.textContent)).toEqual(['РегламентВнутренний регламент сотрудников ФСО47']);
     await user.clear(filter());
     await user.type(filter(), 'кулинария');
     expect(within(menu()).getByText('Ничего не найдено')).toBeInTheDocument();

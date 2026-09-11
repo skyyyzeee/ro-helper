@@ -1,4 +1,4 @@
-import { formatPunishment } from './format';
+import { formatPunishment, pointLabel } from './format';
 import type { Article, ArticleChange, ChangeEntry, DocumentChange, LawDocument, ServerPack } from './model';
 
 /** An article as text for comparing and showing: parts with their numbers, lists, punishments, notes. */
@@ -6,7 +6,7 @@ export function articleText(article: Article): string {
   const lines: string[] = [];
   for (const part of article.parts) {
     lines.push((part.number ? `${part.number}. ` : '') + part.text);
-    for (const point of part.points) lines.push(`${point.marker}) ${point.text}`);
+    for (const point of part.points) lines.push(`${pointLabel(point)} ${point.text}`);
     if (part.punishment) lines.push(`Наказание: ${formatPunishment(part.punishment)}`);
   }
   for (const note of article.notes) lines.push(`${note.label}: ${note.text}`);

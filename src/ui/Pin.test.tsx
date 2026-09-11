@@ -27,15 +27,30 @@ const pinArticle = (user: User) => user.click(within(screen.getByRole('article')
 const pinCalculator = (user: User) => user.click(within(panel()).getByRole('button', { name: 'Закрепить итог поверх игры' }));
 
 describe('pinning an article', () => {
-  it('pins only the part it was opened on and hides the overlay, handing the game back', async () => {
+  it('pins only the part it was opened on, and the overlay stays open', async () => {
     const { platform, user } = await renderApp();
     await user.type(search(), 'ук 65');
     await user.keyboard('{ArrowDown}{ArrowRight}');
     await pinArticle(user);
 
-    expect(platform.state.overlayVisible).toBe(false);
+    expect(platform.state.overlayVisible).toBe(true);
+    expect(screen.getByRole('article')).toBeInTheDocument();
     expect(platform.state.pin).toMatchObject({ kind: 'article', heading: 'УК ст. 65 ч. 2. Кража', accent: 'штраф до 90 000 ₽ либо 40 мес' });
     expect(platform.state.pin!.lines).toEqual([expect.stringMatching(/^Кража, совершенная/)]);
+  });
+});
+
+describe('a point with its list (ФСО 5.1)', () => {
+  it("is found by a sub-point's number, shows the list, and pins it", async () => {
+    const { platform, user } = await renderApp();
+    await open(user, 'уфсо 5.1.3');
+    const point = screen.getByRole('article', { name: 'Пункт 5.1' });
+    expect(point).toHaveTextContent('5.1.3. Строгий выговор. Основания: Систематические нарушения, игнорирование прямых приказов.');
+
+    await pinArticle(user);
+    expect(platform.state.pin?.heading).toMatch(/^Регламент п. 5.1. За нарушение/);
+    expect(platform.state.pin?.lines).toHaveLength(7);
+    expect(platform.state.pin?.lines[1]).toBe('5.1.1. Замечание (устное). Основания: Мелкое нарушение, совершённое впервые. Выносит: Командир подразделения.');
   });
 });
 

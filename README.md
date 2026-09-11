@@ -67,6 +67,10 @@
 
 РО Хелпер — обычное окно поверх игры. Он не читает и не изменяет память игры, не внедряется в её процесс и не нажимает клавиши за вас. Всё, что он делает с игрой, — возвращает ей фокус, когда вы прячете оверлей.
 
+## Конфиденциальность
+
+РО Хелпер не собирает данные: ни аккаунтов, ни аналитики, ни телеметрии. Настройки, избранное и недавние хранятся только на вашем компьютере. В интернет программа обращается лишь за обновлениями к GitHub — это можно выключить в настройках. Подробно — в [политике конфиденциальности](PRIVACY.md); она же открывается в программе: «Настройки» → «Политика конфиденциальности».
+
 ## Серверы
 
 Сейчас поддерживается **Тверской**. Остальные серверы появятся позже — программа к этому готова.
@@ -90,12 +94,25 @@ npm run import       # пересобрать законы из data/tverskoi/so
 
 ### Как выпустить версию
 
-1. Поднять `version` в `package.json` (её же берёт Tauri) и закоммитить.
-2. Поставить тег и отправить его: `git tag v1.0.1 && git push origin v1.0.1`.
+1. Поднять версию: `npm version 1.0.3 --no-git-tag-version` (меняет `package.json`, её же берёт Tauri), закоммитить и отправить.
+2. Поставить на этот коммит тег с той же версией и отправить его: `git tag v1.0.3 && git push origin v1.0.3`. Если тег и версия в `package.json` не совпадут, сборка остановится.
 3. GitHub Actions соберёт установщик, подпишет обновление и создаст черновик релиза с `latest.json`.
 4. Проверить черновик, написать «Что нового» и опубликовать — после этого установленные программы предложат обновиться.
 
 Для подписи в секретах репозитория нужны `TAURI_SIGNING_PRIVATE_KEY` (содержимое закрытого ключа) и `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Открытый ключ записан в `src-tauri/tauri.conf.json`.
+
+## Политика подписи кода / Code signing policy
+
+Установщики собираются из исходного кода этого репозитория в GitHub Actions ([release.yml](.github/workflows/release.yml)) — ничего не собирается вручную на чужих компьютерах. Каждый релиз перед публикацией проверяет и утверждает автор.
+
+Installers are built from the source code in this repository by GitHub Actions ([release.yml](.github/workflows/release.yml)); nothing is built by hand. Every release is reviewed and approved by the maintainer before it is signed and published.
+
+Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/) — *applied for; until the application is approved, installers are not signed.*
+
+- Committers and reviewers / Авторы и ревьюеры: [skyze](https://github.com/skyyyzeee)
+- Approvers / Утверждают релизы: [skyze](https://github.com/skyyyzeee)
+
+Privacy / Конфиденциальность: see the [privacy policy](PRIVACY.md). This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it, except for the automatic update check against GitHub Releases described in the policy, which can be turned off in the settings.
 
 ## Автор
 
