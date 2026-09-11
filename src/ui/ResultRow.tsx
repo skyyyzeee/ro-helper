@@ -11,9 +11,11 @@ export interface ResultRowProps {
   calculator?: { added: boolean; onToggle: () => void };
   /** Under a chapter heading the chapter goes without saying: an article without a punishment shows its text instead. */
   inChapter?: boolean;
+  /** Changed in a recent update of the laws. */
+  changed?: boolean;
 }
 
-export function ResultRow({ hit, selected, onOpen, calculator, inChapter }: ResultRowProps) {
+export function ResultRow({ hit, selected, onOpen, calculator, inChapter, changed }: ResultRowProps) {
   const { article, document } = hit;
   const part = hit.part ?? leadPart(article);
   const chapter = document.chapters.find((c) => c.number === article.chapter);
@@ -35,6 +37,7 @@ export function ResultRow({ hit, selected, onOpen, calculator, inChapter }: Resu
           <DocBadge document={document} />
           <span className="num">{label}</span>
           <span className="ttl">{articleTitle(article)}</span>
+          {changed && <span className="chg chg--changed chg--small">изменено</span>}
           <span className="sp" />
           {part?.jurisdiction && <JurisdictionPill jurisdiction={part.jurisdiction} />}
           {part?.stars && <Stars stars={part.stars} />}

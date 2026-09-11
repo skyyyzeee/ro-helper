@@ -5,7 +5,7 @@
 - `npm test` — Vitest (law core, importer, UI with React Testing Library)
 - `npm run typecheck` — TypeScript, no emit
 - `npm run build` — typecheck + production bundle
-- `npm run import` — rebuild `src/data/tverskoi.json` from the forum snapshots in `data/tverskoi/sources` and list anything the parser could not read; a test fails if the bundled pack is stale
+- `npm run import` — rebuild `src/data/tverskoi.json` from the forum snapshots in `data/tverskoi/sources`, list anything the parser could not read and report what changed against the previous pack: changes to documents whose forum post was edited go into `data/tverskoi/changelog.json` (kept 90 days, shown in «Что изменилось»), other differences are the parser's and are only printed; `-- --check` reports without saving; a test fails if the bundled pack is stale
 
 ## Architecture
 

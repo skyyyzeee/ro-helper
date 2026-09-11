@@ -41,6 +41,8 @@ export interface ArticleViewProps {
   favorite: boolean;
   onFavorite: () => void;
   onPin: () => void;
+  /** When a recent update changed the article: its date, and the «было → стало» view. */
+  changed?: { date: string; onOpen: () => void };
 }
 
 export function ArticleView({
@@ -54,6 +56,7 @@ export function ArticleView({
   favorite,
   onFavorite,
   onPin,
+  changed,
 }: ArticleViewProps) {
   const platform = usePlatform();
   const focusRef = useRef<HTMLElement>(null);
@@ -86,6 +89,12 @@ export function ArticleView({
         </div>
       )}
       <h2 className="art__title">{heading}</h2>
+      {changed && (
+        <button className="art__changed" type="button" onClick={changed.onOpen}>
+          <span className="chg chg--changed">Изменено {formatDate(changed.date)}</span>
+          <span>было → стало</span>
+        </button>
+      )}
 
       <div className="art__parts">
         {article.parts.map((part, i) => {

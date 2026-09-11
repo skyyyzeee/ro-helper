@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
   calculateDetention,
+  changedArticles,
+  changesSince,
   chapterHeading,
   documentContents,
   leadPart,
+  recentChanges,
   searchArticles,
+  type ChangeEntry,
   type Charge,
   type ChargeItem,
   type Mode,
@@ -16,6 +20,7 @@ import {
 import { usePlatform } from '../platform/PlatformContext';
 import { ArticleView } from './ArticleView';
 import { CalculatorPanel, type ChargeFields, type ChargePatch, type CopyState } from './CalculatorPanel';
+import { ChangeDiff, ChangesView, type ChangeRef } from './ChangesView';
 import { DocumentsMenu } from './DocumentsMenu';
 import { CloseIcon, MenuIcon, SearchIcon, SettingsIcon } from './icons';
 import { DEFAULT_OPACITY, OPACITY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
@@ -35,6 +40,13 @@ function plural(n: number, [one, few, many]: [string, string, string]): string {
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} ${few}`;
   return `${n} ${many}`;
 }
+
+/** The version of the laws the user last saw, per server. */
+const seenKey = (server: string) => `laws.seen:${server}`;
+/** Articles changed this recently are marked in the results. */
+const CHANGED_DAYS = 14;
+/** How far back «Что изменилось» from the settings goes. */
+const LIST_DAYS = 60;
 
 /** What is pinned over the game: one article's part, or the calculator, whose card follows it. */
 type Pinned = { kind: 'article'; hit: SearchHit } | { kind: 'calculator' };
@@ -107,6 +119,36 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
     const key = hitKey(hit);
     updateFavorites((list) => (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]));
   };
+
+  // «Что изменилось»: shown once after an update of the laws, and from the settings. Articles changed in the
+  // last two weeks are marked in the results and lead to «было → стало».
+  const [changesView, setChangesView] = useState<{ entries: ChangeEntry[]; title: string } | null>(null);
+  const [diff, setDiff] = useState<ChangeRef | null>(null);
+  const changed = useMemo(() => changedArticles(recentChanges(pack, new Date(), CHANGED_DAYS)), [pack]);
+  useEffect(() => {
+    const key = seenKey(pack.server.id);
+    void platform.readSetting<string>(key).then((seen) => {
+      // The first launch has nothing to compare with; later, whatever came since the last one shows once.
+      const fresh = seen === undefined ? [] : changesSince(pack, seen);
+      if (fresh.length) setChangesView({ entries: fresh, title: 'С прошлого обновления' });
+      if (seen !== pack.version) void platform.writeSetting(key, pack.version);
+    });
+  }, [platform, pack]);
+  const showRecentChanges = () => {
+    setSettingsOpen(false);
+    setOpen(null);
+    setDiff(null);
+    setChangesView({ entries: recentChanges(pack, new Date(), LIST_DAYS), title: `За ${LIST_DAYS} дней` });
+  };
+  /** The article as it is now, for a change: to open it whole. */
+  const hitForArticle = (articleId: string): SearchHit | undefined => {
+    for (const document of pack.documents) {
+      const article = document.articles.find((a) => a.id === articleId);
+      if (article) return { article, document, part: entryPart(article) };
+    }
+    return undefined;
+  };
+  const changeOf = (hit: SearchHit) => changed.get(hit.article.id);
 
   // Calculator: charges of both codes, the mode and the offender for the whole detention, the fine typed in.
   const [charges, setCharges] = useState<Entry[]>([]);
@@ -222,6 +264,8 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
       clearScope();
       return;
     }
+    // «Что изменилось» and «было → стало» are read with the mouse; the list keys would move a hidden selection.
+    if (diff || (changesView && !open)) return;
     if (open) {
       // Enter in an open article puts its part into the calculator, or takes it out.
       if (e.key === 'Enter' && addable(open)) {
@@ -272,7 +316,9 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
   stepBack.current = () => {
     if (settingsOpen) setSettingsOpen(false);
     else if (menuOpen) setMenuOpen(false);
+    else if (diff) setDiff(null);
     else if (open) setOpen(null);
+    else if (changesView) setChangesView(null);
     else if (query) {
       setQuery('');
       setSelected(0);
@@ -311,6 +357,7 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
         hit={hit}
         selected={i === current}
         inChapter={inChapter}
+        changed={!!changeOf(hit)}
         onOpen={() => openHit(hit)}
         calculator={addable(hit) ? { added: inCalculator(hit), onToggle: () => toggleCharge(hit) } : undefined}
       />
@@ -408,7 +455,14 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
       </div>
 
       {settingsOpen && (
-        <SettingsPanel summary={summary} hotkey={profile.hotkey} opacity={opacity} onOpacity={changeOpacity} onEditProfile={onEditProfile} />
+        <SettingsPanel
+          summary={summary}
+          hotkey={profile.hotkey}
+          opacity={opacity}
+          onOpacity={changeOpacity}
+          onEditProfile={onEditProfile}
+          onChanges={showRecentChanges}
+        />
       )}
 
       <div className="search">
@@ -431,6 +485,8 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
           onChange={(e) => {
             setQuery(e.target.value);
             setOpen(null);
+            setDiff(null);
+            setChangesView(null);
             setSelected(0);
           }}
           onKeyDown={onSearchKey}
@@ -439,12 +495,38 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
       </div>
 
       <div className="overlay__content">
-        {open ? (
+        {diff ? (
+          <ChangeDiff
+            pack={pack}
+            target={diff}
+            backLabel={open ? 'Статья' : changesView ? 'Что изменилось' : 'Назад'}
+            onBack={() => {
+              setDiff(null);
+              searchRef.current?.focus();
+            }}
+            onOpenArticle={
+              // From the article itself «←» already leads back to it.
+              open?.article.id !== diff.change.articleId && hitForArticle(diff.change.articleId)
+                ? () => {
+                    setDiff(null);
+                    setOpen(hitForArticle(diff.change.articleId)!);
+                    searchRef.current?.focus();
+                  }
+                : undefined
+            }
+          />
+        ) : open ? (
           <ArticleView
             article={open.article}
             document={open.document}
             focusPart={open.part}
-            backLabel={home ? 'Избранное и недавние' : view === 'contents' ? 'Оглавление' : 'Результаты'}
+            backLabel={changesView ? 'Что изменилось' : home ? 'Избранное и недавние' : view === 'contents' ? 'Оглавление' : 'Результаты'}
+            changed={(() => {
+              const recentChange = changeOf(open);
+              return recentChange && recentChange.change.kind === 'changed'
+                ? { date: recentChange.entry.version, onOpen: () => setDiff(recentChange) }
+                : undefined;
+            })()}
             onBack={() => {
               setOpen(null);
               searchRef.current?.focus();
@@ -458,6 +540,22 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
             favorite={favoriteKeys.includes(hitKey(open))}
             onFavorite={() => toggleFavorite(open)}
             onPin={() => pin({ kind: 'article', hit: open })}
+          />
+        ) : changesView ? (
+          <ChangesView
+            pack={pack}
+            entries={changesView.entries}
+            title={changesView.title}
+            onOpen={(ref) => {
+              const hit = ref.change.kind === 'added' ? hitForArticle(ref.change.articleId) : undefined;
+              if (hit) setOpen(hit);
+              else setDiff(ref);
+              searchRef.current?.focus();
+            }}
+            onBack={() => {
+              setChangesView(null);
+              searchRef.current?.focus();
+            }}
           />
         ) : home ? (
           <>

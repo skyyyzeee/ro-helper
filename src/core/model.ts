@@ -163,13 +163,41 @@ export interface AdministrativeRules {
   bail: Based & { perDay: number };
 }
 
+/** A change to one article between two versions of the laws. */
+export interface ArticleChange {
+  kind: 'added' | 'removed' | 'changed';
+  articleId: string;
+  /** The article as it was: for a removed or changed one. */
+  before?: Article;
+  /** The article as it became: for an added or changed one. */
+  after?: Article;
+}
+
+/** What changed in one document: its articles, or the whole document when it came or went. */
+export interface DocumentChange {
+  documentId: string;
+  short: string;
+  title: string;
+  kind: 'added' | 'removed' | 'changed';
+  articles: ArticleChange[];
+}
+
+/** One update of the laws: when it was and what it changed. */
+export interface ChangeEntry {
+  /** The pack version it produced: the time of the newest edit on the forum. */
+  version: string;
+  documents: DocumentChange[];
+}
+
 export interface ServerPack {
   server: ServerInfo;
   calculator: CalculatorRules;
   /** What the user can pick as their organisation, «Без организации» included. */
   organizations: Organization[];
-  /** Date-based version of the pack. */
+  /** The time of the newest edit among the laws (ISO): changes whenever a law does. */
   version: string;
+  /** Updates of the laws, newest first, kept for a while so «Что изменилось» can show them. */
+  changes: ChangeEntry[];
   documents: LawDocument[];
   /** Words players use → phrases the law uses for the same thing: «ствол» → «огнестрельное оружие». */
   synonyms: Record<string, string[]>;

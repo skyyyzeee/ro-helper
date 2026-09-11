@@ -21,8 +21,9 @@ describe('bundled Тверской pack', () => {
     // Never edited since posting: current as of the post itself.
     expect(TVERSKOI_PACK.documents.find((d) => d.id === 'fkz2')?.source).toMatchObject({ thread: 14682, lastEdited: '2026-09-02T21:44:37+03:00' });
     expect(TVERSKOI_PACK.server).toEqual({ id: 'tverskoi', name: 'Тверской', status: 'active' });
-    // The newest edit: the Army charters, 11 September.
-    expect(TVERSKOI_PACK.version).toBe('2026-09-11');
+    // The version is the newest edit: the Army charters, 11 September. No law has changed since the pack was first built.
+    expect(TVERSKOI_PACK.version).toBe('2026-09-11T12:14:23+03:00');
+    expect(TVERSKOI_PACK.changes).toEqual([]);
   });
 
   it('holds the legislative base, the charters of the organisations and the project rules: 49 documents', () => {

@@ -1,19 +1,48 @@
-// Rebuilds the bundled server pack from the saved forum snapshots.
-// Usage: npm run import
-import { writeFileSync } from 'node:fs';
+// Rebuilds the bundled server pack from the saved forum snapshots and reports what changed.
+// Usage: npm run import            — report, then save the pack and the changelog
+//        npm run import -- --check — report only
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import type { DocumentChange, ServerPack } from '../core/model';
 import { buildPack } from './buildPack';
+import { compareImports, nextChangelog } from './changelog';
 import { TVERSKOI } from './servers';
 
+const check = process.argv.includes('--check');
 const root = join(import.meta.dirname, '..', '..');
-const { pack, issues } = buildPack(join(root, 'data', 'tverskoi'), TVERSKOI);
+const serverDir = join(root, 'data', 'tverskoi');
 const out = join(root, 'src', 'data', 'tverskoi.json');
-writeFileSync(out, JSON.stringify(pack, null, 2) + '\n');
+const previous = existsSync(out) ? (JSON.parse(readFileSync(out, 'utf8')) as ServerPack) : undefined;
+const { pack, issues } = buildPack(serverDir, TVERSKOI);
 
 for (const doc of pack.documents) {
   const penal = doc.articles.filter((a) => a.parts.some((p) => p.punishment)).length;
   console.log(`${doc.short}: ${doc.chapters.length} глав, ${doc.articles.length} статей, с наказаниями ${penal}`);
 }
+
+const report = compareImports(previous, pack);
+const describe = (changes: DocumentChange[]) => {
+  for (const d of changes) {
+    if (d.kind !== 'changed') {
+      console.log(`  ${d.kind === 'added' ? '+ добавлен' : '− удалён'} документ ${d.short} «${d.title}»`);
+      continue;
+    }
+    const count = (kind: string) => d.articles.filter((a) => a.kind === kind).length;
+    console.log(`  ${d.short} «${d.title}»: изменено ${count('changed')}, добавлено ${count('added')}, удалено ${count('removed')}`);
+    for (const a of d.articles.slice(0, 12)) {
+      const number = (a.after ?? a.before)!.number;
+      console.log(`    ${a.kind === 'added' ? '+' : a.kind === 'removed' ? '−' : '~'} ${number}`);
+    }
+    if (d.articles.length > 12) console.log(`    … ещё ${d.articles.length - 12}`);
+  }
+};
+console.log(`\nИзменения законов (в «Что изменилось»): ${report.laws.length ? '' : 'нет'}`);
+describe(report.laws);
+if (report.parser.length) {
+  console.log('\nИзменения разборщика (законы на форуме не менялись, в «Что изменилось» не попадут):');
+  describe(report.parser);
+}
+
 if (issues.length) {
   console.log(`\nНе разобрано: ${issues.length}`);
   for (const issue of issues) {
@@ -26,4 +55,12 @@ if (issues.length) {
 } else {
   console.log('\nВсё разобрано.');
 }
-console.log(`\nПакет ${pack.server.name}, версия ${pack.version} → ${out}`);
+
+if (check) {
+  console.log(`\nПроверка: пакет ${pack.server.name}, версия ${pack.version}, не сохранён.`);
+} else {
+  pack.changes = nextChangelog(pack.changes, pack.version, report.laws);
+  writeFileSync(join(serverDir, 'changelog.json'), JSON.stringify(pack.changes, null, 2) + '\n');
+  writeFileSync(out, JSON.stringify(pack, null, 2) + '\n');
+  console.log(`\nПакет ${pack.server.name}, версия ${pack.version} → ${out}`);
+}

@@ -93,7 +93,13 @@ export const StarIcon = ({ size = 12 }: { size?: number }) => (
   </svg>
 );
 
-export const PinIcon = ({ size = 18 }: { size?: number }) => (
+export const ArrowRightIcon = ({ size = 22 }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M5 12h14M13 6l6 6-6 6" />
+  </Icon>
+);
+
+export const PinIcon =({ size = 18 }: { size?: number }) => (
   <Icon size={size}>
     <path d="M9 3h6l-1 6.5 3.5 3.5h-11L10 9.5z" />
     <path d="M12 13v8" />

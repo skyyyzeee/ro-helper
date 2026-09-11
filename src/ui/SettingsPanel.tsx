@@ -9,6 +9,7 @@ export function SettingsPanel({
   opacity,
   onOpacity,
   onEditProfile,
+  onChanges,
 }: {
   /** «Тверской · МВД». */
   summary: string;
@@ -16,6 +17,8 @@ export function SettingsPanel({
   opacity: number;
   onOpacity: (value: number) => void;
   onEditProfile: () => void;
+  /** Opens «Что изменилось» for the recent updates of the laws. */
+  onChanges: () => void;
 }) {
   const platform = usePlatform();
   const transparency = Math.round((1 - opacity) * 100);
@@ -45,6 +48,9 @@ export function SettingsPanel({
         value={transparency}
         onChange={(e) => onOpacity(1 - Number(e.target.value) / 100)}
       />
+      <button className="settings__button" type="button" onClick={onChanges}>
+        Что изменилось в законах
+      </button>
       {platform.kind !== 'browser' && (
         <button className="settings__button" type="button" onClick={() => void platform.resetWindowBounds()}>
           Сбросить положение окна

@@ -1685,3 +1685,199 @@ input {
   color: var(--on-accent);
   background: rgba(0, 0, 0, 0.12);
 }
+
+/* «Что изменилось» */
+.chg {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 99px;
+  flex: none;
+  text-shadow: none;
+}
+
+.chg--changed { color: var(--was-text); background: var(--was-bg); }
+.chg--added { color: var(--now-text); background: var(--now-bg); }
+.chg--removed { color: var(--gone-text); background: var(--gone-bg); }
+
+.chg--small {
+  font-size: 11px;
+  padding: 2px 7px;
+}
+
+.changes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 12px 20px;
+}
+
+.changes__title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.changes__sub {
+  margin: -6px 0 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.changes__entry {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.changes__date {
+  padding: 8px 0 0;
+}
+
+.changes__doc {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 8px 8px;
+  border-radius: var(--radius-card);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.changes__doc-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px 4px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.changes__whole {
+  margin: 0;
+  padding: 0 6px 4px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.changes__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.changes__row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-width: 0;
+  padding: 8px 6px;
+  border-radius: 10px;
+  text-align: left;
+}
+
+.changes__row:hover {
+  background: var(--surface-hover);
+}
+
+.changes__row .num,
+.changes__row .ttl {
+  font-size: 15px;
+}
+
+.art__changed {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  margin-top: -4px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 99px;
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.art__changed:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.diff__when {
+  margin: -6px 0 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.diff__cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: 8px;
+}
+
+.diff__col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+  min-width: 0;
+}
+
+.diff__col--before {
+  background: var(--was-bg);
+  box-shadow: inset 0 0 0 1px oklch(0.85 0.12 90 / 0.25);
+}
+
+.diff__col--after {
+  background: var(--now-bg);
+  box-shadow: inset 0 0 0 1px oklch(0.8 0.12 155 / 0.25);
+}
+
+.diff__col--empty {
+  justify-content: center;
+  align-items: center;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.diff__label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.diff__col--before .diff__label { color: var(--was-text); }
+.diff__col--after .diff__label { color: var(--now-text); }
+
+.diff__text {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.diff__text mark {
+  color: var(--text);
+  border-radius: 4px;
+  padding: 0 1px;
+}
+
+.diff__removed { background: var(--was-mark); }
+.diff__added { background: var(--now-mark); }
+
+.diff__arrow {
+  /* By the column labels: a long article would take a centred arrow out of sight. */
+  padding-top: 9px;
+  color: var(--text-muted);
+}
+
+.diff > .link {
+  align-self: flex-start;
+  font-size: 14px;
+}

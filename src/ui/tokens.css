@@ -30,6 +30,16 @@
   --warn-text: oklch(0.92 0.05 35);
   --favorite: oklch(0.88 0.09 80);
 
+  /* «Было → стало»: the old text yellow, the new green, a removal red. */
+  --was-text: oklch(0.9 0.1 90);
+  --was-bg: oklch(0.85 0.12 90 / 0.14);
+  --was-mark: oklch(0.85 0.14 90 / 0.34);
+  --now-text: oklch(0.88 0.1 155);
+  --now-bg: oklch(0.8 0.12 155 / 0.13);
+  --now-mark: oklch(0.8 0.14 155 / 0.34);
+  --gone-text: oklch(0.86 0.08 25);
+  --gone-bg: oklch(0.72 0.12 25 / 0.2);
+
   /* Document category badges. */
   --badge-codes-text: oklch(0.87 0.07 245);
   --badge-codes-bg: oklch(0.78 0.1 245 / 0.22);

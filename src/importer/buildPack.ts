@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import type { CalculatorRules, DocumentCategory, DocumentKind, LawDocument, Organization, ServerPack } from '../core/model';
+import type { CalculatorRules, ChangeEntry, DocumentCategory, DocumentKind, LawDocument, Organization, ServerPack } from '../core/model';
 import { parseLawText, type LawFormat, type ParseIssue } from './lawText';
 import { applyOverrides, type Overrides } from './overrides';
 
@@ -82,8 +82,9 @@ export function buildPack(serverDir: string, server: ServerSources): BuildResult
     }
   }
 
-  // The pack version is the newest law edit it contains, so it only changes when a law does.
-  const version = documents.map((d) => d.source.lastEdited.slice(0, 10)).sort().at(-1) ?? '0000-00-00';
+  // The pack version is the time of the newest law edit it contains, so it only changes when a law does.
+  const version = documents.map((d) => d.source.lastEdited).sort((a, b) => Date.parse(a) - Date.parse(b)).at(-1) ?? '0000-00-00';
+  const changes = readJson<ChangeEntry[]>(join(serverDir, 'changelog.json'), []);
   const info = { id: server.id, name: server.name, status: server.status };
-  return { pack: { server: info, calculator, organizations, version, documents, synonyms }, issues };
+  return { pack: { server: info, calculator, organizations, version, changes, documents, synonyms }, issues };
 }

@@ -2,6 +2,7 @@
 // Pure TypeScript with no UI, Tauri or importer imports (enforced by boundary.test.ts).
 export type * from './model';
 export { documentContents, searchArticles, type ChapterContents, type SearchHit } from './search';
+export { articleText, changedArticles, changesSince, diffPacks, diffWords, recentChanges, type WordDiff } from './changes';
 export {
   calculateCriminal,
   chargeLabel,
