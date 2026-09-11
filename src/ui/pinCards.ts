@@ -21,7 +21,7 @@ export function articlePinCard(hit: SearchHit, rules: CalculatorRules): PinCard 
   const warning = only && rules.jurisdictionWarnings[only];
   return {
     kind: 'article',
-    heading: `${hit.document.short} ${articleLabel(hit.article, own)}` + (title ? `. ${title}` : ''),
+    heading: `${hit.document.short} ${articleLabel(hit.article, own, hit.document.unit)}` + (title ? `. ${title}` : ''),
     ...(part?.punishment ? { accent: formatPunishment(part.punishment) } : {}),
     lines: part?.text ? [part.text] : [],
     ...(warning ? { warning } : {}),

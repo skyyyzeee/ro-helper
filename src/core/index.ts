@@ -28,6 +28,7 @@ export {
 export { calculateDetention, type Charge, type DetentionOptions, type DetentionResult, type DetentionStars } from './detention';
 export {
   SUBJECT_LABELS,
+  articleHeading,
   articleLabel,
   articleTitle,
   chapterHeading,

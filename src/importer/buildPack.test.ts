@@ -21,20 +21,28 @@ describe('bundled Тверской pack', () => {
     // Never edited since posting: current as of the post itself.
     expect(TVERSKOI_PACK.documents.find((d) => d.id === 'fkz2')?.source).toMatchObject({ thread: 14682, lastEdited: '2026-09-02T21:44:37+03:00' });
     expect(TVERSKOI_PACK.server).toEqual({ id: 'tverskoi', name: 'Тверской', status: 'active' });
-    // The newest edit among the laws: «О здравоохранении», 8 September.
-    expect(TVERSKOI_PACK.version).toBe('2026-09-08');
+    // The newest edit: the Army charters, 11 September.
+    expect(TVERSKOI_PACK.version).toBe('2026-09-11');
   });
 
-  it('holds the whole legislative base of Тверской: 30 documents, only the two codes with punishments', () => {
+  it('holds the legislative base, the charters of the organisations and the project rules: 49 documents', () => {
     expect(TVERSKOI_PACK.documents.map((d) => d.short)).toEqual([
       'Конституция', 'УК', 'КоАП', 'ПДД', 'УПК', 'ТК', 'Этика',
       '1-ФКЗ', '2-ФКЗ', '3-ФКЗ', '4-ФКЗ',
       '1-ФЗ', '2-ФЗ', '3-ФЗ', '4-ФЗ', '5-ФЗ', '6-ФЗ', '7-ФЗ', '8-ФЗ', '9-ФЗ', '10-ФЗ', '11-ФЗ', '12-ФЗ', '13-ФЗ', '14-ФЗ', '16-ФЗ',
       'Москва', 'Москва', 'Москва', 'Москва',
+      'Устав', 'Устав', 'Регламент', 'Устав', 'Устав', 'Устав',
+      'Положение', 'Положение', 'Положение', 'Положение', 'Положение', 'Положение', 'Положение', 'Положение',
+      'Устав', 'Устав',
+      'Правила', 'Правила', 'Правила',
     ]);
     expect(TVERSKOI_PACK.documents.filter((d) => d.kind === 'penal-code').map((d) => d.id)).toEqual(['uk', 'koap']);
     const byCategory = (category: string) => TVERSKOI_PACK.documents.filter((d) => d.category === category).length;
-    expect(['codes', 'fkz', 'fz', 'moscow'].map(byCategory)).toEqual([7, 4, 15, 4]);
+    expect(['codes', 'fkz', 'fz', 'moscow', 'charters', 'rules'].map(byCategory)).toEqual([7, 4, 15, 4, 16, 3]);
+    // Every organisation's documents are in the pack now.
+    for (const organization of TVERSKOI_PACK.organizations) {
+      for (const id of organization.documents) expect(TVERSKOI_PACK.documents.map((d) => d.id)).toContain(id);
+    }
   });
 
   it('lists the thirteen organisations to choose from, each pointing at Тверской documents', () => {

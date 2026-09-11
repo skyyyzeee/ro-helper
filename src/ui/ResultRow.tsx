@@ -17,6 +17,7 @@ export function ResultRow({ hit, selected, onOpen, calculator, inChapter }: Resu
   const { article, document } = hit;
   const part = hit.part ?? leadPart(article);
   const chapter = document.chapters.find((c) => c.number === article.chapter);
+  const label = articleLabel(article, hit.part, document.unit);
   const ref = useRef<HTMLButtonElement>(null);
   const wasSelected = useRef(selected);
 
@@ -32,7 +33,7 @@ export function ResultRow({ hit, selected, onOpen, calculator, inChapter }: Resu
       <button ref={ref} className="row__main" type="button" aria-current={selected ? 'true' : undefined} tabIndex={-1} onClick={onOpen}>
         <span className="row__line">
           <DocBadge document={document} />
-          <span className="num">{articleLabel(article, hit.part)}</span>
+          <span className="num">{label}</span>
           <span className="ttl">{articleTitle(article)}</span>
           <span className="sp" />
           {part?.jurisdiction && <JurisdictionPill jurisdiction={part.jurisdiction} />}
@@ -62,7 +63,7 @@ export function ResultRow({ hit, selected, onOpen, calculator, inChapter }: Resu
           type="button"
           tabIndex={-1}
           aria-pressed={calculator.added}
-          aria-label={calculator.added ? `Убрать ${articleLabel(article, hit.part)} из калькулятора` : `Добавить ${articleLabel(article, hit.part)} в калькулятор`}
+          aria-label={calculator.added ? `Убрать ${label} из калькулятора` : `Добавить ${label} в калькулятор`}
           title={calculator.added ? 'Убрать из калькулятора' : 'Добавить в калькулятор'}
           onClick={calculator.onToggle}
         >

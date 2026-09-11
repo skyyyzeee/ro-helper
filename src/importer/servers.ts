@@ -16,7 +16,9 @@ export const TVERSKOI: ServerSources = {
     // Законы Москвы
     'msk-charter', 'msk-health', 'msk-news', 'msk-property',
     // Уставы организаций
-    'ch-mvd', 'ch-gibdd', 'ch-fso', 'ch-army', 'ch-army-discipline', 'ch-army-guard', 'ch-sk', 'ch-hospital', 'ch-news',
+    'ch-mvd', 'ch-gibdd', 'ch-fso', 'ch-army', 'ch-army-discipline', 'ch-army-guard',
+    'sk-main', 'sk-gsu', 'sk-inspections', 'sk-uniform', 'sk-ethics', 'sk-kso', 'sk-appeals', 'sk-ranks',
+    'ch-hospital', 'ch-news',
     // Правила проекта
     'rules-main', 'rules-gov', 'rules-crime',
   ],

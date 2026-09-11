@@ -13,6 +13,7 @@ export interface SourceMeta {
   kind: DocumentKind;
   category: DocumentCategory;
   format: LawFormat;
+  unit?: 'point';
   thread: number;
   url: string;
   posted: string;
@@ -62,6 +63,7 @@ export function buildPack(serverDir: string, server: ServerSources): BuildResult
       aliases: meta.aliases,
       kind: meta.kind,
       category: meta.category,
+      ...(meta.unit ? { unit: meta.unit } : {}),
       source: { thread: meta.thread, url: meta.url, posted: meta.posted, lastEdited: meta.lastEdited, snapshotAt: meta.snapshotAt },
       chapters: parsed.chapters,
       articles: parsed.articles,

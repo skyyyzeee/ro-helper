@@ -14,5 +14,8 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    // UI tests type into the whole app over the real 49-document pack; in jsdom, and with every file
+    // running at once, the longest (opening a document's table of contents) take several seconds.
+    testTimeout: 15_000,
   },
 });

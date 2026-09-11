@@ -104,6 +104,8 @@ export interface LawDocument {
   aliases: string[];
   kind: DocumentKind;
   category: DocumentCategory;
+  /** Charters and rules are written in numbered points: «п. 1.1», not «ст. 1.1». */
+  unit?: 'point';
   source: DocumentSource;
   chapters: Chapter[];
   articles: Article[];

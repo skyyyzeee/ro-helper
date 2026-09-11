@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { SUBJECT_LABELS, chapterHeading, penalParts, punishmentBySubject, type Article, type LawDocument, type Part } from '../core';
+import { SUBJECT_LABELS, articleHeading, chapterHeading, penalParts, punishmentBySubject, type Article, type LawDocument, type Part } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
 import { BackIcon, CheckIcon, ExternalIcon, FavoriteIcon, PinIcon, PlusIcon } from './icons';
 import { DocBadge, JurisdictionPill, Stars, formatDate, jurisdictionText, starsHint } from './lawBits';
@@ -58,7 +58,7 @@ export function ArticleView({
   const platform = usePlatform();
   const focusRef = useRef<HTMLElement>(null);
   const chapter = document.chapters.find((c) => c.number === article.chapter);
-  const heading = `Статья ${article.number}` + (article.title ? `. ${article.title}` : '');
+  const heading = articleHeading(article, document.unit);
   // The part the buttons act on; each punished part has its own «+» when there are several.
   const main = entryPart(article, focusPart);
   const perPart = penalParts(article).length > 1;

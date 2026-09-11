@@ -1,4 +1,4 @@
-import type { Article, Chapter, Jurisdiction, Part, Punishment, Sanction, StarRange, Subject } from './model';
+import type { Article, Chapter, Jurisdiction, LawDocument, Part, Punishment, Sanction, StarRange, Subject } from './model';
 
 const NBSP = ' ';
 
@@ -89,9 +89,14 @@ export function leadPart(article: Article): Part | undefined {
   return article.parts.find((part) => part.punishment);
 }
 
-/** «ст. 65», «ст. 8.6 ч. 1». */
-export function articleLabel(article: Article, part?: Part): string {
-  return `ст. ${article.number}` + (part?.number ? ` ч. ${part.number}` : '');
+/** «ст. 65», «ст. 8.6 ч. 1»; «п. 1.1» in a document written in points. */
+export function articleLabel(article: Article, part?: Part, unit?: LawDocument['unit']): string {
+  return `${unit === 'point' ? 'п.' : 'ст.'} ${article.number}` + (part?.number ? ` ч. ${part.number}` : '');
+}
+
+/** «Статья 65. Кража», «Пункт 1.1» — the heading of an open article. */
+export function articleHeading(article: Article, unit?: LawDocument['unit']): string {
+  return `${unit === 'point' ? 'Пункт' : 'Статья'} ${article.number}` + (article.title ? `. ${article.title}` : '');
 }
 
 /** «Глава 14. Преступления против собственности», or «Раздел I. Общие положения» for a section standing in for a chapter. */

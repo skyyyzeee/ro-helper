@@ -1,4 +1,5 @@
 import type { Article, Chapter, Note, Part } from '../core/model';
+import { parsePointsText, uniqueIds } from './points';
 import { parseAdministrativeSanction, parseLeadingTags, parsePunishment, splitPenalty } from './sanctions';
 
 /**
@@ -9,7 +10,7 @@ import { parseAdministrativeSanction, parseLeadingTags, parsePunishment, splitPe
  * - `law` (any other law, code or charter): no sanctions; sections and chapters in any numbering, and
  *   articles that may start again from 1 in each chapter.
  */
-export type LawFormat = 'criminal-code' | 'administrative-code' | 'traffic-rules' | 'law';
+export type LawFormat = 'criminal-code' | 'administrative-code' | 'traffic-rules' | 'law' | 'points';
 
 export interface ParseIssue {
   article?: string;
@@ -73,6 +74,7 @@ function stripTrailingDash(text: string): string {
 }
 
 export function parseLawText(text: string, documentId: string, format: LawFormat): ParsedLaw {
+  if (format === 'points') return parsePointsText(text, documentId);
   const lines = cleanLines(text);
   const chapters: Chapter[] = [];
   const articles: Article[] = [];
@@ -82,7 +84,7 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
   let started = false;
   let section: string | undefined;
   /** A section whose articles come before any chapter of it: it becomes their chapter. */
-  let openSection: { number: string; title: string } | undefined;
+  let openSection: { number: string; title: string; preface: string[] } | undefined;
   let chapter: Chapter | undefined;
   let group: string | undefined;
   let article: Article | undefined;
@@ -116,7 +118,7 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
         group = heading;
       } else {
         section = heading;
-        openSection = { number: m[1], title: m[2] };
+        openSection = { number: m[1], title: m[2], preface: [] };
         chapter = undefined;
         group = undefined;
       }
@@ -135,7 +137,7 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
     if ((m = line.match(ARTICLE))) {
       started = true;
       if (!chapter && openSection) {
-        chapter = { number: openSection.number, title: openSection.title, kind: 'section', preface: [] };
+        chapter = { number: openSection.number, title: openSection.title, kind: 'section', preface: openSection.preface };
         chapters.push(chapter);
         openSection = undefined;
       }
@@ -159,6 +161,7 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
 
     if (!article) {
       if (chapter) chapter.preface.push(line);
+      else if (openSection) openSection.preface.push(line);
       else issue(line, 'Текст вне главы и статьи');
       continue;
     }
@@ -238,11 +241,6 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
     else article.parts.push({ text: format === 'administrative-code' ? stripTrailingDash(line) : line, points: [] });
   }
 
-  // Some laws number articles again in each chapter (8-ФЗ): ids then carry the chapter to stay unique.
-  const numbers = articles.map((a) => a.number);
-  if (new Set(numbers).size < numbers.length) {
-    for (const a of articles) a.id = `${documentId}-${a.chapter ?? '0'}-${a.number}`;
-  }
-
+  uniqueIds(articles, documentId);
   return { chapters, articles, header, footer, issues };
 }
