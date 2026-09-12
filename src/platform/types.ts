@@ -17,8 +17,10 @@ export interface PinCard {
   heading: string;
   /** Stars to set, beside the calculator's total. */
   stars?: number;
-  /** In the accent colour under the heading: the article's punishment. */
-  accent?: string;
+  /** The punishment of the article's part, under the heading: a line per whom it is for. */
+  punishment?: { who?: string; text: string }[];
+  /** What comes on top of the punishment: «лишение права управления», «запись о судимости». */
+  extra?: string[];
   lines: string[];
   warning?: string;
 }

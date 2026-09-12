@@ -1,18 +1,34 @@
 import {
+  SUBJECT_LABELS,
   articleLabel,
   articleTitle,
-  formatPunishment,
   formatRubles,
   leadPart,
   pointLabel,
+  punishmentBySubject,
   type AdministrativeResult,
   type CalculatorRules,
   type DetentionResult,
+  type Part,
   type SearchHit,
 } from '../core';
 import type { PinCard } from '../platform/types';
 import { CALCULATOR_ID } from './pinLayout';
 import { entryPart, hitKey } from './saved';
+
+/**
+ * The whole punishment of a part, as the article itself shows it: a line for everyone, or one per whom
+ * it is for, and the measures that come on top.
+ */
+function punishmentOf(part?: Part): Pick<PinCard, 'punishment' | 'extra'> {
+  if (!part?.punishment) return {};
+  const lines = punishmentBySubject(part.punishment);
+  const named = lines.some((line) => line.subject !== null);
+  return {
+    punishment: lines.map((line) => ({ ...(named && line.subject ? { who: SUBJECT_LABELS[line.subject] } : {}), text: line.text })),
+    ...(part.punishment.additional.length ? { extra: part.punishment.additional } : {}),
+  };
+}
 
 /** The pinned article: only its part — heading, punishment and text — and whose case it is. */
 export function articlePinCard(hit: SearchHit, rules?: CalculatorRules): PinCard {
@@ -25,7 +41,7 @@ export function articlePinCard(hit: SearchHit, rules?: CalculatorRules): PinCard
     id: hitKey(hit),
     kind: 'article',
     heading: `${hit.document.short} ${articleLabel(hit.article, own, hit.document.unit)}` + (title ? `. ${title}` : ''),
-    ...(part?.punishment ? { accent: formatPunishment(part.punishment) } : {}),
+    ...punishmentOf(part),
     // A point written as a list (ФСО 5.1) shows its items too.
     lines: [...(part?.text ? [part.text] : []), ...(part?.points.map((point) => `${pointLabel(point)} ${point.text}`) ?? [])],
     ...(warning ? { warning } : {}),

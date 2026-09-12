@@ -1267,7 +1267,21 @@ input {
 .pin__accent {
   font-size: 15px;
   font-weight: 600;
+  line-height: 1.4;
   color: var(--accent-text);
+}
+
+/* Whom the punishment beside it is for, when the article names them apart. */
+.pin__who {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+/* What comes on top of the punishment. */
+.pin__extra {
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .pin__line {

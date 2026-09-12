@@ -32,7 +32,7 @@ import { PinSurface } from './PinSurface';
 import { PrivacyView } from './PrivacyView';
 import { ReleaseNotesView } from './ReleaseNotesView';
 import { articlePinCard, calculatorPinCard } from './pinCards';
-import { CALCULATOR_ID, hasCard, keepableGroups, pinCard, surfaceNow, unpinCard, updateCard } from './pinLayout';
+import { CALCULATOR_ID, hasCard, keepableGroups, pinCard, restoreGroups, surfaceNow, unpinCard, updateCard } from './pinLayout';
 import { ResizeEdges } from './ResizeEdges';
 import { ResultRow } from './ResultRow';
 import { RECENT_LIMIT, entryPart, favoritesKey, hitKey, recentKey, useHitLookup, useStoredKeys } from './saved';
@@ -254,7 +254,7 @@ export function Overlay({
     void platform.readSetting<PinGroup[]>(pins).then((saved) => {
       if (!active) return;
       // The calculator's card belongs to a detention that is long over.
-      setGroups(Array.isArray(saved) ? keepableGroups(saved) : []);
+      setGroups(Array.isArray(saved) ? keepableGroups(restoreGroups(saved)) : []);
       setPinsReady(true);
     });
     return () => {

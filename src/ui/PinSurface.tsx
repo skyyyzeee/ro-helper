@@ -22,7 +22,17 @@ function PinCardBody({ card }: { card: PinCard }) {
       ) : (
         <div className="pin__title">{card.heading}</div>
       )}
-      {card.accent && <div className="pin__accent">{card.accent}</div>}
+      {card.punishment?.map((line) => (
+        <div key={line.who ?? 'all'} className="pin__accent">
+          {line.who && <span className="pin__who">{line.who}: </span>}
+          {line.text}
+        </div>
+      ))}
+      {card.extra?.map((extra) => (
+        <div key={extra} className="pin__extra">
+          + {extra}
+        </div>
+      ))}
       {card.lines.map((line) => (
         <div key={line} className={card.kind === 'calculator' ? 'pin__line pin__line--strong' : 'pin__line'}>
           {line}

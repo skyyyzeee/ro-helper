@@ -35,8 +35,66 @@ describe('pinning an article', () => {
 
     expect(platform.state.overlayVisible).toBe(true);
     expect(screen.getByRole('article')).toBeInTheDocument();
-    expect(pinnedCards(platform)[0]).toMatchObject({ kind: 'article', heading: 'УК ст. 65 ч. 2. Кража', accent: 'штраф до 90 000 ₽ либо 40 мес' });
+    expect(pinnedCards(platform)[0]).toMatchObject({
+      kind: 'article',
+      heading: 'УК ст. 65 ч. 2. Кража',
+      punishment: [{ text: 'штраф до 90 000 ₽ либо 40 мес' }],
+    });
     expect(pinnedCards(platform)[0].lines).toEqual([expect.stringMatching(/^Кража, совершенная/)]);
+  });
+});
+
+describe('the punishment on the card', () => {
+  it('carries every line of it — whom it is for included — and what comes on top', async () => {
+    const { platform, user } = await renderApp();
+    await open(user, 'коап 5.4 ч 1');
+    await pinArticle(user);
+    expect(pinnedCards(platform)[0].punishment).toEqual([
+      { who: 'Гражданам', text: 'штраф от 10 000 до 25 000 ₽ либо арест до 20 сут' },
+      { who: 'Должностным лицам', text: 'штраф от 30 000 до 50 000 ₽ либо арест до 20 сут' },
+      { who: 'Юридическим лицам', text: 'штраф от 25 000 до 100 000 ₽' },
+    ]);
+
+    // A punishment that is the same for everyone is one line, without naming whom.
+    await open(user, 'ук 108 ч 1');
+    await pinArticle(user);
+    expect(pinnedCards(platform)[1]).toMatchObject({
+      punishment: [{ text: 'штраф до 40 000 ₽ либо 20 мес' }],
+      extra: ['лишение воинского звания'],
+    });
+  });
+
+  it('shows the lines on the card itself', () => {
+    render(
+      <PinSurface
+        groups={[
+          {
+            id: 'a',
+            x: 0,
+            y: 0,
+            cards: [
+              {
+                id: 'a',
+                kind: 'article',
+                heading: 'КоАП ст. 5.4 ч. 1',
+                punishment: [
+                  { who: 'Гражданам', text: 'штраф от 10 000 ₽' },
+                  { who: 'Должностным лицам', text: 'штраф от 30 000 ₽' },
+                ],
+                extra: ['лишение права управления'],
+                lines: ['Текст'],
+              },
+            ],
+          },
+        ]}
+        live={false}
+        onChange={() => {}}
+      />,
+    );
+    const card = screen.getByRole('region', { name: 'Закреплено' });
+    expect(card).toHaveTextContent('Гражданам: штраф от 10 000 ₽');
+    expect(card).toHaveTextContent('Должностным лицам: штраф от 30 000 ₽');
+    expect(card).toHaveTextContent('+ лишение права управления');
   });
 });
 
@@ -167,7 +225,7 @@ function layOut() {
   });
 }
 
-const card = (id: string, heading: string): PinCard => ({ id, kind: 'article', heading, lines: [`Текст ${id}`] });
+const card = (id: string, heading: string): PinCard => ({ id, kind: 'article', heading, punishment: [{ text: 'штраф до 50 000 ₽' }], lines: [`Текст ${id}`] });
 const block = (id: string, x: number, y: number, ...cards: PinCard[]): PinGroup => ({ id, x, y, cards });
 
 /** Drags from one point to another with the mouse, over the whole window. */

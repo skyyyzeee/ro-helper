@@ -72,7 +72,7 @@ describe('an open article', () => {
     expect(pinnedCards(platform)[0]).toMatchObject({
       kind: 'article',
       heading: 'УК ст. 88 ч. 1. Халатность',
-      accent: 'штраф от 60 000 до 80 000 ₽ либо 40 мес',
+      punishment: [{ text: 'штраф от 60 000 до 80 000 ₽ либо 40 мес' }],
       warning: 'федеральная подследственность — дело ФСБ',
     });
     expect(pinnedCards(platform)[0].lines).toEqual([expect.stringMatching(/^Халатность, то есть/)]);

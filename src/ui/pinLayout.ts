@@ -153,6 +153,21 @@ export function surfaceNow(preview: boolean): Surface {
   return { width: screen.availWidth || window.innerWidth, height: screen.availHeight || window.innerHeight };
 }
 
+/**
+ * Cards saved by an older version, which kept the punishment as one line for a citizen and dropped
+ * what came on top. The line is kept as it was until the article is pinned again.
+ */
+export function restoreGroups(saved: PinGroup[]): PinGroup[] {
+  return saved.map((group) => ({
+    ...group,
+    cards: group.cards.map((card) => {
+      const old = (card as PinCard & { accent?: string }).accent;
+      if (!old || card.punishment) return card;
+      return { ...card, punishment: [{ text: old }] };
+    }),
+  }));
+}
+
 /** Blocks that survive a restart: the calculator's card belongs to the detention that is over. */
 export function keepableGroups(groups: PinGroup[]): PinGroup[] {
   return unpinCard(groups, CALCULATOR_ID);
