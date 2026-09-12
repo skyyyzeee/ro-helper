@@ -232,6 +232,25 @@ describe('the cards over the game', () => {
     vi.restoreAllMocks();
   });
 
+  it('takes the size its corner is dragged to, and then scrolls the text instead of cutting it', async () => {
+    layOut();
+    const onChange = vi.fn();
+    render(<PinSurface groups={[block('a', 40, 300, card('a', 'Кража'))]} live onChange={onChange} />);
+    const corner = screen.getByRole('button', { name: 'Изменить размер' });
+    await drag(corner, [420, 420], [560, 620]);
+
+    const sized = onChange.mock.calls.at(-1)![0] as PinGroup[];
+    // The block was 380 × 120 where it was laid out; the corner went 140 right and 200 down.
+    expect(sized[0]).toMatchObject({ width: 520, height: 320 });
+
+    onChange.mockClear();
+    render(<PinSurface groups={sized} live onChange={onChange} />);
+    const block2 = screen.getAllByRole('region', { name: 'Закреплено' }).at(-1)!;
+    expect(block2).toHaveClass('pin--sized');
+    expect(block2).toHaveStyle({ width: '520px', height: '320px' });
+    vi.restoreAllMocks();
+  });
+
   it('in its own window takes what was pinned before it loaded, and tells the overlay what changed', async () => {
     const groups = [block('a', 40, 300, card('a', 'УК ст. 104. Оскорбление'))];
     let sendGroups: (groups: PinGroup[]) => void = () => {};

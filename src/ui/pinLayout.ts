@@ -19,7 +19,14 @@ const FIRST_Y = 1 / 3;
 const GAP_Y = 200;
 const GAP_X = CARD_WIDTH + 24;
 
-const size = (group: PinGroup) => ({ width: CARD_WIDTH, height: CARD_HEIGHT * group.cards.length });
+/** A block is never dragged smaller than this: the heading and a line or two stay readable. */
+export const MIN_WIDTH = 240;
+export const MIN_HEIGHT = 110;
+
+const size = (group: PinGroup) => ({
+  width: group.width ?? CARD_WIDTH,
+  height: group.height ?? CARD_HEIGHT * group.cards.length,
+});
 
 /** Keeps a block on the screen: at least a corner of it stays reachable with the mouse. */
 export function clampTo(x: number, y: number, surface: Surface, box = { width: CARD_WIDTH, height: CARD_HEIGHT }): { x: number; y: number } {
@@ -74,6 +81,22 @@ export function moveGroup(groups: PinGroup[], groupId: string, x: number, y: num
   return groups.map((g) => (g.id === groupId ? { ...g, ...clampTo(x, y, surface, size(g)) } : g));
 }
 
+/**
+ * The size the user dragged a corner to. A block taller than its text scrolls inside instead of cutting
+ * it off, so a long article can be read whole.
+ */
+export function resizeGroup(groups: PinGroup[], groupId: string, width: number, height: number, surface: Surface): PinGroup[] {
+  return groups.map((group) => {
+    if (group.id !== groupId) return group;
+    const most = { width: Math.max(MIN_WIDTH, surface.width - group.x), height: Math.max(MIN_HEIGHT, surface.height - group.y) };
+    return {
+      ...group,
+      width: Math.round(Math.min(Math.max(width, MIN_WIDTH), most.width)),
+      height: Math.round(Math.min(Math.max(height, MIN_HEIGHT), most.height)),
+    };
+  });
+}
+
 /** Dropped onto another block, the cards join it and the block that was dragged is gone. */
 export function joinGroups(groups: PinGroup[], fromId: string, intoId: string): PinGroup[] {
   const from = groups.find((g) => g.id === fromId);
@@ -88,7 +111,8 @@ export function detachCard(groups: PinGroup[], groupId: string, cardId: string, 
   const card = group?.cards.find((c) => c.id === cardId);
   if (!group || !card || group.cards.length < 2) return groups;
   const rest = groups.map((g) => (g.id === groupId ? { ...g, cards: g.cards.filter((c) => c.id !== cardId) } : g));
-  return [...rest, { id: freeId(rest, cardId), ...clampTo(x, y, surface), cards: [card] }];
+  // As wide as the block it came from, but as tall as it needs: one card is not the whole block.
+  return [...rest, { id: freeId(rest, cardId), ...clampTo(x, y, surface), ...(group.width ? { width: group.width } : {}), cards: [card] }];
 }
 
 /** The screen the cards are put on: the game's in the app, the window's in the browser preview. */

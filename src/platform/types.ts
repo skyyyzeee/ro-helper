@@ -31,6 +31,9 @@ export interface PinGroup {
   id: string;
   x: number;
   y: number;
+  /** The size the user dragged the block to, in CSS pixels; without it, a card's width and its own height. */
+  width?: number;
+  height?: number;
   cards: PinCard[];
 }
 

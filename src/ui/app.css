@@ -1095,11 +1095,61 @@ input {
   border-bottom: 1px solid var(--line);
 }
 
+.pin__cards {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Dragged to a size of its own, a block keeps it and scrolls inside instead of cutting the text off. */
+.pin--sized {
+  overflow: hidden;
+}
+
+.pin--sized .pin__cards {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.pin--sized .pin__line {
+  display: block;
+  overflow: visible;
+}
+
+.pin__cards::-webkit-scrollbar {
+  width: 8px;
+}
+
+.pin__cards::-webkit-scrollbar-thumb {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
 .pin__card {
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 12px 18px 18px;
+}
+
+/* The corner that sets the block's size: out of the way until the overlay is open. */
+.pin__resize {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.45);
+  cursor: nwse-resize;
+  transition: color 0.14s ease;
+}
+
+.pin__resize:hover {
+  color: var(--text);
 }
 
 .pin__card--stacked + .pin__card--stacked {
@@ -1380,7 +1430,7 @@ input {
   margin-top: 1px;
 }
 
-/* A notice over the whole panel: one thing to do, then «Понятно» */
+/* A notice over the whole panel: what to set in the game, then «Понятно» */
 .notice {
   position: absolute;
   inset: 0;
@@ -1451,6 +1501,12 @@ input {
   margin: 0;
   font-size: 19px;
   font-weight: 700;
+}
+
+.notice__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .notice__text {

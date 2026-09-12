@@ -29,9 +29,10 @@ describe('first launch', () => {
     expect(radio('Организация', 'МВД')).toHaveAttribute('aria-checked', 'true');
     await user.click(next());
 
-    // The screen mode: one notice over the step, not a step of its own
-    const notice = screen.getByRole('alertdialog', { name: 'Режим экрана GTA' });
+    // What to set in the game: one notice over the step, not a step of its own
+    const notice = screen.getByRole('alertdialog', { name: 'Настройки GTA' });
     expect(notice).toHaveTextContent('Оконный без рамки');
+    expect(notice).toHaveTextContent('Отключение звука при потере фокуса');
     expect(understood()).toHaveFocus();
     await user.click(understood());
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();

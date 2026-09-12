@@ -14,21 +14,33 @@ const STEPS = 3;
  * the screen-mode notice comes over the organisation step, where the game is still fresh in mind.
  * In settings mode the last button saves, and there is a way out without saving.
  */
-/** Over the first launch: the game must run in borderless windowed mode, or the overlay is not seen. */
-function WindowModeNotice({ onClose }: { onClose: () => void }) {
+/**
+ * Over the first launch: two settings in the game itself. Without the first the overlay is not seen at
+ * all; without the second the game goes quiet every time the overlay takes the focus.
+ */
+function GameSetupNotice({ onClose }: { onClose: () => void }) {
   const button = useRef<HTMLButtonElement>(null);
   useEffect(() => button.current?.focus(), []);
   return (
-    <div className="notice" role="alertdialog" aria-label="Режим экрана GTA">
+    <div className="notice" role="alertdialog" aria-label="Настройки GTA">
       <div className="notice__card">
         <div className="notice__head">
           <WarnIcon size={20} />
-          <h3 className="notice__title">Включите «Оконный без рамки»</h3>
+          <h3 className="notice__title">Две настройки в игре</h3>
         </div>
-        <p className="notice__text">
-          Хелпер виден поверх игры только в этом режиме: поверх полноэкранного Windows других окон не показывает.
-        </p>
-        <p className="notice__where">Настройки GTA V → «Графика» → «Тип экрана» → «Оконный без рамки».</p>
+        <div className="notice__item">
+          <p className="notice__text">
+            <b>Включите «Оконный без рамки»</b> — поверх полноэкранного режима Windows других окон не показывает, и хелпера
+            не будет видно.
+          </p>
+          <p className="notice__where">Настройки GTA V → «Графика» → «Тип экрана» → «Оконный без рамки».</p>
+        </div>
+        <div className="notice__item">
+          <p className="notice__text">
+            <b>Выключите потерю звука</b> — иначе, когда открыт хелпер, игра теряет фокус и глушит звук.
+          </p>
+          <p className="notice__where">Настройки GTA V → «Аудио» → «Отключение звука при потере фокуса» → «Выкл».</p>
+        </div>
         <button ref={button} className="btn btn--primary notice__ok" type="button" onClick={onClose}>
           Понятно
         </button>
@@ -192,7 +204,7 @@ export function Onboarding({
 
       </div>
 
-      {notice && <WindowModeNotice onClose={() => { setNotice(false); setStep(3); }} />}
+      {notice && <GameSetupNotice onClose={() => { setNotice(false); setStep(3); }} />}
 
       <div className="ob__foot">
         {step > 1 && (

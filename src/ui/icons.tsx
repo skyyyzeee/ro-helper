@@ -162,3 +162,9 @@ export const KeyboardIcon = ({ size = 18 }: { size?: number }) => (
     <path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8" />
   </Icon>
 );
+
+export const ResizeIcon = ({ size = 12 }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M21 9 9 21M21 15l-6 6" />
+  </Icon>
+);

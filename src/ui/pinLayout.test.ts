@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PinCard, PinGroup } from '../platform/types';
-import { CALCULATOR_ID, detachCard, hasCard, joinGroups, keepableGroups, moveGroup, nextPlace, pinCard, unpinCard, unpinGroup, updateCard } from './pinLayout';
+import { CALCULATOR_ID, MIN_HEIGHT, MIN_WIDTH, detachCard, hasCard, joinGroups, keepableGroups, moveGroup, nextPlace, pinCard, resizeGroup, unpinCard, unpinGroup, updateCard } from './pinLayout';
 
 const SURFACE = { width: 1920, height: 1080 };
 const card = (id: string, heading = id): PinCard => ({ id, kind: 'article', heading, lines: [] });
@@ -59,6 +59,21 @@ describe('what is pinned', () => {
     groups = joinGroups(groups, groups[1].id, groups[0].id);
     const split = detachCard(groups, 'a', 'a', 0, 0, SURFACE);
     expect(new Set(split.map((g) => g.id)).size).toBe(2);
+  });
+
+  it('takes the size the corner was dragged to, never smaller than readable nor past the screen', () => {
+    const groups = moveGroup(pinCard([], card('a'), SURFACE), 'a', 1500, 800, SURFACE);
+    expect(resizeGroup(groups, 'a', 620, 500, SURFACE)[0]).toMatchObject({ width: 420, height: 280 });
+    expect(resizeGroup(groups, 'a', 10, 10, SURFACE)[0]).toMatchObject({ width: MIN_WIDTH, height: MIN_HEIGHT });
+  });
+
+  it('gives a card taken out of a widened block the same width, and its own height', () => {
+    let groups = pinCard(pinCard([], card('a'), SURFACE), card('b'), SURFACE);
+    groups = joinGroups(groups, groups[1].id, groups[0].id);
+    groups = resizeGroup(groups, 'a', 560, 700, SURFACE);
+    const split = detachCard(groups, 'a', 'b', 100, 100, SURFACE);
+    expect(split[1]).toMatchObject({ width: 560 });
+    expect(split[1].height).toBeUndefined();
   });
 
   it('keeps the articles for the next launch, but not the total of a detention long over', () => {
