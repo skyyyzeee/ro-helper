@@ -108,6 +108,22 @@ describe('an open article', () => {
   });
 });
 
+describe('the punishment of a rule of the project', () => {
+  it('is in the results and stands out in the article, where the rules keep it as a note', async () => {
+    const { user } = await renderApp();
+    await user.type(search(), 'передавать аккаунт');
+    const row = screen.getAllByRole('listitem')[0];
+    expect(row).toHaveTextContent('п. 2.2');
+    // In the results it takes the place of the punishment, in its own colour.
+    expect(row.querySelector('.pen--penalty')).toHaveTextContent('PermBan');
+
+    await user.keyboard('{ArrowRight}');
+    const note = within(article()).getByText('Наказание').closest('.note')!;
+    expect(note).toHaveClass('note--penalty');
+    expect(note).toHaveTextContent('PermBan');
+  });
+});
+
 describe('going back from an article', () => {
   it('leaves the list where it was scrolled to, and the article starts at its top', async () => {
     const { user } = await renderApp();

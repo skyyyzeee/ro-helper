@@ -21,6 +21,8 @@ export interface PinCard {
   punishment?: { who?: string; text: string }[];
   /** What comes on top of the punishment: «лишение права управления», «запись о судимости». */
   extra?: string[];
+  /** The punishment of a rule of the project or of a charter — «Mute 60-240 минут», shown in red. */
+  penalty?: string;
   lines: string[];
   warning?: string;
 }

@@ -1,4 +1,4 @@
-import type { Article, Chapter, Jurisdiction, LawDocument, Part, Point, Punishment, Sanction, StarRange, Subject } from './model';
+import type { Article, Chapter, Jurisdiction, LawDocument, Note, Part, Point, Punishment, Sanction, StarRange, Subject } from './model';
 
 const NBSP = ' ';
 
@@ -69,6 +69,16 @@ export function formatPunishment(punishment: Punishment): string {
   if (forCitizen.length) return forCitizen.map((line) => line.text).join(' либо ');
   const [first] = lines;
   return first ? `${SUBJECT_LABELS[first.subject!].toLowerCase()}: ${first.text}` : '';
+}
+
+/**
+ * The rules of the project and the charters of the organisations carry no sanction the parser can read:
+ * their punishment is written under the article as a note — «Наказание: Mute 60-240 минут».
+ */
+export const isPenaltyNote = (note: Note): boolean => /^наказани/i.test(note.label);
+
+export function penaltyNote(article: Article): string | undefined {
+  return article.notes.find(isPenaltyNote)?.text;
 }
 
 export function formatJurisdiction(jurisdiction: Jurisdiction[]): string {

@@ -59,7 +59,7 @@ export interface Part {
 }
 
 export interface Note {
-  /** «Примечание», «Примечание 1» or «Пояснение». */
+  /** «Примечание», «Примечание 1», «Пояснение» — or «Наказание», where the punishment itself is a note. */
   label: string;
   text: string;
 }

@@ -5,6 +5,7 @@ import {
   formatRubles,
   leadPart,
   pointLabel,
+  penaltyNote,
   punishmentBySubject,
   type AdministrativeResult,
   type CalculatorRules,
@@ -37,13 +38,18 @@ export function articlePinCard(hit: SearchHit, rules?: CalculatorRules): PinCard
   const title = articleTitle(hit.article);
   const only = part?.jurisdiction?.length === 1 ? part.jurisdiction[0] : undefined;
   const warning = only && rules?.jurisdictionWarnings[only];
+  // The rules of the project and the charters keep their punishment in a note under the article.
+  const penalty = part?.punishment ? undefined : penaltyNote(hit.article);
+  const heading = `${hit.document.short} ${articleLabel(hit.article, own, hit.document.unit)}` + (title ? `. ${title}` : '');
+  // A point written as a list (ФСО 5.1) shows its items too; a rule, whose text is its own heading, does not repeat it.
+  const lines = [...(part?.text ? [part.text] : []), ...(part?.points.map((point) => `${pointLabel(point)} ${point.text}`) ?? [])];
   return {
     id: hitKey(hit),
     kind: 'article',
-    heading: `${hit.document.short} ${articleLabel(hit.article, own, hit.document.unit)}` + (title ? `. ${title}` : ''),
+    heading,
     ...punishmentOf(part),
-    // A point written as a list (ФСО 5.1) shows its items too.
-    lines: [...(part?.text ? [part.text] : []), ...(part?.points.map((point) => `${pointLabel(point)} ${point.text}`) ?? [])],
+    ...(penalty ? { penalty } : {}),
+    lines: lines.filter((line) => !heading.endsWith(line)),
     ...(warning ? { warning } : {}),
   };
 }

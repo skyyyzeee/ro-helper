@@ -64,6 +64,16 @@ describe('the punishment on the card', () => {
     });
   });
 
+  it('takes the punishment of a rule of the project, which the rules write as a note', async () => {
+    const { platform, user } = await renderApp();
+    await open(user, 'передавать аккаунт');
+    await pinArticle(user);
+    expect(pinnedCards(platform)[0]).toMatchObject({ heading: expect.stringMatching(/^Правила п\. 2\.2/), penalty: 'PermBan.' });
+    expect(pinnedCards(platform)[0].punishment).toBeUndefined();
+    // The rule's text is its own heading: the card does not say it twice.
+    expect(pinnedCards(platform)[0].lines).toEqual([]);
+  });
+
   it('shows the lines on the card itself', () => {
     render(
       <PinSurface

@@ -28,6 +28,7 @@ function PinCardBody({ card }: { card: PinCard }) {
           {line.text}
         </div>
       ))}
+      {card.penalty && <div className="pin__penalty">{card.penalty}</div>}
       {card.extra?.map((extra) => (
         <div key={extra} className="pin__extra">
           + {extra}

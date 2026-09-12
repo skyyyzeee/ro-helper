@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { SUBJECT_LABELS, articleHeading, chapterHeading, penalParts, pointLabel, punishmentBySubject, type Article, type LawDocument, type Part } from '../core';
+import { SUBJECT_LABELS, articleHeading, chapterHeading, isPenaltyNote, penalParts, pointLabel, punishmentBySubject, type Article, type LawDocument, type Part } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
 import { BackIcon, CheckIcon, ExternalIcon, FavoriteIcon, PinIcon, PlusIcon } from './icons';
 import { DocBadge, JurisdictionPill, Stars, formatDate, jurisdictionText, starsHint } from './lawBits';
@@ -166,7 +166,8 @@ export function ArticleView({
       </div>
 
       {article.notes.map((note, i) => (
-        <div key={i} className="note">
+        // The punishment of a rule or a charter is a note, and the one thing that must catch the eye.
+        <div key={i} className={isPenaltyNote(note) ? 'note note--penalty' : 'note'}>
           <span className="note__label">{note.label}</span>
           <p>{note.text}</p>
         </div>

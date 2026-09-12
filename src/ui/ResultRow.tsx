@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { articleLabel, articleTitle, chapterHeading, formatPunishment, leadPart, type SearchHit } from '../core';
+import { articleLabel, articleTitle, chapterHeading, formatPunishment, leadPart, penaltyNote, type SearchHit } from '../core';
 import { CheckIcon, PlusIcon } from './icons';
 import { DocBadge, JurisdictionPill, Stars } from './lawBits';
 
@@ -20,6 +20,8 @@ export function ResultRow({ hit, selected, onOpen, calculator, inChapter, change
   const part = hit.part ?? leadPart(article);
   const chapter = document.chapters.find((c) => c.number === article.chapter);
   const label = articleLabel(article, hit.part, document.unit);
+  // A rule of the project or a charter has its punishment as a note; it is the point of the row.
+  const penalty = part?.punishment ? undefined : penaltyNote(article);
   const ref = useRef<HTMLButtonElement>(null);
   const wasSelected = useRef(selected);
 
@@ -46,6 +48,8 @@ export function ResultRow({ hit, selected, onOpen, calculator, inChapter, change
         <span className="row__line">
           {part?.punishment ? (
             <span className="pen">{formatPunishment(part.punishment)}</span>
+          ) : penalty ? (
+            <span className="pen pen--penalty">{penalty}</span>
           ) : (
             <span className="pen pen--muted">
               {inChapter
