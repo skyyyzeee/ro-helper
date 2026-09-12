@@ -129,3 +129,35 @@ describe('sub-points as a list of their point (ФСО regulation)', () => {
     expect(at('7.2').parts[0].points).toEqual([]);
   });
 });
+
+/** The charters of the other servers, read from their own snapshots. */
+const parseOn = (server: string, id: string, format: LawFormat) =>
+  parseLawText(readFileSync(join(root, 'data', server, 'sources', `${id}.txt`), 'utf8'), id, format);
+
+describe('charters of Арбатский and Кутузовский (real forum text)', () => {
+  const CHARTERS: [string, string, LawFormat, number][] = [
+    ['arbatskiy', 'ch-mvd', 'law', 68], ['arbatskiy', 'ch-gibdd', 'law', 32], ['arbatskiy', 'ch-fsb', 'law', 23],
+    ['arbatskiy', 'ch-army', 'law', 78], ['arbatskiy', 'ch-army-guard', 'points', 41], ['arbatskiy', 'sk-charter', 'law', 67],
+    ['arbatskiy', 'ch-hospital', 'points', 125], ['arbatskiy', 'ch-news', 'points', 208],
+    ['kutuzovskiy', 'ch-mvd', 'points', 85], ['kutuzovskiy', 'ch-gibdd', 'law', 35], ['kutuzovskiy', 'ch-army-discipline', 'points', 86],
+    ['kutuzovskiy', 'ch-hospital', 'points', 156], ['kutuzovskiy', 'ch-news', 'points', 141], ['kutuzovskiy', 'sk-appeals', 'law', 29],
+  ];
+
+  it('reads every point and article, with nothing left unparsed', () => {
+    for (const [server, id, format, count] of CHARTERS) {
+      const doc = parseOn(server, id, format);
+      expect({ server, id, count: doc.articles.length, issues: doc.issues }).toEqual({ server, id, count, issues: [] });
+    }
+  });
+
+  it('takes «Наказание: …» on the line under a point as its punishment', () => {
+    const discipline = parseOn('kutuzovskiy', 'ch-army-discipline', 'points');
+    const ethics = discipline.articles.find((a) => a.number === '4.1')!;
+    expect(ethics.parts[0].text).toBe('Несоблюдение военной этики.');
+    expect(ethics.notes).toEqual([{ label: 'Наказание', text: 'Выговор/Переаттестация' }]);
+    expect(discipline.articles.filter((a) => a.notes.some((n) => n.label === 'Наказание'))).toHaveLength(49);
+
+    const hospital = parseOn('arbatskiy', 'ch-hospital', 'points');
+    expect(hospital.articles.find((a) => a.number === '2.4')!.notes).toEqual([{ label: 'Наказание', text: 'Строгий выговор' }]);
+  });
+});

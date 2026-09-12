@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { PinBridge } from '../platform/tauri';
 import type { PinArea, PinCard, PinGroup } from '../platform/types';
-import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, GripIcon, PagesIcon, PinIcon, ResizeIcon, StarIcon } from './icons';
-import { CARD_WIDTH, MIN_HEIGHT, detachCard, dropSide, joinGroups, moveGroup, pageGroup, resizeGroup, unpinCard, unpinGroup, type DropSide } from './pinLayout';
+import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, CompactIcon, GripIcon, PagesIcon, PinIcon, ResizeIcon, StarIcon } from './icons';
+import { CARD_WIDTH, MIN_HEIGHT, compactGroup, detachCard, dropSide, joinGroups, moveGroup, pageGroup, resizeGroup, unpinCard, unpinGroup, type DropSide } from './pinLayout';
 
-/** What a card pinned over the game shows: an article's part, or the calculator's total. */
-function PinCardBody({ card }: { card: PinCard }) {
+/**
+ * What a card pinned over the game shows: an article's part, or the calculator's total. Compact, only the
+ * heading, the punishment and the warning: the text is for when there is room.
+ */
+function PinCardBody({ card, compact }: { card: PinCard; compact: boolean }) {
   return (
     <>
       {card.kind === 'calculator' ? (
@@ -29,12 +32,12 @@ function PinCardBody({ card }: { card: PinCard }) {
         </div>
       ))}
       {card.penalty && <div className="pin__penalty">{card.penalty}</div>}
-      {card.extra?.map((extra) => (
+      {!compact && card.extra?.map((extra) => (
         <div key={extra} className="pin__extra">
           + {extra}
         </div>
       ))}
-      {card.lines.map((line) => (
+      {!compact && card.lines.map((line) => (
         <div key={line} className={card.kind === 'calculator' ? 'pin__line pin__line--strong' : 'pin__line'}>
           {line}
         </div>
@@ -243,6 +246,7 @@ export function PinSurface({ groups: incoming, live, onChange, onAreas }: PinSur
           'pin',
           live && 'pin--live',
           group.height !== undefined && 'pin--sized',
+          group.compact && 'pin--compact',
           dragId === group.id && 'pin--drag',
           drop && `pin--drop pin--drop-${drop}`,
         ];
@@ -286,6 +290,18 @@ export function PinSurface({ groups: incoming, live, onChange, onAreas }: PinSur
                 <span className="sp" />
                 {live && (
                   <button
+                    className={group.compact ? 'x x--on' : 'x'}
+                    type="button"
+                    aria-pressed={!!group.compact}
+                    aria-label={group.compact ? 'Полный вид' : 'Компактный вид'}
+                    title={group.compact ? 'Полный вид' : 'Компактный вид'}
+                    onClick={() => commit(compactGroup(groups, group.id, !group.compact))}
+                  >
+                    <CompactIcon size={14} />
+                  </button>
+                )}
+                {live && (
+                  <button
                     className={paged ? 'x x--on' : 'x'}
                     type="button"
                     aria-pressed={paged}
@@ -314,6 +330,18 @@ export function PinSurface({ groups: incoming, live, onChange, onAreas }: PinSur
                     {stacked ? <GripIcon size={14} /> : <PinIcon size={14} />}
                     <span>{stacked ? 'Отделить' : 'Закреплено'}</span>
                     <span className="sp" />
+                    {live && !stacked && (
+                      <button
+                        className={group.compact ? 'x x--on' : 'x'}
+                        type="button"
+                        aria-pressed={!!group.compact}
+                        aria-label={group.compact ? 'Полный вид' : 'Компактный вид'}
+                        title={group.compact ? 'Полный вид' : 'Компактный вид'}
+                        onClick={() => commit(compactGroup(groups, group.id, !group.compact))}
+                      >
+                        <CompactIcon size={14} />
+                      </button>
+                    )}
                     {live && (
                       <button
                         className="x"
@@ -326,7 +354,7 @@ export function PinSurface({ groups: incoming, live, onChange, onAreas }: PinSur
                       </button>
                     )}
                   </div>
-                  <PinCardBody card={card} />
+                  <PinCardBody card={card} compact={!!group.compact} />
                 </div>
               ))}
             </div>

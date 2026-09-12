@@ -130,6 +130,11 @@ export function joinGroups(groups: PinGroup[], fromId: string, intoId: string, s
     .map((g) => (g.id === intoId ? { ...g, flow, cards, ...(width ? { width } : {}) } : g));
 }
 
+/** A block in its short form — heading and punishment — or whole. */
+export function compactGroup(groups: PinGroup[], groupId: string, compact: boolean): PinGroup[] {
+  return groups.map((g) => (g.id === groupId ? { ...g, compact } : g));
+}
+
 /** A block of several shown a card at a time, or all of them at once. */
 export function pageGroup(groups: PinGroup[], groupId: string, paged: boolean): PinGroup[] {
   return groups.map((g) => (g.id === groupId ? { ...g, paged, ...(paged ? { height: undefined } : {}) } : g));

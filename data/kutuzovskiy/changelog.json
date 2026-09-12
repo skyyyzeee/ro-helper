@@ -1,1 +1,98 @@
-[]
+[
+  {
+    "version": "2026-09-12T00:39:28+03:00",
+    "documents": [
+      {
+        "documentId": "ch-mvd",
+        "short": "Устав",
+        "title": "Устав МВД",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-gibdd",
+        "short": "Устав",
+        "title": "Устав ГИБДД",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-fsb",
+        "short": "Устав",
+        "title": "Устав ФСБ",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-fso",
+        "short": "Устав",
+        "title": "Внутренний устав ФСО",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-army",
+        "short": "Устав",
+        "title": "Устав внутренней службы",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-army-discipline",
+        "short": "Устав",
+        "title": "Дисциплинарный устав",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-army-guard",
+        "short": "Устав",
+        "title": "Устав караульно-постовой службы",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "sk-appeals",
+        "short": "Регламент",
+        "title": "Регламент подачи обращений в ГСУ СК",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-hospital",
+        "short": "Устав",
+        "title": "Устав больницы",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-news",
+        "short": "Устав",
+        "title": "Устав «Вести Москвы»",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "rules-main",
+        "short": "Правила",
+        "title": "Основные правила проекта",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "rules-gov",
+        "short": "Правила",
+        "title": "Правила государственных организаций",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "rules-crime",
+        "short": "Правила",
+        "title": "Правила криминальных организаций",
+        "kind": "added",
+        "articles": []
+      }
+    ]
+  }
+]

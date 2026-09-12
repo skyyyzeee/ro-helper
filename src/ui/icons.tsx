@@ -175,3 +175,10 @@ export const PagesIcon = ({ size = 14 }: { size?: number }) => (
     <path d="M8 3h11a2 2 0 0 1 2 2v11" />
   </Icon>
 );
+
+/** Short form of a card: the lines drawn together. */
+export const CompactIcon = ({ size = 14 }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M5 9h14M5 15h14M9 4l3 3 3-3M9 20l3-3 3 3" />
+  </Icon>
+);

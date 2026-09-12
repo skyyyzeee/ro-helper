@@ -10,7 +10,8 @@
 // http://127.0.0.1:8787/paste?server=arbatskiy&doc=uk, whose page saves what it finds in `window.name`.
 //
 // The text is written to data/<server>/sources/<doc>.txt and the checksum is printed, so it can be
-// compared with the one computed on the page.
+// compared with the one computed on the page. With `&next=<thread url>` the page goes on to the next
+// thread once the text is saved, so a batch of threads needs one step per thread, not two.
 import { createServer } from 'node:http';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -38,6 +39,9 @@ createServer((req, res) => {
   if (req.method === 'GET' && url.pathname === '/paste') {
     const server = url.searchParams.get('server') ?? '';
     const doc = url.searchParams.get('doc') ?? '';
+    const next = url.searchParams.get('next') ?? '';
+    // Only on to the forum: the page must not be made to go anywhere else.
+    const onward = next.startsWith('https://forum.russia.online/') ? JSON.stringify(next) : 'null';
     return res
       .writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
       .end(`<!doctype html><meta charset="utf-8"><body>Сохраняю…<script>
@@ -47,6 +51,8 @@ createServer((req, res) => {
           if (!text) { document.body.textContent = 'ПУСТО: в window.name ничего нет'; return; }
           const r = await fetch('/save/${server}/${doc}', { method: 'POST', body: text });
           document.body.textContent = (r.ok ? 'OK ' : 'ОШИБКА ') + (await r.text());
+          const next = ${onward};
+          if (r.ok && next) location.href = next;
         })();
       </script></body>`);
   }

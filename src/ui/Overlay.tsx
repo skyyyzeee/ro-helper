@@ -33,6 +33,7 @@ import { PrivacyView } from './PrivacyView';
 import { ReleaseNotesView } from './ReleaseNotesView';
 import { articlePinCard, calculatorPinCard } from './pinCards';
 import { CALCULATOR_ID, hasCard, keepableGroups, pinCard, restoreGroups, surfaceNow, unpinCard, updateCard } from './pinLayout';
+import { applyPreset, cardCount, deletePreset, nextPresetName, presetsKey, readPresets, savePreset, type PinPreset } from './pinPresets';
 import { ResizeEdges } from './ResizeEdges';
 import { ResultRow } from './ResultRow';
 import { RECENT_LIMIT, entryPart, favoritesKey, hitKey, recentKey, useHitLookup, useStoredKeys } from './saved';
@@ -268,6 +269,25 @@ export function Overlay({
   }, [pinsReady, groups, platform, pins]);
   // Moving, joining and closing happen on the cards themselves.
   useEffect(() => platform.onPinsChanged(setGroups), [platform]);
+
+  // Sets of pinned cards saved under a name, per server, to put back over the game at once.
+  const [presets, setPresets] = useState<PinPreset[]>([]);
+  const presetsSetting = presetsKey(pack.server.id);
+  useEffect(() => {
+    let active = true;
+    setPresets([]);
+    void platform.readSetting(presetsSetting).then((saved) => {
+      if (active) setPresets(readPresets(saved));
+    });
+    return () => {
+      active = false;
+    };
+  }, [platform, presetsSetting]);
+  const changePresets = (change: (list: PinPreset[]) => PinPreset[]) => {
+    const next = change(presets);
+    setPresets(next);
+    void platform.writeSetting(presetsSetting, next);
+  };
 
   const pinnedArticle = open ? hasCard(groups, hitKey(open)) : false;
   const pinnedCalculator = hasCard(groups, CALCULATOR_ID);
@@ -702,8 +722,16 @@ export function Overlay({
             onCapturing={onCapturing}
             opacity={opacity}
             onOpacity={changeOpacity}
-            pinned={groups.reduce((n, group) => n + group.cards.length, 0)}
+            pinned={cardCount(groups)}
             onUnpinAll={() => setGroups([])}
+            presets={presets.map((preset) => ({ id: preset.id, name: preset.name, count: cardCount(preset.groups) }))}
+            nextPresetName={nextPresetName(presets)}
+            onSavePreset={(name) => changePresets((list) => savePreset(list, name, groups))}
+            onApplyPreset={(id) => {
+              const preset = presets.find((p) => p.id === id);
+              if (preset) setGroups((list) => applyPreset(list, preset));
+            }}
+            onDeletePreset={(id) => changePresets((list) => deletePreset(list, id))}
             onChanges={showRecentChanges}
             updates={updates}
             onPrivacy={() => setPrivacyOpen(true)}

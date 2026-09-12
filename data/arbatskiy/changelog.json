@@ -1,1 +1,147 @@
-[]
+[
+  {
+    "version": "2026-09-12T23:57:20+03:00",
+    "documents": [
+      {
+        "documentId": "ch-mvd",
+        "short": "Устав",
+        "title": "Внутренний устав МВД",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-gibdd",
+        "short": "Устав",
+        "title": "Устав ГИБДД",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-gibdd-discipline",
+        "short": "Устав",
+        "title": "Дисциплинарный устав ГИБДД",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-gibdd-osb",
+        "short": "Положение",
+        "title": "О работе отдела собственной безопасности ГИБДД",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-fsb",
+        "short": "Устав",
+        "title": "Внутренний устав ФСБ",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-fso",
+        "short": "Устав",
+        "title": "Внутренний устав ФСО",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-army",
+        "short": "Устав",
+        "title": "Внутренний устав Армии",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-army-discipline",
+        "short": "Устав",
+        "title": "Дисциплинарный устав Армии",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-army-guard",
+        "short": "Устав",
+        "title": "Караульно-патрульный устав Армии",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-army-drill",
+        "short": "Устав",
+        "title": "Строевой устав Армии",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-army-service",
+        "short": "Положение",
+        "title": "О порядке прохождения военной службы",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-army-ethics",
+        "short": "Положение",
+        "title": "О служебной этике военнослужащих",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-army-checkpoint",
+        "short": "Положение",
+        "title": "О контрольно-пропускном режиме и действиях при ЧС",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "sk-charter",
+        "short": "Устав",
+        "title": "Устав Следственного комитета",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-gov",
+        "short": "Устав",
+        "title": "Устав Правительства",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-hospital",
+        "short": "Устав",
+        "title": "Устав больницы",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "ch-news",
+        "short": "Устав",
+        "title": "Устав «Вести Москвы»",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "rules-main",
+        "short": "Правила",
+        "title": "Основные правила проекта",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "rules-gov",
+        "short": "Правила",
+        "title": "Правила государственных организаций",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "rules-crime",
+        "short": "Правила",
+        "title": "Правила криминальных организаций",
+        "kind": "added",
+        "articles": []
+      }
+    ]
+  }
+]

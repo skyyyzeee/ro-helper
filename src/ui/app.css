@@ -267,6 +267,60 @@ input {
   border-radius: 12px;
 }
 
+.set__sub {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* Saved sets of pinned cards */
+.presets {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.presets__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 14px;
+}
+
+.presets__name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.presets__input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font-size: 13.5px;
+  outline: none;
+}
+
+.presets__input:focus {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.presets__input:disabled {
+  opacity: 0.5;
+}
+
 .set__hotkey .ob__key {
   font-size: 14px;
   padding: 4px 10px;
@@ -1222,6 +1276,29 @@ input {
 
 .pin__card--stacked + .pin__card--stacked {
   border-top: 1px solid var(--line);
+}
+
+/* Compact: heading and punishment in smaller type, close together. */
+.pin--compact .pin__card {
+  gap: 4px;
+  padding: 8px 14px 12px;
+}
+
+.pin--compact .pin__title {
+  font-size: 15px;
+}
+
+.pin--compact .pin__accent,
+.pin--compact .pin__penalty {
+  font-size: 13.5px;
+}
+
+.pin--compact .pin__big {
+  font-size: 26px;
+}
+
+.pin--compact .pin__warn {
+  font-size: 12.5px;
 }
 
 /* Flipping through the cards of a block, one at a time. */

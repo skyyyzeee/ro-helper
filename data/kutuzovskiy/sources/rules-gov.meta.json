@@ -1,0 +1,15 @@
+{
+  "id": "rules-gov",
+  "short": "Правила",
+  "title": "Правила государственных организаций",
+  "aliases": ["пго"],
+  "kind": "rules",
+  "category": "rules",
+  "format": "points",
+  "unit": "point",
+  "thread": 11,
+  "url": "https://forum.russia.online/threads/pravila-gosudarstvennykh-organizatsii.11/",
+  "posted": "2026-08-05T01:44:32+03:00",
+  "lastEdited": "2026-09-08T09:20:19+03:00",
+  "snapshotAt": "2026-09-11"
+}

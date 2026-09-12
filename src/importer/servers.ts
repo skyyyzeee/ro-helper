@@ -36,6 +36,12 @@ export const ARBATSKIY: ServerSources = {
     // Федеральные законы
     'fz-police', 'fz-fsb', 'fz-fso', 'fz-army', 'fz-sk', 'fz-weapons', 'fz-docs', 'fz-territory',
     'fz-immunity', 'fz-advocacy', 'fz-business', 'fz-media', 'fz-health',
+    // Уставы и положения организаций
+    'ch-mvd', 'ch-gibdd', 'ch-gibdd-discipline', 'ch-gibdd-osb', 'ch-fsb', 'ch-fso',
+    'ch-army', 'ch-army-discipline', 'ch-army-guard', 'ch-army-drill', 'ch-army-service', 'ch-army-ethics', 'ch-army-checkpoint',
+    'sk-charter', 'ch-gov', 'ch-hospital', 'ch-news',
+    // Правила проекта (общие для всех серверов)
+    'rules-main', 'rules-gov', 'rules-crime',
   ],
 };
 
@@ -51,6 +57,11 @@ export const KUTUZOVSKIY: ServerSources = {
     // Федеральные законы
     'fz-police', 'fz-gibdd', 'fz-fsb', 'fz-fso', 'fz-sk', 'fz-prosecutor', 'fz-army', 'fz-weapons',
     'fz-secrets', 'fz-health', 'fz-advocacy', 'fz-service', 'fz-immunity', 'fz-territory', 'fz-parties', 'fz-business',
+    // Уставы и положения организаций
+    'ch-mvd', 'ch-gibdd', 'ch-fsb', 'ch-fso', 'ch-army', 'ch-army-discipline', 'ch-army-guard',
+    'sk-appeals', 'ch-hospital', 'ch-news',
+    // Правила проекта (общие для всех серверов)
+    'rules-main', 'rules-gov', 'rules-crime',
   ],
 };
 

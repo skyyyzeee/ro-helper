@@ -1,8 +1,8 @@
-import { useEffect, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import type { Organization, ServerPack } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
 import { APP_VERSION, AUTHOR, LINKS } from './about';
-import { BackIcon, DiscordIcon, GitHubIcon, WarnIcon } from './icons';
+import { BackIcon, CloseIcon, DiscordIcon, GitHubIcon, WarnIcon } from './icons';
 import { formatDate } from './lawBits';
 import { MAX_OPACITY, MIN_OPACITY } from './overlaySettings';
 import { captureHotkey, hasModifier, hotkeyKeys } from './profile';
@@ -117,6 +117,51 @@ function HotkeyField({ hotkey, onHotkey, onCapturing }: { hotkey: string; onHotk
   );
 }
 
+/** «1 карточка», «3 карточки», «5 карточек». */
+function cardsLabel(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (n === 0) return 'Ничего не закреплено';
+  if (mod10 === 1 && mod100 !== 11) return `${n} карточка`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} карточки`;
+  return `${n} карточек`;
+}
+
+/** Saving what is pinned now as a set, under a name or the next free one. */
+function PresetForm({ disabled, placeholder, onSave }: { disabled: boolean; placeholder: string; onSave: (name: string) => void }) {
+  const [name, setName] = useState('');
+  const save = (event: FormEvent) => {
+    event.preventDefault();
+    if (disabled) return;
+    onSave(name);
+    setName('');
+  };
+  return (
+    <form className="set__row presets__form" onSubmit={save}>
+      <input
+        className="presets__input"
+        type="text"
+        aria-label="Название набора"
+        placeholder={placeholder}
+        value={name}
+        maxLength={40}
+        disabled={disabled}
+        onChange={(e) => setName(e.target.value)}
+        // Esc in the field clears it, not the settings.
+        onKeyDown={(e) => {
+          if (e.key === 'Escape' && name) {
+            e.stopPropagation();
+            setName('');
+          }
+        }}
+      />
+      <button className="settings__button" type="submit" disabled={disabled} title={disabled ? 'Сначала закрепите статьи' : undefined}>
+        Сохранить набор
+      </button>
+    </form>
+  );
+}
+
 export interface SettingsViewProps {
   backLabel: string;
   onBack: () => void;
@@ -135,6 +180,12 @@ export interface SettingsViewProps {
   /** Cards pinned over the game: how many, and unpinning them all at once. */
   pinned: number;
   onUnpinAll: () => void;
+  /** Saved sets of pinned cards, what the next one is called unless named, and saving, showing, deleting one. */
+  presets: { id: string; name: string; count: number }[];
+  nextPresetName: string;
+  onSavePreset: (name: string) => void;
+  onApplyPreset: (id: string) => void;
+  onDeletePreset: (id: string) => void;
   /** Opens «Что изменилось» for the recent updates of the laws. */
   onChanges: () => void;
   updates: Updates;
@@ -157,6 +208,11 @@ export function SettingsView({
   onOpacity,
   pinned,
   onUnpinAll,
+  presets,
+  nextPresetName,
+  onSavePreset,
+  onApplyPreset,
+  onDeletePreset,
   onChanges,
   updates,
   onPrivacy,
@@ -225,16 +281,38 @@ export function SettingsView({
         </p>
       </Block>
 
-      {pinned > 0 && (
-        <Block title="Закреплено поверх игры">
-          <Row label={pinned === 1 ? '1 карточка' : `${pinned} карточки`}>
+      <Block title="Закреплено поверх игры">
+        <Row label={cardsLabel(pinned)}>
+          {pinned > 0 && (
             <button className="settings__button" type="button" onClick={onUnpinAll}>
               Открепить всё
             </button>
-          </Row>
-          <p className="set__hint">Карточки можно перетаскивать, а перетащив одну на другую — соединить в блок.</p>
-        </Block>
-      )}
+          )}
+        </Row>
+        <p className="set__hint">Карточки перетаскиваются за шапку; брошенная на другую встаёт к ней с той стороны, куда её бросили.</p>
+
+        <h4 className="set__sub">Наборы</h4>
+        {presets.length > 0 ? (
+          <ul className="presets" aria-label="Наборы закреплённых">
+            {presets.map((preset) => (
+              <li key={preset.id} className="presets__row">
+                <span className="presets__name">{preset.name}</span>
+                <span className="set__label">{cardsLabel(preset.count)}</span>
+                <span className="sp" />
+                <button className="settings__button" type="button" aria-label={`Показать набор «${preset.name}»`} onClick={() => onApplyPreset(preset.id)}>
+                  Показать
+                </button>
+                <button className="x" type="button" aria-label={`Удалить набор «${preset.name}»`} title="Удалить набор" onClick={() => onDeletePreset(preset.id)}>
+                  <CloseIcon size={14} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="set__hint">Сохраните то, что закреплено сейчас, — «Патруль», «Обыск», — и возвращайте всё одной кнопкой.</p>
+        )}
+        <PresetForm disabled={pinned === 0} placeholder={nextPresetName} onSave={onSavePreset} />
+      </Block>
 
       <Block title="Законы">
         <Row label="Актуально на" value={formatDate(pack.version)} />
