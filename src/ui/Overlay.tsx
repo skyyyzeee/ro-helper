@@ -406,6 +406,21 @@ export function Overlay({
     </div>
   );
 
+  // Shown again, the panel fades in: the window is only hidden, so the class replays the animation.
+  const [entering, setEntering] = useState(false);
+  useEffect(() => {
+    const timer = { id: undefined as ReturnType<typeof setTimeout> | undefined };
+    const stop = platform.onOverlayShown(() => {
+      setEntering(true);
+      clearTimeout(timer.id);
+      timer.id = setTimeout(() => setEntering(false), 240);
+    });
+    return () => {
+      clearTimeout(timer.id);
+      stop();
+    };
+  }, [platform]);
+
   // The search field takes focus on first render and every time the overlay is shown again.
   useEffect(() => {
     searchRef.current?.focus();
@@ -456,7 +471,7 @@ export function Overlay({
           onPin={() => pin({ kind: 'calculator' })}
         />
       )}
-    <div className="overlay glass">
+    <div className={entering ? 'overlay glass overlay--enter' : 'overlay glass'}>
       <div className="overlay__head" data-tauri-drag-region>
         <button
           className={menuOpen ? 'icon-btn icon-btn--on' : 'icon-btn'}

@@ -153,6 +153,55 @@ input {
   color: var(--text);
 }
 
+/* Movement in the app is small and quick: things appear from where they belong and buttons answer the press.
+   Anyone who asked the system for less motion gets none of it (the rule at the end of the file). */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(6px); }
+}
+
+@keyframes drop-in {
+  from { opacity: 0; transform: translateY(-8px); }
+}
+
+@keyframes panel-in {
+  from { opacity: 0; transform: scale(0.985); }
+}
+
+.overlay--enter {
+  animation: panel-in 0.22s ease-out;
+}
+
+/* Every screen the content area shows: results, an article, «Что изменилось», the policy. */
+.overlay__content > * {
+  animation: rise-in 0.18s ease-out;
+}
+
+.btn,
+.icon-btn,
+.settings__button,
+.row__main,
+.add,
+.ob__org,
+.ob__option,
+.chip,
+.link,
+.back {
+  transition:
+    background-color 0.14s ease,
+    color 0.14s ease,
+    box-shadow 0.14s ease,
+    transform 0.1s ease;
+}
+
+.btn:active,
+.icon-btn:active,
+.settings__button:active,
+.add:active,
+.ob__org:active,
+.ob__option:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
 /* Settings */
 .settings {
   display: flex;
@@ -163,6 +212,7 @@ input {
   border-radius: var(--radius-card);
   background: rgba(255, 255, 255, 0.06);
   flex: none;
+  animation: drop-in 0.18s ease-out;
 }
 
 .settings__row {
@@ -311,6 +361,7 @@ input {
   box-shadow: inset 0 0 0 1px oklch(0.78 0.1 245 / 0.3);
   color: var(--accent-text);
   flex: none;
+  animation: drop-in 0.2s ease-out;
 }
 
 .update__text {
@@ -1207,9 +1258,39 @@ input {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(10, 10, 12, 0.55);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(8, 8, 11, 0.5);
+  backdrop-filter: blur(14px) saturate(90%);
+  -webkit-backdrop-filter: blur(14px) saturate(90%);
+  animation: notice-in 0.16s ease-out;
+}
+
+.notice__card {
+  animation: notice-card-in 0.22s cubic-bezier(0.22, 1.2, 0.42, 1);
+}
+
+@keyframes notice-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes notice-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+}
+
+/* Someone who asked the system for less motion gets the notice without it. */
+/* Everything above is decoration: with «less motion» asked for, it happens at once instead. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .notice__card {
