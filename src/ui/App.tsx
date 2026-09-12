@@ -53,7 +53,7 @@ export function App() {
       />
     );
   } else if (profile) {
-    screen = <Overlay pack={TVERSKOI_PACK} profile={profile} onEditProfile={() => setEditing(true)} />;
+    screen = <Overlay pack={TVERSKOI_PACK} profile={profile} onEditProfile={() => setEditing(true)} onProfile={save} />;
   }
 
   return <div className={preview ? 'stage stage--preview' : 'stage'}>{screen}</div>;

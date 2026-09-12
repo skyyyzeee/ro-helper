@@ -22,9 +22,10 @@ import { ArticleView } from './ArticleView';
 import { CalculatorPanel, type ChargeFields, type ChargePatch, type CopyState } from './CalculatorPanel';
 import { ChangeDiff, ChangesView, type ChangeRef } from './ChangesView';
 import { DocumentsMenu } from './DocumentsMenu';
-import { CloseIcon, MenuIcon, SearchIcon, SettingsIcon } from './icons';
+import { BackIcon, CloseIcon, MenuIcon, SearchIcon, SettingsIcon } from './icons';
 import { DEFAULT_OPACITY, OPACITY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
 import type { Profile } from './profile';
+import { OrganizationChoice } from './OrganizationChoice';
 import { PinCardView } from './PinCardView';
 import { PrivacyView } from './PrivacyView';
 import { ReleaseNotesView } from './ReleaseNotesView';
@@ -77,7 +78,19 @@ function hasSelectedText(): boolean {
   return !!window.getSelection()?.toString();
 }
 
-export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; profile: Profile; onEditProfile: () => void }) {
+export function Overlay({
+  pack,
+  profile,
+  onEditProfile,
+  onProfile,
+}: {
+  pack: ServerPack;
+  profile: Profile;
+  /** Opens all the settings again: server, organisation and hotkey. */
+  onEditProfile: () => void;
+  /** Saves a changed profile — the organisation alone, from the settings. */
+  onProfile: (next: Profile) => void;
+}) {
   const platform = usePlatform();
   const searchRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
@@ -127,6 +140,7 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
   // New versions of the app, offered under the header; the privacy policy, opened from the settings.
   const updates = useUpdates();
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [organizationOpen, setOrganizationOpen] = useState(false);
   // «Что нового» of the version on offer, opened from the offer.
   const [notesOpen, setNotesOpen] = useState(false);
   const offered = updates.status.kind === 'available' || updates.status.kind === 'failed' ? updates.status.update : null;
@@ -278,7 +292,7 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
       return;
     }
     // «Что изменилось» and «было → стало» are read with the mouse; the list keys would move a hidden selection.
-    if (notesFor || privacyOpen || diff || (changesView && !open)) return;
+    if (organizationOpen || notesFor || privacyOpen || diff || (changesView && !open)) return;
     if (open) {
       // Enter in an open article puts its part into the calculator, or takes it out.
       if (e.key === 'Enter' && addable(open)) {
@@ -329,6 +343,7 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
   stepBack.current = () => {
     if (settingsOpen) setSettingsOpen(false);
     else if (menuOpen) setMenuOpen(false);
+    else if (organizationOpen) setOrganizationOpen(false);
     else if (notesFor) setNotesOpen(false);
     else if (privacyOpen) setPrivacyOpen(false);
     else if (diff) setDiff(null);
@@ -368,7 +383,7 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
   // what is opened starts at its own top.
   const contentRef = useRef<HTMLDivElement>(null);
   const listScroll = useRef(0);
-  const onList = !notesFor && !privacyOpen && !diff && !open && !changesView;
+  const onList = !organizationOpen && !notesFor && !privacyOpen && !diff && !open && !changesView;
   const wasOnList = useRef(onList);
   useLayoutEffect(() => {
     const content = contentRef.current;
@@ -494,6 +509,11 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
             setSettingsOpen(false);
             setPrivacyOpen(true);
           }}
+          organization={organization}
+          onOrganization={() => {
+            setSettingsOpen(false);
+            setOrganizationOpen(true);
+          }}
         />
       )}
       <UpdateBanner
@@ -527,6 +547,7 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
             setDiff(null);
             setPrivacyOpen(false);
             setNotesOpen(false);
+            setOrganizationOpen(false);
             setChangesView(null);
             setSelected(0);
           }}
@@ -542,7 +563,32 @@ export function Overlay({ pack, profile, onEditProfile }: { pack: ServerPack; pr
           if (onList) listScroll.current = e.currentTarget.scrollTop;
         }}
       >
-        {notesFor ? (
+        {organizationOpen ? (
+          <section className="art" aria-label="Ваша организация">
+            <button
+              className="back"
+              type="button"
+              onClick={() => {
+                setOrganizationOpen(false);
+                searchRef.current?.focus();
+              }}
+            >
+              <BackIcon />
+              <span>Назад</span>
+            </button>
+            <h2 className="art__title">Ваша организация</h2>
+            <p className="ob__sub">Её законы и устав идут первыми в поиске. Документы остальных организаций тоже доступны.</p>
+            <OrganizationChoice
+              pack={pack}
+              value={profile.organization}
+              onPick={(id) => {
+                onProfile({ ...profile, organization: id });
+                setOrganizationOpen(false);
+                searchRef.current?.focus();
+              }}
+            />
+          </section>
+        ) : notesFor ? (
           <ReleaseNotesView
             update={notesFor}
             onBack={() => {

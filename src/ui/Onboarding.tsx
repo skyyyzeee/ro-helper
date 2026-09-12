@@ -1,16 +1,41 @@
-import { useEffect, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { ServerPack } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
-import { ChevronLeftIcon, ChevronRightIcon, WarnIcon } from './icons';
+import { WarnIcon } from './icons';
+import { OrganizationChoice } from './OrganizationChoice';
 import { SERVERS, captureHotkey, formatHotkey, hasModifier, hotkeyKeys, type Profile } from './profile';
 import { ResizeEdges } from './ResizeEdges';
 
-const STEPS = 4;
+const STEPS = 3;
 
 /**
- * First launch (and «Изменить» in the settings): server → organisation → hotkey → screen-mode hint.
+ * First launch (and «Изменить» in the settings): server → organisation → hotkey. At the first launch
+ * the screen-mode notice comes over the organisation step, where the game is still fresh in mind.
  * In settings mode the last button saves, and there is a way out without saving.
  */
+/** Over the first launch: the game must run in borderless windowed mode, or the overlay is not seen. */
+function WindowModeNotice({ onClose }: { onClose: () => void }) {
+  const button = useRef<HTMLButtonElement>(null);
+  useEffect(() => button.current?.focus(), []);
+  return (
+    <div className="notice" role="alertdialog" aria-label="Режим экрана GTA">
+      <div className="notice__card">
+        <div className="notice__head">
+          <WarnIcon size={20} />
+          <h3 className="notice__title">Включите «Оконный без рамки»</h3>
+        </div>
+        <p className="notice__text">
+          Хелпер виден поверх игры только в этом режиме: поверх полноэкранного Windows других окон не показывает.
+        </p>
+        <p className="notice__where">Настройки GTA V → «Графика» → «Тип экрана» → «Оконный без рамки».</p>
+        <button ref={button} className="btn btn--primary notice__ok" type="button" onClick={onClose}>
+          Понятно
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function Onboarding({
   pack,
   initial,
@@ -32,6 +57,7 @@ export function Onboarding({
   const [draft, setDraft] = useState(initial);
   const [listening, setListening] = useState(false);
   const [unsupported, setUnsupported] = useState(false);
+  const [notice, setNotice] = useState(false);
 
   const organization = pack.organizations.find((o) => o.id === draft.organization);
   const server = SERVERS.find((s) => s.id === draft.server);
@@ -70,6 +96,11 @@ export function Onboarding({
 
   const next = () => {
     setListening(false);
+    // Only at the first launch: what the game must be set to, once, before the last step.
+    if (step === 2 && mode === 'first') {
+      setNotice(true);
+      return;
+    }
     if (step < STEPS) setStep(step + 1);
     else onDone(draft);
   };
@@ -123,20 +154,7 @@ export function Onboarding({
           <>
             <h2 className="ob__title">Ваша организация</h2>
             <p className="ob__sub">Её законы и устав будут первыми в поиске. Документы остальных организаций тоже доступны.</p>
-            <div className="ob__orgs" role="radiogroup" aria-label="Организация">
-              {pack.organizations.map((org) => (
-                <button
-                  key={org.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={draft.organization === org.id}
-                  className={draft.organization === org.id ? 'ob__org ob__org--on' : 'ob__org'}
-                  onClick={() => setDraft((d) => ({ ...d, organization: org.id }))}
-                >
-                  {org.name}
-                </button>
-              ))}
-            </div>
+            <OrganizationChoice pack={pack} value={draft.organization} onPick={(id) => setDraft((d) => ({ ...d, organization: id }))} />
           </>
         )}
 
@@ -173,29 +191,15 @@ export function Onboarding({
                 <span>Без Ctrl, Alt или Shift клавиша может пересечься с управлением в игре.</span>
               </div>
             )}
-          </>
-        )}
-
-        {step === 4 && (
-          <>
-            <h2 className="ob__title">Режим экрана GTA</h2>
-            <p className="ob__sub">
-              Оверлей виден поверх игры только в режиме «Оконный без рамки». Поверх полноэкранного режима Windows другие окна не показывает.
-            </p>
-            <div className="ob__setting" aria-hidden="true">
-              <span>Тип экрана</span>
-              <span className="sp" />
-              <ChevronLeftIcon />
-              <span className="ob__setting-value">Оконный без рамки</span>
-              <ChevronRightIcon />
-            </div>
-            <p className="ob__hint">Где это: настройки GTA V → «Графика».</p>
             <p className="ob__summary">
               {server?.name} · {organization?.name} · {formatHotkey(draft.hotkey)}. Всё это можно поменять в настройках.
             </p>
           </>
         )}
+
       </div>
+
+      {notice && <WindowModeNotice onClose={() => { setNotice(false); setStep(3); }} />}
 
       <div className="ob__foot">
         {step > 1 && (

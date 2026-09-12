@@ -121,6 +121,8 @@ export interface ServerInfo {
 export interface Organization {
   id: string;
   name: string;
+  /** Which group it is chosen from: a state service or a criminal one; «Без организации» is in neither. */
+  kind?: 'state' | 'crime';
   /** Documents that rank first for its members; ids of documents the pack may not have yet. */
   documents: string[];
 }

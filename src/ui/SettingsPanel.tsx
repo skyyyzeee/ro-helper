@@ -1,3 +1,4 @@
+import type { Organization } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
 import { APP_VERSION, AUTHOR, LINKS } from './about';
 import { DiscordIcon, GitHubIcon } from './icons';
@@ -37,6 +38,8 @@ export function SettingsPanel({
   onChanges,
   updates,
   onPrivacy,
+  organization,
+  onOrganization,
 }: {
   /** «Тверской · МВД». */
   summary: string;
@@ -49,6 +52,9 @@ export function SettingsPanel({
   updates: Updates;
   /** Opens the privacy policy. */
   onPrivacy: () => void;
+  organization?: Organization;
+  /** Opens the choice of organisation on its own, without the other settings. */
+  onOrganization: () => void;
 }) {
   const platform = usePlatform();
   const transparency = Math.round((1 - opacity) * 100);
@@ -61,6 +67,13 @@ export function SettingsPanel({
         <span className="sp" />
         <button className="settings__button" type="button" onClick={onEditProfile}>
           Изменить
+        </button>
+      </div>
+      <div className="settings__row">
+        <span>Организация: {organization?.name ?? 'не выбрана'}</span>
+        <span className="sp" />
+        <button className="settings__button" type="button" onClick={onOrganization}>
+          Сменить
         </button>
       </div>
       <label className="settings__row">

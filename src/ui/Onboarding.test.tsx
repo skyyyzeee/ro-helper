@@ -5,9 +5,11 @@ import { PROFILE_KEY } from './profile';
 
 const radio = (group: string, name: string | RegExp) => within(screen.getByRole('radiogroup', { name: group })).getByRole('radio', { name });
 const next = () => screen.getByRole('button', { name: /^(Далее|Готово|Сохранить)$/ });
+/** The screen-mode notice comes over the organisation step at the first launch. */
+const understood = () => screen.getByRole('button', { name: 'Понятно' });
 
 describe('first launch', () => {
-  it('walks through server, organisation, hotkey and the screen-mode hint, then opens the overlay', async () => {
+  it('walks through server, organisation and hotkey, and opens the overlay', async () => {
     const { platform, user } = await renderApp({ profile: null });
 
     // Server
@@ -17,12 +19,22 @@ describe('first launch', () => {
     expect(radio('Сервер', /Кутузовский/)).toHaveTextContent('скоро · для новичков');
     await user.click(next());
 
-    // Organisation
+    // Organisation, by group: state services, criminal, and «Без организации» on its own
     expect(within(screen.getByRole('radiogroup', { name: 'Организация' })).getAllByRole('radio')).toHaveLength(13);
+    expect(screen.getByText('Государственные')).toBeInTheDocument();
+    const crime = screen.getByText('Криминальные').parentElement!;
+    expect(within(crime).getAllByRole('radio').map((b) => b.textContent)).toEqual(['ОПГ']);
     expect(radio('Организация', 'Без организации')).toHaveAttribute('aria-checked', 'true');
     await user.click(radio('Организация', 'МВД'));
     expect(radio('Организация', 'МВД')).toHaveAttribute('aria-checked', 'true');
     await user.click(next());
+
+    // The screen mode: one notice over the step, not a step of its own
+    const notice = screen.getByRole('alertdialog', { name: 'Режим экрана GTA' });
+    expect(notice).toHaveTextContent('Оконный без рамки');
+    expect(understood()).toHaveFocus();
+    await user.click(understood());
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
 
     // Hotkey
     const field = screen.getByRole('button', { name: /Горячая клавиша/ });
@@ -36,10 +48,6 @@ describe('first launch', () => {
     await user.keyboard('[F9]');
     expect(field).toHaveAccessibleName('Горячая клавиша: F9');
     expect(screen.getByRole('alert')).toHaveTextContent('Без Ctrl, Alt или Shift');
-    await user.click(next());
-
-    // Screen mode
-    expect(screen.getByRole('heading', { name: 'Режим экрана GTA' })).toBeInTheDocument();
     expect(screen.getByText(/Тверской · МВД · F9\. Всё это можно поменять в настройках/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Готово' }));
 
@@ -53,6 +61,7 @@ describe('first launch', () => {
     const { platform, user } = await renderApp({ profile: null });
     await user.click(next());
     await user.click(next());
+    await user.click(understood());
     const field = screen.getByRole('button', { name: /Горячая клавиша/ });
     await user.click(field);
     await user.keyboard('{Escape}');
@@ -79,10 +88,11 @@ describe('settings', () => {
     expect(screen.getByText('Настройки')).toBeInTheDocument();
     await user.click(next());
     await user.click(radio('Организация', 'ГИБДД'));
+    // The game is already set up: no notice the second time.
     await user.click(next());
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Горячая клавиша/ }));
     await user.keyboard('{Alt>}W{/Alt}');
-    await user.click(next());
     await user.click(screen.getByRole('button', { name: 'Сохранить' }));
 
     expect(await screen.findByText('Тверской · ГИБДД')).toBeInTheDocument();
@@ -99,6 +109,34 @@ describe('settings', () => {
     await user.keyboard('{Escape}');
 
     expect(await screen.findByText('Тверской · МВД')).toBeInTheDocument();
+    expect(platform.settings.get(PROFILE_KEY)).toMatchObject({ organization: 'mvd' });
+  });
+});
+
+describe('changing only the organisation', () => {
+  it('is one screen in the settings: pick and it is saved, the rest untouched', async () => {
+    const { platform, user } = await renderApp({ profile: { organization: 'mvd', hotkey: 'F9' } });
+    await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    expect(screen.getByRole('group', { name: 'Настройки' })).toHaveTextContent('Организация: МВД');
+    await user.click(screen.getByRole('button', { name: 'Сменить' }));
+
+    const choice = screen.getByRole('region', { name: 'Ваша организация' });
+    expect(screen.queryByRole('heading', { name: 'Выберите сервер' })).not.toBeInTheDocument();
+    await user.click(within(choice).getByRole('radio', { name: 'ФСБ' }));
+
+    expect(await screen.findByText('Тверской · ФСБ')).toBeInTheDocument();
+    expect(platform.settings.get(PROFILE_KEY)).toEqual({ server: 'tverskoi', organization: 'fsb', hotkey: 'F9' });
+    expect(screen.getByRole('searchbox', { name: 'Поиск по законам' })).toHaveFocus();
+  });
+
+  it('goes back with Esc without changing anything', async () => {
+    const { platform, user } = await renderApp({ profile: { organization: 'mvd' } });
+    await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await user.click(screen.getByRole('button', { name: 'Сменить' }));
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('region', { name: 'Ваша организация' })).not.toBeInTheDocument();
+    expect(screen.getByText('Тверской · МВД')).toBeInTheDocument();
     expect(platform.settings.get(PROFILE_KEY)).toMatchObject({ organization: 'mvd' });
   });
 });
