@@ -1,7 +1,7 @@
 // Law data model: one server pack holds that server's documents, parsed from forum threads.
 
 /** Jurisdiction tags from the law text: Р — regional (police), Ф — federal (ФСБ), В — military. */
-export type Jurisdiction = 'Р' | 'Ф' | 'В';
+export type Jurisdiction = 'Р' | 'Ф' | 'В' | 'С';
 
 /** Menu grouping and badge colour. */
 export type DocumentCategory = 'codes' | 'fkz' | 'fz' | 'moscow' | 'charters' | 'rules';
@@ -142,15 +142,20 @@ export interface CalculatorRules {
   stackOnce?: Based & { article: string };
   stages: Record<'attempt' | 'preparation', Based & { factor: number; label: string }>;
   maxTotalMonths: Based & { value: number };
-  /** Where the wanted level comes from the term; a server whose laws do not tie them has none. */
-  stars?: Based & { monthsPerStar: number; max: number };
+  /**
+   * The wanted level: «term» turns the total term into stars (Тверской), «charges» takes the highest
+   * priority the charged articles carry (Кутузовский). A server whose laws say neither has none.
+   */
+  stars?: Based & { max: number; from?: 'term' | 'charges'; monthsPerStar?: number };
   /** Crime categories by the article's maximum term, lightest first; the last one has no limit. */
   categories: Based & { list: { name: string; label: string; maxMonths?: number }[] };
   /**
-   * Bail: by the category of the most serious crime (Тверской), or by the wanted priority the officer
-   * sets (Арбатский) — then the amounts are keyed by the priority, «1»…«5».
+   * Bail: by the category of the most serious crime (Тверской), by the wanted priority the officer sets
+   * (Арбатский; the amounts are keyed by the priority, «1»…«5»), or by the term itself — so much money
+   * for every full year of it (Кутузовский).
    */
-  bail: Based & { by: 'category' | 'wanted'; amounts: Record<string, number> };
+  bail: Based &
+    ({ by: 'category' | 'wanted'; amounts: Record<string, number> } | { by: 'term'; per: { months: number; amount: number } });
   /** Jurisdiction tag → what the officer should know when a charge has only that tag. */
   jurisdictionWarnings: Partial<Record<Jurisdiction, string>>;
   administrative: AdministrativeRules;

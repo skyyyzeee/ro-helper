@@ -79,7 +79,7 @@ export function calculateDetention(charges: Charge[], options: DetentionOptions,
   let stars: DetentionStars | null = null;
   // Without stars in the laws (Арбатский) the wanted level is the officer's to set, not the calculator's.
   if (rules.stars && criminal?.mode === 'custody') stars = { count: criminal.stars, months: criminal.starsMonths, from: 'criminal' };
-  if (rules.stars && administrative?.starsFrom && administrative.stars > (stars?.count ?? 0)) {
+  if (rules.stars?.monthsPerStar && administrative?.starsFrom && administrative.stars > (stars?.count ?? 0)) {
     const count = Math.min(administrative.stars, rules.stars.max);
     stars = {
       count,

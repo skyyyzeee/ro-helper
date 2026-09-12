@@ -1,0 +1,40 @@
+{
+  "criminalCode": "uk",
+  "combine": {
+    "kind": "absorption",
+    "basis": "УК ст. 5.2 ч. 3"
+  },
+  "stackOnce": {
+    "article": "17.3",
+    "basis": "УК ст. 5.2 ч. 4"
+  },
+  "stages": {
+    "attempt": { "factor": 0.75, "label": "покушение", "basis": "УК ст. 5.2.1 ч. 3" },
+    "preparation": { "factor": 0.5, "label": "приготовление", "basis": "УК ст. 5.2.1 ч. 2" }
+  },
+  "maxTotalMonths": { "value": 50, "basis": "УК ст. 5.2 ч. 4" },
+  "stars": { "from": "charges", "max": 5, "basis": "УК ст. 5.7 ч. 4" },
+  "categories": {
+    "basis": "УК ст. 5.8 ч. 1",
+    "list": [
+      { "name": "no-record", "label": "без судимости", "maxMonths": 30 },
+      { "name": "record", "label": "с записью о судимости" }
+    ]
+  },
+  "bail": {
+    "by": "term",
+    "basis": "УК ст. 5.10",
+    "per": { "months": 12, "amount": 25000 }
+  },
+  "jurisdictionWarnings": {
+    "Ф": "федеральная подследственность — дело ФСБ",
+    "В": "военная подследственность — дело военной полиции",
+    "С": "подследственность Следственного комитета"
+  },
+  "administrative": {
+    "code": "koap",
+    "sum": { "basis": "КоАП ст. 7.4" },
+    "fine": { "min": 0, "max": {}, "basis": "КоАП ст. 6.4" },
+    "arrest": { "maxDays": 15, "basis": "КоАП ст. 6.5 ч. 4" }
+  }
+}

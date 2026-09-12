@@ -15,9 +15,8 @@ describe('first launch', () => {
     // Server
     expect(radio('Сервер', /Тверской/)).toHaveAttribute('aria-checked', 'true');
     expect(radio('Сервер', /Арбатский/)).toBeEnabled();
-    // Кутузовский has no laws in the app yet.
-    expect(radio('Сервер', /Кутузовский/)).toBeDisabled();
-    expect(radio('Сервер', /Кутузовский/)).toHaveTextContent('скоро · для новичков');
+    expect(radio('Сервер', /Кутузовский/)).toBeEnabled();
+    expect(radio('Сервер', /Кутузовский/)).toHaveTextContent('для новичков');
     await user.click(next());
 
     // Organisation, by group: state services, criminal, and «Без организации» on its own

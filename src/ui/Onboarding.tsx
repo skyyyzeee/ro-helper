@@ -149,7 +149,11 @@ export function Onboarding({
                 >
                   <span className="ob__option-name">{choice.name}</span>
                   <span className="sp" />
-                  {choice.status === 'soon' && <span className="ob__option-note">{['скоро', choice.note].filter(Boolean).join(' · ')}</span>}
+                  {(choice.status === 'soon' || choice.note) && (
+                    <span className="ob__option-note">
+                      {[choice.status === 'soon' ? 'скоро' : null, choice.note].filter(Boolean).join(' · ')}
+                    </span>
+                  )}
                   <span className="ob__radio" />
                 </button>
               ))}

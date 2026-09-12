@@ -52,15 +52,24 @@ function toRoman(n: number): string {
  * Ids stay unique: where numbers repeat, they carry the chapter (8-ФЗ numbers articles again in each chapter);
  * a number written twice in one chapter (ГИБДД 4.2.1) takes its place in the order: `…-4.2.1~2`.
  */
-export function uniqueIds(articles: Article[], documentId: string): void {
+export function uniqueIds(articles: Article[], documentId: string, issues: ParseIssue[] = []): void {
   const numbers = articles.map((a) => a.number);
   if (new Set(numbers).size === numbers.length) return;
   const seen = new Map<string, number>();
+  // The issues found while parsing name the article by its old id; they must follow it, or a manual
+  // fix keyed by the final id would never resolve them.
+  const renamed = new Map<string, string>();
   for (const a of articles) {
     const id = `${documentId}-${a.chapter ?? '0'}-${a.number}`;
     const n = (seen.get(id) ?? 0) + 1;
     seen.set(id, n);
-    a.id = n > 1 ? `${id}~${n}` : id;
+    const next = n > 1 ? `${id}~${n}` : id;
+    renamed.set(a.id, next);
+    a.id = next;
+  }
+  for (const issue of issues) {
+    const next = issue.article && renamed.get(issue.article);
+    if (next) issue.article = next;
   }
 }
 
@@ -240,6 +249,6 @@ export function parsePointsText(text: string, documentId: string, options: Point
     seen.add(c.number);
   }
 
-  uniqueIds(articles, documentId);
+  uniqueIds(articles, documentId, issues);
   return { chapters: kept, articles, header, footer, issues };
 }

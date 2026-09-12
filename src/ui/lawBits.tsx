@@ -14,6 +14,7 @@ const JURISDICTION_NAMES: Record<Jurisdiction, { name: string; who: string }> = 
   Р: { name: 'региональная', who: 'полиция' },
   Ф: { name: 'федеральная', who: 'ФСБ' },
   В: { name: 'военная', who: 'военная полиция' },
+  С: { name: 'следственная', who: 'СК' },
 };
 
 /** «федеральная (ФСБ)», «региональная или федеральная». */

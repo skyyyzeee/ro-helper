@@ -39,6 +39,21 @@ export const ARBATSKIY: ServerSources = {
   ],
 };
 
+export const KUTUZOVSKIY: ServerSources = {
+  id: 'kutuzovskiy',
+  name: 'Кутузовский',
+  status: 'active',
+  documents: [
+    // Кодексы и Конституция
+    'const', 'uk', 'koap', 'pdd', 'upk', 'tk', 'ethics',
+    // Федеральные конституционные законы
+    'fkz-court', 'fkz-gov', 'fkz-ministries', 'fkz-duma', 'fkz-emergency',
+    // Федеральные законы
+    'fz-police', 'fz-gibdd', 'fz-fsb', 'fz-fso', 'fz-sk', 'fz-prosecutor', 'fz-army', 'fz-weapons',
+    'fz-secrets', 'fz-health', 'fz-advocacy', 'fz-service', 'fz-immunity', 'fz-territory', 'fz-parties', 'fz-business',
+  ],
+};
+
 /** Every server the importer builds a pack for. */
-export const SERVERS: ServerSources[] = [TVERSKOI, ARBATSKIY];
+export const SERVERS: ServerSources[] = [TVERSKOI, ARBATSKIY, KUTUZOVSKIY];
 

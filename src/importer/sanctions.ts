@@ -12,7 +12,8 @@ export interface LeadingTags {
   rest: string;
 }
 
-const JURISDICTIONS = new Set<string>(['Р', 'Ф', 'В']);
+// Кутузовский adds «С» for the Следственный комитет, and writes it with a Latin C in the legend.
+const JURISDICTIONS = new Set<string>(['Р', 'Ф', 'В', 'С', 'C']);
 
 /**
  * Reads the tags a special-part line starts with, in any order: `[Р/Ф]`, `[★★★]`,
@@ -31,7 +32,8 @@ export function parseLeadingTags(line: string): LeadingTags {
       else if (/^★+$/.test(inner)) result.stars = { min: inner.length, max: inner.length };
       else {
         const codes = inner.split('/').map((code) => code.trim());
-        if (codes.every((code) => JURISDICTIONS.has(code))) result.jurisdiction = codes as Jurisdiction[];
+        // Latin «C» in the legend and Cyrillic «С» in the articles mean the same Следственный комитет.
+        if (codes.every((code) => JURISDICTIONS.has(code))) result.jurisdiction = codes.map((code) => (code === 'C' ? 'С' : code)) as Jurisdiction[];
         else break; // not a tag we know — leave it in the text
       }
       rest = rest.slice(bracket[0].length);
@@ -72,6 +74,17 @@ export interface ParsedPunishment {
   unparsed: string[];
 }
 
+/**
+ * What a criminal punishment carries besides the term or the fine: Тверской takes the military rank,
+ * Кутузовский writes a criminal record and the damages the convict must pay.
+ */
+const CRIMINAL_ADDITIONS: [RegExp, string][] = [
+  [/\s+с\s+обязательным\s+лишением\s+воинского\s+звания(?:\s*\([^)]*\))?$/i, 'лишение воинского звания'],
+  [/,?\s+с\s+созданием\s+записи\s+о\s+судимости$/i, 'запись о судимости'],
+  [/,?\s+а\s+также\s+полное\s+возмещение\s+материального\s+ущерба$/i, 'полное возмещение материального ущерба'],
+  [/\s+и\s+изъяти\S*\s+лицензии\s+на\s+осуществление\s+рыбной\s+ловли$/i, 'изъятие лицензии на рыбную ловлю'],
+];
+
 /** Reads the clause after «наказывается»: alternatives separated by «либо». */
 export function parsePunishment(clause: string): ParsedPunishment {
   const alternatives: Sanction[] = [];
@@ -83,16 +96,20 @@ export function parsePunishment(clause: string): ParsedPunishment {
     let alt = rawAlt.trim().replace(/[.;,\s]+$/, '');
     if (!alt) continue;
 
-    const military = alt.match(/\s+с\s+обязательным\s+лишением\s+воинского\s+звания(?:\s*\([^)]*\))?$/);
-    if (military && military.index !== undefined) {
-      additional.push('лишение воинского звания');
-      alt = alt.slice(0, military.index);
+    for (const [pattern, label] of CRIMINAL_ADDITIONS) {
+      const found = alt.match(pattern);
+      if (found && found.index !== undefined) {
+        additional.push(label);
+        alt = alt.slice(0, found.index).replace(/[.;,\s]+$/, '');
+      }
     }
 
     // Each pattern must cover the whole alternative; anything left over is reported, not ignored.
     const fine = alt.match(/^штраф\S*\s+в\s+размере\s+(?:от\s+([\d.\s]+?)\s+до\s+([\d.\s]+?)|до\s+([\d.\s]+?)|([\d.\s]+?))\s+рубл\S*$/);
     // «на срок 30 месяцев» (Тверской) and «на срок до 50 месяцев» (Арбатский) mean the same: the term of the article.
-    const term = alt.match(/^лишени\S*\s+свободы\s+на\s+срок\s+(?:до\s+)?(\d+)\s+месяц\S*$/) ?? alt.match(/^(?:до\s+)?(\d+)\s+месяц\S*\s+лишения\s+свободы$/);
+    const term =
+      alt.match(/^лишени\S*\s+свободы\s+на\s+срок\s+(?:до\s+)?(\d+)\s+месяц\S*$/i) ??
+      alt.match(/^(?:до\s+)?(\d+)\s+месяц\S*\s+лишения(?:\s+свободы)?$/i);
     const byStars = alt.match(/^лишени\S*\s+свободы\s+на\s+срок,\s+предусмотренный\s+приоритетом[^,]*,\s+где\s+1\s+приоритет\s+равняется\s+(\d+)\s+месяц\S*\s+лишения\s+свободы$/);
 
     if (fine) {
@@ -121,6 +138,11 @@ function readNumber(raw: string): number | undefined {
 }
 
 const SUBJECT_PHRASES: [RegExp, Subject][] = [
+  // Кутузовский names whom the fine is for in the dative: «штраф гражданину от 5 000 …».
+  [/\s*работодателю(?:\s+или\s+виновному\s+должностному\s+лицу)?(?=[\s,;—-]|$)/i, 'official'],
+  [/\s*должностному\s+лицу(?=[\s,;—-]|$)/i, 'official'],
+  [/\s*(?:организации|юридическому\s+лицу)(?=[\s,;—-]|$)/i, 'legal'],
+  [/\s*гражданину(?=[\s,;—-]|$)/i, 'citizen'],
   [/\s*(?:на|для)\s+граждан(?=[\s,;-]|$)/, 'citizen'],
   [/\s*(?:на|для)\s+должностных\s+лиц(?=[\s,;-]|$)/, 'official'],
   [/\s*(?:на|для)\s+юридических\s+лиц(?=[\s,;-]|$)/, 'legal'],
@@ -130,12 +152,12 @@ const SUBJECT_PHRASES: [RegExp, Subject][] = [
 ];
 
 // «до 10.000 рублей», «от 5.000 до 10.000 рублей», «до - 10.000 рублей» (a stray dash in Арбатский).
-const AMOUNT = String.raw`(?:в\s+размере\s+)?(?:от\s+([\d.\s]+?)\s+до\s+[-—–]?\s*([\d.\s]+?)|до\s+[-—–]?\s*([\d.\s]+?)|([\d.\s]+?))\s+рубл\S*`;
+const AMOUNT = String.raw`(?:в\s+размере\s+)?(?:от\s+([\d.\s]+?)(?:\s+рубл\S*)?\s+до\s+[-—–]?\s*([\d.\s]+?)|до\s+[-—–]?\s*([\d.\s]+?)|([\d.\s]+?))\s+рубл\S*`;
 // Тверской writes «влечет наложение административного штрафа …», Арбатский just «Штраф до 10.000 рублей»:
 // the patterns ignore case so both read the same.
 const ADMIN_FINE = new RegExp(String.raw`^(?:наложени\S+\s+)?(?:административн\S+\s+)?(?:штраф\S*\s+)?` + AMOUNT + '$', 'i');
 const ADMIN_MULTIPLE = /^(?:наложени\S+\s+)?(?:административн\S+\s+)?штраф\S*\s+в\s+(\S+?)кратном\s+размере\s+суммы\s+неуплаченного\s+административного\s+штрафа(?:,\s*но\s+не\s+менее\s+([\d.\s]+?)\s+рубл\S*)?$/i;
-const ADMIN_ARREST = /^административн\S+\s+арест\S*\s+на\s+срок\s+(до\s+)?(\d+|[а-яё]+)\s+сут\S*$/i;
+const ADMIN_ARREST = /^административн\S+\s+арест\S*(?:\s+на(?:\s+срок)?)?\s+(до\s+)?(\d+|[а-яё]+)\s+сут\S*$/i;
 const ADMIN_LICENSE = /^лишени\S+\s+права\s+(?:на\s+)?управлени\S*\s+(?:транспортными\s+средствами|ТС)$/i;
 const ADMIN_EVACUATION = /^эвакуаци\S+\s+транспортного\s+средства$/i;
 const ADMIN_WARNING = /^предупреждени\S*$/i;
@@ -143,7 +165,21 @@ const ADMIN_ADDITIONS: [RegExp, string][] = [
   [/\s+с\s+лишением\s+права\s+(?:на\s+)?управлени\S*\s+(?:транспортным\s+средством|транспортными\s+средствами|ТС)$/i, 'лишение права управления ТС'],
   [/\s+и\s+изъяти\S*\s+лицензии$/i, 'изъятие лицензии'],
 ];
-const ADMIN_SUSPENSION = /\s+с\s+административным\s+приостановлением\s+деятельности\s+(?:данного\s+)?юридического\s+лица\s+на\s+срок\s+до\s+(\S+)\s+месяц\S*$/;
+
+/**
+ * Кутузовский hangs what else follows the fine on the same line: «… с обязанностью возместить ущерб»,
+ * «; возможно лишение специального права …», «. Материал также направляется …». Each is kept as written,
+ * so nothing of the law is lost, and the fine itself is read as usual.
+ */
+const ADMIN_EXTRA =
+  /\s+с\s+(?:возможн\S+\s+|обязательн\S+\s+)?(?:обязанностью|изъятием|отстранением|лишением|конфискацией|запретом|возмещением|передачей|перемещением|административным\s+приостановлением)\s[^;]*$/i;
+const ADMIN_TAIL = /\.\s+[А-ЯЁ][^.]*\.?$/;
+/** A segment that describes a condition, a possibility or someone else's fine, not a punishment of its own. */
+const ADMIN_ASIDE = /^(?:возможн\S*|при\s|в\s+случае\s|организатору\s|организаторам\s)/i;
+
+/** «Полное возмещение ущерба» → «полное возмещение ущерба»: an addition reads as part of a sentence. */
+const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
+const ADMIN_SUSPENSION = /\s+с\s+административным\s+приостановлением\s+деятельности\s+(?:данного\s+)?юридического\s+лица\s+на\s+срок\s+до\s+(\S+)\s+месяц\S*$/i;
 const MONTH_WORDS: Record<string, number> = { одного: 1, двух: 2, трех: 3, трёх: 3, шести: 6 };
 
 function readAdministrativeAlternative(alt: string): Sanction | null {
@@ -181,6 +217,13 @@ export function parseAdministrativeSanction(clause: string): ParsedPunishment {
   const unparsed: string[] = [];
   let rest = clause.trim().replace(/[.;,\s]+$/, '');
 
+  // A sentence after the punishment says what else happens to the material; it is no punishment.
+  const tail = rest.match(ADMIN_TAIL);
+  if (tail && tail.index !== undefined) {
+    additional.push(lowerFirst(tail[0].replace(/^\.\s+/, '').replace(/\.$/, '')));
+    rest = rest.slice(0, tail.index);
+  }
+
   // Additions written after the fine: «… с лишением права управления ТС», «… и изъятие лицензии».
   for (const [pattern, label] of ADMIN_ADDITIONS) {
     const found = rest.match(pattern);
@@ -209,6 +252,17 @@ export function parseAdministrativeSanction(clause: string): ParsedPunishment {
     }
     segment = segment.replace(/^[-—–]\s*/, '');
     if (!segment) continue;
+
+    const extra = segment.match(ADMIN_EXTRA);
+    if (extra && extra.index !== undefined) {
+      additional.push(lowerFirst(extra[0].trim().replace(/^с\s+/i, '')));
+      segment = segment.slice(0, extra.index).trim();
+    }
+    // «возможно лишение …», «при продолжении нарушения — …»: what may follow, written out as it stands.
+    if (ADMIN_ASIDE.test(segment)) {
+      additional.push(lowerFirst(segment));
+      continue;
+    }
 
     for (const rawAlt of segment.split(/\s*,?\s+(?:или|либо|и\/или)\s+/)) {
       const alt = rawAlt.trim().replace(/[.;,\s]+$/, '');

@@ -1,4 +1,4 @@
-import { articleLabel } from './format';
+import { articleLabel, formatRubles } from './format';
 import type { Article, CalculatorRules, Jurisdiction, LawDocument, Part, Sanction } from './model';
 
 /** How far the crime went: finished, attempted (покушение) or prepared (приготовление). */
@@ -165,6 +165,10 @@ export function calculateCriminal(charges: ChargeItem[], wanted: Mode, rules: Ca
       // The officer sets the wanted priority, the law only says what bail each priority costs.
       const level = priority ?? 1;
       bail = { category: `приоритет розыска ${level}`, amount: rules.bail.amounts[String(level)] ?? null };
+    } else if (rules.bail.by === 'term') {
+      // So much for every full year of the term: «пропорционально количеству лет» (Кутузовский).
+      const units = Math.floor(term / rules.bail.per.months);
+      bail = { category: `${units} × ${formatRubles(rules.bail.per.amount)}`, amount: units * rules.bail.per.amount };
     } else {
       const category = crimeCategory(strictest.item, rules);
       bail = { category: category.label, amount: rules.bail.amounts[category.name] ?? null };
@@ -178,7 +182,11 @@ export function calculateCriminal(charges: ChargeItem[], wanted: Mode, rules: Ca
       : { min: strictest.fine.min, max: strictest.fine.max + (stacked?.fine?.max ?? 0) };
   }
 
-  const stars = rules.stars ? Math.min(rules.stars.max, Math.floor(term / rules.stars.monthsPerStar)) : 0;
+  // The wanted level either follows the term or comes from the articles themselves.
+  const highest = Math.max(0, ...items.map((r) => r.item.part.stars?.max ?? 0));
+  const stars = !rules.stars
+    ? 0
+    : Math.min(rules.stars.max, rules.stars.from === 'charges' ? highest : Math.floor(term / (rules.stars.monthsPerStar ?? 1)));
 
   const warnings: string[] = [];
   for (const [tag, text] of Object.entries(rules.jurisdictionWarnings) as [Jurisdiction, string][]) {
@@ -195,7 +203,8 @@ export function calculateCriminal(charges: ChargeItem[], wanted: Mode, rules: Ca
     term,
     capped,
     stars,
-    starsMonths: rules.stars ? stars * rules.stars.monthsPerStar : 0,
+    // Stars taken from the articles stand for no term of their own.
+    starsMonths: rules.stars?.monthsPerStar && rules.stars.from !== 'charges' ? stars * rules.stars.monthsPerStar : term,
     fineLimit,
     bail,
     explanation,

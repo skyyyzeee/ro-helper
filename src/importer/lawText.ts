@@ -1,4 +1,4 @@
-import type { Article, Chapter, Note, Part } from '../core/model';
+import type { Article, Chapter, Jurisdiction, Note, Part } from '../core/model';
 import { parsePointsText, uniqueIds, type PointsOptions } from './points';
 import { parseAdministrativeSanction, parseLeadingTags, parsePunishment, splitPenalty } from './sanctions';
 
@@ -45,7 +45,11 @@ export function cleanLines(text: string): string[] {
 const SECTION = /^Раздел\s+([IVXLC]+|\d+)\.\s*(.*)$/i;
 const CHAPTER = /^Глава\s+([IVXLC]+|\d+(?:\.\d+)*)\.\s*(.*)$/i;
 /** «Статья 1. Название», «Статья 1», «Статья 17.1 Название»; without the full stop, only an empty or capitalised title, so a sentence «Статья 5 настоящего закона …» is not a heading. */
-const ARTICLE = /^Статья\s+(\d+(?:\.\d+)*)(?:\s*\.\s*(.*)|\s+([А-ЯЁA-Z«"].*)|)$/;
+const ARTICLE = /^Статья\s+(\d+(?:\.\d+)*)(?:\s*\.\s*(.*)|\s+(\(?[А-ЯЁA-Z«"].*)|)$/;
+/** Кутузовский marks the jurisdiction in the article's heading: «Статья 10.3 (Ф/Р) Кража …». */
+const HEADING_JURISDICTION = /^\(([ФРВСC](?:\s*\/\s*[ФРВСC])*)\)\s*(.*)$/;
+/** Кутузовский writes the wanted level on its own line: «Приоритет розыска 3». */
+const PRIORITY_LINE = /^Приоритет\s+розыска\s+(\d)\s*$/i;
 const NOTE = /^(Примечани[ея]|Пояснени[ея])(?:\s+(\d+))?\s*[.:]?\s*(.*)$/;
 const SUBNUMBERED = /^(\d+(?:\.\d+)+)\.\s+(.*)$/;
 /** «ч. 1. Порядок …», «ч. 1 Судебная …», «Часть 1. На территории …». */
@@ -56,7 +60,9 @@ const POINT = /^([а-яё]|\d+)\)\s+(.*)$/;
 const TAGGED = /^\[[^\]]*\]/;
 const SANCTION = /^(?:влеч[её]т|влекут)\s+(.*)$/;
 /** «наказывается …», «Штраф до 50.000 рублей.»: Арбатский writes the punishment on its own line. */
-const SANCTION_LINE = /^(?:наказыва(?:ется|ются)\s|(?:предупреждени\S*\s+(?:или|либо)\s+)?штраф\S*\s+(?:в\s+размере\s+)?(?:до|от|в)\s)/i;
+const SANCTION_LINE = /^(?:наказание\s*:\s*|наказыва(?:ется|ются)\s|(?:предупреждени\S*\s+(?:или|либо)\s+)?штраф\S*\s+(?:в\s+размере\s+)?(?:до|от|в)\s)/i;
+/** «Наказание: …» (Кутузовский) — the word is a label, the punishment follows it. */
+const SANCTION_LABEL = /^наказание\s*:\s*/i;
 /** Part-of-code markers that carry no content of their own. */
 const MARKERS = /^(ОСОБЕННАЯ ЧАСТЬ|ОБЩАЯ ЧАСТЬ)$/i;
 /**
@@ -146,8 +152,16 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
         chapters.push(chapter);
         openSection = undefined;
       }
-      const title = (m[2] ?? m[3] ?? '').replace(/\.$/, '');
+      let title = (m[2] ?? m[3] ?? '').replace(/\.$/, '');
+      // «Статья 10.3 (Ф/Р) Кража …»: the tag belongs to the punishment, the rest is the offence itself.
+      const heading = title.match(HEADING_JURISDICTION);
+      let headingJurisdiction: Jurisdiction[] | undefined;
+      if (penal && heading) {
+        headingJurisdiction = heading[1].split('/').map((tag) => (tag.trim() === 'C' ? 'С' : tag.trim()) as Jurisdiction);
+        title = heading[2].replace(/\.$/, '');
+      }
       article = { id: `${documentId}-${m[1]}`, number: m[1], title, chapter: chapter?.number, parts: [], notes: [] };
+      if (headingJurisdiction) article.parts.push({ text: '', points: [], jurisdiction: headingJurisdiction });
       if (group) article.group = group;
       articles.push(article);
       lastNote = undefined;
@@ -195,7 +209,8 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
         part.punishment = punishment;
         for (const alt of unparsed) issue(line, `Не разобрано наказание: «${alt}»`, part);
         if (!punishment.alternatives.length) issue(line, 'Нет ни одного наказания', part);
-      } else {
+      } else if (!/^\s*[-—–]/.test(part.text)) {
+        // «[Р] - Статья относится к подследственности МВД»: the general part explains the tags themselves.
         issue(line, 'Часть с метками, но без наказания', part);
       }
       continue;
@@ -234,6 +249,14 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
       continue;
     }
 
+    // Кутузовский writes the wanted level of the article on its own line, between the offence and the punishment.
+    if (penal && (m = line.match(PRIORITY_LINE))) {
+      const level = Number(m[1]);
+      const part = lastPart() ?? (article.parts.push({ text: '', points: [] }), article.parts[0]);
+      part.stars = { min: level, max: level };
+      continue;
+    }
+
     // Арбатский writes the punishment on the line under the offence: it belongs to the part above it.
     if (penal && SANCTION_LINE.test(line)) {
       // КоАП Арбатского writes the offence in the article's title and the punishment under it, with no parts.
@@ -243,10 +266,11 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
         part.text = stripTrailingDash(part.text);
         if (part.punishment) issue(line, 'Второе наказание для одной части', part);
         else {
+          const clause = line.replace(SANCTION_LABEL, '');
           const { punishment, unparsed } =
             format === 'administrative-code'
-              ? parseAdministrativeSanction(line.replace(/\.$/, ''))
-              : parsePunishment(splitPenalty(`— ${line}`).clause ?? line);
+              ? parseAdministrativeSanction(clause.replace(/\.$/, ''))
+              : parsePunishment(splitPenalty(`— ${clause}`).clause ?? clause);
           part.punishment = punishment;
           for (const alt of unparsed) issue(line, `Не разобрано наказание: «${alt}»`, part);
           if (!punishment.alternatives.length) issue(line, 'Нет ни одного наказания', part);
@@ -267,6 +291,6 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
     else article.parts.push({ text: format === 'administrative-code' ? stripTrailingDash(line) : line, points: [] });
   }
 
-  uniqueIds(articles, documentId);
+  uniqueIds(articles, documentId, issues);
   return { chapters, articles, header, footer, issues };
 }
