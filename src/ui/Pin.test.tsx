@@ -210,8 +210,8 @@ describe('the cards over the game', () => {
     const onChange = vi.fn();
     render(<PinSurface groups={[block('a', 40, 300, card('a', 'Кража')), block('b', 500, 300, card('b', 'Халатность'))]} live onChange={onChange} />);
 
-    // Dropped with the mouse inside the other block, the two become one.
-    await drag(head(screen.getAllByRole('region', { name: 'Закреплено' })[0]), [60, 310], [560, 330]);
+    // Dropped on the lower half of the other block, the cards go under its own.
+    await drag(head(screen.getAllByRole('region', { name: 'Закреплено' })[0]), [60, 310], [690, 410]);
     const joined = onChange.mock.calls.at(-1)![0] as PinGroup[];
     expect(joined).toHaveLength(1);
     expect(joined[0].cards.map((c) => c.heading)).toEqual(['Халатность', 'Кража']);
@@ -249,6 +249,45 @@ describe('the cards over the game', () => {
     expect(block2).toHaveClass('pin--sized');
     expect(block2).toHaveStyle({ width: '520px', height: '320px' });
     vi.restoreAllMocks();
+  });
+
+  it('puts the cards on the side the mouse dropped them on', async () => {
+    layOut();
+    const onChange = vi.fn();
+    render(<PinSurface groups={[block('a', 40, 300, card('a', 'Кража')), block('b', 500, 300, card('b', 'Халатность'))]} live onChange={onChange} />);
+
+    // Nearest the left edge of the other block: beside it, and first.
+    await drag(head(screen.getAllByRole('region', { name: 'Закреплено' })[0]), [60, 310], [530, 350]);
+    const joined = (onChange.mock.calls.at(-1)![0] as PinGroup[])[0];
+    expect(joined.flow).toBe('row');
+    expect(joined.cards.map((c) => c.heading)).toEqual(['Кража', 'Халатность']);
+    vi.restoreAllMocks();
+  });
+
+  it('flips through the cards of a block one at a time', async () => {
+    const onChange = vi.fn();
+    const stack = [block('a', 40, 300, card('a', 'Кража'), card('b', 'Халатность'), card('c', 'Разбой'))];
+    const { rerender } = render(<PinSurface groups={stack} live onChange={onChange} />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: 'Листать по одной' }));
+    expect(onChange).toHaveBeenCalledWith([expect.objectContaining({ paged: true })]);
+
+    rerender(<PinSurface groups={onChange.mock.calls.at(-1)![0] as PinGroup[]} live onChange={onChange} />);
+    const shown = () => [...document.querySelectorAll('.pin__title')].map((el) => el.textContent);
+    expect(shown()).toEqual(['Кража']);
+    expect(screen.getByText('1 / 3')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Следующая карточка' }));
+    expect(shown()).toEqual(['Халатность']);
+    // Back past the first card it comes round to the last.
+    await user.click(screen.getByRole('button', { name: 'Предыдущая карточка' }));
+    await user.click(screen.getByRole('button', { name: 'Предыдущая карточка' }));
+    expect(shown()).toEqual(['Разбой']);
+    expect(screen.getByText('3 / 3')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Показать все карточки' }));
+    expect(onChange.mock.calls.at(-1)![0][0].paged).toBe(false);
   });
 
   it('in its own window takes what was pinned before it loaded, and tells the overlay what changed', async () => {

@@ -1080,9 +1080,46 @@ input {
   box-shadow: 0 0 0 2px oklch(0.78 0.1 245 / 0.55), 0 18px 40px rgba(0, 0, 0, 0.45);
 }
 
-/* The block the dragged one would join. */
+/* The block the dragged one would join, with a bar on the edge the cards would go in on. */
 .pin--drop {
   box-shadow: 0 0 0 2px var(--accent), 0 0 0 6px oklch(0.78 0.1 245 / 0.2);
+}
+
+.pin--drop::after {
+  content: '';
+  position: absolute;
+  background: var(--accent);
+  border-radius: 3px;
+}
+
+.pin--drop-top::after,
+.pin--drop-bottom::after {
+  left: 10px;
+  right: 10px;
+  height: 4px;
+}
+
+.pin--drop-top::after {
+  top: -2px;
+}
+
+.pin--drop-bottom::after {
+  bottom: -2px;
+}
+
+.pin--drop-left::after,
+.pin--drop-right::after {
+  top: 10px;
+  bottom: 10px;
+  width: 4px;
+}
+
+.pin--drop-left::after {
+  left: -2px;
+}
+
+.pin--drop-right::after {
+  right: -2px;
 }
 
 .pin__bar {
@@ -1099,6 +1136,24 @@ input {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* A block taller than the screen scrolls instead of running off it. */
+  overflow-y: auto;
+}
+
+/* Dropped on the side, cards stand beside each other and share the block's width. */
+.pin__cards--row {
+  flex-direction: row;
+  overflow-x: auto;
+}
+
+.pin__cards--row .pin__card {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.pin__cards--row .pin__card--stacked + .pin__card--stacked {
+  border-top: 0;
+  border-left: 1px solid var(--line);
 }
 
 /* Dragged to a size of its own, a block keeps it and scrolls inside instead of cutting the text off. */
@@ -1108,7 +1163,6 @@ input {
 
 .pin--sized .pin__cards {
   flex: 1;
-  overflow-y: auto;
 }
 
 .pin--sized .pin__line {
@@ -1154,6 +1208,25 @@ input {
 
 .pin__card--stacked + .pin__card--stacked {
   border-top: 1px solid var(--line);
+}
+
+/* Flipping through the cards of a block, one at a time. */
+.pin__pager {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.x--sm {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+
+.x--on {
+  color: var(--accent-text);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .pin__head {

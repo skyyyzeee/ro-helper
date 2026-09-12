@@ -34,6 +34,10 @@ export interface PinGroup {
   /** The size the user dragged the block to, in CSS pixels; without it, a card's width and its own height. */
   width?: number;
   height?: number;
+  /** How the cards of a block stand: one under another, or side by side. Set by the edge they were dropped on. */
+  flow?: 'column' | 'row';
+  /** A block of several shown a card at a time, flipped through like pages, so it stays small. */
+  paged?: boolean;
   cards: PinCard[];
 }
 

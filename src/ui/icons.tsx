@@ -168,3 +168,10 @@ export const ResizeIcon = ({ size = 12 }: { size?: number }) => (
     <path d="M21 9 9 21M21 15l-6 6" />
   </Icon>
 );
+
+export const PagesIcon = ({ size = 14 }: { size?: number }) => (
+  <Icon size={size}>
+    <rect x="3" y="6" width="13" height="14" rx="2" />
+    <path d="M8 3h11a2 2 0 0 1 2 2v11" />
+  </Icon>
+);

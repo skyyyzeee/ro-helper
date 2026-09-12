@@ -23,10 +23,25 @@ const GAP_X = CARD_WIDTH + 24;
 export const MIN_WIDTH = 240;
 export const MIN_HEIGHT = 110;
 
-const size = (group: PinGroup) => ({
-  width: group.width ?? CARD_WIDTH,
-  height: group.height ?? CARD_HEIGHT * group.cards.length,
-});
+/** Side by side, a block is as wide as its cards; one under another, as tall. Paged, it is one card. */
+const size = (group: PinGroup) => {
+  const cards = group.paged ? 1 : group.cards.length;
+  return {
+    width: group.width ?? (group.flow === 'row' ? CARD_WIDTH * cards : CARD_WIDTH),
+    height: group.height ?? (group.flow === 'row' ? CARD_HEIGHT : CARD_HEIGHT * cards),
+  };
+};
+
+/** The edge of a block the cards were dropped on, which is where they go in. */
+export type DropSide = 'top' | 'bottom' | 'left' | 'right';
+
+/** Which edge of a block the mouse is nearest — by how far it is across the block, not in pixels. */
+export function dropSide(rect: { left: number; top: number; width: number; height: number }, x: number, y: number): DropSide {
+  const across = (x - (rect.left + rect.width / 2)) / (rect.width / 2 || 1);
+  const down = (y - (rect.top + rect.height / 2)) / (rect.height / 2 || 1);
+  if (Math.abs(across) > Math.abs(down)) return across < 0 ? 'left' : 'right';
+  return down < 0 ? 'top' : 'bottom';
+}
 
 /** Keeps a block on the screen: at least a corner of it stays reachable with the mouse. */
 export function clampTo(x: number, y: number, surface: Surface, box = { width: CARD_WIDTH, height: CARD_HEIGHT }): { x: number; y: number } {
@@ -97,12 +112,27 @@ export function resizeGroup(groups: PinGroup[], groupId: string, width: number, 
   });
 }
 
-/** Dropped onto another block, the cards join it and the block that was dragged is gone. */
-export function joinGroups(groups: PinGroup[], fromId: string, intoId: string): PinGroup[] {
+/**
+ * Dropped onto another block, the cards join it and the block that was dragged is gone. The edge they
+ * were dropped on says where they go: below or above the others, or beside them to the left or right.
+ */
+export function joinGroups(groups: PinGroup[], fromId: string, intoId: string, side: DropSide = 'bottom'): PinGroup[] {
   const from = groups.find((g) => g.id === fromId);
   const into = groups.find((g) => g.id === intoId);
   if (!from || !into || fromId === intoId) return groups;
-  return groups.filter((g) => g.id !== fromId).map((g) => (g.id === intoId ? { ...g, cards: [...g.cards, ...from.cards] } : g));
+  const flow = side === 'left' || side === 'right' ? 'row' : 'column';
+  const first = side === 'top' || side === 'left';
+  const cards = first ? [...from.cards, ...into.cards] : [...into.cards, ...from.cards];
+  // A block given a width of its own grows by what came in beside it; one under another it keeps its own.
+  const width = into.width && flow === 'row' ? into.width + CARD_WIDTH * from.cards.length : into.width;
+  return groups
+    .filter((g) => g.id !== fromId)
+    .map((g) => (g.id === intoId ? { ...g, flow, cards, ...(width ? { width } : {}) } : g));
+}
+
+/** A block of several shown a card at a time, or all of them at once. */
+export function pageGroup(groups: PinGroup[], groupId: string, paged: boolean): PinGroup[] {
+  return groups.map((g) => (g.id === groupId ? { ...g, paged, ...(paged ? { height: undefined } : {}) } : g));
 }
 
 /** Dragged out of a block of several, a card becomes a block of its own where it was dropped. */
@@ -111,8 +141,9 @@ export function detachCard(groups: PinGroup[], groupId: string, cardId: string, 
   const card = group?.cards.find((c) => c.id === cardId);
   if (!group || !card || group.cards.length < 2) return groups;
   const rest = groups.map((g) => (g.id === groupId ? { ...g, cards: g.cards.filter((c) => c.id !== cardId) } : g));
-  // As wide as the block it came from, but as tall as it needs: one card is not the whole block.
-  return [...rest, { id: freeId(rest, cardId), ...clampTo(x, y, surface), ...(group.width ? { width: group.width } : {}), cards: [card] }];
+  // As wide as one card of the block it came from, and as tall as it needs on its own.
+  const width = group.width && group.flow !== 'row' ? group.width : undefined;
+  return [...rest, { id: freeId(rest, cardId), ...clampTo(x, y, surface), ...(width ? { width } : {}), cards: [card] }];
 }
 
 /** The screen the cards are put on: the game's in the app, the window's in the browser preview. */
