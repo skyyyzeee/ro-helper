@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { TVERSKOI_PACK } from '../data';
+import { packFor } from '../data';
 import { usePlatform } from '../platform/PlatformContext';
 import { Onboarding } from './Onboarding';
 import { Overlay } from './Overlay';
@@ -40,11 +40,10 @@ export function App() {
 
   let screen = null;
   if (profile === null) {
-    screen = <Onboarding pack={TVERSKOI_PACK} initial={FIRST_PROFILE} mode="first" onDone={save} onCapturing={setCapturing} />;
+    screen = <Onboarding initial={FIRST_PROFILE} mode="first" onDone={save} onCapturing={setCapturing} />;
   } else if (profile && editing) {
     screen = (
       <Onboarding
-        pack={TVERSKOI_PACK}
         initial={profile}
         mode="settings"
         onDone={save}
@@ -53,7 +52,7 @@ export function App() {
       />
     );
   } else if (profile) {
-    screen = <Overlay pack={TVERSKOI_PACK} profile={profile} onEditProfile={() => setEditing(true)} onProfile={save} />;
+    screen = <Overlay pack={packFor(profile?.server ?? FIRST_PROFILE.server)} profile={profile} onEditProfile={() => setEditing(true)} onProfile={save} />;
   }
 
   return <div className={preview ? 'stage stage--preview' : 'stage'}>{screen}</div>;

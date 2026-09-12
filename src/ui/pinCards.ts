@@ -14,12 +14,12 @@ import type { PinCard } from '../platform/types';
 import { entryPart } from './saved';
 
 /** The pinned article: only its part — heading, punishment and text — and whose case it is. */
-export function articlePinCard(hit: SearchHit, rules: CalculatorRules): PinCard {
+export function articlePinCard(hit: SearchHit, rules?: CalculatorRules): PinCard {
   const own = entryPart(hit.article, hit.part);
   const part = own ?? leadPart(hit.article) ?? hit.part ?? hit.article.parts.find((p) => p.text);
   const title = articleTitle(hit.article);
   const only = part?.jurisdiction?.length === 1 ? part.jurisdiction[0] : undefined;
-  const warning = only && rules.jurisdictionWarnings[only];
+  const warning = only && rules?.jurisdictionWarnings[only];
   return {
     kind: 'article',
     heading: `${hit.document.short} ${articleLabel(hit.article, own, hit.document.unit)}` + (title ? `. ${title}` : ''),

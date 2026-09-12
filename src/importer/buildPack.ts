@@ -46,7 +46,9 @@ export function buildPack(serverDir: string, server: ServerSources): BuildResult
   const overrides = readJson<Overrides>(join(serverDir, 'overrides.json'), {});
   const synonyms = readJson<Record<string, string[]>>(join(serverDir, 'synonyms.json'), {});
   const organizations = readJson<Organization[]>(join(serverDir, 'organizations.json'), []);
-  const calculator = JSON.parse(readFileSync(join(serverDir, 'calculator.json'), 'utf8')) as CalculatorRules;
+  // A server whose codes have not been described yet is searched without a calculator.
+  const calculatorFile = join(serverDir, 'calculator.json');
+  const calculator = existsSync(calculatorFile) ? (JSON.parse(readFileSync(calculatorFile, 'utf8')) as CalculatorRules) : undefined;
   const available = new Set(readdirSync(sourcesDir).filter((f) => f.endsWith('.meta.json')).map((f) => f.replace('.meta.json', '')));
   const issues: BuildResult['issues'] = [];
   const documents: LawDocument[] = [];
@@ -88,5 +90,5 @@ export function buildPack(serverDir: string, server: ServerSources): BuildResult
   const version = documents.map((d) => d.source.lastEdited).sort((a, b) => Date.parse(a) - Date.parse(b)).at(-1) ?? '0000-00-00';
   const changes = readJson<ChangeEntry[]>(join(serverDir, 'changelog.json'), []);
   const info = { id: server.id, name: server.name, status: server.status };
-  return { pack: { server: info, calculator, organizations, version, changes, documents, synonyms }, issues };
+  return { pack: { server: info, ...(calculator ? { calculator } : {}), organizations, version, changes, documents, synonyms }, issues };
 }

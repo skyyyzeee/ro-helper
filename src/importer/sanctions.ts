@@ -91,7 +91,8 @@ export function parsePunishment(clause: string): ParsedPunishment {
 
     // Each pattern must cover the whole alternative; anything left over is reported, not ignored.
     const fine = alt.match(/^штраф\S*\s+в\s+размере\s+(?:от\s+([\d.\s]+?)\s+до\s+([\d.\s]+?)|до\s+([\d.\s]+?)|([\d.\s]+?))\s+рубл\S*$/);
-    const term = alt.match(/^лишени\S*\s+свободы\s+на\s+срок\s+(\d+)\s+месяц\S*$/);
+    // «на срок 30 месяцев» (Тверской) and «на срок до 50 месяцев» (Арбатский) mean the same: the term of the article.
+    const term = alt.match(/^лишени\S*\s+свободы\s+на\s+срок\s+(?:до\s+)?(\d+)\s+месяц\S*$/) ?? alt.match(/^(?:до\s+)?(\d+)\s+месяц\S*\s+лишения\s+свободы$/);
     const byStars = alt.match(/^лишени\S*\s+свободы\s+на\s+срок,\s+предусмотренный\s+приоритетом[^,]*,\s+где\s+1\s+приоритет\s+равняется\s+(\d+)\s+месяц\S*\s+лишения\s+свободы$/);
 
     if (fine) {
@@ -128,13 +129,20 @@ const SUBJECT_PHRASES: [RegExp, Subject][] = [
   [/\s+юридическим\s+лицам$/, 'legal'],
 ];
 
-const AMOUNT = String.raw`(?:в\s+размере\s+)?(?:от\s+([\d.\s]+?)\s+до\s+([\d.\s]+?)|до\s+([\d.\s]+?)|([\d.\s]+?))\s+рубл\S*`;
-const ADMIN_FINE = new RegExp(String.raw`^(?:наложени\S+\s+)?(?:административн\S+\s+)?(?:штраф\S*\s+)?` + AMOUNT + '$');
-const ADMIN_MULTIPLE = /^(?:наложени\S+\s+)?(?:административн\S+\s+)?штраф\S*\s+в\s+(\S+?)кратном\s+размере\s+суммы\s+неуплаченного\s+административного\s+штрафа(?:,\s*но\s+не\s+менее\s+([\d.\s]+?)\s+рубл\S*)?$/;
-const ADMIN_ARREST = /^административн\S+\s+арест\S*\s+на\s+срок\s+(до\s+)?(\d+|[а-яё]+)\s+сут\S*$/;
-const ADMIN_LICENSE = /^лишени\S+\s+права\s+(?:на\s+)?управлени\S*\s+(?:транспортными\s+средствами|ТС)$/;
-const ADMIN_EVACUATION = /^эвакуаци\S+\s+транспортного\s+средства$/;
-const ADMIN_WARNING = /^предупреждени\S*$/;
+// «до 10.000 рублей», «от 5.000 до 10.000 рублей», «до - 10.000 рублей» (a stray dash in Арбатский).
+const AMOUNT = String.raw`(?:в\s+размере\s+)?(?:от\s+([\d.\s]+?)\s+до\s+[-—–]?\s*([\d.\s]+?)|до\s+[-—–]?\s*([\d.\s]+?)|([\d.\s]+?))\s+рубл\S*`;
+// Тверской writes «влечет наложение административного штрафа …», Арбатский just «Штраф до 10.000 рублей»:
+// the patterns ignore case so both read the same.
+const ADMIN_FINE = new RegExp(String.raw`^(?:наложени\S+\s+)?(?:административн\S+\s+)?(?:штраф\S*\s+)?` + AMOUNT + '$', 'i');
+const ADMIN_MULTIPLE = /^(?:наложени\S+\s+)?(?:административн\S+\s+)?штраф\S*\s+в\s+(\S+?)кратном\s+размере\s+суммы\s+неуплаченного\s+административного\s+штрафа(?:,\s*но\s+не\s+менее\s+([\d.\s]+?)\s+рубл\S*)?$/i;
+const ADMIN_ARREST = /^административн\S+\s+арест\S*\s+на\s+срок\s+(до\s+)?(\d+|[а-яё]+)\s+сут\S*$/i;
+const ADMIN_LICENSE = /^лишени\S+\s+права\s+(?:на\s+)?управлени\S*\s+(?:транспортными\s+средствами|ТС)$/i;
+const ADMIN_EVACUATION = /^эвакуаци\S+\s+транспортного\s+средства$/i;
+const ADMIN_WARNING = /^предупреждени\S*$/i;
+const ADMIN_ADDITIONS: [RegExp, string][] = [
+  [/\s+с\s+лишением\s+права\s+(?:на\s+)?управлени\S*\s+(?:транспортным\s+средством|транспортными\s+средствами|ТС)$/i, 'лишение права управления ТС'],
+  [/\s+и\s+изъяти\S*\s+лицензии$/i, 'изъятие лицензии'],
+];
 const ADMIN_SUSPENSION = /\s+с\s+административным\s+приостановлением\s+деятельности\s+(?:данного\s+)?юридического\s+лица\s+на\s+срок\s+до\s+(\S+)\s+месяц\S*$/;
 const MONTH_WORDS: Record<string, number> = { одного: 1, двух: 2, трех: 3, трёх: 3, шести: 6 };
 
@@ -172,6 +180,15 @@ export function parseAdministrativeSanction(clause: string): ParsedPunishment {
   const additional: string[] = [];
   const unparsed: string[] = [];
   let rest = clause.trim().replace(/[.;,\s]+$/, '');
+
+  // Additions written after the fine: «… с лишением права управления ТС», «… и изъятие лицензии».
+  for (const [pattern, label] of ADMIN_ADDITIONS) {
+    const found = rest.match(pattern);
+    if (found && found.index !== undefined) {
+      additional.push(label);
+      rest = rest.slice(0, found.index);
+    }
+  }
 
   const suspension = rest.match(ADMIN_SUSPENSION);
   if (suspension && suspension.index !== undefined) {

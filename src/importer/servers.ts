@@ -23,3 +23,22 @@ export const TVERSKOI: ServerSources = {
     'rules-main', 'rules-gov', 'rules-crime',
   ],
 };
+
+export const ARBATSKIY: ServerSources = {
+  id: 'arbatskiy',
+  name: 'Арбатский',
+  status: 'active',
+  documents: [
+    // Кодексы и Конституция
+    'const', 'uk', 'koap', 'pdd', 'upk', 'tk', 'ethics',
+    // Федеральные конституционные законы
+    'fkz-court', 'fkz-gov', 'fkz-prosecutor', 'fkz-emergency',
+    // Федеральные законы
+    'fz-police', 'fz-fsb', 'fz-fso', 'fz-army', 'fz-sk', 'fz-weapons', 'fz-docs', 'fz-territory',
+    'fz-immunity', 'fz-advocacy', 'fz-business', 'fz-media', 'fz-health',
+  ],
+};
+
+/** Every server the importer builds a pack for. */
+export const SERVERS: ServerSources[] = [TVERSKOI, ARBATSKIY];
+

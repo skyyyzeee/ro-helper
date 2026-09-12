@@ -3,7 +3,7 @@ import { TVERSKOI_PACK } from '../data';
 import { calculateCriminal, crimeCategory, fineFits, type ChargeItem, type Mode, type Stage } from './calculator';
 import type { CalculatorRules } from './model';
 
-const rules = TVERSKOI_PACK.calculator;
+const rules = TVERSKOI_PACK.calculator!;
 const uk = TVERSKOI_PACK.documents.find((d) => d.id === 'uk')!;
 
 /** «65», «65 ч2», «88 ч1 attempt» → a charge from the real УК. */

@@ -193,7 +193,8 @@ export interface ChangeEntry {
 
 export interface ServerPack {
   server: ServerInfo;
-  calculator: CalculatorRules;
+  /** Rules of the detention calculator; a server whose codes are not described yet has none. */
+  calculator?: CalculatorRules;
   /** What the user can pick as their organisation, «Без организации» included. */
   organizations: Organization[];
   /** The time of the newest edit among the laws (ISO): changes whenever a law does. */

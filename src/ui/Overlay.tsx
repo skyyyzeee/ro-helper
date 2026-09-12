@@ -182,7 +182,8 @@ export function Overlay({
   const [offender, setOffender] = useState<Offender>('citizen');
   const [fineInput, setFineInput] = useState('');
   const [side, setSide] = useState<'left' | 'right'>('left');
-  const calculable = [pack.calculator.criminalCode, pack.calculator.administrative.code];
+  const rules = pack.calculator;
+  const calculable = rules ? [rules.criminalCode, rules.administrative.code] : [];
   const addable = (hit: SearchHit) => calculable.includes(hit.document.id) && !!(hit.part ?? leadPart(hit.article))?.punishment;
   const inCalculator = (hit: SearchHit) => charges.some((c) => c.key === hitKey(hit));
   const toggleCharge = (hit: SearchHit) => {
@@ -210,7 +211,7 @@ export function Overlay({
       ),
     [charges],
   );
-  const result = useMemo(() => calculateDetention(items, { mode, offender }, pack.calculator), [items, mode, offender, pack.calculator]);
+  const result = useMemo(() => (rules ? calculateDetention(items, { mode, offender }, rules) : null), [items, mode, offender, rules]);
   /** The calculator's entry behind a charge of the result. */
   const entryOf = (item: ChargeItem) => charges[items.findIndex((c) => c === item)];
   const updateCharge = (item: ChargeItem, patch: ChargePatch) => {
@@ -230,9 +231,9 @@ export function Overlay({
   // Pinned card: an article stays pinned while the overlay stays open for the next search; pinning the
   // calculator hides the overlay. The calculator's card follows the calculator and goes with it.
   const [pinned, setPinned] = useState<Pinned | null>(null);
-  const articleCard = useMemo(() => (pinned?.kind === 'article' ? articlePinCard(pinned.hit, pack.calculator) : null), [pinned, pack.calculator]);
+  const articleCard = useMemo(() => (pinned?.kind === 'article' ? articlePinCard(pinned.hit, rules) : null), [pinned, rules]);
   const calculatorCard = useMemo(
-    () => (pinned?.kind === 'calculator' && calculatorOpen ? calculatorPinCard(result, typedNumber(fineInput)) : null),
+    () => (pinned?.kind === 'calculator' && calculatorOpen && result ? calculatorPinCard(result, typedNumber(fineInput)) : null),
     [pinned, calculatorOpen, result, fineInput],
   );
   const pinCard = articleCard ?? calculatorCard;
@@ -258,13 +259,13 @@ export function Overlay({
   const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(copyTimer.current), []);
   const copyCharges = () => {
-    if (!result.charge) return;
+    if (!result?.charge) return;
     const show = (state: CopyState) => {
       setCopyState(state);
       clearTimeout(copyTimer.current);
       copyTimer.current = setTimeout(() => setCopyState('idle'), 1500);
     };
-    platform.writeClipboard(result.charge).then(
+    platform.writeClipboard(result.charge!).then(
       () => show('copied'),
       () => show('failed'),
     );
@@ -272,7 +273,7 @@ export function Overlay({
   /** Ctrl+C copies the charges, unless there is text selected to copy. Says whether it did. */
   const copyShortcut = useRef<() => boolean>(() => false);
   copyShortcut.current = () => {
-    if (!result.charge || hasSelectedText()) return false;
+    if (!result?.charge || hasSelectedText()) return false;
     copyCharges();
     return true;
   };
@@ -452,7 +453,7 @@ export function Overlay({
     )}
     <div className={`shell shell--${side}`}>
       {platform.kind === 'tauri' && <ResizeEdges />}
-      {calculatorOpen && (
+      {calculatorOpen && result && (
         <CalculatorPanel
           result={result}
           onMode={setMode}
@@ -658,7 +659,7 @@ export function Overlay({
               setOpen(null);
               searchRef.current?.focus();
             }}
-            monthsPerStar={open.document.id === pack.calculator.criminalCode ? pack.calculator.stars.monthsPerStar : undefined}
+            monthsPerStar={rules && open.document.id === rules.criminalCode ? rules.stars.monthsPerStar : undefined}
             calculator={
               addable(open)
                 ? { has: (part) => inCalculator(partHit(open, part)), toggle: (part) => toggleCharge(partHit(open, part)) }

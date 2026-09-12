@@ -49,11 +49,14 @@ const ARTICLE = /^Статья\s+(\d+(?:\.\d+)*)(?:\s*\.\s*(.*)|\s+([А-ЯЁA-Z�
 const NOTE = /^(Примечани[ея]|Пояснени[ея])(?:\s+(\d+))?\s*[.:]?\s*(.*)$/;
 const SUBNUMBERED = /^(\d+(?:\.\d+)+)\.\s+(.*)$/;
 /** «ч. 1. Порядок …», «ч. 1 Судебная …», «Часть 1. На территории …». */
+
 const LABELLED_PART = /^(?:ч\.|Часть)\s*(\d+(?:\.\d+)*)\.?\s+(.*)$/;
 const NUMBERED = /^(\d+)\.\s+(.*)$/;
 const POINT = /^([а-яё]|\d+)\)\s+(.*)$/;
 const TAGGED = /^\[[^\]]*\]/;
 const SANCTION = /^(?:влеч[её]т|влекут)\s+(.*)$/;
+/** «наказывается …», «Штраф до 50.000 рублей.»: Арбатский writes the punishment on its own line. */
+const SANCTION_LINE = /^(?:наказыва(?:ется|ются)\s|(?:предупреждени\S*\s+(?:или|либо)\s+)?штраф\S*\s+(?:в\s+размере\s+)?(?:до|от|в)\s)/i;
 /** Part-of-code markers that carry no content of their own. */
 const MARKERS = /^(ОСОБЕННАЯ ЧАСТЬ|ОБЩАЯ ЧАСТЬ)$/i;
 /**
@@ -86,6 +89,8 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
   /** A section whose articles come before any chapter of it: it becomes their chapter. */
   let openSection: { number: string; title: string; preface: string[] } | undefined;
   let chapter: Chapter | undefined;
+  /** Only the penal codes carry punishments the calculator can use. */
+  const penal = format === 'criminal-code' || format === 'administrative-code';
   let group: string | undefined;
   let article: Article | undefined;
   let lastNote: Note | undefined;
@@ -223,10 +228,31 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
       }
     }
 
-    if ((format === 'law' && (m = line.match(LABELLED_PART))) || (m = line.match(SUBNUMBERED)) || (m = line.match(NUMBERED))) {
+    if ((m = line.match(LABELLED_PART)) || (m = line.match(SUBNUMBERED)) || (m = line.match(NUMBERED))) {
       lastNote = undefined;
       article.parts.push({ number: m[1], text: m[2], points: [] });
       continue;
+    }
+
+    // Арбатский writes the punishment on the line under the offence: it belongs to the part above it.
+    if (penal && SANCTION_LINE.test(line)) {
+      // КоАП Арбатского writes the offence in the article's title and the punishment under it, with no parts.
+      const part = lastPart() ?? (article.parts.push({ text: '', points: [] }), article.parts[0]);
+      {
+        lastNote = undefined;
+        part.text = stripTrailingDash(part.text);
+        if (part.punishment) issue(line, 'Второе наказание для одной части', part);
+        else {
+          const { punishment, unparsed } =
+            format === 'administrative-code'
+              ? parseAdministrativeSanction(line.replace(/\.$/, ''))
+              : parsePunishment(splitPenalty(`— ${line}`).clause ?? line);
+          part.punishment = punishment;
+          for (const alt of unparsed) issue(line, `Не разобрано наказание: «${alt}»`, part);
+          if (!punishment.alternatives.length) issue(line, 'Нет ни одного наказания', part);
+        }
+        continue;
+      }
     }
 
     if ((m = line.match(POINT))) {

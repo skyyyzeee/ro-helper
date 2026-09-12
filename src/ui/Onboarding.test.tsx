@@ -14,8 +14,9 @@ describe('first launch', () => {
 
     // Server
     expect(radio('Сервер', /Тверской/)).toHaveAttribute('aria-checked', 'true');
-    expect(radio('Сервер', /Арбатский/)).toBeDisabled();
-    expect(radio('Сервер', /Арбатский/)).toHaveTextContent('скоро');
+    expect(radio('Сервер', /Арбатский/)).toBeEnabled();
+    // Кутузовский has no laws in the app yet.
+    expect(radio('Сервер', /Кутузовский/)).toBeDisabled();
     expect(radio('Сервер', /Кутузовский/)).toHaveTextContent('скоро · для новичков');
     await user.click(next());
 
@@ -110,6 +111,41 @@ describe('settings', () => {
 
     expect(await screen.findByText('Тверской · МВД')).toBeInTheDocument();
     expect(platform.settings.get(PROFILE_KEY)).toMatchObject({ organization: 'mvd' });
+  });
+});
+
+describe('another server', () => {
+  it('brings its own laws and its own organisations', async () => {
+    const { platform, user } = await renderApp({ profile: null });
+    await user.click(radio('Сервер', /Арбатский/));
+    await user.click(next());
+
+    // Арбатский has no «Вести Москвы»; the one picked on another server goes back to «Без организации».
+    expect(within(screen.getByRole('radiogroup', { name: 'Организация' })).queryByRole('radio', { name: 'Вести Москвы' })).not.toBeInTheDocument();
+    await user.click(radio('Организация', 'ГИБДД'));
+    await user.click(next());
+    await user.click(understood());
+    await user.click(next());
+
+    expect(await screen.findByText('Арбатский · ГИБДД')).toBeInTheDocument();
+    expect(platform.settings.get(PROFILE_KEY)).toMatchObject({ server: 'arbatskiy', organization: 'gibdd' });
+
+    // Its own criminal code: ст. 6.1 «Убийство» with the term written as «на срок до 50 месяцев».
+    await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'ук 6.1');
+    const first = within(screen.getByRole('list', { name: 'Результаты поиска' })).getAllByRole('listitem')[0];
+    expect(first).toHaveTextContent('ст. 6.1');
+    expect(first).toHaveTextContent('Убийство');
+    expect(first).toHaveTextContent('50 мес');
+  });
+
+  it('keeps an organisation both servers have when the server changes', async () => {
+    const { user } = await renderApp({ profile: { organization: 'mvd' } });
+    await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await user.click(screen.getByRole('button', { name: 'Изменить' }));
+    await user.click(radio('Сервер', /Арбатский/));
+    await user.click(next());
+
+    expect(radio('Организация', 'МВД')).toHaveAttribute('aria-checked', 'true');
   });
 });
 

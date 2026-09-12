@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import type { ServerPack } from '../core';
+import { packFor } from '../data';
 import { usePlatform } from '../platform/PlatformContext';
 import { WarnIcon } from './icons';
 import { OrganizationChoice } from './OrganizationChoice';
@@ -37,14 +37,12 @@ function WindowModeNotice({ onClose }: { onClose: () => void }) {
 }
 
 export function Onboarding({
-  pack,
   initial,
   mode,
   onDone,
   onCancel,
   onCapturing,
 }: {
-  pack: ServerPack;
   initial: Profile;
   mode: 'first' | 'settings';
   onDone: (profile: Profile) => void;
@@ -59,6 +57,8 @@ export function Onboarding({
   const [unsupported, setUnsupported] = useState(false);
   const [notice, setNotice] = useState(false);
 
+  // The laws — and so the organisations to choose from — are the ones of the server in the draft.
+  const pack = packFor(draft.server);
   const organization = pack.organizations.find((o) => o.id === draft.organization);
   const server = SERVERS.find((s) => s.id === draft.server);
 
@@ -138,7 +138,14 @@ export function Onboarding({
                   aria-checked={draft.server === choice.id}
                   disabled={choice.status !== 'active'}
                   className={draft.server === choice.id ? 'ob__option ob__option--on' : 'ob__option'}
-                  onClick={() => setDraft((d) => ({ ...d, server: choice.id }))}
+                  onClick={() =>
+                    setDraft((d) => {
+                      // Another server has its own organisations: one it does not have goes back to «Без организации».
+                      const organizations = packFor(choice.id).organizations;
+                      const keep = organizations.some((o) => o.id === d.organization);
+                      return { ...d, server: choice.id, organization: keep ? d.organization : 'none' };
+                    })
+                  }
                 >
                   <span className="ob__option-name">{choice.name}</span>
                   <span className="sp" />

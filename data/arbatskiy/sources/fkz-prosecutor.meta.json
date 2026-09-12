@@ -1,0 +1,17 @@
+{
+  "id": "fkz-prosecutor",
+  "short": "ФКЗ",
+  "title": "О Генеральной прокуратуре РО",
+  "aliases": [
+    "прокуратура"
+  ],
+  "kind": "law",
+  "category": "fkz",
+  "format": "points",
+  "thread": 2123,
+  "url": "https://forum.russia.online/threads/federal-nyi-konstitutsionnyi-zakon-o-general-noi-prokurature-ro.2123/",
+  "posted": "2026-08-22T20:19:12+03:00",
+  "lastEdited": "2026-08-26T20:24:01+03:00",
+  "snapshotAt": "2026-09-12",
+  "unit": "point"
+}

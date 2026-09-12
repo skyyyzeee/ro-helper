@@ -4,7 +4,7 @@ import type { Offender } from './administrative';
 import type { Mode } from './calculator';
 import { calculateDetention, type Charge } from './detention';
 
-const rules = TVERSKOI_PACK.calculator;
+const rules = TVERSKOI_PACK.calculator!;
 const doc = (id: string) => TVERSKOI_PACK.documents.find((d) => d.id === id)!;
 
 /** «koap 8.6 ч1», «uk 65 ч1» → a charge from the real Тверской codes, with options. */

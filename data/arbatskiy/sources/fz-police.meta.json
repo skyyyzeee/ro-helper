@@ -1,0 +1,18 @@
+{
+  "id": "fz-police",
+  "short": "ФЗ",
+  "title": "О полиции",
+  "aliases": [
+    "полиция",
+    "мвд"
+  ],
+  "kind": "law",
+  "category": "fz",
+  "format": "points",
+  "thread": 2051,
+  "url": "https://forum.russia.online/threads/federal-nyi-zakon-o-politsii.2051/",
+  "posted": "2026-08-22T19:02:41+03:00",
+  "lastEdited": "2026-08-26T20:31:05+03:00",
+  "snapshotAt": "2026-09-12",
+  "unit": "point"
+}

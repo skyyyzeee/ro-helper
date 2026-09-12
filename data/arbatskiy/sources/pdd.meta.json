@@ -1,0 +1,17 @@
+{
+  "id": "pdd",
+  "short": "ПДД",
+  "title": "Правила дорожного движения",
+  "aliases": [
+    "пдд"
+  ],
+  "kind": "law",
+  "category": "codes",
+  "format": "points",
+  "thread": 2086,
+  "url": "https://forum.russia.online/threads/pravila-dorozhnogo-dvizheniya-ro.2086/",
+  "posted": "2026-08-22T19:34:39+03:00",
+  "lastEdited": "2026-09-03T23:29:03+03:00",
+  "snapshotAt": "2026-09-12",
+  "unit": "point"
+}
