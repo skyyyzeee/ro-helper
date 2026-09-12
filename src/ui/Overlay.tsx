@@ -17,6 +17,8 @@ import {
   type SearchHit,
   type ServerPack,
 } from '../core';
+import { packFor } from '../data';
+import type { PinCard, PinGroup } from '../platform/types';
 import { usePlatform } from '../platform/PlatformContext';
 import { ArticleView } from './ArticleView';
 import { CalculatorPanel, type ChargeFields, type ChargePatch, type CopyState } from './CalculatorPanel';
@@ -26,14 +28,16 @@ import { BackIcon, CloseIcon, MenuIcon, SearchIcon, SettingsIcon } from './icons
 import { DEFAULT_OPACITY, OPACITY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
 import type { Profile } from './profile';
 import { OrganizationChoice } from './OrganizationChoice';
-import { PinCardView } from './PinCardView';
+import { PinSurface } from './PinSurface';
 import { PrivacyView } from './PrivacyView';
 import { ReleaseNotesView } from './ReleaseNotesView';
 import { articlePinCard, calculatorPinCard } from './pinCards';
+import { CALCULATOR_ID, hasCard, keepableGroups, pinCard, surfaceNow, unpinCard, updateCard } from './pinLayout';
 import { ResizeEdges } from './ResizeEdges';
 import { ResultRow } from './ResultRow';
 import { RECENT_LIMIT, entryPart, favoritesKey, hitKey, recentKey, useHitLookup, useStoredKeys } from './saved';
-import { SettingsPanel } from './SettingsPanel';
+import { ServerChoice } from './ServerChoice';
+import { SettingsView } from './SettingsView';
 import { UpdateBanner } from './UpdateBanner';
 import { useUpdates } from './updates';
 
@@ -53,8 +57,8 @@ const CHANGED_DAYS = 14;
 /** How far back «Что изменилось» from the settings goes. */
 const LIST_DAYS = 60;
 
-/** What is pinned over the game: one article's part, or the calculator, whose card follows it. */
-type Pinned = { kind: 'article'; hit: SearchHit } | { kind: 'calculator' };
+/** What is pinned over the game, per server: blocks of cards where the user put them. */
+const pinsKey = (server: string) => `pins:${server}`;
 
 /** Width of the calculator panel plus the gap to the overlay, in CSS pixels. */
 const CALCULATOR_WIDTH = 400 + 12;
@@ -83,13 +87,16 @@ export function Overlay({
   profile,
   onEditProfile,
   onProfile,
+  onCapturing,
 }: {
   pack: ServerPack;
   profile: Profile;
-  /** Opens all the settings again: server, organisation and hotkey. */
+  /** Opens the first-launch steps again: server, organisation and hotkey in a row. */
   onEditProfile: () => void;
-  /** Saves a changed profile — the organisation alone, from the settings. */
+  /** Saves a changed profile — the server, the organisation or the hotkey, changed in the settings. */
   onProfile: (next: Profile) => void;
+  /** While a hotkey is being recorded no global hotkey may be registered. */
+  onCapturing: (capturing: boolean) => void;
 }) {
   const platform = usePlatform();
   const searchRef = useRef<HTMLInputElement>(null);
@@ -141,6 +148,7 @@ export function Overlay({
   const updates = useUpdates();
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [organizationOpen, setOrganizationOpen] = useState(false);
+  const [serverOpen, setServerOpen] = useState(false);
   // «Что нового» of the version on offer, opened from the offer.
   const [notesOpen, setNotesOpen] = useState(false);
   const offered = updates.status.kind === 'available' || updates.status.kind === 'failed' ? updates.status.update : null;
@@ -161,7 +169,6 @@ export function Overlay({
     });
   }, [platform, pack]);
   const showRecentChanges = () => {
-    setSettingsOpen(false);
     setOpen(null);
     setDiff(null);
     setChangesView({ entries: recentChanges(pack, new Date(), LIST_DAYS), title: `За ${LIST_DAYS} дней` });
@@ -235,32 +242,46 @@ export function Overlay({
     setPriority(1);
   }, [calculatorOpen]);
 
-  // Pinned card: an article stays pinned while the overlay stays open for the next search; pinning the
-  // calculator hides the overlay. The calculator's card follows the calculator and goes with it.
-  const [pinned, setPinned] = useState<Pinned | null>(null);
-  const articleCard = useMemo(() => (pinned?.kind === 'article' ? articlePinCard(pinned.hit, rules) : null), [pinned, rules]);
+  // Pinned over the game: any number of cards, each where the user dragged it, kept for the next launch.
+  // Pinning an article leaves the overlay open for the next search; pinning the calculator hides it.
+  const [groups, setGroups] = useState<PinGroup[]>([]);
+  const [pinsReady, setPinsReady] = useState(false);
+  const pins = pinsKey(pack.server.id);
+  const surface = () => surfaceNow(platform.kind === 'browser');
+  useEffect(() => {
+    let active = true;
+    setPinsReady(false);
+    void platform.readSetting<PinGroup[]>(pins).then((saved) => {
+      if (!active) return;
+      // The calculator's card belongs to a detention that is long over.
+      setGroups(Array.isArray(saved) ? keepableGroups(saved) : []);
+      setPinsReady(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, [platform, pins]);
+  useEffect(() => {
+    if (!pinsReady) return;
+    void platform.setPins(groups);
+    void platform.writeSetting(pins, keepableGroups(groups));
+  }, [pinsReady, groups, platform, pins]);
+  // Moving, joining and closing happen on the cards themselves.
+  useEffect(() => platform.onPinsChanged(setGroups), [platform]);
+
+  const pinnedArticle = open ? hasCard(groups, hitKey(open)) : false;
+  const pinnedCalculator = hasCard(groups, CALCULATOR_ID);
+  const togglePin = (card: PinCard) =>
+    setGroups((list) => (hasCard(list, card.id) ? unpinCard(list, card.id) : pinCard(list, card, surface())));
+
+  // The pinned total follows the calculator, and goes when the charges do.
   const calculatorCard = useMemo(
-    () => (pinned?.kind === 'calculator' && calculatorOpen && result ? calculatorPinCard(result, typedNumber(fineInput)) : null),
-    [pinned, calculatorOpen, result, fineInput],
+    () => (calculatorOpen && result ? calculatorPinCard(result, typedNumber(fineInput)) : null),
+    [calculatorOpen, result, fineInput],
   );
-  const pinCard = articleCard ?? calculatorCard;
   useEffect(() => {
-    if (pinCard) void platform.showPin(pinCard);
-  }, [pinCard, platform]);
-  useEffect(() => {
-    if (pinned?.kind !== 'calculator' || calculatorOpen) return;
-    setPinned(null);
-    void platform.hidePin();
-  }, [pinned, calculatorOpen, platform]);
-  useEffect(() => platform.onPinClosed(() => setPinned(null)), [platform]);
-  const pin = (next: Pinned) => {
-    setPinned(next);
-    if (next.kind === 'calculator') void platform.hideOverlay();
-  };
-  const unpin = () => {
-    setPinned(null);
-    void platform.hidePin();
-  };
+    setGroups((list) => (calculatorCard ? updateCard(list, calculatorCard) : unpinCard(list, CALCULATOR_ID)));
+  }, [calculatorCard]);
 
   const [copyState, setCopyState] = useState<CopyState>('idle');
   const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -300,7 +321,7 @@ export function Overlay({
       return;
     }
     // «Что изменилось» and «было → стало» are read with the mouse; the list keys would move a hidden selection.
-    if (organizationOpen || notesFor || privacyOpen || diff || (changesView && !open)) return;
+    if (settingsOpen || organizationOpen || serverOpen || notesFor || privacyOpen || diff || (changesView && !open)) return;
     if (open) {
       // Enter in an open article puts its part into the calculator, or takes it out.
       if (e.key === 'Enter' && addable(open)) {
@@ -346,15 +367,18 @@ export function Overlay({
     searchRef.current?.focus();
   };
 
-  /** Esc steps back one layer at a time: settings → menu → article → search text → document → hide the overlay. */
+  /** Esc steps back one layer at a time: a screen over the settings → the settings → menu → article →
+   * search text → document → hide the overlay. */
   const stepBack = useRef<() => void>(() => {});
   stepBack.current = () => {
-    if (settingsOpen) setSettingsOpen(false);
-    else if (menuOpen) setMenuOpen(false);
+    if (menuOpen) setMenuOpen(false);
     else if (organizationOpen) setOrganizationOpen(false);
+    else if (serverOpen) setServerOpen(false);
     else if (notesFor) setNotesOpen(false);
     else if (privacyOpen) setPrivacyOpen(false);
     else if (diff) setDiff(null);
+    else if (changesView && settingsOpen) setChangesView(null);
+    else if (settingsOpen) setSettingsOpen(false);
     else if (open) setOpen(null);
     else if (changesView) setChangesView(null);
     else if (query) {
@@ -391,7 +415,7 @@ export function Overlay({
   // what is opened starts at its own top.
   const contentRef = useRef<HTMLDivElement>(null);
   const listScroll = useRef(0);
-  const onList = !organizationOpen && !notesFor && !privacyOpen && !diff && !open && !changesView;
+  const onList = !settingsOpen && !organizationOpen && !serverOpen && !notesFor && !privacyOpen && !diff && !open && !changesView;
   const wasOnList = useRef(onList);
   useLayoutEffect(() => {
     const content = contentRef.current;
@@ -452,12 +476,8 @@ export function Overlay({
 
   return (
     <>
-    {/* In the browser there is no second window: the stand-in game scene shows the card itself. */}
-    {platform.kind === 'browser' && pinCard && (
-      <div className="pin-preview">
-        <PinCardView card={pinCard} live onClose={unpin} />
-      </div>
-    )}
+    {/* In the browser there is no second window: the stand-in game scene shows the cards itself. */}
+    {platform.kind === 'browser' && <PinSurface groups={groups} live onChange={setGroups} />}
     <div className={`shell shell--${side}`}>
       {platform.kind === 'tauri' && <ResizeEdges />}
       {calculatorOpen && result && (
@@ -477,7 +497,12 @@ export function Overlay({
           onFineInput={setFineInput}
           onCopy={copyCharges}
           copyState={copyState}
-          onPin={() => pin({ kind: 'calculator' })}
+          pinned={pinnedCalculator}
+          onPin={() => {
+            if (!result) return;
+            togglePin(calculatorPinCard(result, typedNumber(fineInput)));
+            if (!pinnedCalculator) void platform.hideOverlay();
+          }}
         />
       )}
     <div className={entering ? 'overlay glass overlay--enter' : 'overlay glass'}>
@@ -520,26 +545,6 @@ export function Overlay({
         </button>
       </div>
 
-      {settingsOpen && (
-        <SettingsPanel
-          summary={summary}
-          hotkey={profile.hotkey}
-          opacity={opacity}
-          onOpacity={changeOpacity}
-          onEditProfile={onEditProfile}
-          onChanges={showRecentChanges}
-          updates={updates}
-          onPrivacy={() => {
-            setSettingsOpen(false);
-            setPrivacyOpen(true);
-          }}
-          organization={organization}
-          onOrganization={() => {
-            setSettingsOpen(false);
-            setOrganizationOpen(true);
-          }}
-        />
-      )}
       <UpdateBanner
         updates={updates}
         onNotes={() => {
@@ -572,6 +577,8 @@ export function Overlay({
             setPrivacyOpen(false);
             setNotesOpen(false);
             setOrganizationOpen(false);
+            setServerOpen(false);
+            setSettingsOpen(false);
             setChangesView(null);
             setSelected(0);
           }}
@@ -598,7 +605,7 @@ export function Overlay({
               }}
             >
               <BackIcon />
-              <span>Назад</span>
+              <span>{settingsOpen ? 'Настройки' : 'Назад'}</span>
             </button>
             <h2 className="art__title">Ваша организация</h2>
             <p className="ob__sub">Её законы и устав идут первыми в поиске. Документы остальных организаций тоже доступны.</p>
@@ -608,6 +615,32 @@ export function Overlay({
               onPick={(id) => {
                 onProfile({ ...profile, organization: id });
                 setOrganizationOpen(false);
+                searchRef.current?.focus();
+              }}
+            />
+          </section>
+        ) : serverOpen ? (
+          <section className="art" aria-label="Ваш сервер">
+            <button
+              className="back"
+              type="button"
+              onClick={() => {
+                setServerOpen(false);
+                searchRef.current?.focus();
+              }}
+            >
+              <BackIcon />
+              <span>Настройки</span>
+            </button>
+            <h2 className="art__title">Ваш сервер</h2>
+            <p className="ob__sub">Законы и правила берутся из законодательной базы выбранного сервера.</p>
+            <ServerChoice
+              value={profile.server}
+              onPick={(id) => {
+                // Another server has its own organisations: one it does not have goes back to «Без организации».
+                const keep = packFor(id).organizations.some((o) => o.id === profile.organization);
+                onProfile({ ...profile, server: id, organization: keep ? profile.organization : 'none' });
+                setServerOpen(false);
                 searchRef.current?.focus();
               }}
             />
@@ -626,6 +659,7 @@ export function Overlay({
           />
         ) : privacyOpen ? (
           <PrivacyView
+            backLabel={settingsOpen ? 'Настройки' : 'Назад'}
             onBack={() => {
               setPrivacyOpen(false);
               searchRef.current?.focus();
@@ -651,6 +685,29 @@ export function Overlay({
                 : undefined
             }
           />
+        ) : settingsOpen && !changesView ? (
+          <SettingsView
+            backLabel={open ? 'Статья' : 'Поиск'}
+            onBack={() => {
+              setSettingsOpen(false);
+              searchRef.current?.focus();
+            }}
+            pack={pack}
+            organization={organization}
+            onServer={() => setServerOpen(true)}
+            onOrganization={() => setOrganizationOpen(true)}
+            onEditProfile={onEditProfile}
+            hotkey={profile.hotkey}
+            onHotkey={(accelerator) => onProfile({ ...profile, hotkey: accelerator })}
+            onCapturing={onCapturing}
+            opacity={opacity}
+            onOpacity={changeOpacity}
+            pinned={groups.reduce((n, group) => n + group.cards.length, 0)}
+            onUnpinAll={() => setGroups([])}
+            onChanges={showRecentChanges}
+            updates={updates}
+            onPrivacy={() => setPrivacyOpen(true)}
+          />
         ) : open ? (
           <ArticleView
             article={open.article}
@@ -675,7 +732,8 @@ export function Overlay({
             }
             favorite={favoriteKeys.includes(hitKey(open))}
             onFavorite={() => toggleFavorite(open)}
-            onPin={() => pin({ kind: 'article', hit: open })}
+            pinned={pinnedArticle}
+            onPin={() => togglePin(articlePinCard(open, rules))}
           />
         ) : changesView ? (
           <ChangesView

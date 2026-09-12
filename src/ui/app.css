@@ -179,6 +179,7 @@ input {
 .btn,
 .icon-btn,
 .settings__button,
+.ob__hotkey,
 .row__main,
 .add,
 .ob__org,
@@ -202,17 +203,82 @@ input {
   transform: scale(0.97);
 }
 
-/* Settings */
+/* Settings: a screen of its own, in blocks */
 .settings {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin: 0 16px 12px;
-  padding: 14px 16px;
+  gap: 14px;
+  padding: 4px 16px 18px;
+}
+
+.set {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px 14px;
   border-radius: var(--radius-card);
   background: rgba(255, 255, 255, 0.06);
-  flex: none;
-  animation: drop-in 0.18s ease-out;
+}
+
+.set__title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.set__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.set__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  font-size: 14px;
+}
+
+.set__label {
+  color: var(--text-muted);
+}
+
+.set__value {
+  font-weight: 600;
+}
+
+.set__hint {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.ob__hotkey.set__hotkey {
+  height: auto;
+  width: auto;
+  min-width: 132px;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 12px;
+}
+
+.set__hotkey .ob__key {
+  font-size: 14px;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.set__hotkey .muted {
+  font-size: 13px;
+}
+
+.set__links {
+  gap: 12px;
 }
 
 .settings__row {
@@ -220,10 +286,6 @@ input {
   align-items: center;
   gap: 8px;
   font-size: 14px;
-}
-
-.settings__row--muted {
-  color: var(--text-muted);
 }
 
 .settings__value {
@@ -259,8 +321,6 @@ input {
 }
 
 .settings__about {
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
   font-size: 13px;
   color: var(--text-muted);
 }
@@ -280,11 +340,6 @@ input {
   height: 16px;
   margin: 0;
   accent-color: var(--accent);
-}
-
-.settings__privacy {
-  align-self: flex-start;
-  font-size: 13px;
 }
 
 /* Markdown pages: the privacy policy, release notes */
@@ -981,37 +1036,74 @@ input {
   -webkit-backdrop-filter: blur(20px);
 }
 
-/* Pinned card: its own window over the game (in the preview, on the stand-in scene) */
-.pin-stage {
-  padding: 4px;
-  width: max-content;
-}
-
-.pin-preview {
-  position: absolute;
-  left: 40px;
-  top: 30%;
+/* Pinned cards: their own window over the game (in the preview, on the stand-in scene). Every block sits
+   where it was dropped; a block dropped onto another joins it. */
+.pin-surface {
+  position: fixed;
+  inset: 0;
   z-index: 10;
+  overflow: hidden;
+  /* Only the blocks themselves take the mouse, and only while the overlay is open. */
+  pointer-events: none;
 }
 
 .pin {
+  position: absolute;
   box-sizing: border-box;
   width: 380px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 16px 18px 18px;
   border-radius: 18px;
   background: rgba(14, 14, 17, 0.52);
   border: 1px solid var(--glass-border);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
   user-select: none;
   cursor: default;
+  animation: panel-in 0.18s ease-out;
+  transition:
+    box-shadow 0.14s ease,
+    transform 0.12s ease;
 }
 
 .pin--live {
+  pointer-events: auto;
   box-shadow: 0 0 0 2px oklch(0.78 0.1 245 / 0.55);
+}
+
+.pin--live .pin__head,
+.pin--live .pin__bar {
   cursor: move;
+}
+
+.pin--drag {
+  transform: scale(1.015);
+  box-shadow: 0 0 0 2px oklch(0.78 0.1 245 / 0.55), 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+/* The block the dragged one would join. */
+.pin--drop {
+  box-shadow: 0 0 0 2px var(--accent), 0 0 0 6px oklch(0.78 0.1 245 / 0.2);
+}
+
+.pin__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 8px 16px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.58);
+  border-bottom: 1px solid var(--line);
+}
+
+.pin__card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 18px 18px;
+}
+
+.pin__card--stacked + .pin__card--stacked {
+  border-top: 1px solid var(--line);
 }
 
 .pin__head {
@@ -1020,6 +1112,17 @@ input {
   gap: 8px;
   font-size: 12.5px;
   color: rgba(255, 255, 255, 0.58);
+}
+
+/* In a block of several, the handle of a card shows only when the mouse is on it. */
+.pin__card--stacked .pin__head {
+  opacity: 0;
+  margin-bottom: -4px;
+  transition: opacity 0.14s ease;
+}
+
+.pin--live .pin__card--stacked:hover .pin__head {
+  opacity: 1;
 }
 
 .pin__big {

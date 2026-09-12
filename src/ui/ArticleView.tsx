@@ -40,6 +40,8 @@ export interface ArticleViewProps {
   calculator?: { has: (part?: Part) => boolean; toggle: (part?: Part) => void };
   favorite: boolean;
   onFavorite: () => void;
+  /** Whether this part is already pinned over the game: the button then unpins it. */
+  pinned: boolean;
   onPin: () => void;
   /** When a recent update changed the article: its date, and the «было → стало» view. */
   changed?: { date: string; onOpen: () => void };
@@ -55,6 +57,7 @@ export function ArticleView({
   calculator,
   favorite,
   onFavorite,
+  pinned,
   onPin,
   changed,
 }: ArticleViewProps) {
@@ -183,9 +186,9 @@ export function ArticleView({
             {mainAdded ? `Убрать ${mainLabel}из калькулятора` : `Добавить ${mainLabel}в калькулятор`}
           </button>
         )}
-        <button className="btn" type="button" onClick={onPin}>
+        <button className={pinned ? 'btn btn--on' : 'btn'} type="button" aria-pressed={pinned} onClick={onPin}>
           <PinIcon />
-          <span>Закрепить</span>
+          <span>{pinned ? 'Открепить' : 'Закрепить'}</span>
         </button>
         <button
           className={favorite ? 'btn btn--icon fav fav--on' : 'btn btn--icon fav'}

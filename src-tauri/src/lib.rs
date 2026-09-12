@@ -3,27 +3,34 @@ use std::sync::Mutex;
 use tauri::{
   menu::{Menu, MenuItem},
   tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-  AppHandle, Emitter, Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent,
+  AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
-use tauri_plugin_store::StoreExt;
 
 /// Emitted to the frontend when the tray asks to show or hide the overlay (the same toggle as the hotkey).
 const TOGGLE_EVENT: &str = "overlay-toggle";
 
-/// The pinned card's window, and what it hears: a new card, the overlay shown or hidden.
+/// The window of the pinned cards, and what it hears: the cards, the overlay shown or hidden.
 const PIN_LABEL: &str = "pin";
-const PIN_CARD_EVENT: &str = "pin-card";
+const PIN_GROUPS_EVENT: &str = "pin-groups";
 const PIN_LIVE_EVENT: &str = "pin-live";
-/// Told to the overlay when the card is closed from the card itself.
-const PIN_CLOSED_EVENT: &str = "pin-closed";
-const SETTINGS_FILE: &str = "settings.json";
-const PIN_POSITION_KEY: &str = "pin.position";
+/// Told to the overlay when the user moves, joins or closes something on the cards themselves.
+const PIN_LAYOUT_EVENT: &str = "pin-layout";
 
-/// The card on the pin window, and whether the overlay is open (the card can then be dragged and closed).
+/// What is pinned — blocks of cards, each with its place — and whether the overlay is open
+/// (the blocks can then be dragged, joined and closed).
 #[derive(Default)]
 struct Pin {
-  card: Mutex<Option<Value>>,
+  groups: Mutex<Vec<Value>>,
   live: Mutex<bool>,
+}
+
+/// Where one block sits, in physical pixels of the pin window.
+#[derive(serde::Deserialize)]
+struct PinArea {
+  x: i32,
+  y: i32,
+  width: i32,
+  height: i32,
 }
 
 /// The pin window is shown, hidden and made click-through with Win32 calls, never through the window
@@ -33,6 +40,7 @@ struct Pin {
 #[cfg(windows)]
 mod pin_window {
   use windows_sys::Win32::Foundation::HWND;
+  use windows_sys::Win32::Graphics::Gdi::{CombineRgn, CreateRectRgn, DeleteObject, SetWindowRgn, RGN_OR};
   use windows_sys::Win32::UI::WindowsAndMessaging::{
     GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, ShowWindow, GWL_EXSTYLE, HWND_TOPMOST, SWP_FRAMECHANGED,
     SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SW_HIDE, SW_SHOWNOACTIVATE, WS_EX_LAYERED,
@@ -58,6 +66,21 @@ mod pin_window {
   /// Back on top of the always-on-top windows (the overlay may have come up over it), still without focus.
   pub unsafe fn raise(hwnd: HWND) {
     SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+  }
+
+  /// The window covers the whole desktop, but only where the cards are is it there at all: everything
+  /// else is cut away, so nothing of it is drawn over the game and the mouse reaches the overlay below.
+  pub fn set_areas(hwnd: HWND, areas: &[(i32, i32, i32, i32)]) {
+    unsafe {
+      let region = CreateRectRgn(0, 0, 0, 0);
+      for (x, y, width, height) in areas {
+        let part = CreateRectRgn(*x, *y, x + width, y + height);
+        CombineRgn(region, region, part, RGN_OR);
+        DeleteObject(part as _);
+      }
+      // The window owns the region from here on and frees it itself.
+      SetWindowRgn(hwnd, region, 1);
+    }
   }
 
   /// Lets the mouse pass through to the game, the same styles the window library uses for it.
@@ -92,48 +115,62 @@ fn pin_window(app: &AppHandle) -> Result<WebviewWindow, String> {
   app.get_webview_window(PIN_LABEL).ok_or_else(|| "no pin window".into())
 }
 
-/// Shows a card on the pin window, replacing the one before, without taking the focus from the game.
+/// Puts the blocks of cards on the pin window, without taking the focus from the game; nothing
+/// pinned hides the window.
 #[tauri::command]
-fn pin_show(app: AppHandle, state: tauri::State<Pin>, card: Value) -> Result<(), String> {
+fn pin_set(app: AppHandle, state: tauri::State<Pin>, groups: Vec<Value>) -> Result<(), String> {
   let window = pin_window(&app)?;
-  *state.card.lock().unwrap() = Some(card.clone());
-  app.emit_to(PIN_LABEL, PIN_CARD_EVENT, card).map_err(|e| e.to_string())?;
+  *state.groups.lock().unwrap() = groups.clone();
+  app.emit_to(PIN_LABEL, PIN_GROUPS_EVENT, &groups).map_err(|e| e.to_string())?;
+  let empty = groups.is_empty();
   #[cfg(windows)]
   if let Some(hwnd) = pin_window::hwnd(&window) {
-    // Set again on every show: the window library may still rewrite the styles while the window is being built.
-    pin_window::set_click_through(hwnd, !*state.live.lock().unwrap());
-    pin_window::show(hwnd);
+    if empty {
+      pin_window::hide(hwnd);
+    } else {
+      // Set again on every show: the window library may still rewrite the styles while the window is being built.
+      pin_window::set_click_through(hwnd, !*state.live.lock().unwrap());
+      pin_window::show(hwnd);
+    }
   }
   #[cfg(not(windows))]
-  window.show().map_err(|e| e.to_string())?;
-  Ok(())
-}
-
-/// Hides the card: asked by the overlay, or by the card's own cross, which the overlay is then told of.
-#[tauri::command]
-fn pin_hide(app: AppHandle, state: tauri::State<Pin>, from_card: Option<bool>) -> Result<(), String> {
-  let window = pin_window(&app)?;
-  *state.card.lock().unwrap() = None;
-  #[cfg(windows)]
-  if let Some(hwnd) = pin_window::hwnd(&window) {
-    pin_window::hide(hwnd);
-  }
-  #[cfg(not(windows))]
-  window.hide().map_err(|e| e.to_string())?;
-  if from_card.unwrap_or(false) {
-    app.emit_to("main", PIN_CLOSED_EVENT, ()).map_err(|e| e.to_string())?;
+  if empty {
+    window.hide().map_err(|e| e.to_string())?;
+  } else {
+    window.show().map_err(|e| e.to_string())?;
   }
   Ok(())
 }
 
-/// What the pin window shows when it loads: the card, if any, and whether the overlay is open.
+/// What the user did on the cards themselves — moved, joined or closed one — told to the overlay,
+/// which keeps what is pinned and saves it.
+#[tauri::command]
+fn pin_layout(app: AppHandle, state: tauri::State<Pin>, groups: Vec<Value>) -> Result<(), String> {
+  *state.groups.lock().unwrap() = groups.clone();
+  app.emit_to("main", PIN_LAYOUT_EVENT, &groups).map_err(|e| e.to_string())
+}
+
+/// Where the cards are now: the rest of the window is cut away so it takes neither the mouse nor the screen.
+#[tauri::command]
+#[allow(unused_variables)]
+fn pin_areas(app: AppHandle, areas: Vec<PinArea>) -> Result<(), String> {
+  let window = pin_window(&app)?;
+  #[cfg(windows)]
+  if let Some(hwnd) = pin_window::hwnd(&window) {
+    let rects: Vec<(i32, i32, i32, i32)> = areas.iter().map(|a| (a.x, a.y, a.width, a.height)).collect();
+    pin_window::set_areas(hwnd, &rects);
+  }
+  Ok(())
+}
+
+/// What the pin window shows when it loads: what is pinned, and whether the overlay is open.
 #[tauri::command]
 fn pin_state(state: tauri::State<Pin>) -> Value {
-  serde_json::json!({ "card": *state.card.lock().unwrap(), "live": *state.live.lock().unwrap() })
+  serde_json::json!({ "groups": *state.groups.lock().unwrap(), "live": *state.live.lock().unwrap() })
 }
 
-/// The overlay was shown or hidden. While it is shown the card takes the mouse, so it can be dragged and
-/// closed, and comes back on top of the overlay; while it is hidden, clicks go through to the game.
+/// The overlay was shown or hidden. While it is shown the cards take the mouse, so they can be dragged,
+/// joined and closed, and come back on top of the overlay; while it is hidden, clicks go through to the game.
 #[tauri::command]
 fn pin_live(app: AppHandle, state: tauri::State<Pin>, live: bool) -> Result<(), String> {
   let window = pin_window(&app)?;
@@ -141,7 +178,7 @@ fn pin_live(app: AppHandle, state: tauri::State<Pin>, live: bool) -> Result<(), 
   #[cfg(windows)]
   if let Some(hwnd) = pin_window::hwnd(&window) {
     pin_window::set_click_through(hwnd, !live);
-    if live && state.card.lock().unwrap().is_some() {
+    if live && !state.groups.lock().unwrap().is_empty() {
       unsafe { pin_window::raise(hwnd) };
     }
   }
@@ -150,12 +187,12 @@ fn pin_live(app: AppHandle, state: tauri::State<Pin>, live: bool) -> Result<(), 
   app.emit_to(PIN_LABEL, PIN_LIVE_EVENT, live).map_err(|e| e.to_string())
 }
 
-/// The hidden pin window, where it was last left (or at the left of the primary screen), remembering
-/// where it is dragged to.
+/// The hidden pin window: the whole desktop, so a card can be put anywhere on it. Only where the cards
+/// are does the window exist at all (`pin_areas`); the rest of it is cut away.
 fn create_pin_window(app: &AppHandle) -> tauri::Result<()> {
   let window = WebviewWindowBuilder::new(app, PIN_LABEL, WebviewUrl::App("index.html".into()))
     .title("РО Хелпер — закреплено")
-    .inner_size(380.0, 160.0)
+    .inner_size(800.0, 600.0)
     .decorations(false)
     .transparent(true)
     .shadow(false)
@@ -167,35 +204,21 @@ fn create_pin_window(app: &AppHandle) -> tauri::Result<()> {
     .visible(false)
     .build()?;
 
-  let store = app.store(SETTINGS_FILE).ok();
-  let saved = store
-    .as_ref()
-    .and_then(|s| s.get(PIN_POSITION_KEY))
-    .and_then(|v| Some(PhysicalPosition::new(v.get("x")?.as_i64()? as i32, v.get("y")?.as_i64()? as i32)));
-  let on_screen = |p: &PhysicalPosition<i32>| {
-    app.available_monitors().unwrap_or_default().iter().any(|m| {
-      let (pos, size) = (m.position(), m.size());
-      p.x >= pos.x && p.x < pos.x + size.width as i32 && p.y >= pos.y && p.y < pos.y + size.height as i32
-    })
-  };
-  let position = match saved.filter(on_screen) {
-    Some(p) => Some(p),
-    None => app.primary_monitor().ok().flatten().map(|m| {
-      let area = m.work_area();
-      let scale = m.scale_factor();
-      PhysicalPosition::new(area.position.x + (40.0 * scale) as i32, area.position.y + area.size.height as i32 / 3)
-    }),
-  };
-  if let Some(position) = position {
-    window.set_position(position)?;
+  let monitors = app.available_monitors().unwrap_or_default();
+  if !monitors.is_empty() {
+    let left = monitors.iter().map(|m| m.position().x).min().unwrap_or(0);
+    let top = monitors.iter().map(|m| m.position().y).min().unwrap_or(0);
+    let right = monitors.iter().map(|m| m.position().x + m.size().width as i32).max().unwrap_or(0);
+    let bottom = monitors.iter().map(|m| m.position().y + m.size().height as i32).max().unwrap_or(0);
+    window.set_position(PhysicalPosition::new(left, top))?;
+    window.set_size(PhysicalSize::new((right - left).max(1) as u32, (bottom - top).max(1) as u32))?;
   }
 
-  if let Some(store) = store {
-    window.on_window_event(move |event| {
-      if let WindowEvent::Moved(p) = event {
-        store.set(PIN_POSITION_KEY, serde_json::json!({ "x": p.x, "y": p.y }));
-      }
-    });
+  // Until the cards say where they are, the window is nowhere: a window the size of the desktop would
+  // otherwise take the clicks meant for the overlay.
+  #[cfg(windows)]
+  if let Some(hwnd) = pin_window::hwnd(&window) {
+    pin_window::set_areas(hwnd, &[]);
   }
   Ok(())
 }
@@ -248,8 +271,9 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       remember_foreground,
       restore_foreground,
-      pin_show,
-      pin_hide,
+      pin_set,
+      pin_layout,
+      pin_areas,
       pin_state,
       pin_live
     ])

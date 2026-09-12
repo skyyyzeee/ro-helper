@@ -2,9 +2,9 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { PinBridge } from '../platform/tauri';
-import type { PinCard } from '../platform/types';
-import { renderApp } from '../test/renderApp';
-import { PinCardView, PinWindow } from './PinCardView';
+import type { PinCard, PinGroup } from '../platform/types';
+import { pinnedCards, renderApp } from '../test/renderApp';
+import { PinSurface, PinWindow } from './PinSurface';
 
 type User = Awaited<ReturnType<typeof renderApp>>['user'];
 
@@ -35,8 +35,8 @@ describe('pinning an article', () => {
 
     expect(platform.state.overlayVisible).toBe(true);
     expect(screen.getByRole('article')).toBeInTheDocument();
-    expect(platform.state.pin).toMatchObject({ kind: 'article', heading: 'УК ст. 65 ч. 2. Кража', accent: 'штраф до 90 000 ₽ либо 40 мес' });
-    expect(platform.state.pin!.lines).toEqual([expect.stringMatching(/^Кража, совершенная/)]);
+    expect(pinnedCards(platform)[0]).toMatchObject({ kind: 'article', heading: 'УК ст. 65 ч. 2. Кража', accent: 'штраф до 90 000 ₽ либо 40 мес' });
+    expect(pinnedCards(platform)[0].lines).toEqual([expect.stringMatching(/^Кража, совершенная/)]);
   });
 });
 
@@ -48,9 +48,9 @@ describe('a point with its list (ФСО 5.1)', () => {
     expect(point).toHaveTextContent('5.1.3. Строгий выговор. Основания: Систематические нарушения, игнорирование прямых приказов.');
 
     await pinArticle(user);
-    expect(platform.state.pin?.heading).toMatch(/^Регламент п. 5.1. За нарушение/);
-    expect(platform.state.pin?.lines).toHaveLength(7);
-    expect(platform.state.pin?.lines[1]).toBe('5.1.1. Замечание (устное). Основания: Мелкое нарушение, совершённое впервые. Выносит: Командир подразделения.');
+    expect(pinnedCards(platform)[0].heading).toMatch(/^Регламент п. 5.1. За нарушение/);
+    expect(pinnedCards(platform)[0].lines).toHaveLength(7);
+    expect(pinnedCards(platform)[0].lines[1]).toBe('5.1.1. Замечание (устное). Основания: Мелкое нарушение, совершённое впервые. Выносит: Командир подразделения.');
   });
 });
 
@@ -62,23 +62,25 @@ describe('pinning the calculator', () => {
     await pinCalculator(user);
 
     expect(platform.state.overlayVisible).toBe(false);
-    expect(platform.state.pin).toEqual<PinCard>({
-      kind: 'calculator',
-      heading: '30 мес',
-      stars: 3,
-      lines: ['ст. 65 ч. 1 УК; ст. 8.6 ч. 1 КоАП', 'КоАП: штраф 10 000 ₽'],
-    });
+    expect(pinnedCards(platform)).toEqual<PinCard[]>([
+      {
+        id: 'calculator',
+        kind: 'calculator',
+        heading: '30 мес',
+        stars: 3,
+        lines: ['ст. 65 ч. 1 УК; ст. 8.6 ч. 1 КоАП', 'КоАП: штраф 10 000 ₽'],
+      },
+    ]);
 
     await add(user, 'ук 88 ч 1');
-    expect(platform.state.pin).toMatchObject({
+    expect(pinnedCards(platform)[0]).toMatchObject({
       heading: '40 мес',
       stars: 4,
       warning: 'ст. 88 ч. 1 — федеральная подследственность — дело ФСБ',
     });
 
     await user.click(within(panel()).getByRole('button', { name: 'Очистить' }));
-    expect(platform.state.pin).toBeNull();
-    expect(platform.calls.some((c) => c.method === 'hidePin')).toBe(true);
+    expect(pinnedCards(platform)).toEqual([]);
   });
 
   it('shows the fine when the officer picked one, and the КоАП total when there is no УК', async () => {
@@ -86,87 +88,172 @@ describe('pinning the calculator', () => {
     await add(user, 'коап 5.4 ч 1');
     await user.click(within(panel()).getByRole('radio', { name: 'арест' }));
     await pinCalculator(user);
-    expect(platform.state.pin).toMatchObject({ heading: 'арест 20 сут', stars: 2, lines: ['ст. 5.4 ч. 1 КоАП'] });
+    expect(pinnedCards(platform)[0]).toMatchObject({ heading: 'арест 20 сут', stars: 2, lines: ['ст. 5.4 ч. 1 КоАП'] });
 
     await add(user, 'ук 57');
     await user.click(within(panel()).getByRole('radio', { name: 'Штраф' }));
-    expect(platform.state.pin!.heading).toBe('Штраф до 100 000 ₽');
+    expect(pinnedCards(platform)[0].heading).toBe('Штраф до 100 000 ₽');
     await user.type(within(panel()).getByRole('textbox', { name: 'Сумма штрафа' }), '50000');
-    expect(platform.state.pin!.heading).toBe('Штраф 50 000 ₽');
+    expect(pinnedCards(platform)[0].heading).toBe('Штраф 50 000 ₽');
+
+    // The same button takes the total off again.
+    await user.click(within(panel()).getByRole('button', { name: 'Открепить итог' }));
+    expect(pinnedCards(platform)).toEqual([]);
   });
 });
 
-describe('one card at a time', () => {
-  it('replaces the card with a new pin, and the calculator no longer changes it', async () => {
+describe('several cards at once', () => {
+  it('pins each one beside the others, and keeps the articles for the next launch', async () => {
     const { platform, user } = await renderApp();
-    await add(user, 'ук 65 ч 1');
-    await pinCalculator(user);
+    await open(user, 'ук 65 ч 1');
+    await pinArticle(user);
     await open(user, 'ук 104');
     await pinArticle(user);
-    expect(platform.state.pin!.kind).toBe('article');
-
     await add(user, 'ук 88 ч 1');
-    expect(platform.state.pin!.kind).toBe('article');
+    await pinCalculator(user);
+
+    expect(pinnedCards(platform).map((card) => card.kind)).toEqual(['article', 'article', 'calculator']);
+    // Each block is put beside the ones already there, so none hides another.
+    const places = platform.state.pins.map((group) => `${group.x},${group.y}`);
+    expect(new Set(places).size).toBe(3);
+
+    // Saved without the calculator, whose detention is over by the next launch.
+    const saved = platform.settings.get('pins:tverskoi') as PinGroup[];
+    expect(saved.flatMap((group) => group.cards).map((card) => card.kind)).toEqual(['article', 'article']);
   });
 
-  it('forgets the card closed with its own cross', async () => {
+  it('takes back what the user did on the cards themselves and saves it', async () => {
     const { platform, user } = await renderApp();
-    await add(user, 'ук 65 ч 1');
-    await pinCalculator(user);
-    act(() => platform.closePin());
+    await open(user, 'ук 65 ч 1');
+    await pinArticle(user);
 
-    await add(user, 'ук 88 ч 1');
-    expect(platform.state.pin).toBeNull();
+    const moved = platform.state.pins.map((group) => ({ ...group, x: 700, y: 120 }));
+    await act(async () => platform.changePins(moved));
+    expect(platform.settings.get('pins:tverskoi')).toEqual(moved);
+
+    await act(async () => platform.changePins([]));
+    expect(pinnedCards(platform)).toEqual([]);
+    // The article says it is not pinned any more.
+    expect(within(screen.getByRole('article')).getByRole('button', { name: 'Закрепить' })).toBeInTheDocument();
   });
 
-  it('shows the card on the stand-in game scene of the browser preview, closed with its cross', async () => {
-    const { platform, user } = await renderApp({ platform: { kind: 'browser' } });
-    await add(user, 'ук 65 ч 1');
-    await pinCalculator(user);
-    const card = screen.getByRole('region', { name: 'Закреплено' });
-    expect(card).toHaveTextContent('30 мес');
-
-    await user.click(within(card).getByRole('button', { name: 'Открепить' }));
-    expect(screen.queryByRole('region', { name: 'Закреплено' })).not.toBeInTheDocument();
-    expect(platform.state.pin).toBeNull();
+  it('brings the saved cards back on the next launch', async () => {
+    const saved: PinGroup[] = [
+      { id: 'uk-65#1', x: 100, y: 200, cards: [{ id: 'uk-65#1', kind: 'article', heading: 'УК ст. 65 ч. 1. Кража', lines: ['Кража'] }] },
+      { id: 'calculator', x: 300, y: 400, cards: [{ id: 'calculator', kind: 'calculator', heading: '30 мес', lines: [] }] },
+    ];
+    const { platform } = await renderApp({ settings: { 'pins:tverskoi': saved } });
+    await vi.waitFor(() => expect(platform.state.pins.length).toBe(1));
+    expect(pinnedCards(platform)[0].heading).toBe('УК ст. 65 ч. 1. Кража');
   });
 });
 
-describe('the card', () => {
-  const card: PinCard = { kind: 'article', heading: 'УК ст. 104. Оскорбление', accent: 'штраф до 40 000 ₽ либо 30 мес', lines: ['Текст'] };
+/** In jsdom nothing is laid out: the blocks are where their style says, each of this size. */
+const BLOCK = { width: 380, height: 120 };
+function layOut() {
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+    if (this.classList.contains('pin-surface')) return { left: 0, top: 0, width: 1600, height: 900 } as DOMRect;
+    const block = this.closest('.pin') as HTMLElement | null;
+    if (!block) return { left: 0, top: 0, width: 0, height: 0 } as DOMRect;
+    const left = parseFloat(block.style.left) || 0;
+    const top = parseFloat(block.style.top) || 0;
+    if (this === block) {
+      const height = BLOCK.height * block.querySelectorAll('.pin__card').length;
+      return { left, top, right: left + BLOCK.width, bottom: top + height, width: BLOCK.width, height } as DOMRect;
+    }
+    const index = [...block.querySelectorAll('.pin__card')].indexOf(this.closest('.pin__card')!);
+    const cardTop = top + BLOCK.height * Math.max(index, 0);
+    return { left, top: cardTop, right: left + BLOCK.width, bottom: cardTop + BLOCK.height, width: BLOCK.width, height: BLOCK.height } as DOMRect;
+  });
+}
 
-  it('can be closed only while the overlay is open', () => {
-    const onClose = vi.fn();
-    const { rerender } = render(<PinCardView card={card} live={false} onClose={onClose} />);
+const card = (id: string, heading: string): PinCard => ({ id, kind: 'article', heading, lines: [`Текст ${id}`] });
+const block = (id: string, x: number, y: number, ...cards: PinCard[]): PinGroup => ({ id, x, y, cards });
+
+/** Drags from one point to another with the mouse, over the whole window. */
+async function drag(from: HTMLElement, at: [number, number], to: [number, number]) {
+  const user = userEvent.setup();
+  await user.pointer([
+    { target: from, coords: { clientX: at[0], clientY: at[1] }, keys: '[MouseLeft>]' },
+    { target: document.body, coords: { clientX: to[0], clientY: to[1] } },
+    { target: document.body, coords: { clientX: to[0], clientY: to[1] }, keys: '[/MouseLeft]' },
+  ]);
+}
+
+const head = (group: HTMLElement) => group.querySelector('.pin__head') as HTMLElement;
+
+describe('the cards over the game', () => {
+  it('shows the cross and the drag only while the overlay is open', () => {
+    const groups = [block('a', 40, 300, card('a', 'УК ст. 104. Оскорбление'))];
+    const { rerender } = render(<PinSurface groups={groups} live={false} onChange={() => {}} />);
     expect(screen.queryByRole('button', { name: 'Открепить' })).not.toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Закреплено' })).not.toHaveAttribute('data-tauri-drag-region');
+    expect(screen.getByRole('region', { name: 'Закреплено' })).not.toHaveClass('pin--live');
 
-    rerender(<PinCardView card={card} live onClose={onClose} />);
+    const onChange = vi.fn();
+    rerender(<PinSurface groups={groups} live onChange={onChange} />);
     screen.getByRole('button', { name: 'Открепить' }).click();
-    expect(onClose).toHaveBeenCalled();
-    expect(screen.getByRole('region', { name: 'Закреплено' })).toHaveAttribute('data-tauri-drag-region');
+    expect(onChange).toHaveBeenCalledWith([]);
   });
 
-  it('in its window takes the card pinned before it loaded, the next ones, and closes through the bridge', async () => {
-    let sendCard: (card: PinCard) => void = () => {};
+  it('moves a block to where it was dragged', async () => {
+    layOut();
+    const onChange = vi.fn();
+    render(<PinSurface groups={[block('a', 40, 300, card('a', 'Кража'))]} live onChange={onChange} />);
+    await drag(head(screen.getByRole('region', { name: 'Закреплено' })), [60, 310], [560, 410]);
+
+    expect(onChange).toHaveBeenCalledWith([expect.objectContaining({ id: 'a', x: 540, y: 400 })]);
+    vi.restoreAllMocks();
+  });
+
+  it('joins two blocks when one is dropped onto the other, and takes a card back out of the block', async () => {
+    layOut();
+    const onChange = vi.fn();
+    render(<PinSurface groups={[block('a', 40, 300, card('a', 'Кража')), block('b', 500, 300, card('b', 'Халатность'))]} live onChange={onChange} />);
+
+    // Dropped with the mouse inside the other block, the two become one.
+    await drag(head(screen.getAllByRole('region', { name: 'Закреплено' })[0]), [60, 310], [560, 330]);
+    const joined = onChange.mock.calls.at(-1)![0] as PinGroup[];
+    expect(joined).toHaveLength(1);
+    expect(joined[0].cards.map((c) => c.heading)).toEqual(['Халатность', 'Кража']);
+
+    // The joined block shows how many cards it holds, and each keeps its own cross.
+    onChange.mockClear();
+    render(<PinSurface groups={joined} live onChange={onChange} />);
+    const stack = screen.getByRole('region', { name: 'Закреплено: 2' });
+    expect(within(stack).getByRole('button', { name: 'Открепить всё' })).toBeInTheDocument();
+    expect(within(stack).getByRole('button', { name: 'Открепить: Кража' })).toBeInTheDocument();
+
+    // A card dragged out of the block becomes a block of its own again.
+    const second = stack.querySelectorAll('.pin__card')[1] as HTMLElement;
+    await drag(second.querySelector('.pin__head') as HTMLElement, [520, 440], [900, 640]);
+    const split = onChange.mock.calls.at(-1)![0] as PinGroup[];
+    expect(split.map((group) => group.cards.map((c) => c.heading))).toEqual([['Халатность'], ['Кража']]);
+    expect(split[1]).toMatchObject({ x: 880, y: 620 });
+    vi.restoreAllMocks();
+  });
+
+  it('in its own window takes what was pinned before it loaded, and tells the overlay what changed', async () => {
+    const groups = [block('a', 40, 300, card('a', 'УК ст. 104. Оскорбление'))];
+    let sendGroups: (groups: PinGroup[]) => void = () => {};
     let sendLive: (live: boolean) => void = () => {};
     const bridge: PinBridge = {
-      state: async () => ({ card, live: false }),
-      onCard: (listener) => ((sendCard = listener), () => {}),
+      state: async () => ({ groups, live: false }),
+      onGroups: (listener) => ((sendGroups = listener), () => {}),
       onLive: (listener) => ((sendLive = listener), () => {}),
-      close: vi.fn(async () => {}),
-      fit: vi.fn(async () => {}),
+      layout: vi.fn(async () => {}),
+      areas: vi.fn(async () => {}),
     };
     render(<PinWindow bridge={bridge} />);
     expect(await screen.findByText('УК ст. 104. Оскорбление')).toBeInTheDocument();
-    expect(bridge.fit).toHaveBeenCalled();
+    // The window tells the native side where the cards are: everywhere else it lets the mouse through.
+    expect(bridge.areas).toHaveBeenCalled();
 
-    act(() => sendCard({ kind: 'calculator', heading: '40 мес', stars: 4, lines: ['ст. 88 ч. 1 УК'] }));
+    act(() => sendGroups([block('b', 40, 300, { id: 'calculator', kind: 'calculator', heading: '40 мес', stars: 4, lines: ['ст. 88 ч. 1 УК'] })]));
     expect(screen.getByText('40 мес')).toBeInTheDocument();
 
     act(() => sendLive(true));
     await userEvent.click(screen.getByRole('button', { name: 'Открепить' }));
-    expect(bridge.close).toHaveBeenCalled();
+    expect(bridge.layout).toHaveBeenCalledWith([]);
     expect(screen.queryByRole('region', { name: 'Закреплено' })).not.toBeInTheDocument();
   });
 });

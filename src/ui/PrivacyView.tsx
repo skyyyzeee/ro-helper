@@ -6,12 +6,12 @@ import { Markdown } from './Markdown';
 export const PRIVACY_TEXT = policy.split(/\r?\n---\r?\n/)[0];
 
 /** The privacy policy inside the app, from the same file as on GitHub. */
-export function PrivacyView({ onBack }: { onBack: () => void }) {
+export function PrivacyView({ backLabel = 'Назад', onBack }: { backLabel?: string; onBack: () => void }) {
   return (
     <article className="art md" aria-label="Политика конфиденциальности">
       <button className="back" type="button" onClick={onBack}>
         <BackIcon />
-        <span>Назад</span>
+        <span>{backLabel}</span>
       </button>
       <Markdown text={PRIVACY_TEXT} />
     </article>

@@ -8,8 +8,10 @@ export interface WindowBounds {
   height: number;
 }
 
-/** What the pinned card shows. Serializable: it is sent to a separate window. */
+/** What a pinned card shows. Serializable: it is sent to a separate window. */
 export interface PinCard {
+  /** What it stands for: `uk-65#1` for an article's part, `calculator` for the total. */
+  id: string;
   kind: 'article' | 'calculator';
   /** Article: «УК ст. 88 ч. 1. Халатность»; calculator: the total, «30 мес». */
   heading: string;
@@ -19,6 +21,25 @@ export interface PinCard {
   accent?: string;
   lines: string[];
   warning?: string;
+}
+
+/**
+ * A block of pinned cards over the game, at the place the user dragged it to (CSS pixels of the
+ * screen). A block holds several cards once they are dropped onto each other.
+ */
+export interface PinGroup {
+  id: string;
+  x: number;
+  y: number;
+  cards: PinCard[];
+}
+
+/** A card's place on the screen, in physical pixels: everything else lets the mouse through. */
+export interface PinArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 /** A newer version of the app, found in the GitHub releases. */
@@ -71,14 +92,13 @@ export interface PlatformAdapter {
   setAlwaysOnTop(on: boolean): Promise<void>;
 
   /**
-   * Pinned card: a separate transparent window over the game that never takes the focus. Clicks go
-   * through it while the overlay is hidden; while it is shown, the card can be dragged and closed.
-   * Showing a card replaces the one pinned before.
+   * What is pinned over the game: a transparent window that never takes the focus, with a block of
+   * cards where the user put each. Clicks go through it while the overlay is hidden; while the overlay
+   * is shown, the blocks can be dragged, joined and closed. An empty list hides it.
    */
-  showPin(card: PinCard): Promise<void>;
-  hidePin(): Promise<void>;
-  /** Called when the card is closed from the card itself. Returns an unsubscribe function. */
-  onPinClosed(listener: () => void): () => void;
+  setPins(groups: PinGroup[]): Promise<void>;
+  /** Called when the user moves, joins or closes something there. Returns an unsubscribe function. */
+  onPinsChanged(listener: (groups: PinGroup[]) => void): () => void;
 
   writeClipboard(text: string): Promise<void>;
 

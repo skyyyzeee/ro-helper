@@ -1,4 +1,4 @@
-import type { AppUpdate, PinCard, PlatformAdapter, ResizeEdge, WindowBounds } from './types';
+import type { AppUpdate, PinGroup, PlatformAdapter, ResizeEdge, WindowBounds } from './types';
 
 export interface FakeCall {
   method: keyof PlatformAdapter;
@@ -12,7 +12,8 @@ export interface FakePlatform extends PlatformAdapter {
   readonly state: {
     overlayVisible: boolean;
     hotkey: string | null;
-    pin: PinCard | null;
+    /** What is pinned over the game, block by block. */
+    pins: PinGroup[];
     clipboard: string;
     /** What the releases offer: a newer version, none, or no connection. */
     update: AppUpdate | null | 'offline';
@@ -20,8 +21,8 @@ export interface FakePlatform extends PlatformAdapter {
   };
   /** Simulates the user pressing the registered global hotkey. */
   pressHotkey(): void;
-  /** Simulates the user closing the pinned card with its own cross. */
-  closePin(): void;
+  /** Simulates what the user does on the pinned cards themselves: closing, moving, joining. */
+  changePins(groups: PinGroup[]): void;
 }
 
 export interface FakeOptions {
@@ -37,11 +38,11 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
   const calls: FakeCall[] = [];
   const settings = new Map<string, unknown>();
   const shownListeners = new Set<() => void>();
-  const pinClosedListeners = new Set<() => void>();
+  const pinListeners = new Set<(groups: PinGroup[]) => void>();
   const state: FakePlatform['state'] = {
     overlayVisible: true,
     hotkey: null,
-    pin: null,
+    pins: [],
     clipboard: '',
     update: options.update ?? null,
     updateInstalled: false,
@@ -62,9 +63,9 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
     pressHotkey() {
       onHotkey?.();
     },
-    closePin() {
-      state.pin = null;
-      pinClosedListeners.forEach((listener) => listener());
+    changePins(groups) {
+      state.pins = groups;
+      pinListeners.forEach((listener) => listener(groups));
     },
 
     async registerHotkey(accelerator, onPress) {
@@ -127,17 +128,13 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
       record('setAlwaysOnTop', on);
     },
 
-    async showPin(card) {
-      record('showPin', card);
-      state.pin = card;
+    async setPins(groups) {
+      record('setPins', groups);
+      state.pins = groups;
     },
-    async hidePin() {
-      record('hidePin');
-      state.pin = null;
-    },
-    onPinClosed(listener) {
-      pinClosedListeners.add(listener);
-      return () => pinClosedListeners.delete(listener);
+    onPinsChanged(listener) {
+      pinListeners.add(listener);
+      return () => pinListeners.delete(listener);
     },
 
     async writeClipboard(text) {

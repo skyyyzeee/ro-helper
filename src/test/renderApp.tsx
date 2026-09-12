@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createFakePlatform, type FakeOptions } from '../platform/fake';
+import { createFakePlatform, type FakeOptions, type FakePlatform } from '../platform/fake';
 import { PlatformProvider } from '../platform/PlatformContext';
 import { App } from '../ui/App';
 import { DEFAULT_HOTKEY } from '../ui/overlaySettings';
@@ -13,6 +13,9 @@ export interface RenderOptions {
   /** The saved profile; `null` starts on the first-launch screen. Defaults to Тверской without an organisation. */
   profile?: Partial<Profile> | null;
 }
+
+/** Every card pinned over the game, block by block, in the order they were pinned. */
+export const pinnedCards = (platform: FakePlatform) => platform.state.pins.flatMap((group) => group.cards);
 
 /** Renders the whole app on a fake platform and waits until it has loaded its settings. */
 export async function renderApp(options: RenderOptions = {}) {

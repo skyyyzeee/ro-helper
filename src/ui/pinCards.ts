@@ -11,7 +11,8 @@ import {
   type SearchHit,
 } from '../core';
 import type { PinCard } from '../platform/types';
-import { entryPart } from './saved';
+import { CALCULATOR_ID } from './pinLayout';
+import { entryPart, hitKey } from './saved';
 
 /** The pinned article: only its part — heading, punishment and text — and whose case it is. */
 export function articlePinCard(hit: SearchHit, rules?: CalculatorRules): PinCard {
@@ -21,6 +22,7 @@ export function articlePinCard(hit: SearchHit, rules?: CalculatorRules): PinCard
   const only = part?.jurisdiction?.length === 1 ? part.jurisdiction[0] : undefined;
   const warning = only && rules?.jurisdictionWarnings[only];
   return {
+    id: hitKey(hit),
     kind: 'article',
     heading: `${hit.document.short} ${articleLabel(hit.article, own, hit.document.unit)}` + (title ? `. ${title}` : ''),
     ...(part?.punishment ? { accent: formatPunishment(part.punishment) } : {}),
@@ -64,6 +66,7 @@ export function calculatorPinCard(result: DetentionResult, fineTyped?: number): 
   }
   const warnings = criminal?.warnings ?? [];
   return {
+    id: CALCULATOR_ID,
     kind: 'calculator',
     heading,
     ...(stars && stars.count > 0 ? { stars: stars.count } : {}),

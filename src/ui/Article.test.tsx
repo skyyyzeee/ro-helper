@@ -1,6 +1,6 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { renderApp } from '../test/renderApp';
+import { pinnedCards, renderApp } from '../test/renderApp';
 
 type User = Awaited<ReturnType<typeof renderApp>>['user'];
 
@@ -69,18 +69,27 @@ describe('an open article', () => {
     await openFromSearch(user, 'ук 88 ч 1');
     await user.click(within(article()).getByRole('button', { name: 'Закрепить' }));
 
-    expect(platform.state.pin).toMatchObject({
+    expect(pinnedCards(platform)[0]).toMatchObject({
       kind: 'article',
       heading: 'УК ст. 88 ч. 1. Халатность',
       accent: 'штраф от 60 000 до 80 000 ₽ либо 40 мес',
       warning: 'федеральная подследственность — дело ФСБ',
     });
-    expect(platform.state.pin!.lines).toEqual([expect.stringMatching(/^Халатность, то есть/)]);
+    expect(pinnedCards(platform)[0].lines).toEqual([expect.stringMatching(/^Халатность, то есть/)]);
 
+    // Another article is pinned beside the first, not instead of it.
     await openFromSearch(user, 'ук 104');
     await user.click(within(article()).getByRole('button', { name: 'Закрепить' }));
-    expect(platform.state.pin!.heading).toMatch(/^УК ст\. 104\. /);
-    expect(platform.state.pin!.warning).toBeUndefined();
+    expect(pinnedCards(platform).map((card) => card.heading)).toEqual([
+      'УК ст. 88 ч. 1. Халатность',
+      expect.stringMatching(/^УК ст\. 104\. /),
+    ]);
+    expect(pinnedCards(platform)[1].warning).toBeUndefined();
+
+    // The same article again unpins it: the button says so.
+    expect(within(article()).queryByRole('button', { name: 'Закрепить' })).not.toBeInTheDocument();
+    await user.click(within(article()).getByRole('button', { name: 'Открепить' }));
+    expect(pinnedCards(platform).map((card) => card.heading)).toEqual(['УК ст. 88 ч. 1. Халатность']);
   });
 
   it('opens with → only once the caret is at the end, and Esc goes back to the results', async () => {

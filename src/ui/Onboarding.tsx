@@ -4,6 +4,7 @@ import { usePlatform } from '../platform/PlatformContext';
 import { WarnIcon } from './icons';
 import { OrganizationChoice } from './OrganizationChoice';
 import { SERVERS, captureHotkey, formatHotkey, hasModifier, hotkeyKeys, type Profile } from './profile';
+import { ServerChoice } from './ServerChoice';
 import { ResizeEdges } from './ResizeEdges';
 
 const STEPS = 3;
@@ -129,35 +130,16 @@ export function Onboarding({
           <>
             <h2 className="ob__title">Выберите сервер</h2>
             <p className="ob__sub">Законы и правила берутся из законодательной базы выбранного сервера.</p>
-            <div className="ob__options" role="radiogroup" aria-label="Сервер">
-              {SERVERS.map((choice) => (
-                <button
-                  key={choice.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={draft.server === choice.id}
-                  disabled={choice.status !== 'active'}
-                  className={draft.server === choice.id ? 'ob__option ob__option--on' : 'ob__option'}
-                  onClick={() =>
-                    setDraft((d) => {
-                      // Another server has its own organisations: one it does not have goes back to «Без организации».
-                      const organizations = packFor(choice.id).organizations;
-                      const keep = organizations.some((o) => o.id === d.organization);
-                      return { ...d, server: choice.id, organization: keep ? d.organization : 'none' };
-                    })
-                  }
-                >
-                  <span className="ob__option-name">{choice.name}</span>
-                  <span className="sp" />
-                  {(choice.status === 'soon' || choice.note) && (
-                    <span className="ob__option-note">
-                      {[choice.status === 'soon' ? 'скоро' : null, choice.note].filter(Boolean).join(' · ')}
-                    </span>
-                  )}
-                  <span className="ob__radio" />
-                </button>
-              ))}
-            </div>
+            <ServerChoice
+              value={draft.server}
+              onPick={(id) =>
+                setDraft((d) => {
+                  // Another server has its own organisations: one it does not have goes back to «Без организации».
+                  const keep = packFor(id).organizations.some((o) => o.id === d.organization);
+                  return { ...d, server: id, organization: keep ? d.organization : 'none' };
+                })
+              }
+            />
           </>
         )}
 

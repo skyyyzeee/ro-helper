@@ -83,7 +83,7 @@ describe('settings', () => {
   it('reopen the same steps, save the new choice and re-register the hotkey at once', async () => {
     const { platform, user } = await renderApp({ profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
-    await user.click(screen.getByRole('button', { name: 'Изменить' }));
+    await user.click(screen.getByRole('button', { name: 'Настроить заново' }));
 
     expect(screen.getByText('Настройки')).toBeInTheDocument();
     await user.click(next());
@@ -100,10 +100,32 @@ describe('settings', () => {
     expect(platform.state.hotkey).toBe('Alt+W');
   });
 
+  it('change the hotkey right in the settings, without the steps', async () => {
+    const { platform, user } = await renderApp({ profile: { hotkey: 'Alt+Q' } });
+    await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await user.click(screen.getByRole('button', { name: 'Горячая клавиша: Alt + Q' }));
+    await user.keyboard('{Control>}{Shift>}L{/Shift}{/Control}');
+
+    expect(platform.settings.get(PROFILE_KEY)).toMatchObject({ hotkey: 'Ctrl+Shift+L' });
+    expect(platform.state.hotkey).toBe('Ctrl+Shift+L');
+    // The settings stay open, with the new keys on the field.
+    expect(screen.getByRole('button', { name: 'Горячая клавиша: Ctrl + Shift + L' })).toBeInTheDocument();
+  });
+
+  it('change the server without going through the steps', async () => {
+    const { platform, user } = await renderApp({ profile: { organization: 'mvd' } });
+    await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await user.click(screen.getByRole('button', { name: 'Сменить сервер' }));
+    await user.click(within(screen.getByRole('region', { name: 'Ваш сервер' })).getByRole('radio', { name: /Арбатский/ }));
+
+    expect(await screen.findByText('Арбатский · МВД')).toBeInTheDocument();
+    expect(platform.settings.get(PROFILE_KEY)).toMatchObject({ server: 'arbatskiy', organization: 'mvd' });
+  });
+
   it('leave without saving on «Отмена» or Esc', async () => {
     const { platform, user } = await renderApp({ profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
-    await user.click(screen.getByRole('button', { name: 'Изменить' }));
+    await user.click(screen.getByRole('button', { name: 'Настроить заново' }));
     await user.click(next());
     await user.click(radio('Организация', 'ОПГ'));
     await user.keyboard('{Escape}');
@@ -140,7 +162,7 @@ describe('another server', () => {
   it('keeps an organisation both servers have when the server changes', async () => {
     const { user } = await renderApp({ profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
-    await user.click(screen.getByRole('button', { name: 'Изменить' }));
+    await user.click(screen.getByRole('button', { name: 'Настроить заново' }));
     await user.click(radio('Сервер', /Арбатский/));
     await user.click(next());
 
@@ -152,7 +174,7 @@ describe('changing only the organisation', () => {
   it('is one screen in the settings: pick and it is saved, the rest untouched', async () => {
     const { platform, user } = await renderApp({ profile: { organization: 'mvd', hotkey: 'F9' } });
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
-    expect(screen.getByRole('group', { name: 'Настройки' })).toHaveTextContent('Организация: МВД');
+    expect(screen.getByRole('group', { name: 'Настройки' })).toHaveTextContent('ОрганизацияМВД');
     await user.click(screen.getByRole('button', { name: 'Сменить' }));
 
     const choice = screen.getByRole('region', { name: 'Ваша организация' });

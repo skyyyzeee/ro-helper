@@ -144,3 +144,21 @@ export const DiscordIcon = ({ size = 18 }: { size?: number }) => (
     />
   </svg>
 );
+
+export const GripIcon = ({ size = 14 }: { size?: number }) => (
+  <Icon size={size}>
+    <circle cx="9" cy="6" r="1.4" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="6" r="1.4" fill="currentColor" stroke="none" />
+    <circle cx="9" cy="12" r="1.4" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="12" r="1.4" fill="currentColor" stroke="none" />
+    <circle cx="9" cy="18" r="1.4" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="18" r="1.4" fill="currentColor" stroke="none" />
+  </Icon>
+);
+
+export const KeyboardIcon = ({ size = 18 }: { size?: number }) => (
+  <Icon size={size}>
+    <rect x="2.5" y="6" width="19" height="12" rx="2.5" />
+    <path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8" />
+  </Icon>
+);

@@ -66,13 +66,15 @@ export interface CalculatorPanelProps {
   onFineInput: (value: string) => void;
   onCopy: () => void;
   copyState: CopyState;
+  /** Whether the total is pinned over the game already: the button then unpins it. */
+  pinned: boolean;
   /** Pins the total over the game, to read the charges out to the detainee. */
   onPin: () => void;
 }
 
 /** The side panel: criminal and administrative charges, their totals by law, and the charges to copy. */
 export function CalculatorPanel(props: CalculatorPanelProps) {
-  const { result, onClear, onCopy, copyState, onPin } = props;
+  const { result, onClear, onCopy, copyState, pinned, onPin } = props;
   const count = (result.criminal?.items.length ?? 0) + (result.administrative?.items.length ?? 0);
 
   return (
@@ -100,7 +102,14 @@ export function CalculatorPanel(props: CalculatorPanelProps) {
               Ctrl+C
             </span>
           </button>
-          <button className="btn btn--icon" type="button" aria-label="Закрепить итог поверх игры" title="Закрепить поверх игры" onClick={onPin}>
+          <button
+            className={pinned ? 'btn btn--icon btn--on' : 'btn btn--icon'}
+            type="button"
+            aria-pressed={pinned}
+            aria-label={pinned ? 'Открепить итог' : 'Закрепить итог поверх игры'}
+            title={pinned ? 'Открепить итог' : 'Закрепить поверх игры'}
+            onClick={onPin}
+          >
             <PinIcon />
           </button>
         </div>

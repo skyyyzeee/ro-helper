@@ -52,7 +52,15 @@ export function App() {
       />
     );
   } else if (profile) {
-    screen = <Overlay pack={packFor(profile?.server ?? FIRST_PROFILE.server)} profile={profile} onEditProfile={() => setEditing(true)} onProfile={save} />;
+    screen = (
+      <Overlay
+        pack={packFor(profile?.server ?? FIRST_PROFILE.server)}
+        profile={profile}
+        onEditProfile={() => setEditing(true)}
+        onProfile={save}
+        onCapturing={setCapturing}
+      />
+    );
   }
 
   return <div className={preview ? 'stage stage--preview' : 'stage'}>{screen}</div>;
