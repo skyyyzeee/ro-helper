@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import type { PinBridge } from '../platform/tauri';
+import type { PinBridge, ShownToast } from '../platform/tauri';
 import type { PinArea, PinCard, PinGroup } from '../platform/types';
-import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, CompactIcon, GripIcon, PagesIcon, PinIcon, ResizeIcon, StarIcon } from './icons';
+import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, CompactIcon, DownloadIcon, GripIcon, PagesIcon, PinIcon, ResizeIcon, StarIcon } from './icons';
 import { CARD_WIDTH, MIN_HEIGHT, compactGroup, detachCard, dropSide, joinGroups, moveGroup, pageGroup, resizeGroup, unpinCard, unpinGroup, type DropSide } from './pinLayout';
 
 /**
@@ -69,7 +69,16 @@ export interface PinSurfaceProps {
   onChange: (groups: PinGroup[]) => void;
   /** Where the blocks are now, in physical pixels, for the window that lets the mouse through elsewhere. */
   onAreas?: (areas: PinArea[]) => void;
+  /** A notice at the top right — a new version is out — and what to do when it has gone. */
+  toast?: ShownToast | null;
+  onToastEnd?: () => void;
 }
+
+/** How long a notice stays before it goes, and how long it takes to go. */
+export const TOAST_MS = 5000;
+const TOAST_LEAVE_MS = 240;
+/** The key the notice's element is kept under among the blocks. */
+const TOAST_KEY = 'toast::notice';
 
 /** Room around a block for the outline shown while the overlay is open. */
 const PAD = 4;
@@ -81,7 +90,7 @@ const cardKey = (groupId: string, cardId: string) => `${groupId} :: ${cardId}`;
  * Everything pinned over the game: blocks of cards, each where the user dropped it. A block is dragged
  * by its head; dropped onto another it joins it, and a card dragged out of a block becomes one of its own.
  */
-export function PinSurface({ groups: incoming, live, onChange, onAreas }: PinSurfaceProps) {
+export function PinSurface({ groups: incoming, live, onChange, onAreas, toast, onToastEnd }: PinSurfaceProps) {
   const [groups, setGroups] = useState(incoming);
   const [drag, setDrag] = useState<Drag | null>(null);
   /** Which card of a paged block is on show, by block. */
@@ -90,6 +99,22 @@ export function PinSurface({ groups: incoming, live, onChange, onAreas }: PinSur
   const boxes = useRef(new Map<string, HTMLElement>());
   const latest = useRef(groups);
   latest.current = groups;
+
+  // A notice stays a few seconds, then slides away; a click sends it off sooner.
+  const [leaving, setLeaving] = useState(false);
+  const toastEnd = useRef(onToastEnd);
+  toastEnd.current = onToastEnd;
+  const [dismissed, setDismissed] = useState(0);
+  useEffect(() => {
+    if (!toast) return;
+    setLeaving(false);
+    const leave = setTimeout(() => setLeaving(true), dismissed ? 0 : TOAST_MS);
+    const end = setTimeout(() => toastEnd.current?.(), (dismissed ? 0 : TOAST_MS) + TOAST_LEAVE_MS);
+    return () => {
+      clearTimeout(leave);
+      clearTimeout(end);
+    };
+  }, [toast, dismissed]);
 
   // While a block follows the mouse, its place is the mouse's, not the one the overlay last sent.
   useEffect(() => {
@@ -209,19 +234,18 @@ export function PinSurface({ groups: incoming, live, onChange, onAreas }: PinSur
       onAreas([physical({ left: 0, top: 0, width: window.innerWidth, height: window.innerHeight })]);
       return;
     }
+    // The notice, too, takes its place on the screen while it shows.
+    const elements = () => [...groups.map((group) => boxes.current.get(group.id)), boxes.current.get(TOAST_KEY)];
     const report = () => {
-      const rects = groups.map((group) => boxes.current.get(group.id)?.getBoundingClientRect()).filter((rect) => rect !== undefined);
+      const rects = elements().map((element) => element?.getBoundingClientRect()).filter((rect) => rect !== undefined);
       onAreas(rects.map(physical));
     };
     report();
     if (typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(report);
-    for (const group of groups) {
-      const element = boxes.current.get(group.id);
-      if (element) observer.observe(element);
-    }
+    for (const element of elements()) if (element) observer.observe(element);
     return () => observer.disconnect();
-  }, [groups, dragId, live, onAreas]);
+  }, [groups, dragId, live, onAreas, toast]);
 
   // How much room the cards have: the screen in the app, the window in the preview.
   const size = surface();
@@ -233,6 +257,29 @@ export function PinSurface({ groups: incoming, live, onChange, onAreas }: PinSur
 
   return (
     <div ref={root} className={live ? 'pin-surface pin-surface--live' : 'pin-surface'}>
+      {toast && (
+        <div
+          ref={(element) => hold(element, TOAST_KEY)}
+          className={leaving ? 'toast toast--leave' : 'toast'}
+          style={
+            toast.corner
+              ? { top: toast.corner.top / (window.devicePixelRatio || 1) + 16, right: Math.max(8, size.width - toast.corner.right / (window.devicePixelRatio || 1) + 16) }
+              : { top: 16, right: 16 }
+          }
+          role="status"
+          aria-label="Уведомление"
+          title="Скрыть"
+          onClick={() => setDismissed((n) => n + 1)}
+        >
+          <span className="toast__icon">
+            <DownloadIcon size={18} />
+          </span>
+          <span className="toast__body">
+            <span className="toast__title">{toast.title}</span>
+            {toast.text && <span className="toast__text">{toast.text}</span>}
+          </span>
+        </div>
+      )}
       {groups.map((group) => {
         const stacked = group.cards.length > 1;
         const paged = stacked && !!group.paged;
@@ -376,21 +423,26 @@ export function PinSurface({ groups: incoming, live, onChange, onAreas }: PinSur
   );
 }
 
-/** The pin window of the app: everything pinned over the game, and what the user does with it there. */
+/** The pin window of the app: everything pinned over the game, the notices, and what the user does with them there. */
 export function PinWindow({ bridge }: { bridge: PinBridge }) {
   const [groups, setGroups] = useState<PinGroup[]>([]);
   const [live, setLive] = useState(false);
+  const [toast, setToast] = useState<ShownToast | null>(null);
 
   useEffect(() => {
     void bridge.state().then((state) => {
       setGroups((current) => (current.length ? current : state.groups));
       setLive(state.live);
+      // A notice sent before the window had loaded is still on show.
+      if (state.toast) setToast((current) => current ?? state.toast!);
     });
     const stopGroups = bridge.onGroups(setGroups);
     const stopLive = bridge.onLive(setLive);
+    const stopToast = bridge.onToast(setToast);
     return () => {
       stopGroups();
       stopLive();
+      stopToast();
     };
   }, [bridge]);
 
@@ -402,6 +454,10 @@ export function PinWindow({ bridge }: { bridge: PinBridge }) {
     },
     [bridge],
   );
+  const endToast = useCallback(() => {
+    setToast(null);
+    void bridge.toastDone();
+  }, [bridge]);
 
-  return <PinSurface groups={groups} live={live} onChange={change} onAreas={areas} />;
+  return <PinSurface groups={groups} live={live} onChange={change} onAreas={areas} toast={toast} onToastEnd={endToast} />;
 }

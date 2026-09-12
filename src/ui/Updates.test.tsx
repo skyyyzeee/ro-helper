@@ -1,8 +1,8 @@
-import { cleanup, screen, within } from '@testing-library/react';
+import { act, cleanup, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../test/renderApp';
 import { APP_VERSION } from './about';
-import { AUTO_KEY, DISMISSED_KEY } from './updates';
+import { AUTO_KEY, DISMISSED_KEY, TOASTED_KEY } from './updates';
 
 const banner = () => screen.queryByRole('status', { name: 'Обновление' });
 const settings = () => screen.getByRole('group', { name: 'Настройки' });
@@ -137,4 +137,37 @@ describe('updates of the app', () => {
     await user.click(auto);
     expect(platform.settings.get(AUTO_KEY)).toBe(false);
   });
+
+  it('tells a new version once over the game, top right, so it is seen with the overlay hidden', async () => {
+    const { platform } = await renderApp({ platform: { update: { version: '1.1.0' } } });
+    await vi.waitFor(() => expect(platform.state.toast).not.toBeNull());
+    expect(platform.state.toast).toMatchObject({
+      title: 'Вышло обновление РО Хелпер',
+      text: 'Версия 1.1.0. Откройте хелпер (Alt + Q) и нажмите «Обновить».',
+    });
+    expect(platform.settings.get(TOASTED_KEY)).toBe('1.1.0');
+
+    // Launched again with the same version on offer: told already.
+    cleanup();
+    const again = await renderApp({ platform: { update: { version: '1.1.0' } }, settings: { [TOASTED_KEY]: '1.1.0' } });
+    await told(again.platform);
+    expect(again.platform.calls.some((c) => c.method === 'showToast')).toBe(false);
+
+    // A newer one is told in its turn.
+    cleanup();
+    const newer = await renderApp({ platform: { update: { version: '1.2.0' } }, settings: { [TOASTED_KEY]: '1.1.0' } });
+    await vi.waitFor(() => expect(newer.platform.state.toast?.text).toContain('1.2.0'));
+  });
+
+  it('does not tell a version put off with «Позже»', async () => {
+    const { platform } = await renderApp({ platform: { update: { version: '1.1.0' } }, settings: { [DISMISSED_KEY]: '1.1.0' } });
+    await told(platform);
+    expect(platform.calls.some((c) => c.method === 'showToast')).toBe(false);
+  });
 });
+
+/** Waits until the overlay has looked up whether the version on offer was told already, and acted on it. */
+async function told(platform: Awaited<ReturnType<typeof renderApp>>['platform']) {
+  await vi.waitFor(() => expect(platform.calls.some((c) => c.method === 'readSetting' && c.args[0] === TOASTED_KEY)).toBe(true));
+  await act(async () => {});
+}

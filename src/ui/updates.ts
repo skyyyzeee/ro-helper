@@ -8,6 +8,8 @@ export const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
 export const DISMISSED_KEY = 'update.dismissed';
 /** Whether the app asks for new versions by itself; off, it goes online only when asked from the settings. */
 export const AUTO_KEY = 'update.auto';
+/** The last version announced over the game: each new one is told once. */
+export const TOASTED_KEY = 'update.toasted';
 
 export type UpdateStatus =
   | { kind: 'idle' }

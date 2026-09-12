@@ -18,7 +18,7 @@ import {
   type ServerPack,
 } from '../core';
 import { packFor } from '../data';
-import type { PinCard, PinGroup } from '../platform/types';
+import type { PinCard, PinGroup, Toast } from '../platform/types';
 import { usePlatform } from '../platform/PlatformContext';
 import { ArticleView } from './ArticleView';
 import { CalculatorPanel, type ChargeFields, type ChargePatch, type CopyState } from './CalculatorPanel';
@@ -26,7 +26,7 @@ import { ChangeDiff, ChangesView, type ChangeRef } from './ChangesView';
 import { DocumentsMenu } from './DocumentsMenu';
 import { BackIcon, CloseIcon, MenuIcon, SearchIcon, SettingsIcon } from './icons';
 import { DEFAULT_OPACITY, OPACITY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
-import type { Profile } from './profile';
+import { formatHotkey, type Profile } from './profile';
 import { OrganizationChoice } from './OrganizationChoice';
 import { PinSurface } from './PinSurface';
 import { PrivacyView } from './PrivacyView';
@@ -40,7 +40,7 @@ import { RECENT_LIMIT, entryPart, favoritesKey, hitKey, recentKey, useHitLookup,
 import { ServerChoice } from './ServerChoice';
 import { SettingsView } from './SettingsView';
 import { UpdateBanner } from './UpdateBanner';
-import { useUpdates } from './updates';
+import { DISMISSED_KEY, TOASTED_KEY, useUpdates } from './updates';
 
 /** «1 результат», «3 результата», «11 результатов». */
 function plural(n: number, [one, few, many]: [string, string, string]): string {
@@ -147,6 +147,29 @@ export function Overlay({
 
   // New versions of the app, offered under the header; the privacy policy, opened from the settings.
   const updates = useUpdates();
+  // A new version is told once over the game, top right, even with the overlay hidden: the offer under
+  // the header is seen only by whoever opens the helper. One put off with «Позже» is not told again.
+  const [previewToast, setPreviewToast] = useState<Toast | null>(null);
+  const found = updates.status.kind === 'available' ? updates.status.update.version : null;
+  useEffect(() => {
+    if (!found) return;
+    let active = true;
+    void Promise.all([platform.readSetting<string>(TOASTED_KEY), platform.readSetting<string>(DISMISSED_KEY)]).then(([told, putOff]) => {
+      if (!active || told === found || putOff === found) return;
+      const toast: Toast = {
+        id: `update-${found}`,
+        title: 'Вышло обновление РО Хелпер',
+        text: `Версия ${found}. Откройте хелпер (${formatHotkey(profile.hotkey)}) и нажмите «Обновить».`,
+      };
+      void platform.showToast(toast);
+      // In the browser there is no window over the game: the stand-in scene shows the notice itself.
+      if (platform.kind === 'browser') setPreviewToast(toast);
+      void platform.writeSetting(TOASTED_KEY, found);
+    });
+    return () => {
+      active = false;
+    };
+  }, [found, platform, profile.hotkey]);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [organizationOpen, setOrganizationOpen] = useState(false);
   const [serverOpen, setServerOpen] = useState(false);
@@ -497,7 +520,9 @@ export function Overlay({
   return (
     <>
     {/* In the browser there is no second window: the stand-in game scene shows the cards itself. */}
-    {platform.kind === 'browser' && <PinSurface groups={groups} live onChange={setGroups} />}
+    {platform.kind === 'browser' && (
+      <PinSurface groups={groups} live onChange={setGroups} toast={previewToast} onToastEnd={() => setPreviewToast(null)} />
+    )}
     <div className={`shell shell--${side}`}>
       {platform.kind === 'tauri' && <ResizeEdges />}
       {calculatorOpen && result && (

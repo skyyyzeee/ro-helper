@@ -55,6 +55,13 @@ export interface PinArea {
   height: number;
 }
 
+/** A short notice over the game, top right of the main screen, that goes by itself after a few seconds. */
+export interface Toast {
+  id: string;
+  title: string;
+  text?: string;
+}
+
 /** A newer version of the app, found in the GitHub releases. */
 export interface AppUpdate {
   version: string;
@@ -112,6 +119,8 @@ export interface PlatformAdapter {
   setPins(groups: PinGroup[]): Promise<void>;
   /** Called when the user moves, joins or closes something there. Returns an unsubscribe function. */
   onPinsChanged(listener: (groups: PinGroup[]) => void): () => void;
+  /** Shows a notice over the game — even while the overlay is hidden — that goes by itself. */
+  showToast(toast: Toast): Promise<void>;
 
   writeClipboard(text: string): Promise<void>;
 

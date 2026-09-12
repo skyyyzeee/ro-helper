@@ -6,7 +6,7 @@ import { isRegistered, register, unregister } from '@tauri-apps/plugin-global-sh
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { load } from '@tauri-apps/plugin-store';
 import { check, type Update } from '@tauri-apps/plugin-updater';
-import type { PinArea, PinGroup, PlatformAdapter, WindowBounds } from './types';
+import type { PinArea, PinGroup, PlatformAdapter, Toast, WindowBounds } from './types';
 
 /** True inside the Tauri app, false in a plain browser. */
 export function isTauri(): boolean {
@@ -22,22 +22,32 @@ const PIN_GROUPS_EVENT = 'pin-groups';
 const PIN_LIVE_EVENT = 'pin-live';
 /** What the user did on the cards themselves: moved, joined or closed one. */
 const PIN_LAYOUT_EVENT = 'pin-layout';
+/** A notice to show over the game. */
+const PIN_TOAST_EVENT = 'pin-toast';
 
 /** True in the window of the pinned cards, which renders them instead of the overlay. */
 export function isPinWindow(): boolean {
   return isTauri() && getCurrentWindow().label === PIN_LABEL;
 }
 
+/** A notice as the pin window gets it: with the top right corner of the main screen's work area, in its physical pixels. */
+export interface ShownToast extends Toast {
+  corner?: { right: number; top: number };
+}
+
 /** What the window of the pinned cards needs from the native side. */
 export interface PinBridge {
   /** What was pinned before the window loaded, and whether the overlay is open. */
-  state(): Promise<{ groups: PinGroup[]; live: boolean }>;
+  state(): Promise<{ groups: PinGroup[]; live: boolean; toast?: ShownToast | null }>;
   onGroups(listener: (groups: PinGroup[]) => void): () => void;
   onLive(listener: (live: boolean) => void): () => void;
   /** Tells the overlay what the user moved, joined or closed here. */
   layout(groups: PinGroup[]): Promise<void>;
   /** Where the cards are, in physical pixels: everywhere else the window lets the mouse through. */
   areas(areas: PinArea[]): Promise<void>;
+  onToast(listener: (toast: ShownToast) => void): () => void;
+  /** The notice has gone: the window may hide again when nothing is pinned. */
+  toastDone(): Promise<void>;
 }
 
 export function createPinBridge(): PinBridge {
@@ -51,6 +61,8 @@ export function createPinBridge(): PinBridge {
     onLive: (listener) => subscribe(PIN_LIVE_EVENT, listener),
     layout: (groups) => invoke('pin_layout', { groups }),
     areas: (areas) => invoke('pin_areas', { areas }),
+    onToast: (listener) => subscribe(PIN_TOAST_EVENT, listener),
+    toastDone: () => invoke('pin_toast_done'),
   };
 }
 
@@ -207,6 +219,7 @@ export async function createTauriPlatform(): Promise<PlatformAdapter> {
     setAlwaysOnTop: (on) => win.setAlwaysOnTop(on),
 
     setPins: (groups) => invoke('pin_set', { groups }),
+    showToast: (toast) => invoke('pin_toast', { toast }),
     onPinsChanged(listener) {
       pinListeners.add(listener);
       return () => pinListeners.delete(listener);

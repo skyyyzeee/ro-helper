@@ -1,4 +1,4 @@
-import type { AppUpdate, PinGroup, PlatformAdapter, ResizeEdge, WindowBounds } from './types';
+import type { AppUpdate, PinGroup, PlatformAdapter, ResizeEdge, Toast, WindowBounds } from './types';
 
 export interface FakeCall {
   method: keyof PlatformAdapter;
@@ -14,6 +14,8 @@ export interface FakePlatform extends PlatformAdapter {
     hotkey: string | null;
     /** What is pinned over the game, block by block. */
     pins: PinGroup[];
+    /** The last notice shown over the game. */
+    toast: Toast | null;
     clipboard: string;
     /** What the releases offer: a newer version, none, or no connection. */
     update: AppUpdate | null | 'offline';
@@ -43,6 +45,7 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
     overlayVisible: true,
     hotkey: null,
     pins: [],
+    toast: null,
     clipboard: '',
     update: options.update ?? null,
     updateInstalled: false,
@@ -135,6 +138,10 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
     onPinsChanged(listener) {
       pinListeners.add(listener);
       return () => pinListeners.delete(listener);
+    },
+    async showToast(toast) {
+      record('showToast', toast);
+      state.toast = toast;
     },
 
     async writeClipboard(text) {

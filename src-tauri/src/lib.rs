@@ -15,6 +15,8 @@ const PIN_GROUPS_EVENT: &str = "pin-groups";
 const PIN_LIVE_EVENT: &str = "pin-live";
 /// Told to the overlay when the user moves, joins or closes something on the cards themselves.
 const PIN_LAYOUT_EVENT: &str = "pin-layout";
+/// A notice to show over the game.
+const PIN_TOAST_EVENT: &str = "pin-toast";
 
 /// What is pinned — blocks of cards, each with its place — and whether the overlay is open
 /// (the blocks can then be dragged, joined and closed).
@@ -22,6 +24,8 @@ const PIN_LAYOUT_EVENT: &str = "pin-layout";
 struct Pin {
   groups: Mutex<Vec<Value>>,
   live: Mutex<bool>,
+  /// The notice on show, if any: it keeps the window up though nothing is pinned.
+  toast: Mutex<Option<Value>>,
 }
 
 /// Where one block sits, in physical pixels of the pin window.
@@ -126,7 +130,10 @@ fn pin_set(app: AppHandle, state: tauri::State<Pin>, groups: Vec<Value>) -> Resu
   #[cfg(windows)]
   if let Some(hwnd) = pin_window::hwnd(&window) {
     if empty {
-      pin_window::hide(hwnd);
+      // A notice still on show keeps the window up; it hides once the notice has gone.
+      if state.toast.lock().unwrap().is_none() {
+        pin_window::hide(hwnd);
+      }
     } else {
       // Set again on every show: the window library may still rewrite the styles while the window is being built.
       pin_window::set_click_through(hwnd, !*state.live.lock().unwrap());
@@ -135,7 +142,9 @@ fn pin_set(app: AppHandle, state: tauri::State<Pin>, groups: Vec<Value>) -> Resu
   }
   #[cfg(not(windows))]
   if empty {
-    window.hide().map_err(|e| e.to_string())?;
+    if state.toast.lock().unwrap().is_none() {
+      window.hide().map_err(|e| e.to_string())?;
+    }
   } else {
     window.show().map_err(|e| e.to_string())?;
   }
@@ -166,7 +175,7 @@ fn pin_areas(app: AppHandle, areas: Vec<PinArea>) -> Result<(), String> {
 /// What the pin window shows when it loads: what is pinned, and whether the overlay is open.
 #[tauri::command]
 fn pin_state(state: tauri::State<Pin>) -> Value {
-  serde_json::json!({ "groups": *state.groups.lock().unwrap(), "live": *state.live.lock().unwrap() })
+  serde_json::json!({ "groups": *state.groups.lock().unwrap(), "live": *state.live.lock().unwrap(), "toast": *state.toast.lock().unwrap() })
 }
 
 /// The overlay was shown or hidden. While it is shown the cards take the mouse, so they can be dragged,
@@ -185,6 +194,47 @@ fn pin_live(app: AppHandle, state: tauri::State<Pin>, live: bool) -> Result<(), 
   #[cfg(not(windows))]
   window.set_ignore_cursor_events(!live).map_err(|e| e.to_string())?;
   app.emit_to(PIN_LABEL, PIN_LIVE_EVENT, live).map_err(|e| e.to_string())
+}
+
+/// A notice over the game — a new version has come out — at the top right of the main screen, shown even
+/// with nothing pinned. The window takes the corner of the screen's work area along, measured from itself.
+#[tauri::command]
+fn pin_toast(app: AppHandle, state: tauri::State<Pin>, toast: Value) -> Result<(), String> {
+  let window = pin_window(&app)?;
+  let mut shown = toast;
+  if let (Ok(Some(monitor)), Ok(origin)) = (app.primary_monitor(), window.outer_position()) {
+    let area = monitor.work_area();
+    shown["corner"] = serde_json::json!({
+      "right": area.position.x + area.size.width as i32 - origin.x,
+      "top": area.position.y - origin.y,
+    });
+  }
+  *state.toast.lock().unwrap() = Some(shown.clone());
+  app.emit_to(PIN_LABEL, PIN_TOAST_EVENT, &shown).map_err(|e| e.to_string())?;
+  #[cfg(windows)]
+  if let Some(hwnd) = pin_window::hwnd(&window) {
+    pin_window::set_click_through(hwnd, !*state.live.lock().unwrap());
+    pin_window::show(hwnd);
+  }
+  #[cfg(not(windows))]
+  window.show().map_err(|e| e.to_string())?;
+  Ok(())
+}
+
+/// The notice has gone by itself: with nothing pinned, the window hides again.
+#[tauri::command]
+fn pin_toast_done(app: AppHandle, state: tauri::State<Pin>) -> Result<(), String> {
+  let window = pin_window(&app)?;
+  *state.toast.lock().unwrap() = None;
+  if state.groups.lock().unwrap().is_empty() {
+    #[cfg(windows)]
+    if let Some(hwnd) = pin_window::hwnd(&window) {
+      pin_window::hide(hwnd);
+    }
+    #[cfg(not(windows))]
+    window.hide().map_err(|e| e.to_string())?;
+  }
+  Ok(())
 }
 
 /// The hidden pin window: the whole desktop, so a card can be put anywhere on it. Only where the cards
@@ -275,7 +325,9 @@ pub fn run() {
       pin_layout,
       pin_areas,
       pin_state,
-      pin_live
+      pin_live,
+      pin_toast,
+      pin_toast_done
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {

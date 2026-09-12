@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { PinBridge } from '../platform/tauri';
 import type { PinCard, PinGroup } from '../platform/types';
 import { pinnedCards, renderApp } from '../test/renderApp';
-import { PinSurface, PinWindow } from './PinSurface';
+import { PinSurface, PinWindow, TOAST_MS } from './PinSurface';
 
 type User = Awaited<ReturnType<typeof renderApp>>['user'];
 
@@ -368,6 +368,8 @@ describe('the cards over the game', () => {
       onLive: (listener) => ((sendLive = listener), () => {}),
       layout: vi.fn(async () => {}),
       areas: vi.fn(async () => {}),
+      onToast: () => () => {},
+      toastDone: vi.fn(async () => {}),
     };
     render(<PinWindow bridge={bridge} />);
     expect(await screen.findByText('УК ст. 104. Оскорбление')).toBeInTheDocument();
@@ -381,5 +383,36 @@ describe('the cards over the game', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Открепить' }));
     expect(bridge.layout).toHaveBeenCalledWith([]);
     expect(screen.queryByRole('region', { name: 'Закреплено' })).not.toBeInTheDocument();
+  });
+});
+
+describe('a notice over the game', () => {
+  it('shows at the top right and goes by itself after a few seconds', () => {
+    vi.useFakeTimers();
+    const onToastEnd = vi.fn();
+    render(
+      <PinSurface groups={[]} live={false} onChange={() => {}} toast={{ id: 't', title: 'Вышло обновление РО Хелпер', text: 'Версия 1.1.0.' }} onToastEnd={onToastEnd} />,
+    );
+    const notice = () => screen.getByRole('status', { name: 'Уведомление' });
+    expect(notice()).toHaveTextContent('Вышло обновление РО ХелперВерсия 1.1.0.');
+    expect(notice()).toHaveStyle({ top: '16px', right: '16px' });
+
+    act(() => void vi.advanceTimersByTime(TOAST_MS - 100));
+    expect(notice()).not.toHaveClass('toast--leave');
+    act(() => void vi.advanceTimersByTime(100));
+    expect(notice()).toHaveClass('toast--leave');
+    act(() => void vi.advanceTimersByTime(300));
+    expect(onToastEnd).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it('goes at once when clicked', () => {
+    vi.useFakeTimers();
+    const onToastEnd = vi.fn();
+    render(<PinSurface groups={[]} live onChange={() => {}} toast={{ id: 't', title: 'Вышло обновление' }} onToastEnd={onToastEnd} />);
+    act(() => screen.getByRole('status', { name: 'Уведомление' }).click());
+    act(() => void vi.advanceTimersByTime(300));
+    expect(onToastEnd).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
   });
 });

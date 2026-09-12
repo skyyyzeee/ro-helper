@@ -1403,6 +1403,71 @@ input {
   color: var(--warn-text);
 }
 
+/* A notice over the game: top right of the main screen, gone by itself in a few seconds. */
+.toast {
+  position: absolute;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  box-sizing: border-box;
+  width: 330px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(14, 14, 17, 0.88);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+  cursor: pointer;
+  animation: toast-in 0.28s cubic-bezier(0.22, 1.2, 0.42, 1);
+  transition:
+    opacity 0.24s ease,
+    transform 0.24s ease;
+}
+
+.toast--leave {
+  opacity: 0;
+  transform: translateX(18px);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
+.toast__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  flex: none;
+  color: var(--on-accent);
+  background: var(--accent);
+}
+
+.toast__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.toast__title {
+  font-size: 14.5px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.toast__text {
+  font-size: 13px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.74);
+}
+
 /* Documents menu */
 .scrim {
   position: absolute;
