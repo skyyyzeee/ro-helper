@@ -1,0 +1,36 @@
+{
+  "criminalCode": "uk",
+  "combine": {
+    "kind": "sum",
+    "basis": "УК ст. 5.10 ч. 1"
+  },
+  "stages": {
+    "attempt": { "factor": 0.75, "label": "покушение", "basis": "УК ст. 5.14 ч. 3" },
+    "preparation": { "factor": 0.5, "label": "приготовление", "basis": "УК ст. 5.14 ч. 2" }
+  },
+  "maxTotalMonths": { "value": 50, "basis": "УК ст. 5.10 ч. 3" },
+  "categories": {
+    "basis": "УК ст. 2.2",
+    "list": [
+      { "name": "small", "label": "небольшой тяжести", "maxMonths": 20 },
+      { "name": "medium", "label": "средней тяжести", "maxMonths": 30 },
+      { "name": "grave", "label": "тяжкое", "maxMonths": 40 },
+      { "name": "especially-grave", "label": "особо тяжкое" }
+    ]
+  },
+  "bail": {
+    "by": "wanted",
+    "basis": "УК ст. 5.20 ч. 2",
+    "amounts": { "1": 25000, "2": 50000, "3": 75000, "4": 100000, "5": 125000 }
+  },
+  "jurisdictionWarnings": {},
+  "administrative": {
+    "code": "koap",
+    "sum": { "basis": "КоАП ст. 4.3" },
+    "fine": {
+      "min": 0,
+      "max": {},
+      "basis": "КоАП ст. 3.2"
+    }
+  }
+}

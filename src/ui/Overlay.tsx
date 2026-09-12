@@ -181,6 +181,8 @@ export function Overlay({
   const [mode, setMode] = useState<Mode>('custody');
   const [offender, setOffender] = useState<Offender>('citizen');
   const [fineInput, setFineInput] = useState('');
+  /** Арбатский: bail goes by the wanted priority the officer sets, 1 by default. */
+  const [priority, setPriority] = useState(1);
   const [side, setSide] = useState<'left' | 'right'>('left');
   const rules = pack.calculator;
   const calculable = rules ? [rules.criminalCode, rules.administrative.code] : [];
@@ -211,7 +213,11 @@ export function Overlay({
       ),
     [charges],
   );
-  const result = useMemo(() => (rules ? calculateDetention(items, { mode, offender }, rules) : null), [items, mode, offender, rules]);
+  const result = useMemo(
+    () => (rules ? calculateDetention(items, { mode, offender, priority }, rules) : null),
+    [items, mode, offender, priority, rules],
+  );
+  const priorityLevels = rules?.bail.by === 'wanted' ? Object.keys(rules.bail.amounts).map(Number).sort((a, b) => a - b) : null;
   /** The calculator's entry behind a charge of the result. */
   const entryOf = (item: ChargeItem) => charges[items.findIndex((c) => c === item)];
   const updateCharge = (item: ChargeItem, patch: ChargePatch) => {
@@ -226,6 +232,7 @@ export function Overlay({
     setMode('custody');
     setOffender('citizen');
     setFineInput('');
+    setPriority(1);
   }, [calculatorOpen]);
 
   // Pinned card: an article stays pinned while the overlay stays open for the next search; pinning the
@@ -458,6 +465,7 @@ export function Overlay({
           result={result}
           onMode={setMode}
           onOffender={setOffender}
+          priority={priorityLevels ? { value: priority, levels: priorityLevels, onChange: setPriority } : undefined}
           fieldsOf={(item) => entryOf(item) ?? { amount: '', days: '', unpaid: '' }}
           onUpdate={updateCharge}
           onRemove={(item) => {
@@ -659,7 +667,7 @@ export function Overlay({
               setOpen(null);
               searchRef.current?.focus();
             }}
-            monthsPerStar={rules && open.document.id === rules.criminalCode ? rules.stars.monthsPerStar : undefined}
+            monthsPerStar={rules?.stars && open.document.id === rules.criminalCode ? rules.stars.monthsPerStar : undefined}
             calculator={
               addable(open)
                 ? { has: (part) => inCalculator(partHit(open, part)), toggle: (part) => toggleCharge(partHit(open, part)) }

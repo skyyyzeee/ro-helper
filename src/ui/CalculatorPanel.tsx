@@ -56,6 +56,8 @@ export interface CalculatorPanelProps {
   /** The mode the officer picked; the result says which one could actually be used. */
   onMode: (mode: Mode) => void;
   onOffender: (offender: Offender) => void;
+  /** Where bail goes by the wanted priority (Арбатский): the priority the officer set, and setting it. */
+  priority?: { value: number; levels: number[]; onChange: (value: number) => void };
   fieldsOf: (item: ChargeItem) => ChargeFields;
   onUpdate: (item: ChargeItem, patch: ChargePatch) => void;
   onRemove: (item: ChargeItem) => void;
@@ -107,7 +109,7 @@ export function CalculatorPanel(props: CalculatorPanelProps) {
   );
 }
 
-function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, fineInput, onFineInput }: CalculatorPanelProps & { criminal: CriminalResult }) {
+function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, fineInput, onFineInput, priority }: CalculatorPanelProps & { criminal: CriminalResult }) {
   const { items, mode } = criminal;
   const noFine = criminal.fineUnavailable;
   const noCustody = criminal.custodyUnavailable.length === items.length;
@@ -128,7 +130,7 @@ function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, fineInp
       {noFine.length > 0 && <p className="calc__hint">Штраф недоступен: у {noFine.map((r) => chargeLabel(r.item)).join(', ')} нет штрафа</p>}
       {noCustody && <p className="calc__hint">КПЗ недоступен: ни у одной статьи нет лишения свободы</p>}
 
-      <div className="sec-t">УК · поглощение</div>
+      <div className="sec-t">УК · {criminal.combine === 'sum' ? 'сложение' : 'поглощение'}</div>
       <ul className="calc__items" aria-label="Статьи в калькуляторе">
         {items.map((r) => {
           const label = chargeLabel(r.item);
@@ -231,7 +233,25 @@ function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, fineInp
       {mode === 'custody' && criminal.bail && (
         <div className="bail">
           <span>Залог</span>
-          <span className="muted">({criminal.bail.category})</span>
+          {priority ? (
+            <span className="bail__levels" role="radiogroup" aria-label="Приоритет розыска">
+              {priority.levels.map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  role="radio"
+                  aria-checked={priority.value === level}
+                  aria-label={`Приоритет розыска ${level}`}
+                  className={priority.value === level ? 'bail__level bail__level--on' : 'bail__level'}
+                  onClick={() => priority.onChange(level)}
+                >
+                  {level}
+                </button>
+              ))}
+            </span>
+          ) : (
+            <span className="muted">({criminal.bail.category})</span>
+          )}
           <span className="sp" />
           <span className="val">{criminal.bail.amount ? formatRubles(criminal.bail.amount) : 'не предусмотрен'}</span>
         </div>

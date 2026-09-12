@@ -147,8 +147,8 @@ export function calculateAdministrative<T extends AdministrativeItem>(
       }
       fine = { limit: { min, max: cap ?? amount }, amount, fixed: false, fits: true, multiplier: sanction.multiplier };
     } else if (sanction?.kind === 'arrest') {
-      const max = Math.min(sanction.max, rules.arrest.maxDays);
-      if (max < sanction.max) explanation.push(`${label}: арест не более ${max} сут — ${rules.arrest.basis}`);
+      const max = rules.arrest ? Math.min(sanction.max, rules.arrest.maxDays) : sanction.max;
+      if (rules.arrest && max < sanction.max) explanation.push(`${label}: арест не более ${max} сут — ${rules.arrest.basis}`);
       const fixed = sanction.min === sanction.max;
       const days = fixed ? max : (item.days ?? max);
       arrest = { limit: { min: sanction.min, max }, days, fixed, fits: days >= (sanction.min ?? 1) && days <= max };
@@ -191,7 +191,7 @@ export function calculateAdministrative<T extends AdministrativeItem>(
     items,
     fineTotal,
     arrestDays,
-    bail: arrestDays ? { days: arrestDays, perDay: rules.bail.perDay, amount: arrestDays * rules.bail.perDay } : null,
+    bail: arrestDays && rules.bail ? { days: arrestDays, perDay: rules.bail.perDay, amount: arrestDays * rules.bail.perDay } : null,
     other,
     stars,
     starsFrom,

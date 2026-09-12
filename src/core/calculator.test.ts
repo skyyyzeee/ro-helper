@@ -67,7 +67,7 @@ describe('criminal calculator (real Тверской УК and rules)', () => {
   it('turns months into stars by the rules (1 ★ = 10 мес)', () => {
     expect(calc(['56 ч1'])).toMatchObject({ term: 20, stars: 2 });
     expect(calc(['51 ч1'])).toMatchObject({ term: 50, stars: 5 });
-    const tenStars = { ...rules, stars: { ...rules.stars, monthsPerStar: 5, max: 10 } };
+    const tenStars = { ...rules, stars: { ...rules.stars!, monthsPerStar: 5, max: 10 } };
     expect(calc(['56 ч1'], 'custody', tenStars)).toMatchObject({ stars: 4, starsMonths: 20 });
   });
 

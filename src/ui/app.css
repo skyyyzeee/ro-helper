@@ -348,6 +348,34 @@ input {
   font-size: inherit;
 }
 
+/* Bail by the wanted priority: 1…5 beside the amount */
+.bail__levels {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.bail__level {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface);
+  transition: background-color 0.14s ease, color 0.14s ease;
+}
+
+.bail__level:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.bail__level--on,
+.bail__level--on:hover {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
 /* The offer of a new version */
 .update {
   display: flex;

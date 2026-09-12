@@ -10,6 +10,8 @@ export interface DetentionOptions {
   mode: Mode;
   /** Who the administrative charges are brought against. */
   offender: Offender;
+  /** Where bail goes by the wanted priority (Арбатский): the priority the officer set, 1 by default. */
+  priority?: number;
 }
 
 export interface DetentionStars {
@@ -69,14 +71,15 @@ function chargeLine(charges: Charge[], rules: CalculatorRules): string {
 export function calculateDetention(charges: Charge[], options: DetentionOptions, rules: CalculatorRules): DetentionResult {
   const criminalCharges = charges.filter((c) => c.document.id === rules.criminalCode);
   const administrativeCharges = charges.filter((c) => c.document.id === rules.administrative.code);
-  const criminal = criminalCharges.length ? calculateCriminal(criminalCharges, options.mode, rules) : null;
+  const criminal = criminalCharges.length ? calculateCriminal(criminalCharges, options.mode, rules, options.priority) : null;
   const administrative = administrativeCharges.length
     ? calculateAdministrative(administrativeCharges, options.offender, rules.administrative)
     : null;
 
   let stars: DetentionStars | null = null;
-  if (criminal?.mode === 'custody') stars = { count: criminal.stars, months: criminal.starsMonths, from: 'criminal' };
-  if (administrative?.starsFrom && administrative.stars > (stars?.count ?? 0)) {
+  // Without stars in the laws (Арбатский) the wanted level is the officer's to set, not the calculator's.
+  if (rules.stars && criminal?.mode === 'custody') stars = { count: criminal.stars, months: criminal.starsMonths, from: 'criminal' };
+  if (rules.stars && administrative?.starsFrom && administrative.stars > (stars?.count ?? 0)) {
     const count = Math.min(administrative.stars, rules.stars.max);
     stars = {
       count,

@@ -6,7 +6,8 @@
   },
   "calculator": {
     "criminalCode": "uk",
-    "absorption": {
+    "combine": {
+      "kind": "absorption",
       "basis": "УК ст. 41 ч. 2"
     },
     "stackOnce": {
@@ -59,6 +60,7 @@
       ]
     },
     "bail": {
+      "by": "category",
       "basis": "УК ст. 50.1",
       "amounts": {
         "small": 50000,

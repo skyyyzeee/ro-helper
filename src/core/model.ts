@@ -136,16 +136,21 @@ interface Based {
 export interface CalculatorRules {
   /** Document the calculator treats as the criminal code. */
   criminalCode: string;
-  /** Several crimes: the strictest punishment absorbs the rest. */
-  absorption: Based;
-  /** An article whose punishment may be added once on top of the strictest one. */
+  /** Several crimes: the strictest punishment absorbs the rest (Тверской) or the terms add up (Арбатский). */
+  combine: Based & { kind: 'absorption' | 'sum' };
+  /** Absorption only: an article whose punishment may be added once on top of the strictest one. */
   stackOnce?: Based & { article: string };
   stages: Record<'attempt' | 'preparation', Based & { factor: number; label: string }>;
   maxTotalMonths: Based & { value: number };
-  stars: Based & { monthsPerStar: number; max: number };
+  /** Where the wanted level comes from the term; a server whose laws do not tie them has none. */
+  stars?: Based & { monthsPerStar: number; max: number };
   /** Crime categories by the article's maximum term, lightest first; the last one has no limit. */
   categories: Based & { list: { name: string; label: string; maxMonths?: number }[] };
-  bail: Based & { amounts: Record<string, number> };
+  /**
+   * Bail: by the category of the most serious crime (Тверской), or by the wanted priority the officer
+   * sets (Арбатский) — then the amounts are keyed by the priority, «1»…«5».
+   */
+  bail: Based & { by: 'category' | 'wanted'; amounts: Record<string, number> };
   /** Jurisdiction tag → what the officer should know when a charge has only that tag. */
   jurisdictionWarnings: Partial<Record<Jurisdiction, string>>;
   administrative: AdministrativeRules;
@@ -159,10 +164,10 @@ export interface AdministrativeRules {
   sum: Based;
   /** Limits of any one fine, for whoever it is set on; they narrow an article's own limits. */
   fine: Based & { min: number; max: Partial<Record<Subject, number>> };
-  /** Longest arrest for one violation. */
-  arrest: Based & { maxDays: number };
-  /** Bail to be released from an arrest, per day of it. */
-  bail: Based & { perDay: number };
+  /** Longest arrest for one violation; a code without arrests (Арбатский) has none. */
+  arrest?: Based & { maxDays: number };
+  /** Bail to be released from an arrest, per day of it; none where there are no arrests. */
+  bail?: Based & { perDay: number };
 }
 
 /** A change to one article between two versions of the laws. */
