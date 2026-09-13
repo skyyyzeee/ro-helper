@@ -1,1 +1,77 @@
-[]
+[
+  {
+    "version": "2026-09-11T12:14:23+03:00",
+    "documents": [
+      {
+        "documentId": "rules-leaders",
+        "short": "Правила",
+        "title": "Правила для лидеров фракций",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "rules-martial",
+        "short": "Правила",
+        "title": "Правила военного положения",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "rules-supply",
+        "short": "Правила",
+        "title": "Правила перехвата поставок",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "rules-robbery",
+        "short": "Правила",
+        "title": "Правила ограблений и похищений",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "rules-business",
+        "short": "Правила",
+        "title": "Правила ограбления бизнесов",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "rules-bank",
+        "short": "Правила",
+        "title": "Правила ограбления банков",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "rules-workshops",
+        "short": "Правила",
+        "title": "Правила захвата цехов и дилеров",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "rules-fort",
+        "short": "Правила",
+        "title": "Правила нападения и обороны Форта",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "rules-software",
+        "short": "Правила",
+        "title": "Правила проверки на стороннее ПО",
+        "kind": "added",
+        "articles": []
+      },
+      {
+        "documentId": "rules-forum",
+        "short": "Правила",
+        "title": "Форумные правила",
+        "kind": "added",
+        "articles": []
+      }
+    ]
+  }
+]

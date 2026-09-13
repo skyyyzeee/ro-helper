@@ -23,6 +23,8 @@ const CAPS_CHAPTER = /^(\d+)\.\s+([^a-zа-яё]{3,80})$/;
 /** «1.1. …», «1.1 …», «1.1 | …», «1. …» — a bare «15 – …» is no point. */
 const POINT = /^(\d{1,3}\.\d{1,3}(?:\.\d{1,3})*\.?|\d{1,3}\.)(?:\s+\|?\s*|\s*\|\s*)(\S.*)$/;
 const ITEM = /^([а-яё]|\d+)\)\s+(.*)$/;
+/** «2. Обязанности лидера»: in project rules written in «1.1» points, the title of the section numbered 2. */
+const NUMBERED_SECTION = /^(\d{1,2})\.\s+([^.;!?]{2,80}?)\s*:?$/;
 /**
  * «Примечание: …», «➤ Исключение к п.5.42.: …», «Пояснение: …» — and «Наказание: Строгий выговор» on the line under
  * a point, where the charters of Арбатский and Кутузовский write what Тверской puts after «|».
@@ -100,6 +102,8 @@ export function parsePointsText(text: string, documentId: string, options: Point
   let item: Point | undefined;
   let ended = false;
   const filled = new Set<Chapter>();
+  /** Project rules: section titles written as «2. Название», by the section's number. */
+  const sectionTitles = new Map<string, string>();
   const chapterOf = new Map<Article, Chapter>();
 
   /** Title-like lines at the end of the last point, which belong to what follows it; within a chapter, only «…:» sub-headings. */
@@ -151,6 +155,10 @@ export function parsePointsText(text: string, documentId: string, options: Point
       item = undefined;
       continue;
     }
+    if (!explicitChapters && dotted && (m = line.match(NUMBERED_SECTION))) {
+      sectionTitles.set(m[1], m[2]);
+      continue;
+    }
     if ((m = line.match(POINT)) && (!dotted || m[1].includes('.', m[1].indexOf('.') + 1) || /^\d+\.\d/.test(m[1]))) {
       const number = m[1].replace(/\.$/, '');
       if (options.subpoints === 'list' && article && number.startsWith(`${article.number}.`)) {
@@ -163,7 +171,12 @@ export function parsePointsText(text: string, documentId: string, options: Point
       if (!explicitChapters) {
         // Project rules: the chapter is the point's first number, titled by the line before its first point.
         const first = number.split('.')[0];
-        if (chapter?.number !== first) {
+        if (chapter?.number !== first && sectionTitles.has(first)) {
+          // Titled by its own «2. Название» line: the lines before the point stay with the point before it.
+          chapter = { number: first, title: sectionTitles.get(first)!, kind: 'section', preface: [] };
+          chapters.push(chapter);
+          group = undefined;
+        } else if (chapter?.number !== first) {
           const { title, subheading, preface } = popSectionTitle();
           // The rules call them sections: «р. 11, п. 4».
           chapter = { number: first, title, kind: 'section', preface };

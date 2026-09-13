@@ -12,6 +12,6 @@
   {"id": "hospital", "name": "Больница", "kind": "state", "documents": ["fz-health", "ch-hospital"]},
   {"id": "advocate", "name": "Адвокатура", "kind": "state", "documents": ["fz-advocacy", "upk"]},
   {"id": "news", "name": "Вести Москвы", "kind": "state", "documents": ["ch-news"]},
-  {"id": "opg", "name": "ОПГ", "kind": "crime", "documents": ["rules-crime"]},
+  {"id": "opg", "name": "ОПГ", "kind": "crime", "documents": ["rules-crime", "rules-robbery", "rules-business", "rules-bank", "rules-workshops", "rules-supply", "rules-fort"]},
   {"id": "none", "name": "Без организации", "documents": []}
 ]

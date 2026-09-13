@@ -21,12 +21,15 @@ describe('bundled Тверской pack', () => {
     // Never edited since posting: current as of the post itself.
     expect(TVERSKOI_PACK.documents.find((d) => d.id === 'fkz2')?.source).toMatchObject({ thread: 14682, lastEdited: '2026-09-02T21:44:37+03:00' });
     expect(TVERSKOI_PACK.server).toEqual({ id: 'tverskoi', name: 'Тверской', status: 'active' });
-    // The version is the newest edit: the Army charters, 11 September. No law has changed since the pack was first built.
+    // The version is the newest edit: the Army charters, 11 September. No law has changed since the pack was first
+    // built; the only update added the other rules of the project.
     expect(TVERSKOI_PACK.version).toBe('2026-09-11T12:14:23+03:00');
-    expect(TVERSKOI_PACK.changes).toEqual([]);
+    expect(TVERSKOI_PACK.changes).toHaveLength(1);
+    expect(TVERSKOI_PACK.changes[0].documents.every((d) => d.kind === 'added' && d.documentId.startsWith('rules-'))).toBe(true);
+    expect(TVERSKOI_PACK.changes[0].documents).toHaveLength(10);
   });
 
-  it('holds the legislative base, the charters of the organisations and the project rules: 49 documents', () => {
+  it('holds the legislative base, the charters of the organisations and the project rules: 59 documents', () => {
     expect(TVERSKOI_PACK.documents.map((d) => d.short)).toEqual([
       'Конституция', 'УК', 'КоАП', 'ПДД', 'УПК', 'ТК', 'Этика',
       '1-ФКЗ', '2-ФКЗ', '3-ФКЗ', '4-ФКЗ',
@@ -35,11 +38,11 @@ describe('bundled Тверской pack', () => {
       'Устав', 'Устав', 'Регламент', 'Устав', 'Устав', 'Устав',
       'Положение', 'Положение', 'Положение', 'Положение', 'Положение', 'Положение', 'Положение', 'Положение',
       'Устав', 'Устав',
-      'Правила', 'Правила', 'Правила',
+      'Правила', 'Правила', 'Правила', 'Правила', 'Правила', 'Правила', 'Правила', 'Правила', 'Правила', 'Правила', 'Правила', 'Правила', 'Правила',
     ]);
     expect(TVERSKOI_PACK.documents.filter((d) => d.kind === 'penal-code').map((d) => d.id)).toEqual(['uk', 'koap']);
     const byCategory = (category: string) => TVERSKOI_PACK.documents.filter((d) => d.category === category).length;
-    expect(['codes', 'fkz', 'fz', 'moscow', 'charters', 'rules'].map(byCategory)).toEqual([7, 4, 15, 4, 16, 3]);
+    expect(['codes', 'fkz', 'fz', 'moscow', 'charters', 'rules'].map(byCategory)).toEqual([7, 4, 15, 4, 16, 13]);
     // Every organisation's documents are in the pack now.
     for (const organization of TVERSKOI_PACK.organizations) {
       for (const id of organization.documents) expect(TVERSKOI_PACK.documents.map((d) => d.id)).toContain(id);

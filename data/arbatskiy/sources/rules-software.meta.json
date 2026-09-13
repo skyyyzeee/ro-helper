@@ -1,0 +1,17 @@
+{
+  "id": "rules-software",
+  "short": "Правила",
+  "title": "Правила проверки на стороннее ПО",
+  "aliases": [
+    "ппо"
+  ],
+  "kind": "rules",
+  "category": "rules",
+  "format": "points",
+  "unit": "point",
+  "thread": 10,
+  "url": "https://forum.russia.online/threads/pravila-proverki-na-storonneye-po.10/",
+  "posted": "2026-07-31T13:20:47+03:00",
+  "lastEdited": "2026-07-31T13:20:47+03:00",
+  "snapshotAt": "2026-09-14"
+}

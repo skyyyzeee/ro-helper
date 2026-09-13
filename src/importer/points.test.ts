@@ -161,3 +161,24 @@ describe('charters of Арбатский and Кутузовский (real forum 
     expect(hospital.articles.find((a) => a.number === '2.4')!.notes).toEqual([{ label: 'Наказание', text: 'Строгий выговор' }]);
   });
 });
+
+describe('the other rules of the project (real forum text, the same on every server)', () => {
+  const RULES: [string, number, number][] = [
+    ['rules-leaders', 40, 26], ['rules-martial', 20, 11], ['rules-supply', 63, 52], ['rules-robbery', 51, 39], ['rules-business', 14, 11],
+    ['rules-bank', 19, 14], ['rules-workshops', 15, 14], ['rules-fort', 36, 31], ['rules-software', 14, 6], ['rules-forum', 37, 26],
+  ];
+
+  it('reads every point, and every punishment after «|»', () => {
+    for (const [id, count, punished] of RULES) {
+      const doc = parse(id);
+      const penalties = doc.articles.filter((a) => a.notes.some((n) => n.label === 'Наказание')).length;
+      expect({ id, count: doc.articles.length, penalties, issues: doc.issues }).toEqual({ id, count, penalties: punished, issues: [] });
+    }
+  });
+
+  it('takes «2. Обязанности лидера» for the title of section 2, not for a line of the point before it', () => {
+    const leaders = parse('rules-leaders');
+    expect(leaders.chapters.map((c) => c.title)).toEqual(['Общее положение', 'Обязанности лидера', 'Лидерам запрещено', 'Повышения/Увольнения']);
+    expect(leaders.articles.flatMap((a) => a.parts).some((p) => /^\d\.\s/.test(p.text))).toBe(false);
+  });
+});

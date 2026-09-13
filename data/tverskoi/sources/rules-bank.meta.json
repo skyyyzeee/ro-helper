@@ -1,0 +1,17 @@
+{
+  "id": "rules-bank",
+  "short": "Правила",
+  "title": "Правила ограбления банков",
+  "aliases": [
+    "пбанк"
+  ],
+  "kind": "rules",
+  "category": "rules",
+  "format": "points",
+  "unit": "point",
+  "thread": 4,
+  "url": "https://forum.russia.online/threads/pravila-ogrableniya-bankov.4/",
+  "posted": "2026-07-25T16:13:54+03:00",
+  "lastEdited": "2026-07-25T16:13:54+03:00",
+  "snapshotAt": "2026-09-14"
+}

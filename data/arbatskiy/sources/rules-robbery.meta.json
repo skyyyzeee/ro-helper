@@ -1,0 +1,17 @@
+{
+  "id": "rules-robbery",
+  "short": "Правила",
+  "title": "Правила ограблений и похищений",
+  "aliases": [
+    "пох"
+  ],
+  "kind": "rules",
+  "category": "rules",
+  "format": "points",
+  "unit": "point",
+  "thread": 5,
+  "url": "https://forum.russia.online/threads/pravila-ograblenii-i-pokhishchenii.5/",
+  "posted": "2026-07-25T16:14:18+03:00",
+  "lastEdited": "2026-09-08T09:16:47+03:00",
+  "snapshotAt": "2026-09-14"
+}

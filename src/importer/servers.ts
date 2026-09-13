@@ -21,6 +21,8 @@ export const TVERSKOI: ServerSources = {
     'ch-hospital', 'ch-news',
     // Правила проекта
     'rules-main', 'rules-gov', 'rules-crime',
+    'rules-leaders', 'rules-martial', 'rules-supply', 'rules-robbery', 'rules-business', 'rules-bank',
+    'rules-workshops', 'rules-fort', 'rules-software', 'rules-forum',
   ],
 };
 
@@ -42,6 +44,8 @@ export const ARBATSKIY: ServerSources = {
     'sk-charter', 'ch-gov', 'ch-hospital', 'ch-news',
     // Правила проекта (общие для всех серверов)
     'rules-main', 'rules-gov', 'rules-crime',
+    'rules-leaders', 'rules-martial', 'rules-supply', 'rules-robbery', 'rules-business', 'rules-bank',
+    'rules-workshops', 'rules-fort', 'rules-software', 'rules-forum',
   ],
 };
 
@@ -62,6 +66,8 @@ export const KUTUZOVSKIY: ServerSources = {
     'sk-appeals', 'ch-hospital', 'ch-news',
     // Правила проекта (общие для всех серверов)
     'rules-main', 'rules-gov', 'rules-crime',
+    'rules-leaders', 'rules-martial', 'rules-supply', 'rules-robbery', 'rules-business', 'rules-bank',
+    'rules-workshops', 'rules-fort', 'rules-software', 'rules-forum',
   ],
 };
 

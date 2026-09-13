@@ -1,0 +1,17 @@
+{
+  "id": "rules-fort",
+  "short": "Правила",
+  "title": "Правила нападения и обороны Форта",
+  "aliases": [
+    "пфорт"
+  ],
+  "kind": "rules",
+  "category": "rules",
+  "format": "points",
+  "unit": "point",
+  "thread": 15,
+  "url": "https://forum.russia.online/threads/pravila-napadeniya-oborony-territorii-forta.15/",
+  "posted": "2026-08-13T22:10:00+03:00",
+  "lastEdited": "2026-09-08T09:17:05+03:00",
+  "snapshotAt": "2026-09-14"
+}
