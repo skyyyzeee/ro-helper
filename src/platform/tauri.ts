@@ -220,6 +220,13 @@ export async function createTauriPlatform(): Promise<PlatformAdapter> {
 
     setPins: (groups) => invoke('pin_set', { groups }),
     showToast: (toast) => invoke('pin_toast', { toast }),
+    async download(url) {
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`${response.status} ${url}`);
+      return response.text();
+    },
+    readLaws: async (server) => (await invoke<string | null>('laws_read', { server })) ?? undefined,
+    writeLaws: (server, text) => invoke('laws_write', { server, text }),
     onPinsChanged(listener) {
       pinListeners.add(listener);
       return () => pinListeners.delete(listener);

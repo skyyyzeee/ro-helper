@@ -4,7 +4,9 @@ import { createFakePlatform, type FakeOptions, type FakePlatform } from '../plat
 import { PlatformProvider } from '../platform/PlatformContext';
 import { App } from '../ui/App';
 import { DEFAULT_HOTKEY } from '../ui/overlaySettings';
+import { APP_VERSION } from '../ui/about';
 import { PROFILE_KEY, type Profile } from '../ui/profile';
+import { SEEN_VERSION_KEY } from '../ui/whatsNew';
 
 export interface RenderOptions {
   platform?: FakeOptions;
@@ -22,6 +24,8 @@ export async function renderApp(options: RenderOptions = {}) {
   const platform = createFakePlatform(options.platform);
   const profile = options.profile === null ? null : { server: 'tverskoi', organization: 'none', hotkey: DEFAULT_HOTKEY, ...options.profile };
   if (profile) platform.settings.set(PROFILE_KEY, profile);
+  // A copy that has run this version before: «Что нового» after an update is its own test's to show.
+  platform.settings.set(SEEN_VERSION_KEY, APP_VERSION);
   for (const [key, value] of Object.entries(options.settings ?? {})) platform.settings.set(key, value);
 
   render(

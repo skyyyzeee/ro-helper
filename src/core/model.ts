@@ -201,7 +201,17 @@ export interface ChangeEntry {
   documents: DocumentChange[];
 }
 
+/**
+ * The shape of a pack the app reads. Installed copies take newer laws from GitHub only in the shape they
+ * know: bump it whenever a pack changes in a way an older app would misread.
+ */
+export const PACK_FORMAT = 1;
+
 export interface ServerPack {
+  /** The shape this pack is written in: see `PACK_FORMAT`. */
+  format: number;
+  /** When the pack's content last changed (ISO), set by the importer: a newer one replaces an older one. */
+  built?: string;
   server: ServerInfo;
   /** Rules of the detention calculator; a server whose codes are not described yet has none. */
   calculator?: CalculatorRules;

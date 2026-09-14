@@ -35,6 +35,12 @@ export function createBrowserPlatform(): PlatformAdapter {
       await fake.writeClipboard(text);
       await navigator.clipboard?.writeText(text).catch(() => undefined);
     },
+    // The preview downloads the laws for real; they are kept only until the page reloads.
+    download: async (url) => {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`${response.status} ${url}`);
+      return response.text();
+    },
     async openExternal(url) {
       await fake.openExternal(url);
       window.open(url, '_blank', 'noopener');

@@ -273,6 +273,39 @@ fn create_pin_window(app: &AppHandle) -> tauri::Result<()> {
   Ok(())
 }
 
+/// The laws of a server downloaded from GitHub, kept in the app's data folder beside the settings.
+fn laws_file(app: &AppHandle, server: &str) -> Result<std::path::PathBuf, String> {
+  // Only a server id: a name that could reach outside the folder is refused.
+  if server.is_empty() || !server.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-') {
+    return Err(format!("bad server id: {server}"));
+  }
+  let dir = app.path().app_data_dir().map_err(|e| e.to_string())?.join("laws");
+  Ok(dir.join(format!("{server}.json")))
+}
+
+/// The laws of a server downloaded before, or nothing when there are none.
+#[tauri::command]
+fn laws_read(app: AppHandle, server: String) -> Result<Option<String>, String> {
+  let file = laws_file(&app, &server)?;
+  match std::fs::read_to_string(&file) {
+    Ok(text) => Ok(Some(text)),
+    Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+    Err(e) => Err(e.to_string()),
+  }
+}
+
+/// Keeps the laws of a server just downloaded; written aside first, so a half-written file is never read.
+#[tauri::command]
+fn laws_write(app: AppHandle, server: String, text: String) -> Result<(), String> {
+  let file = laws_file(&app, &server)?;
+  if let Some(dir) = file.parent() {
+    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+  }
+  let partial = file.with_extension("json.part");
+  std::fs::write(&partial, text).map_err(|e| e.to_string())?;
+  std::fs::rename(&partial, &file).map_err(|e| e.to_string())
+}
+
 /// The window that had focus before the overlay was shown — normally the game — as a raw HWND.
 #[derive(Default)]
 struct PreviousForeground(Mutex<Option<isize>>);
@@ -320,6 +353,8 @@ pub fn run() {
     .manage(Pin::default())
     .invoke_handler(tauri::generate_handler![
       remember_foreground,
+      laws_read,
+      laws_write,
       restore_foreground,
       pin_set,
       pin_layout,

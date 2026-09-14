@@ -119,6 +119,11 @@ export interface PlatformAdapter {
   setPins(groups: PinGroup[]): Promise<void>;
   /** Called when the user moves, joins or closes something there. Returns an unsubscribe function. */
   onPinsChanged(listener: (groups: PinGroup[]) => void): () => void;
+  /** Downloads a text file (the laws on GitHub). Throws when offline or when the file is not there. */
+  download(url: string): Promise<string>;
+  /** The laws of a server downloaded before, kept on the computer, or nothing. */
+  readLaws(server: string): Promise<string | undefined>;
+  writeLaws(server: string, text: string): Promise<void>;
   /** Shows a notice over the game — even while the overlay is hidden — that goes by itself. */
   showToast(toast: Toast): Promise<void>;
 

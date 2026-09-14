@@ -4,7 +4,7 @@
 //        npm run import -- arbatskiy     — one server instead of all
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { DocumentChange, ServerPack } from '../core/model';
+import { PACK_FORMAT, type DocumentChange, type ServerPack } from '../core/model';
 import { buildPack } from './buildPack';
 import { compareImports, nextChangelog } from './changelog';
 import { SERVERS } from './servers';
@@ -73,7 +73,24 @@ for (const server of servers) {
   } else {
     pack.changes = nextChangelog(pack.changes, pack.version, report.laws);
     writeFileSync(join(serverDir, 'changelog.json'), JSON.stringify(pack.changes, null, 2) + '\n');
+    // «Built» moves only when the content does, so installed copies fetch a pack only when it is new to them.
+    const { built: previousBuilt, ...before } = previous ?? ({} as Partial<ServerPack>);
+    const same = previous !== undefined && JSON.stringify(before) === JSON.stringify(pack);
+    pack.built = same && previousBuilt ? previousBuilt : new Date().toISOString();
     writeFileSync(out, JSON.stringify(pack, null, 2) + '\n');
     console.log(`\nПакет ${pack.server.name}, версия ${pack.version} → ${out}`);
   }
+}
+
+// What installed copies look at first: each server's pack and when it was built. They download a pack only
+// when it is newer than theirs and written in a shape they read.
+if (!check) {
+  const packs: Record<string, { built?: string; version: string }> = {};
+  for (const server of SERVERS) {
+    const file = join(root, 'src', 'data', `${server.id}.json`);
+    if (!existsSync(file)) continue;
+    const pack = JSON.parse(readFileSync(file, 'utf8')) as ServerPack;
+    packs[server.id] = { built: pack.built, version: pack.version };
+  }
+  writeFileSync(join(root, 'src', 'data', 'manifest.json'), JSON.stringify({ format: PACK_FORMAT, packs }, null, 2) + '\n');
 }

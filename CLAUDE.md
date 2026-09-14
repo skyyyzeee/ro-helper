@@ -7,7 +7,9 @@
 - `npm run build` — typecheck + production bundle
 - `npm run import` — rebuild `src/data/tverskoi.json` from the forum snapshots in `data/tverskoi/sources`, list anything the parser could not read and report what changed against the previous pack: changes to documents whose forum post was edited go into `data/tverskoi/changelog.json` (kept 90 days, shown in «Что изменилось»), other differences are the parser's and are only printed; `-- --check` reports without saving; a test fails if the bundled pack is stale
 
+- Laws without a release: `npm run import` also writes `src/data/manifest.json` (each pack's `built` time and the `PACK_FORMAT`); installed copies poll it on `main` (`raw.githubusercontent.com`) and download a server's pack when it was built later than theirs, keeping it in `%APPDATA%\com.skyze.rohelper\laws`. So a law fix reaches players by committing the rebuilt packs to `main` — no tag. `built` changes only when a pack's content does. Bump `PACK_FORMAT` (`src/core/model.ts`) whenever the pack's shape changes in a way an older app would misread: older copies then keep their laws until they update
 - Releases: the version lives only in `package.json`, «Что нового» in a `## <version>` section of `CHANGELOG.md` (the build fails without one; write it for every release, in Russian, for players); a pushed tag `v*` runs `.github/workflows/release.yml` (tests, NSIS installer, signed update, draft release with `latest.json` that installed copies poll). The update signing key is the user's (`%USERPROFILE%\.tauri\ro-helper.key`, GitHub secrets) — never generate or replace it
+- Backlog of known defects and ideas put off for later: `.scratch/backlog/` (one ticket per file)
 - `node scripts/readme-screenshots.mjs` — retake the README's `docs/screenshots` from the running browser preview (headless Edge over the DevTools protocol)
 
 ## Architecture

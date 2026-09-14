@@ -9,7 +9,10 @@ describe('bundled Тверской pack', () => {
     const root = join(import.meta.dirname, '..', '..');
     const { pack, issues } = buildPack(join(root, 'data', 'tverskoi'), TVERSKOI);
     expect(issues).toEqual([]);
-    expect(TVERSKOI_PACK).toEqual(pack);
+    // Only when the pack was built is the importer's to set, as it saves the pack.
+    const { built, ...bundled } = TVERSKOI_PACK;
+    expect(built).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(bundled).toEqual(pack);
   });
 
   it('carries the source and the date the law is current as of', () => {

@@ -39,6 +39,10 @@ import { ResultRow } from './ResultRow';
 import { RECENT_LIMIT, entryPart, favoritesKey, hitKey, recentKey, useHitLookup, useStoredKeys } from './saved';
 import { ServerChoice } from './ServerChoice';
 import { SettingsView } from './SettingsView';
+import type { Laws } from './laws';
+import { APP_VERSION } from './about';
+import { WhatsNewView } from './WhatsNewView';
+import { CHANGELOG, SEEN_VERSION_KEY, compareVersions, notesSince, type VersionNotes } from './whatsNew';
 import { UpdateBanner } from './UpdateBanner';
 import { DISMISSED_KEY, TOASTED_KEY, useUpdates } from './updates';
 
@@ -89,6 +93,8 @@ export function Overlay({
   onEditProfile,
   onProfile,
   onCapturing,
+  laws,
+  newUser = false,
 }: {
   pack: ServerPack;
   profile: Profile;
@@ -98,6 +104,10 @@ export function Overlay({
   onProfile: (next: Profile) => void;
   /** While a hotkey is being recorded no global hotkey may be registered. */
   onCapturing: (capturing: boolean) => void;
+  /** Checking for newer laws from the settings, and what the last check found. */
+  laws?: Pick<Laws, 'status' | 'check'>;
+  /** This session began at the first launch: there is nothing new to tell. */
+  newUser?: boolean;
 }) {
   const platform = usePlatform();
   const searchRef = useRef<HTMLInputElement>(null);
@@ -173,6 +183,20 @@ export function Overlay({
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [organizationOpen, setOrganizationOpen] = useState(false);
   const [serverOpen, setServerOpen] = useState(false);
+  // «Что нового»: once after the app was updated — every version since the one last run — and the whole
+  // history from the settings.
+  const [whatsNew, setWhatsNew] = useState<{ title: string; sections: VersionNotes[]; backLabel: string } | null>(null);
+  useEffect(() => {
+    void platform.readSetting<string>(SEEN_VERSION_KEY).then((seen) => {
+      if (seen !== APP_VERSION) void platform.writeSetting(SEEN_VERSION_KEY, APP_VERSION);
+      // Just installed, the same version, or an older one put back: nothing to tell.
+      if (newUser || seen === APP_VERSION || (seen !== undefined && compareVersions(seen, APP_VERSION) > 0)) return;
+      const sections = notesSince(seen, APP_VERSION);
+      if (sections.length) setWhatsNew({ title: `Хелпер обновлён до версии ${APP_VERSION}`, sections, backLabel: 'Закрыть' });
+    });
+    // Once, at the start of the session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [platform]);
   // «Что нового» of the version on offer, opened from the offer.
   const [notesOpen, setNotesOpen] = useState(false);
   const offered = updates.status.kind === 'available' || updates.status.kind === 'failed' ? updates.status.update : null;
@@ -364,7 +388,7 @@ export function Overlay({
       return;
     }
     // «Что изменилось» and «было → стало» are read with the mouse; the list keys would move a hidden selection.
-    if (settingsOpen || organizationOpen || serverOpen || notesFor || privacyOpen || diff || (changesView && !open)) return;
+    if (whatsNew || settingsOpen || organizationOpen || serverOpen || notesFor || privacyOpen || diff || (changesView && !open)) return;
     if (open) {
       // Enter in an open article puts its part into the calculator, or takes it out.
       if (e.key === 'Enter' && addable(open)) {
@@ -415,6 +439,7 @@ export function Overlay({
   const stepBack = useRef<() => void>(() => {});
   stepBack.current = () => {
     if (menuOpen) setMenuOpen(false);
+    else if (whatsNew) setWhatsNew(null);
     else if (organizationOpen) setOrganizationOpen(false);
     else if (serverOpen) setServerOpen(false);
     else if (notesFor) setNotesOpen(false);
@@ -458,7 +483,7 @@ export function Overlay({
   // what is opened starts at its own top.
   const contentRef = useRef<HTMLDivElement>(null);
   const listScroll = useRef(0);
-  const onList = !settingsOpen && !organizationOpen && !serverOpen && !notesFor && !privacyOpen && !diff && !open && !changesView;
+  const onList = !whatsNew && !settingsOpen && !organizationOpen && !serverOpen && !notesFor && !privacyOpen && !diff && !open && !changesView;
   const wasOnList = useRef(onList);
   useLayoutEffect(() => {
     const content = contentRef.current;
@@ -624,6 +649,7 @@ export function Overlay({
             setOrganizationOpen(false);
             setServerOpen(false);
             setSettingsOpen(false);
+            setWhatsNew(null);
             setChangesView(null);
             setSelected(0);
           }}
@@ -639,7 +665,17 @@ export function Overlay({
           if (onList) listScroll.current = e.currentTarget.scrollTop;
         }}
       >
-        {organizationOpen ? (
+        {whatsNew ? (
+          <WhatsNewView
+            title={whatsNew.title}
+            sections={whatsNew.sections}
+            backLabel={whatsNew.backLabel}
+            onBack={() => {
+              setWhatsNew(null);
+              searchRef.current?.focus();
+            }}
+          />
+        ) : organizationOpen ? (
           <section className="art" aria-label="Ваша организация">
             <button
               className="back"
@@ -760,6 +796,8 @@ export function Overlay({
             onChanges={showRecentChanges}
             updates={updates}
             onPrivacy={() => setPrivacyOpen(true)}
+            laws={laws}
+            onHistory={() => setWhatsNew({ title: 'История версий', sections: CHANGELOG, backLabel: 'Настройки' })}
           />
         ) : open ? (
           <ArticleView

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { packFor } from '../data';
 import { usePlatform } from '../platform/PlatformContext';
 import { Onboarding } from './Onboarding';
+import { useLaws } from './laws';
 import { Overlay } from './Overlay';
 import { DEFAULT_HOTKEY } from './overlaySettings';
 import { PROFILE_KEY, type Profile } from './profile';
@@ -16,9 +16,16 @@ export function App() {
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
   const [editing, setEditing] = useState(false);
   const [capturing, setCapturing] = useState(false);
+  /** This session began at the first launch: nothing is new to someone who has just installed the app. */
+  const [newUser, setNewUser] = useState(false);
+  // The laws of the chosen server: built in, or newer ones from GitHub.
+  const laws = useLaws(profile ? profile.server : null);
 
   useEffect(() => {
-    void platform.readSetting<Profile>(PROFILE_KEY).then((saved) => setProfile(saved ?? null));
+    void platform.readSetting<Profile>(PROFILE_KEY).then((saved) => {
+      setProfile(saved ?? null);
+      if (!saved) setNewUser(true);
+    });
   }, [platform]);
 
   // The hotkey follows the profile at once; while a new one is being recorded, none is registered.
@@ -54,7 +61,9 @@ export function App() {
   } else if (profile) {
     screen = (
       <Overlay
-        pack={packFor(profile?.server ?? FIRST_PROFILE.server)}
+        pack={laws.pack}
+        laws={laws}
+        newUser={newUser}
         profile={profile}
         onEditProfile={() => setEditing(true)}
         onProfile={save}

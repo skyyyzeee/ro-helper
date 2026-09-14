@@ -14,6 +14,10 @@ export interface FakePlatform extends PlatformAdapter {
     hotkey: string | null;
     /** What is pinned over the game, block by block. */
     pins: PinGroup[];
+    /** Files on the internet by URL; «offline» for no connection at all. */
+    remote: Record<string, string> | 'offline';
+    /** Laws downloaded before, by server. */
+    laws: Map<string, string>;
     /** The last notice shown over the game. */
     toast: Toast | null;
     clipboard: string;
@@ -31,6 +35,10 @@ export interface FakeOptions {
   kind?: PlatformAdapter['kind'];
   /** Backing store for settings; defaults to memory. */
   storage?: Pick<Storage, 'getItem' | 'setItem'>;
+  /** Files on the internet by URL, for the laws on GitHub; none by default. */
+  remote?: Record<string, string> | 'offline';
+  /** Laws downloaded before, by server. */
+  laws?: Record<string, string>;
   /** A newer version the releases offer; none by default. */
   update?: AppUpdate | 'offline';
 }
@@ -45,6 +53,8 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
     overlayVisible: true,
     hotkey: null,
     pins: [],
+    remote: options.remote ?? {},
+    laws: new Map(Object.entries(options.laws ?? {})),
     toast: null,
     clipboard: '',
     update: options.update ?? null,
@@ -138,6 +148,21 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
     onPinsChanged(listener) {
       pinListeners.add(listener);
       return () => pinListeners.delete(listener);
+    },
+    async download(url) {
+      record('download', url);
+      if (state.remote === 'offline') throw new Error('offline');
+      const text = state.remote[url];
+      if (text === undefined) throw new Error(`404 ${url}`);
+      return text;
+    },
+    async readLaws(server) {
+      record('readLaws', server);
+      return state.laws.get(server);
+    },
+    async writeLaws(server, text) {
+      record('writeLaws', server);
+      state.laws.set(server, text);
     },
     async showToast(toast) {
       record('showToast', toast);

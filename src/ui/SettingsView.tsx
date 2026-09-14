@@ -6,6 +6,7 @@ import { BackIcon, CloseIcon, DiscordIcon, GitHubIcon, WarnIcon } from './icons'
 import { formatDate } from './lawBits';
 import { MAX_OPACITY, MIN_OPACITY } from './overlaySettings';
 import { captureHotkey, hasModifier, hotkeyKeys } from './profile';
+import type { Laws, LawsStatus } from './laws';
 import type { Updates } from './updates';
 
 /** What a check from the settings found, beside its button. */
@@ -22,6 +23,22 @@ function updateNote(status: Updates['status']): string | null {
       return `Доступна версия ${status.update.version}`;
     case 'installing':
       return 'Обновляю…';
+    default:
+      return null;
+  }
+}
+
+/** What a check for newer laws found, beside its button. */
+function lawsNote(status: LawsStatus): string | null {
+  switch (status.kind) {
+    case 'checking':
+      return 'Проверяю…';
+    case 'latest':
+      return 'Законы актуальны';
+    case 'offline':
+      return 'Нет связи с GitHub';
+    case 'updated':
+      return 'Загружены новые законы';
     default:
       return null;
   }
@@ -190,6 +207,10 @@ export interface SettingsViewProps {
   onChanges: () => void;
   updates: Updates;
   onPrivacy: () => void;
+  /** Checking GitHub for newer laws, without a new version of the app. */
+  laws?: Pick<Laws, 'status' | 'check'>;
+  /** Opens what is new in every version. */
+  onHistory: () => void;
 }
 
 /** The settings screen: what the helper works with, how it looks, the laws, updates and the app itself. */
@@ -216,6 +237,8 @@ export function SettingsView({
   onChanges,
   updates,
   onPrivacy,
+  laws,
+  onHistory,
 }: SettingsViewProps) {
   const platform = usePlatform();
   const transparency = Math.round((1 - opacity) * 100);
@@ -319,6 +342,17 @@ export function SettingsView({
         <button className="settings__button" type="button" onClick={onChanges}>
           Что изменилось в законах
         </button>
+        {laws && (
+          <div className="set__row">
+            <button className="settings__button" type="button" disabled={laws.status.kind === 'checking'} onClick={laws.check}>
+              Проверить законы
+            </button>
+            <span className="settings__note" role="status" aria-label="Проверка законов">
+              {lawsNote(laws.status)}
+            </span>
+          </div>
+        )}
+        <p className="set__hint">Новые законы приходят с GitHub сами, без обновления программы.</p>
       </Block>
 
       <Block title="Обновления">
@@ -352,6 +386,9 @@ export function SettingsView({
         <div className="set__row set__links">
           <button className="link" type="button" onClick={onPrivacy}>
             Политика конфиденциальности
+          </button>
+          <button className="link" type="button" onClick={onHistory}>
+            История версий
           </button>
           <span className="sp" />
           <button className="link" type="button" onClick={onEditProfile}>
