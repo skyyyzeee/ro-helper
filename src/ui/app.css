@@ -2925,3 +2925,742 @@ input {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* ——— AI: the analysis, documents, trainer, lawyer, voice, history ——— */
+
+/* ИИ-разбор: the situation goes in the search field, the answer here, every cited article a click away. */
+.icon-btn--ai { color: var(--accent-text); }
+
+.search--ai { box-shadow: inset 0 0 0 1px oklch(0.78 0.1 245 / 0.45); }
+
+.search--ai > svg { color: var(--accent-text); }
+
+.ai-offer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+  background: oklch(0.78 0.1 245 / 0.12);
+  color: var(--accent-text);
+  font-size: 14px;
+  text-align: left;
+}
+
+.ai-offer:hover { background: oklch(0.78 0.1 245 / 0.2); color: var(--text); }
+
+.ai-offer b { font-weight: 600; overflow-wrap: anywhere; }
+
+.ai-offer svg { flex: none; }
+
+.ai__top { display: flex; align-items: center; }
+
+.ai__intro { display: flex; flex-direction: column; gap: 10px; }
+
+.ai__example { font-style: italic; }
+
+.ai__messages { display: flex; flex-direction: column; gap: 12px; padding-bottom: 8px; }
+
+.ai__question {
+  align-self: flex-end;
+  max-width: 88%;
+  padding: 10px 14px;
+  border-radius: var(--radius-card) var(--radius-card) 4px var(--radius-card);
+  background: var(--accent);
+  color: var(--on-accent);
+  text-shadow: none;
+  font-size: 14.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ai__side {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+  margin-bottom: 2px;
+}
+
+.ai__reply {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.ai__answer { display: flex; flex-direction: column; gap: 6px; user-select: text; }
+
+.ai__line { margin: 0; font-size: 14.5px; line-height: 1.55; overflow-wrap: anywhere; }
+
+.ai__line--item { padding-left: 14px; position: relative; }
+
+.ai__line--item::before { content: '•'; position: absolute; left: 2px; color: var(--text-muted); }
+
+.ai__section { color: var(--accent-text); font-weight: 600; }
+
+.ai__cite {
+  display: inline;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: oklch(0.78 0.1 245 / 0.55);
+  text-underline-offset: 3px;
+}
+
+.ai__cite:hover { color: var(--accent-text); text-decoration-color: currentColor; }
+
+.ai__sources { font-size: 13px; color: var(--text-muted); }
+
+.ai__sources summary { cursor: pointer; }
+
+.ai__chips, .ai__sides { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+.ai__chips { margin-top: 8px; }
+
+.ai__chip {
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.ai__chip:hover { background: rgba(255, 255, 255, 0.16); color: var(--text); }
+
+.ai__chip:disabled { opacity: 0.5; cursor: default; }
+
+.ai__pending {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.ai__dots {
+  width: 22px;
+  height: 6px;
+  background:
+    radial-gradient(circle, var(--accent-text) 2.5px, transparent 3px) 0 50% / 8px 6px repeat-x;
+  animation: ai-dots 1s linear infinite;
+  mask: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent);
+}
+
+@keyframes ai-dots {
+  from { background-position: 0 50%; }
+  to { background-position: 8px 50%; }
+}
+
+/* ——— AI: tabs, voice, documents, trainer, lawyer, history ——— */
+
+/* A segmented control: one of a few options, the chosen one filled. */
+.tabs {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 99px;
+  background: var(--surface);
+  flex: none;
+}
+
+.tabs__btn {
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 99px;
+  color: var(--text-muted);
+}
+
+.tabs__btn:hover {
+  color: var(--text);
+}
+
+.tabs__btn--on {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+}
+
+.set__label--strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* A switch: a pill with a knob, red when on. */
+.switch {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 26px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.16);
+  transition: background-color 0.15s ease;
+}
+
+.switch__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s ease;
+}
+
+.switch--on {
+  background: var(--accent);
+}
+
+.switch--on .switch__knob {
+  transform: translateX(20px);
+}
+
+.switch:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* The microphone in the search field: red and pulsing while it records, dimmed while Gemini writes the words down. */
+.mic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: var(--text-muted);
+}
+
+.mic:hover { color: var(--text); background: var(--surface-hover); }
+
+.mic--recording,
+.mic--recording:hover {
+  color: #fff;
+  background: var(--accent);
+  animation: mic-pulse 1.2s ease-out infinite;
+}
+
+.mic--transcribing { opacity: 0.5; cursor: progress; }
+
+/* The history of AI analyses. */
+.history__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 8px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.history__item:hover { background: var(--surface-hover); }
+
+.history__open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px 14px;
+  text-align: left;
+}
+
+.history__title {
+  font-size: 14.5px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history__meta { font-size: 12.5px; color: var(--text-muted); }
+
+/* «Составить документ»: the kind as chips, who writes, and the document as a sheet with its gaps marked. */
+.ai__tabs {
+  align-self: flex-start;
+}
+
+.ai__chip--on,
+.ai__chip--on:hover {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.doc__author {
+  padding: 10px 12px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  font-size: 13.5px;
+}
+
+.doc__author summary {
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.doc__author[open] summary {
+  margin-bottom: 10px;
+}
+
+.doc__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.doc__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.doc__paper {
+  padding: 16px 18px;
+  border-radius: var(--radius-card);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+  font-size: 14px;
+  line-height: 1.6;
+  user-select: text;
+}
+
+.doc__line {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.doc__gap {
+  padding: 0 3px;
+  border-radius: 4px;
+  color: var(--warn-text);
+  background: var(--warn-bg);
+}
+
+.doc__edit {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  border: 1px solid color-mix(in oklch, var(--accent) 50%, transparent);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font: 14px/1.6 var(--font);
+  resize: vertical;
+  outline: 0;
+}
+
+.doc__actions {
+  gap: 10px;
+}
+
+.doc__copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.doc__situation {
+  font-style: italic;
+}
+
+/* An AI answer pinned over the game: the question on top in the accent colour, the answer's lines below. */
+.pin__title--ai {
+  color: var(--accent-text);
+  font-style: italic;
+}
+
+/* «Тренажёр»: the question as a card, the answer as the player's bubble, the verdict coloured by how right it was. */
+.quiz__docs {
+  gap: 10px;
+}
+
+.quiz__select {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font: 14px var(--font);
+}
+
+.quiz__start {
+  align-self: flex-start;
+}
+
+.quiz__progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.quiz__bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.quiz__bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+.quiz__question {
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  font-size: 15.5px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.quiz__answer {
+  align-self: flex-end;
+}
+
+.quiz__verdict {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 12px 14px;
+  border-left: 3px solid;
+  border-radius: 0 var(--radius-card) var(--radius-card) 0;
+  background: var(--surface);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.quiz__verdict b {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.quiz__verdict--right { border-color: var(--now-text); }
+
+.quiz__verdict--right b { color: var(--now-text); }
+
+.quiz__verdict--partly { border-color: var(--was-text); }
+
+.quiz__verdict--partly b { color: var(--was-text); }
+
+.quiz__verdict--wrong { border-color: var(--penalty-text); }
+
+.quiz__verdict--wrong b { color: var(--penalty-text); }
+
+.quiz__model {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.quiz__result {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  background: color-mix(in oklch, var(--accent) 14%, transparent);
+  font-size: 16px;
+}
+
+/* Examples to try the AI with: whole questions, pressed to ask. */
+.ai__examples {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.ai__example {
+  padding: 8px 12px;
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  font-size: 13.5px;
+  text-align: left;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.ai__example:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+/* «Требования адвоката»: a card per demand, its edge coloured by the verdict; the reply to give at the end. */
+.demands {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.demand {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--text-faint);
+  border-radius: 0 var(--radius-card) var(--radius-card) 0;
+  background: var(--surface);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.demand__head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.demand__verdict {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.demand__what {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.demand__row {
+  margin: 0;
+}
+
+.demand__label {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.demand--lawful { border-color: var(--now-text); }
+
+.demand--lawful .demand__verdict { color: var(--now-text); }
+
+.demand--unlawful { border-color: var(--penalty-text); }
+
+.demand--unlawful .demand__verdict { color: var(--penalty-text); }
+
+.demand--partly { border-color: var(--was-text); }
+
+.demand--partly .demand__verdict { color: var(--was-text); }
+
+.demand--unclear .demand__verdict { color: var(--text-muted); }
+
+.lawyer__reply {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  background: color-mix(in oklch, var(--accent) 12%, transparent);
+}
+
+.lawyer__reply p {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  user-select: text;
+}
+
+/* Where the AI answers come from: the AI server or the player's own Gemini key. */
+.ai-provider {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.ai-provider__on {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* ——— The legal analysis: status, blocks, source cards ——— */
+
+.verdict-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+/* A status of the checks: its colour says how firm the answer is, the word says it again. */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--surface-active);
+  color: var(--text-muted);
+}
+.status--confirmed { background: var(--now-bg); color: var(--now-text); }
+.status--likely { background: var(--was-bg); color: var(--was-text); }
+.status--clarify { background: var(--warn-bg); color: var(--warn-text); }
+.status--not-found,
+.status--review { background: var(--gone-bg); color: var(--gone-text); }
+
+.answer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.answer__block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.answer__title {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.answer__list {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.answer__calc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  font-size: 14px;
+}
+.answer__charge {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.sources {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* A found article the answer stands on. */
+.source {
+  padding: 10px 12px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.source--bad { border-color: var(--penalty-line); }
+.source__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+.source__label { font-weight: 700; }
+.source__name { color: var(--text-muted); font-size: 13.5px; }
+.source__why,
+.source__punishment { margin: 0; font-size: 13.5px; line-height: 1.45; }
+.source__issue {
+  margin: 0;
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  font-size: 13px;
+  color: var(--gone-text);
+}
+.source__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 99px;
+  font-size: 12.5px;
+  font-weight: 500;
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.chip-btn:hover { background: var(--surface-active); }
+.chip-btn--on,
+.chip-btn--on:hover { background: var(--accent); color: var(--on-accent); }
+
+.ai__depth {
+  display: flex;
+  gap: 6px;
+  margin: 2px 0 10px;
+}
+
+.ai__facts {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  font-size: 13.5px;
+}
+.ai__facts summary { cursor: pointer; color: var(--text-muted); font-weight: 600; }
+.fact--changed { color: var(--was-text); }
+
+.clarify { display: flex; flex-direction: column; gap: 6px; }

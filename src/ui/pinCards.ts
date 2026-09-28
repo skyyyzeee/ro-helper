@@ -96,3 +96,13 @@ export function calculatorPinCard(result: DetentionResult, fineTyped?: number): 
     ...(warnings.length ? { warning: warnings.join('; ') } : {}),
   };
 }
+
+/** The AI's short answer to a question asked over the game, as a card: the question on top, the answer's lines below. */
+export function aiPinCard(id: number, question: string, answer: string): PinCard {
+  const lines = answer
+    .split('\n')
+    .map((line) => line.replace(/\*\*/g, '').replace(/^[-•*]\s+/, '').trim())
+    .filter(Boolean)
+    .slice(0, 6);
+  return { id: `ai:${id}`, kind: 'ai', heading: question.length > 90 ? `${question.slice(0, 88)}…` : question, lines };
+}

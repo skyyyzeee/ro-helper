@@ -175,5 +175,7 @@ export function restoreGroups(saved: PinGroup[]): PinGroup[] {
 
 /** Blocks that survive a restart: the calculator's card belongs to the detention that is over. */
 export function keepableGroups(groups: PinGroup[]): PinGroup[] {
-  return unpinCard(groups, CALCULATOR_ID);
+  // The calculator's total and the AI's answers belong to a moment that is over by the next launch.
+  const stale = new Set(groups.flatMap((g) => g.cards).filter((c) => c.id === CALCULATOR_ID || c.kind === 'ai').map((c) => c.id));
+  return [...stale].reduce(unpinCard, groups);
 }

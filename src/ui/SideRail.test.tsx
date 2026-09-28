@@ -9,7 +9,7 @@ describe('the side column', () => {
     await renderApp();
     const buttons = within(rail()).getAllByRole('button');
     expect(buttons[0]).toHaveAccessibleName('Сменить сервер или организацию');
-    expect(buttons.slice(1).map((b) => b.textContent)).toEqual(['Поиск', 'Документы', 'Калькулятор', 'Закреплённое', 'Памятки', 'Настройки', 'Профиль']);
+    expect(buttons.slice(1).map((b) => b.textContent)).toEqual(['Поиск', 'Документы', 'Калькулятор', 'Закреплённое', 'ИИ', 'История', 'Памятки', 'Настройки', 'Профиль']);
     expect(within(rail()).getByRole('button', { name: 'Поиск' })).toHaveAttribute('aria-current', 'page');
   });
 

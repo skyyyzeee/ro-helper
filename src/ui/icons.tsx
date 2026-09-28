@@ -43,6 +43,11 @@ export const CalculatorIcon = icon('calculate', 20);
 export const MemoIcon = icon('sticky_note_2', 20);
 export const ProfileIcon = icon('account_circle', 20);
 export const PaletteIcon = icon('palette', 18);
+/** The AI analysis. */
+export const SparkIcon = icon('wand_stars', 20);
+export const MicIcon = icon('mic', 20);
+/** The history of AI analyses. */
+export const HistoryIcon = icon('history', 20);
 
 /** Star for favourites: outlined, and filled when its button is on (`.fav--on`). */
 export const FavoriteIcon = ({ size = 20 }: Size) => (

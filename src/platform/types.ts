@@ -12,7 +12,7 @@ export interface WindowBounds {
 export interface PinCard {
   /** What it stands for: `uk-65#1` for an article's part, `calculator` for the total. */
   id: string;
-  kind: 'article' | 'calculator';
+  kind: 'article' | 'calculator' | 'ai';
   /** Article: «УК ст. 88 ч. 1. Халатность»; calculator: the total, «30 мес». */
   heading: string;
   /** Stars to set, beside the calculator's total. */
@@ -92,6 +92,12 @@ export interface PlatformAdapter {
   /** Global hotkey that toggles the overlay while the game has focus. Replaces any previous one. */
   registerHotkey(accelerator: string, onPress: () => void): Promise<void>;
   unregisterHotkey(): Promise<void>;
+  /**
+   * The push-to-talk key for a question over the game: `onDown` when it is pressed, `onUp` when it is let go.
+   * A second global hotkey beside the overlay's; replaces any previous one.
+   */
+  registerVoiceHotkey(accelerator: string, onDown: () => void, onUp: () => void): Promise<void>;
+  unregisterVoiceHotkey(): Promise<void>;
 
   /** Shows the overlay and gives it focus. */
   showOverlay(): Promise<void>;
