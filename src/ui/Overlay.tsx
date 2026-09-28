@@ -1297,6 +1297,11 @@ export function Overlay({
             onCharge={addCharges}
             onPinArticle={(hit) => setGroups((list) => (hasCard(list, hitKey(hit)) ? list : pinCard(list, articlePinCard(hit, rules), surface())))}
             onCopy={(text) => platform.writeClipboard(text)}
+            onDraft={(text) => {
+              setAiDraft(text);
+              searchRef.current?.focus();
+            }}
+            onLink={(url) => void platform.openExternal(url)}
             onTab={(tab) => {
               setAiTab(tab);
               searchRef.current?.focus();

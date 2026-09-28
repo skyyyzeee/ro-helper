@@ -58,10 +58,33 @@ describe('the analysis on screen', () => {
     expect(bodies.at(-1)).toContain('ФАКТЫ ДЕЛА ДО ЭТОГО СООБЩЕНИЯ');
   });
 
-  it('keeps the facts of the case in view', async () => {
+  it('keeps the facts of the case in view, each one to correct, and the decisions made so far', async () => {
     const { user } = await ask('у меня украли телефон');
     await user.click(screen.getByText(/Факты дела: 1/));
     expect(screen.getByText(/украли телефон/, { selector: 'li' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^Исправить факт: у игрока украли телефон/ }));
+    const field = screen.getByRole('searchbox', { name: 'Поиск по законам' });
+    expect(field).toHaveValue('Поправка: не «у игрока украли телефон», а ');
+    expect(field).toHaveFocus();
+
+    await user.type(field, 'кошелёк{Enter}');
+    await screen.findByText('История решений');
+    const decisions = screen.getByText('История решений').nextElementSibling!;
+    expect(within(decisions as HTMLElement).getAllByRole('listitem')).toHaveLength(2);
+    expect(decisions).toHaveTextContent('Поправка: не «у игрока украли телефон», а кошелёк');
+  });
+
+  it('shows each source card whole: its document, its text, its forum thread, and the charge to copy', async () => {
+    const { user, platform } = await ask('у меня украли телефон');
+    const card = screen.getAllByRole('listitem').find((li) => li.classList.contains('source'))!;
+    expect(card).toHaveTextContent('Уголовный кодекс');
+    await user.click(within(card).getByText('Текст статьи'));
+    expect(within(card).getByText(/Кража, то есть тайное хищение/)).toBeVisible();
+    await user.click(within(card).getByRole('button', { name: /Источник/ }));
+    expect(platform.calls.at(-1)?.method).toBe('openExternal');
+    expect(String(platform.calls.at(-1)?.args[0])).toMatch(/^https:\/\/forum\.russia\.online\//);
+    await user.click(screen.getByRole('button', { name: 'Скопировать обвинение' }));
+    expect(platform.state.clipboard).toBe('ст. 65 ч. 1 УК');
   });
 
   it('sends the full analysis with more thinking when it is chosen', async () => {

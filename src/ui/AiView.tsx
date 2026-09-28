@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { articleLabel, type SearchHit, type Stage } from '../core';
+import { STATUS_LABELS } from '../protocol';
 import { PERSPECTIVES, type AiChat } from './ai';
 import { AnswerView } from './AnswerView';
 import { BackIcon, WarnIcon } from './icons';
@@ -61,6 +62,8 @@ export function AiView({
   onCharge,
   onPinArticle,
   onCopy,
+  onDraft,
+  onLink,
 }: {
   chat: AiChat;
   /** Documents the calculator counts. */
@@ -69,6 +72,10 @@ export function AiView({
   onCharge: (hits: (SearchHit & { stage?: Stage })[]) => void;
   onPinArticle: (hit: SearchHit) => void;
   onCopy: (text: string) => Promise<void>;
+  /** Puts a text into the question field, to finish and send: a correction of a fact. */
+  onDraft: (text: string) => void;
+  /** Opens a page in the browser: a law's forum thread. */
+  onLink: (url: string) => void;
   backLabel: string;
   onBack: () => void;
   /** Opens a found article, as from the search. */
@@ -84,6 +91,13 @@ export function AiView({
     void endRef.current?.scrollIntoView?.({ block: 'end' });
   }, [chat.messages.length, last?.pending]);
   const lastQuestion = [...chat.messages].reverse().find((m) => m.role === 'user')?.text;
+  // The history of decisions: what each question led to, and how firm it was.
+  const decisions = chat.messages.flatMap((m, i) => {
+    const asked = chat.messages[i - 1];
+    const analysis = m.analysis;
+    if (!analysis || analysis.answer.reply || asked?.role !== 'user') return [];
+    return [{ id: m.id, question: asked.text, conclusion: analysis.case.conclusion, status: analysis.validation.status, review: analysis.validation.needsReview }];
+  });
 
   return (
     <section className="art ai" aria-label="ИИ-разбор">
@@ -118,11 +132,34 @@ export function AiView({
           <ul className="answer__list">
             {chat.current.facts.map((fact) => (
               <li key={fact} className={/\(изменено\)\s*$/.test(fact) ? 'fact fact--changed' : 'fact'}>
-                {fact}
+                {fact}{' '}
+                <button
+                  className="link"
+                  type="button"
+                  aria-label={`Исправить факт: ${fact}`}
+                  disabled={chat.busy}
+                  onClick={() => onDraft(`Поправка: не «${fact.replace(/\s*\(изменено\)\s*$/, '')}», а `)}
+                >
+                  исправить
+                </button>
               </li>
             ))}
           </ul>
           {chat.current.norms.length > 0 && <p className="set__hint">Статьи: {chat.current.norms.join(', ')}</p>}
+          {decisions.length > 1 && (
+            <>
+              <div className="answer__title">История решений</div>
+              <ol className="answer__list">
+                {decisions.map((d) => (
+                  <li key={d.id}>
+                    <span className="decision__question">{d.question}</span> → {d.conclusion || '—'}{' '}
+                    <span className={`status status--${d.status}`}>{STATUS_LABELS[d.status]}</span>
+                    {d.review && <span className="status status--review">Требует проверки</span>}
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
           <p className="set__hint">Исправьте факт или спросите «а если…» в поле сверху — ИИ пересмотрит только то, что изменилось.</p>
         </details>
       )}
@@ -185,6 +222,7 @@ export function AiView({
                   onCharge={onCharge}
                   onPinArticle={onPinArticle}
                   onCopy={onCopy}
+                  onLink={onLink}
                   onClarify={(text) => void chat.send(text)}
                 />
               ) : (

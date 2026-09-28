@@ -3664,3 +3664,22 @@ input {
 .fact--changed { color: var(--was-text); }
 
 .clarify { display: flex; flex-direction: column; gap: 6px; }
+
+.source__doc {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+.source__text summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.source__text p {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.5;
+  max-height: 260px;
+  overflow: auto;
+}
+.decision__question { color: var(--text-muted); }

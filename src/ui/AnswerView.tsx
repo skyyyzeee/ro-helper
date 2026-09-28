@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { articleTitle, formatPunishment, formatRubles, leadPart, type DetentionResult, type SearchHit, type Stage } from '../core';
+import { articleText, articleTitle, formatPunishment, formatRubles, leadPart, type DetentionResult, type SearchHit, type Stage } from '../core';
 import { STATUS_LABELS, type Analysis, type CheckedNorm, type Status } from '../protocol';
 import { shortLabel } from './AiView';
 import { answerText } from './ai';
-import { CheckIcon, PinIcon, PlusIcon, WarnIcon } from './icons';
+import { CheckIcon, ExternalIcon, PinIcon, PlusIcon, WarnIcon } from './icons';
 
 const STAGE_LABELS = { done: '', attempt: 'покушение', preparation: 'приготовление' } as const;
 
@@ -76,12 +76,15 @@ function SourceCard({
   onOpen,
   onCharge,
   onPin,
+  onLink,
   chargeable,
 }: {
   checked: CheckedNorm;
   onOpen: (hit: SearchHit) => void;
   onCharge?: (hit: SearchHit) => void;
   onPin: (hit: SearchHit) => void;
+  /** Opens the document's forum thread: where the law is published. */
+  onLink: (url: string) => void;
   chargeable: boolean;
 }) {
   const { norm, hit, issues } = checked;
@@ -113,6 +116,7 @@ function SourceCard({
         {norm.fit === 'partial' && <span className="status status--likely">если подтвердится</span>}
         {norm.stage !== 'done' && <span className="status">{STAGE_LABELS[norm.stage]}</span>}
       </div>
+      <span className="source__doc">{hit.document.title}</span>
       {norm.why && <p className="source__why">{norm.why}</p>}
       {punishment && (
         <p className="source__punishment">
@@ -124,6 +128,10 @@ function SourceCard({
           <WarnIcon size={13} /> {issue}
         </p>
       ))}
+      <details className="source__text">
+        <summary>Текст статьи</summary>
+        <p>{articleText(hit.article)}</p>
+      </details>
       <div className="source__actions">
         <button type="button" className="chip-btn" onClick={() => onOpen(hit)}>
           Открыть статью
@@ -136,6 +144,11 @@ function SourceCard({
         <button type="button" className="chip-btn" onClick={() => onPin(hit)}>
           <PinIcon size={13} /> Закрепить
         </button>
+        {hit.document.source?.url && (
+          <button type="button" className="chip-btn" title="Тема закона на форуме" onClick={() => onLink(hit.document.source.url)}>
+            <ExternalIcon size={13} /> Источник
+          </button>
+        )}
       </div>
     </li>
   );
@@ -155,6 +168,7 @@ export function AnswerView({
   onPinArticle,
   onCopy,
   onClarify,
+  onLink,
 }: {
   analysis: Analysis;
   busy: boolean;
@@ -165,9 +179,15 @@ export function AnswerView({
   onPinArticle: (hit: SearchHit) => void;
   onCopy: (text: string) => Promise<void>;
   onClarify: (text: string) => void;
+  onLink: (url: string) => void;
 }) {
   const { answer, validation, calculation } = analysis;
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<'answer' | 'charge' | null>(null);
+  const copy = (what: 'answer' | 'charge', text: string) =>
+    void onCopy(text).then(() => {
+      setCopied(what);
+      setTimeout(() => setCopied(null), 1500);
+    });
   if (answer.reply) return <p className="ai__line">{answer.reply}</p>;
   const chargeHits = (calculation?.charges ?? []).map((c) => ({ article: c.article, document: c.document, part: c.part, stage: c.stage }));
 
@@ -197,6 +217,7 @@ export function AnswerView({
                 onOpen={onOpen}
                 onCharge={(hit) => onCharge([{ ...hit, stage: checked.norm.stage }])}
                 onPin={onPinArticle}
+                onLink={onLink}
                 chargeable={!!checked.hit && calculable.includes(checked.hit.document.id) && !checked.issues.length}
               />
             ))}
@@ -220,6 +241,11 @@ export function AnswerView({
               <button type="button" className="chip-btn" onClick={() => onCharge(chargeHits)}>
                 <PlusIcon size={13} /> Открыть в калькуляторе
               </button>
+              {calculation.result.charge && (
+                <button type="button" className="chip-btn" onClick={() => copy('charge', calculation.result.charge)}>
+                  {copied === 'charge' ? 'Скопировано' : 'Скопировать обвинение'}
+                </button>
+              )}
             </div>
           )}
         </Block>
@@ -286,14 +312,9 @@ export function AnswerView({
         <button
           type="button"
           className="chip-btn"
-          onClick={() =>
-            void onCopy(answerText(answer)).then(() => {
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
-            })
-          }
+          onClick={() => copy('answer', answerText(answer))}
         >
-          {copied ? 'Скопировано' : 'Скопировать'}
+          {copied === 'answer' ? 'Скопировано' : 'Скопировать'}
         </button>
       </div>
     </div>
