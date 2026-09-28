@@ -23,7 +23,7 @@ function PinCardBody({ card, compact }: { card: PinCard; compact: boolean }) {
           ) : null}
         </div>
       ) : (
-        <div className="pin__title">{card.heading}</div>
+        <div className={card.kind === 'ai' ? 'pin__title pin__title--ai' : 'pin__title'}>{card.heading}</div>
       )}
       {card.punishment?.map((line) => (
         <div key={line.who ?? 'all'} className="pin__accent">

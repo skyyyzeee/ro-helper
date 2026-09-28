@@ -68,6 +68,7 @@ export function App() {
         onEditProfile={() => setEditing(true)}
         onProfile={save}
         onCapturing={setCapturing}
+        capturing={capturing}
       />
     );
   }

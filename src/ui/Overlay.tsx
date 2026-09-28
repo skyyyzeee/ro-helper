@@ -24,14 +24,24 @@ import { ArticleView } from './ArticleView';
 import { CalculatorPanel, type ChargeFields, type ChargePatch, type CopyState } from './CalculatorPanel';
 import { ChangeDiff, ChangesView, type ChangeRef } from './ChangesView';
 import { DocumentsMenu } from './DocumentsMenu';
-import { BackIcon, CloseIcon, MenuIcon, SearchIcon, SettingsIcon } from './icons';
-import { DEFAULT_OPACITY, OPACITY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
+import { transcribe, useAiChat } from './ai';
+import { AiView, type AiTab } from './AiView';
+import { DocumentView } from './DocumentView';
+import { TrainerView } from './TrainerView';
+import { LawyerView } from './LawyerView';
+import { useLawyerCheck } from './lawyer';
+import { useTrainer } from './trainer';
+import { useDocumentWriter } from './documents';
+import { HistoryView } from './HistoryView';
+import { BackIcon, CloseIcon, HistoryIcon, MenuIcon, MicIcon, SearchIcon, SettingsIcon, SparkIcon } from './icons';
+import { canRecord, startRecording, type Recording } from './voice';
+import { DEFAULT_OPACITY, DEFAULT_VOICE_HOTKEY, OPACITY_KEY, VOICE_HOTKEY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
 import { formatHotkey, type Profile } from './profile';
 import { OrganizationChoice } from './OrganizationChoice';
 import { PinSurface } from './PinSurface';
 import { PrivacyView } from './PrivacyView';
 import { ReleaseNotesView } from './ReleaseNotesView';
-import { articlePinCard, calculatorPinCard } from './pinCards';
+import { aiPinCard, articlePinCard, calculatorPinCard } from './pinCards';
 import { CALCULATOR_ID, hasCard, keepableGroups, pinCard, restoreGroups, surfaceNow, unpinCard, updateCard } from './pinLayout';
 import { applyPreset, cardCount, deletePreset, nextPresetName, presetsKey, readPresets, savePreset, type PinPreset } from './pinPresets';
 import { ResizeEdges } from './ResizeEdges';
@@ -80,6 +90,13 @@ function typedNumber(text: string): number | undefined {
   return digits ? Number(digits) : undefined;
 }
 
+/**
+ * Timings of the push-to-talk key, in milliseconds: a «pressed» sooner than `repeat` after the last event is the key
+ * repeating while held; a hold ends `holdEnd` after the repeats stop; a «let go» sooner than `tap` after the start is
+ * a tap; a recording shorter than `shortest` holds no question.
+ */
+export const TALK = { repeat: 250, holdEnd: 450, tap: 700, shortest: 800 };
+
 /** Whether the user has selected some text, which Ctrl+C should copy instead of the charges. */
 function hasSelectedText(): boolean {
   const active = document.activeElement;
@@ -93,6 +110,7 @@ export function Overlay({
   onEditProfile,
   onProfile,
   onCapturing,
+  capturing = false,
   laws,
   newUser = false,
 }: {
@@ -104,6 +122,8 @@ export function Overlay({
   onProfile: (next: Profile) => void;
   /** While a hotkey is being recorded no global hotkey may be registered. */
   onCapturing: (capturing: boolean) => void;
+  /** A hotkey is being recorded in the settings: no global hotkey may be registered meanwhile. */
+  capturing?: boolean;
   /** Checking for newer laws from the settings, and what the last check found. */
   laws?: Pick<Laws, 'status' | 'check'>;
   /** This session began at the first launch: there is nothing new to tell. */
@@ -130,6 +150,18 @@ export function Overlay({
   /** Where each chapter's rows start in the list ↑↓ walk through. */
   const chapterStarts = contents.map((_, g) => contents.slice(0, g).reduce((n, group) => n + group.hits.length, 0));
   const summary = [pack.server.name, organization && organization.id !== 'none' ? organization.name : null].filter(Boolean).join(' · ');
+
+  // The AI analysis: while it is open, the search field takes the situation instead of a query.
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiDraft, setAiDraft] = useState('');
+  const chat = useAiChat(platform, pack, boostDocuments);
+  // The AI screen has two tabs: analysing a situation, and writing a document about it.
+  const [aiTab, setAiTab] = useState<AiTab>('chat');
+  const writer = useDocumentWriter(platform, pack, boostDocuments);
+  const trainer = useTrainer(platform, pack, boostDocuments);
+  const lawyer = useLawyerCheck(platform, pack, boostDocuments);
+  /** The field is the AI's, not the search's: an article opened from the answer gives it back to the search. */
+  const aiMode = aiOpen && !open;
 
   // An empty search shows the favourites, then the recent articles without them; ↑↓ go through both.
   const lookup = useHitLookup(pack);
@@ -336,6 +368,122 @@ export function Overlay({
     void platform.writeSetting(presetsSetting, next);
   };
 
+  // A question over the game: hold the push-to-talk key and speak, let go — the AI's short answer is pinned over
+  // the game as a card, and the overlay stays hidden. Notices over the game say what is going on meanwhile.
+  const [voiceHotkey, setVoiceHotkey] = useState(DEFAULT_VOICE_HOTKEY);
+  useEffect(() => {
+    void platform.readSetting<string>(VOICE_HOTKEY_KEY).then((saved) => setVoiceHotkey(saved ?? DEFAULT_VOICE_HOTKEY));
+  }, [platform]);
+  const changeVoiceHotkey = (accelerator: string) => {
+    setVoiceHotkey(accelerator);
+    void platform.writeSetting(VOICE_HOTKEY_KEY, accelerator);
+  };
+  /**
+   * Two ways to ask, told apart by what Windows reports of the key:
+   * - held: a key held down repeats «pressed» every few dozen milliseconds (and may report «let go» between the
+   *   repeats); the question ends a moment after the repeats stop — when the key is really let go;
+   * - tapped: a press, then a pause, then another press ends the question.
+   * A «let go» ends it only when the key is not repeating and was held a while: a quick one is the tap's own.
+   */
+  const talk = useRef({
+    recording: null as Recording | null,
+    startedAt: 0,
+    lastEvent: 0,
+    held: false,
+    toldTap: false,
+    holdTimer: undefined as ReturnType<typeof setTimeout> | undefined,
+    starting: false,
+    thinking: false,
+  });
+  const notice = (title: string, text?: string) => void platform.showToast({ id: `talk-${Date.now()}`, title, ...(text ? { text } : {}) });
+  /** The first spoken question fetches the speech model: the wait is said, once. */
+  const downloadingSpeech = () => notice('Скачиваю распознавание речи', 'Один раз, около 45 МБ. Дальше голос распознаётся прямо на компьютере.');
+  const talkDown = useRef(async () => {});
+  const talkUp = useRef(async () => {});
+  const finishTalk = useRef(async () => {});
+  talkDown.current = async () => {
+    const state = talk.current;
+    const now = Date.now();
+    const gap = now - state.lastEvent;
+    state.lastEvent = now;
+    if (state.recording) {
+      if (gap < TALK.repeat) {
+        // The key repeats: it is being held. The question ends when the repeats stop.
+        state.held = true;
+        clearTimeout(state.holdTimer);
+        state.holdTimer = setTimeout(() => void finishTalk.current(), TALK.holdEnd);
+      } else {
+        // A new press after a pause: the tapped question is over.
+        await finishTalk.current();
+      }
+      return;
+    }
+    if (state.starting || state.thinking) return;
+    if (!canRecord()) return notice('Микрофон недоступен', 'Спросить голосом не получится на этом компьютере.');
+    state.starting = true;
+    state.held = false;
+    state.toldTap = false;
+    try {
+      state.recording = await startRecording(() => void finishTalk.current());
+      state.startedAt = Date.now();
+      notice('Слушаю…', `Говорите, пока держите ${formatHotkey(voiceHotkey)}. Или отпустите и нажмите ещё раз, когда договорите.`);
+    } catch {
+      notice('Не получилось включить микрофон', 'Windows: «Параметры» → «Конфиденциальность» → «Микрофон».');
+    } finally {
+      state.starting = false;
+    }
+  };
+  talkUp.current = async () => {
+    const state = talk.current;
+    state.lastEvent = Date.now();
+    // Held and repeating: the repeats stopping ends it, not a «let go» that may come between them.
+    if (!state.recording || state.held) return;
+    if (Date.now() - state.startedAt < TALK.tap) {
+      // Let go at once: a tap — the recording goes on until the next press.
+      if (!state.toldTap) notice('Слушаю…', `Скажите вопрос и нажмите ${formatHotkey(voiceHotkey)} ещё раз.`);
+      state.toldTap = true;
+      return;
+    }
+    await finishTalk.current();
+  };
+  finishTalk.current = async () => {
+    const state = talk.current;
+    clearTimeout(state.holdTimer);
+    const recording = state.recording;
+    if (!recording) return;
+    state.recording = null;
+    state.held = false;
+    if (Date.now() - state.startedAt < TALK.shortest) {
+      recording.cancel();
+      return notice('Слишком коротко', `Держите ${formatHotkey(voiceHotkey)} всё время, пока говорите, — или нажмите, скажите и нажмите ещё раз.`);
+    }
+    state.thinking = true;
+    try {
+      notice('Думаю…');
+      const question = await transcribe(platform, await recording.stop(), downloadingSpeech);
+      if (!question) return notice('Не расслышал вопрос', 'Говорите чуть громче или ближе к микрофону.');
+      const answer = await chat.send(question, undefined, { brief: true });
+      if (!answer) return notice('ИИ ещё отвечает на прошлый вопрос');
+      if (answer.failed) return notice('ИИ не ответил', answer.text);
+      setGroups((list) => pinCard(list, aiPinCard(answer.id, question, answer.text), surface()));
+    } catch (error) {
+      notice('ИИ не ответил', error instanceof Error ? error.message : String(error));
+    } finally {
+      state.thinking = false;
+    }
+  };
+  // Registered while no hotkey is being recorded in the settings, and never on the overlay's own key.
+  useEffect(() => {
+    if (capturing || !voiceHotkey || voiceHotkey === profile.hotkey) return;
+    void platform.registerVoiceHotkey(
+      voiceHotkey,
+      () => void talkDown.current(),
+      () => void talkUp.current(),
+    );
+    return () => void platform.unregisterVoiceHotkey();
+  }, [platform, voiceHotkey, capturing, profile.hotkey]);
+  useEffect(() => () => talk.current.recording?.cancel(), []);
+
   const pinnedArticle = open ? hasCard(groups, hitKey(open)) : false;
   const pinnedCalculator = hasCard(groups, CALCULATOR_ID);
   const togglePin = (card: PinCard) =>
@@ -387,6 +535,18 @@ export function Overlay({
       clearScope();
       return;
     }
+    // In the AI analysis Enter sends the situation; the list keys have no list to walk.
+    if (aiMode) {
+      if (e.key === 'Enter' && !e.shiftKey && aiDraft.trim() && !(aiTab === 'document' ? writer.busy : aiTab === 'trainer' ? trainer.phase !== 'answering' : aiTab === 'lawyer' ? lawyer.busy : chat.busy)) {
+        e.preventDefault();
+        if (aiTab === 'document') void writer.write(aiDraft);
+        else if (aiTab === 'trainer') void trainer.reply(aiDraft);
+        else if (aiTab === 'lawyer') void lawyer.check(aiDraft);
+        else void chat.send(aiDraft);
+        setAiDraft('');
+      }
+      return;
+    }
     // «Что изменилось» and «было → стало» are read with the mouse; the list keys would move a hidden selection.
     if (whatsNew || settingsOpen || organizationOpen || serverOpen || notesFor || privacyOpen || diff || (changesView && !open)) return;
     if (open) {
@@ -434,6 +594,66 @@ export function Overlay({
     searchRef.current?.focus();
   };
 
+  // A spoken question: the microphone until pressed again, then Gemini writes it down and the AI takes it up.
+  const [voice, setVoice] = useState<'idle' | 'recording' | 'transcribing'>('idle');
+  const recording = useRef<Recording | null>(null);
+  useEffect(() => () => recording.current?.cancel(), []);
+  const voiceFailed = (text: string) => {
+    openAi();
+    chat.note(text);
+  };
+  const stopVoice = async () => {
+    const current = recording.current;
+    if (!current) return;
+    recording.current = null;
+    setVoice('transcribing');
+    try {
+      const text = await transcribe(platform, await current.stop(), downloadingSpeech);
+      if (text && aiOpen && aiTab === 'document') void writer.write(text);
+      else if (text && aiOpen && aiTab === 'trainer') void trainer.reply(text);
+      else if (text && aiOpen && aiTab === 'lawyer') void lawyer.check(text);
+      else if (text) openAi(text);
+      else voiceFailed('Не расслышал вопрос. Нажмите 🎤 и говорите чуть громче или ближе к микрофону.');
+    } catch (error) {
+      voiceFailed(error instanceof Error ? error.message : String(error));
+    } finally {
+      setVoice('idle');
+    }
+  };
+  const toggleVoice = async () => {
+    if (voice === 'recording') return void stopVoice();
+    if (voice !== 'idle') return;
+    try {
+      recording.current = await startRecording(() => void stopVoice());
+      setVoice('recording');
+    } catch {
+      voiceFailed(
+        'Не получилось включить микрофон. Проверьте, что он подключён и что Windows разрешает к нему доступ: «Параметры» → «Конфиденциальность» → «Микрофон».',
+      );
+    }
+  };
+
+  // Earlier conversations with the AI, from the header.
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  /** Opens the AI analysis over whatever was on show; with a text — what was typed in the search — asks about it at once. */
+  const openAi = (text?: string) => {
+    setAiOpen(true);
+    setHistoryOpen(false);
+    setOpen(null);
+    setMenuOpen(false);
+    setSettingsOpen(false);
+    setChangesView(null);
+    setDiff(null);
+    setPrivacyOpen(false);
+    setWhatsNew(null);
+    if (text?.trim()) {
+      void chat.send(text);
+      setQuery('');
+    }
+    searchRef.current?.focus();
+  };
+
   /** Esc steps back one layer at a time: a screen over the settings → the settings → menu → article →
    * search text → document → hide the overlay. */
   const stepBack = useRef<() => void>(() => {});
@@ -448,6 +668,8 @@ export function Overlay({
     else if (changesView && settingsOpen) setChangesView(null);
     else if (settingsOpen) setSettingsOpen(false);
     else if (open) setOpen(null);
+    else if (historyOpen) setHistoryOpen(false);
+    else if (aiOpen) setAiOpen(false);
     else if (changesView) setChangesView(null);
     else if (query) {
       setQuery('');
@@ -483,7 +705,7 @@ export function Overlay({
   // what is opened starts at its own top.
   const contentRef = useRef<HTMLDivElement>(null);
   const listScroll = useRef(0);
-  const onList = !whatsNew && !settingsOpen && !organizationOpen && !serverOpen && !notesFor && !privacyOpen && !diff && !open && !changesView;
+  const onList = !whatsNew && !settingsOpen && !organizationOpen && !serverOpen && !notesFor && !privacyOpen && !diff && !open && !changesView && !aiOpen && !historyOpen;
   const wasOnList = useRef(onList);
   useLayoutEffect(() => {
     const content = contentRef.current;
@@ -595,6 +817,30 @@ export function Overlay({
           {summary}
         </span>
         <button
+          className={aiOpen ? 'icon-btn icon-btn--on icon-btn--ai' : 'icon-btn icon-btn--ai'}
+          type="button"
+          aria-label="ИИ-разбор ситуации"
+          aria-pressed={aiOpen}
+          title="ИИ-разбор ситуации"
+          onClick={() => (aiMode ? setAiOpen(false) : openAi())}
+        >
+          <SparkIcon />
+        </button>
+        <button
+          className={historyOpen ? 'icon-btn icon-btn--on' : 'icon-btn'}
+          type="button"
+          aria-label="История ИИ-разборов"
+          aria-pressed={historyOpen}
+          title="История ИИ-разборов"
+          onClick={() => {
+            setHistoryOpen((v) => !v);
+            setOpen(null);
+            setSettingsOpen(false);
+          }}
+        >
+          <HistoryIcon />
+        </button>
+        <button
           className={settingsOpen ? 'icon-btn icon-btn--on' : 'icon-btn'}
           type="button"
           aria-label="Настройки"
@@ -623,9 +869,9 @@ export function Overlay({
         }}
       />
 
-      <div className="search">
-        <SearchIcon />
-        {scope && (
+      <div className={aiMode ? 'search search--ai' : 'search'}>
+        {aiMode ? <SparkIcon /> : <SearchIcon />}
+        {scope && !aiMode && (
           <button className="scope" type="button" aria-label={`Искать во всех документах, а не только в ${scope.short}`} title="Искать во всех документах" onClick={clearScope}>
             <span>{scope.short}</span>
             <CloseIcon size={12} />
@@ -636,12 +882,33 @@ export function Overlay({
           className="search__input"
           type="search"
           aria-label="Поиск по законам"
-          placeholder={scope ? `Поиск: ${scope.title}` : 'Номер или слова: 65, коап 8.6, кража'}
+          placeholder={
+            aiMode
+              ? aiTab === 'document'
+                ? 'Опишите, что произошло: кто, где, что сделал…'
+                : aiTab === 'trainer'
+                  ? 'Ваш ответ своими словами…'
+                  : aiTab === 'lawyer'
+                    ? 'Что требует адвокат: свидание, копию протокола…'
+                    : chat.messages.length
+                      ? 'Уточните или опишите новую ситуацию…'
+                      : 'Опишите ситуацию своими словами…'
+              : scope
+                ? `Поиск: ${scope.title}`
+                : 'Номер или слова: 65, коап 8.6, кража'
+          }
           autoComplete="off"
-          spellCheck={false}
-          value={query}
+          spellCheck={aiMode}
+          value={aiMode ? aiDraft : query}
           onChange={(e) => {
+            if (aiMode) {
+              setAiDraft(e.target.value);
+              setSettingsOpen(false);
+              setPrivacyOpen(false);
+              return;
+            }
             setQuery(e.target.value);
+            setAiOpen(false);
             setOpen(null);
             setDiff(null);
             setPrivacyOpen(false);
@@ -655,7 +922,20 @@ export function Overlay({
           }}
           onKeyDown={onSearchKey}
         />
-        <span className="kbd">Esc</span>
+        {canRecord() && (
+          <button
+            type="button"
+            className={voice === 'idle' ? 'mic' : `mic mic--${voice}`}
+            aria-label={voice === 'recording' ? 'Остановить запись и спросить ИИ' : 'Спросить ИИ голосом'}
+            aria-pressed={voice === 'recording'}
+            title={voice === 'recording' ? 'Говорите… нажмите ещё раз, чтобы спросить' : voice === 'transcribing' ? 'Разбираю, что вы сказали…' : 'Спросить голосом'}
+            disabled={voice === 'transcribing'}
+            onClick={() => void toggleVoice()}
+          >
+            <MicIcon />
+          </button>
+        )}
+        <span className="kbd">{aiMode ? 'Enter' : 'Esc'}</span>
       </div>
 
       <div
@@ -781,6 +1061,8 @@ export function Overlay({
             hotkey={profile.hotkey}
             onHotkey={(accelerator) => onProfile({ ...profile, hotkey: accelerator })}
             onCapturing={onCapturing}
+            voiceHotkey={voiceHotkey}
+            onVoiceHotkey={changeVoiceHotkey}
             opacity={opacity}
             onOpacity={changeOpacity}
             pinned={cardCount(groups)}
@@ -804,7 +1086,7 @@ export function Overlay({
             article={open.article}
             document={open.document}
             focusPart={open.part}
-            backLabel={changesView ? 'Что изменилось' : home ? 'Избранное и недавние' : view === 'contents' ? 'Оглавление' : 'Результаты'}
+            backLabel={aiOpen ? 'ИИ-разбор' : changesView ? 'Что изменилось' : home ? 'Избранное и недавние' : view === 'contents' ? 'Оглавление' : 'Результаты'}
             changed={(() => {
               const recentChange = changeOf(open);
               return recentChange && recentChange.change.kind === 'changed'
@@ -825,6 +1107,81 @@ export function Overlay({
             onFavorite={() => toggleFavorite(open)}
             pinned={pinnedArticle}
             onPin={() => togglePin(articlePinCard(open, rules))}
+          />
+        ) : historyOpen ? (
+          <HistoryView
+            history={chat.history}
+            serverName={pack.server.name}
+            backLabel={aiOpen ? 'ИИ-разбор' : 'Поиск'}
+            onBack={() => {
+              setHistoryOpen(false);
+              searchRef.current?.focus();
+            }}
+            onOpen={(id) => {
+              chat.open(id);
+              setHistoryOpen(false);
+              setAiOpen(true);
+              searchRef.current?.focus();
+            }}
+            onForget={chat.forget}
+          />
+        ) : aiOpen && aiTab === 'lawyer' ? (
+          <LawyerView
+            lawyer={lawyer}
+            backLabel={query ? 'Результаты' : scope ? 'Оглавление' : 'Поиск'}
+            onBack={() => {
+              setAiOpen(false);
+              searchRef.current?.focus();
+            }}
+            onOpen={openHit}
+            onTab={(tab) => {
+              setAiTab(tab);
+              searchRef.current?.focus();
+            }}
+          />
+        ) : aiOpen && aiTab === 'trainer' ? (
+          <TrainerView
+            trainer={trainer}
+            pack={pack}
+            backLabel={query ? 'Результаты' : scope ? 'Оглавление' : 'Поиск'}
+            onBack={() => {
+              setAiOpen(false);
+              searchRef.current?.focus();
+            }}
+            onOpen={openHit}
+            onTab={(tab) => {
+              setAiTab(tab);
+              searchRef.current?.focus();
+            }}
+          />
+        ) : aiOpen && aiTab === 'document' ? (
+          <DocumentView
+            writer={writer}
+            backLabel={query ? 'Результаты' : scope ? 'Оглавление' : 'Поиск'}
+            onBack={() => {
+              setAiOpen(false);
+              searchRef.current?.focus();
+            }}
+            onOpen={openHit}
+            onTab={(tab) => {
+              setAiTab(tab);
+              searchRef.current?.focus();
+            }}
+          />
+        ) : aiOpen ? (
+          <AiView
+            chat={chat}
+            backLabel={query ? 'Результаты' : scope ? 'Оглавление' : 'Поиск'}
+            onBack={() => {
+              setAiOpen(false);
+              searchRef.current?.focus();
+            }}
+            onOpen={openHit}
+            onSettings={() => setSettingsOpen(true)}
+            onTab={(tab) => {
+              setAiTab(tab);
+              searchRef.current?.focus();
+            }}
           />
         ) : changesView ? (
           <ChangesView
@@ -893,23 +1250,44 @@ export function Overlay({
               {hits.map((hit, i) => rowFor(hit, i))}
             </div>
             {hits.length === 0 && <div className="empty">Ничего не найдено</div>}
+            {/* A situation typed into the search finds nothing whole: the AI takes it word by word. */}
+            <button className="ai-offer" type="button" onClick={() => openAi(query)}>
+              <SparkIcon size={18} />
+              <span>
+                Разобрать с ИИ: <b>«{query.trim()}»</b>
+              </span>
+            </button>
           </>
         )}
       </div>
 
       <div className="overlay__foot">
-        <span>
-          <b>↑↓</b> выбор
-        </span>
-        <span>
-          <b>Enter</b> в калькулятор
-        </span>
-        <span>
-          <b>→</b> открыть
-        </span>
-        <span>
-          <b>Esc</b> назад
-        </span>
+        {aiMode ? (
+          <>
+            <span>
+              <b>Enter</b> {aiTab === 'document' ? 'составить документ' : aiTab === 'trainer' ? 'ответить' : aiTab === 'lawyer' ? 'проверить требования' : 'спросить ИИ'}
+            </span>
+            <span>клик по статье — открыть</span>
+            <span>
+              <b>Esc</b> к поиску
+            </span>
+          </>
+        ) : (
+          <>
+            <span>
+              <b>↑↓</b> выбор
+            </span>
+            <span>
+              <b>Enter</b> в калькулятор
+            </span>
+            <span>
+              <b>→</b> открыть
+            </span>
+            <span>
+              <b>Esc</b> назад
+            </span>
+          </>
+        )}
       </div>
 
       {menuOpen && (

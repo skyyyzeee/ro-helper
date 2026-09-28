@@ -1,0 +1,262 @@
+// RO Helper AI server: the app asks the AI through it, so players need no key of their own. The AI key lives only
+// here, in the environment of this server (see env.example) — never in the app, which anyone can take apart.
+//
+// It forwards to any OpenAI-compatible API (ProxyAPI, VseGPT…) and keeps the spending in check:
+// a few questions a day per computer and per address, and a daily budget in rubles for everyone together.
+// Plain Node (20+), no packages: `node server.mjs`, behind Caddy for HTTPS (see README.md).
+import { createServer } from 'node:http';
+import { readFileSync, writeFileSync, renameSync, existsSync } from 'node:fs';
+
+const env = (name, fallback) => process.env[name] ?? fallback;
+const num = (name, fallback) => Number(env(name, fallback));
+
+const CONFIG = {
+  port: num('PORT', 8787),
+  /** The OpenAI-compatible API and its key: ProxyAPI, VseGPT or another. */
+  apiBase: env('AI_BASE_URL', 'https://api.proxyapi.ru/openai/v1').replace(/\/$/, ''),
+  apiKey: env('AI_API_KEY', ''),
+  /**
+   * Models to ask, in turn: when one is busy (429 — the provider's limit for that model is taken up), the next
+   * is tried. The first is AI_MODEL; AI_MODELS, comma-separated, replaces the whole list.
+   */
+  models: env('AI_MODELS', `${env('AI_MODEL', 'gpt-5-nano')},gpt-4.1-nano,gpt-4o-mini`).split(',').map((m) => m.trim()).filter(Boolean),
+  transcribeModels: env('AI_TRANSCRIBE_MODELS', `${env('AI_TRANSCRIBE_MODEL', 'whisper-1')},gpt-4o-mini-transcribe`).split(',').map((m) => m.trim()).filter(Boolean),
+  /** Rubles per 1M tokens, in and out, for counting the budget; and per minute of speech. */
+  priceIn: num('PRICE_IN_RUB', 20),
+  priceOut: num('PRICE_OUT_RUB', 104),
+  pricePerMinute: num('PRICE_MINUTE_RUB', 1.6),
+  /** Everyone together may spend this much a day; past it, the AI rests until midnight (Moscow). */
+  budgetPerDay: num('BUDGET_RUB_PER_DAY', 20),
+  /** Per computer and per address, a day. */
+  questionsPerDevice: num('QUESTIONS_PER_DEVICE', 20),
+  voicePerDevice: num('VOICE_PER_DEVICE', 10),
+  requestsPerIp: num('REQUESTS_PER_IP', 80),
+  maxOutputTokens: num('MAX_OUTPUT_TOKENS', 900),
+  stateFile: env('STATE_FILE', './state.json'),
+};
+
+if (!CONFIG.apiKey) {
+  console.error('AI_API_KEY is not set: put the key of the AI API in /opt/ro-helper/.env');
+  process.exit(1);
+}
+
+/** The day by Moscow time: limits start over at midnight there, where most players are. */
+const today = () => new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10);
+
+// ——— What was spent today, kept on disk so a restart does not reset the limits ———
+
+let state = { day: today(), spent: 0, devices: {}, ips: {} };
+if (existsSync(CONFIG.stateFile)) {
+  try {
+    state = JSON.parse(readFileSync(CONFIG.stateFile, 'utf8'));
+  } catch {
+    // A broken file starts the day over.
+  }
+}
+let dirty = false;
+setInterval(() => {
+  if (!dirty) return;
+  dirty = false;
+  writeFileSync(`${CONFIG.stateFile}.part`, JSON.stringify(state));
+  renameSync(`${CONFIG.stateFile}.part`, CONFIG.stateFile);
+}, 5000).unref();
+
+function rollDay() {
+  if (state.day === today()) return;
+  state = { day: today(), spent: 0, devices: {}, ips: {} };
+  dirty = true;
+}
+
+/** Why this request may not go on today, or nothing when it may. */
+function refusal(device, ip, kind) {
+  rollDay();
+  if (state.spent >= CONFIG.budgetPerDay) return 'На сегодня ИИ РО Хелпера исчерпал общий лимит. Он снова заработает после полуночи по Москве.';
+  if ((state.ips[ip] ?? 0) >= CONFIG.requestsPerIp) return 'Слишком много вопросов с вашего адреса за сегодня. Попробуйте завтра.';
+  const used = state.devices[device] ?? { questions: 0, voice: 0 };
+  if (kind === 'voice' && used.voice >= CONFIG.voicePerDevice) return `На сегодня голосовые вопросы закончились (${CONFIG.voicePerDevice} в день). Спросите текстом — или завтра.`;
+  if (kind === 'question' && used.questions >= CONFIG.questionsPerDevice) return `На сегодня вопросы ИИ закончились (${CONFIG.questionsPerDevice} в день). Они снова появятся после полуночи по Москве.`;
+  return null;
+}
+
+function count(device, ip, kind, rubles) {
+  const used = (state.devices[device] ??= { questions: 0, voice: 0 });
+  if (kind === 'voice') used.voice += 1;
+  if (kind === 'question') used.questions += 1;
+  state.ips[ip] = (state.ips[ip] ?? 0) + 1;
+  state.spent += rubles;
+  dirty = true;
+}
+
+// ——— The AI ———
+
+/** The AI API's own words on what went wrong: ProxyAPI writes them in `detail`, OpenAI-style APIs in `error.message`. */
+class UpstreamError extends Error {
+  constructor(status, body, raw) {
+    const said = body?.detail ?? body?.error?.message ?? (raw || '').slice(0, 300);
+    super(`AI API ${status}: ${typeof said === 'string' ? said : JSON.stringify(said)}`);
+    this.status = status;
+  }
+}
+
+/**
+ * One call to the AI API. A «too many requests» (429) or a busy backend (502–504) is tried again after a pause,
+ * twice, before the player is told: a short burst of requests over the API's rate should not reach the player.
+ */
+async function upstream(path, init, tries = 3) {
+  for (let attempt = 0; ; attempt++) {
+    const response = await fetch(`${CONFIG.apiBase}${path}`, init);
+    const raw = await response.text();
+    let body = null;
+    try {
+      body = JSON.parse(raw);
+    } catch {
+      // Not JSON: the raw text says what happened.
+    }
+    if (response.ok) return body;
+    const retry = [429, 502, 503, 504].includes(response.status) && attempt < tries - 1;
+    const error = new UpstreamError(response.status, body, raw);
+    console.error(new Date().toISOString(), retry ? `retrying: ${error.message}` : error.message);
+    if (!retry) throw error;
+    const wait = Number(response.headers.get('retry-after')) * 1000 || 1500 * (attempt + 1);
+    await new Promise((resolve) => setTimeout(resolve, Math.min(wait, 8000)));
+  }
+}
+
+/** Asks each model in turn while they are busy; any other failure is final. */
+async function inTurn(models, call) {
+  let last;
+  for (const model of models) {
+    try {
+      return await call(model);
+    } catch (error) {
+      last = error;
+      const busy = error instanceof UpstreamError && [429, 502, 503, 504].includes(error.status);
+      if (!busy) throw error;
+    }
+  }
+  throw last;
+}
+
+async function chat({ system, messages, json, think }) {
+  const body = await inTurn(CONFIG.models, (model) =>
+    upstream(
+      '/chat/completions',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${CONFIG.apiKey}` },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'system', content: system }, ...messages],
+          // The thinking is paid for and counts toward the tokens: a law lookup needs little of it, weighing a lawyer's
+          // demands against the law needs more — the answer must still fit after it.
+          max_completion_tokens: think ? CONFIG.maxOutputTokens * 4 : CONFIG.maxOutputTokens,
+          ...(model.startsWith('gpt-5') ? { reasoning_effort: think ? 'low' : 'minimal' } : {}),
+          ...(json ? { response_format: { type: 'json_object' } } : {}),
+        }),
+      },
+      // With another model to go to, one pause is enough before moving on.
+      2,
+    ),
+  );
+  const text = body?.choices?.[0]?.message?.content ?? '';
+  const usage = body?.usage ?? {};
+  const rubles = ((usage.prompt_tokens ?? 0) * CONFIG.priceIn + (usage.completion_tokens ?? 0) * CONFIG.priceOut) / 1e6;
+  return { text, rubles };
+}
+
+async function transcribe(wavBase64) {
+  const audio = Buffer.from(wavBase64, 'base64');
+  const body = await inTurn(CONFIG.transcribeModels, (model) => {
+    const form = new FormData();
+    form.append('file', new Blob([audio], { type: 'audio/wav' }), 'question.wav');
+    form.append('model', model);
+    form.append('language', 'ru');
+    return upstream('/audio/transcriptions', { method: 'POST', headers: { Authorization: `Bearer ${CONFIG.apiKey}` }, body: form }, 2);
+  });
+  // 16-bit mono WAV: 2 bytes a sample; the header's rate tells the seconds. The API bills every started minute.
+  const rate = audio.length > 28 ? audio.readUInt32LE(24) : 16000;
+  const minutes = Math.max(1, Math.ceil(Math.max(0, audio.length - 44) / 2 / rate / 60));
+  return { text: body?.text ?? '', rubles: minutes * CONFIG.pricePerMinute };
+}
+
+// ——— HTTP ———
+
+/** A question with a dozen articles is some 60 KB; a minute of 16 kHz speech some 2.6 MB as base64. */
+const LIMITS = { '/v1/chat': 200_000, '/v1/transcribe': 3_000_000 };
+
+function readBody(request, limit) {
+  return new Promise((resolve, reject) => {
+    let size = 0;
+    const chunks = [];
+    request.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > limit) {
+        reject(new Error('too large'));
+        request.destroy();
+      } else chunks.push(chunk);
+    });
+    request.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    request.on('error', reject);
+  });
+}
+
+function send(response, status, body) {
+  response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*' });
+  response.end(JSON.stringify(body));
+}
+
+const server = createServer(async (request, response) => {
+  if (request.method === 'OPTIONS') {
+    response.writeHead(204, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, GET',
+      'Access-Control-Allow-Headers': 'Content-Type, X-Device',
+    });
+    return response.end();
+  }
+  if (request.method === 'GET' && request.url === '/v1/status') {
+    rollDay();
+    return send(response, 200, { ok: true, open: state.spent < CONFIG.budgetPerDay });
+  }
+  const limit = LIMITS[request.url];
+  if (request.method !== 'POST' || !limit) return send(response, 404, { error: 'Нет такого адреса' });
+
+  // Caddy in front tells the player's address; the device is a random id the app keeps.
+  const ip = String(request.headers['x-forwarded-for'] ?? request.socket.remoteAddress ?? '').split(',')[0].trim();
+  const device = String(request.headers['x-device'] ?? '').slice(0, 64);
+  if (!/^[\w-]{8,64}$/.test(device)) return send(response, 400, { error: 'Обновите РО Хелпер до последней версии.' });
+
+  let input;
+  try {
+    input = JSON.parse(await readBody(request, limit));
+  } catch {
+    return send(response, 413, { error: 'Слишком большой запрос.' });
+  }
+
+  try {
+    if (request.url === '/v1/transcribe') {
+      const why = refusal(device, ip, 'voice');
+      if (why) return send(response, 429, { error: why });
+      const { text, rubles } = await transcribe(String(input.audio ?? ''));
+      count(device, ip, 'voice', rubles);
+      return send(response, 200, { text });
+    }
+    // Every step of one question — the law terms, then the answer — is one call; only the answer counts as a question.
+    const kind = input.counts === false ? 'step' : 'question';
+    const why = refusal(device, ip, kind);
+    if (why) return send(response, 429, { error: why });
+    const messages = Array.isArray(input.messages)
+      ? input.messages.filter((m) => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string').slice(-14)
+      : [];
+    if (!messages.length || typeof input.system !== 'string') return send(response, 400, { error: 'Пустой вопрос.' });
+    const { text, rubles } = await chat({ system: input.system.slice(0, 8000), messages, json: !!input.json, think: input.think === true });
+    count(device, ip, kind, rubles);
+    return send(response, 200, { text });
+  } catch (error) {
+    if (!(error instanceof UpstreamError)) console.error(new Date().toISOString(), error);
+    const busy = error instanceof UpstreamError && error.status === 429;
+    return send(response, 502, { error: busy ? 'ИИ сейчас перегружен. Попробуйте через минуту.' : 'ИИ сейчас не отвечает. Попробуйте через минуту.' });
+  }
+});
+
+server.listen(CONFIG.port, '127.0.0.1', () => console.log(`RO Helper AI server on 127.0.0.1:${CONFIG.port}, models ${CONFIG.models.join(' → ')}; voice ${CONFIG.transcribeModels.join(' → ')}`));

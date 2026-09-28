@@ -22,7 +22,8 @@
     "@tauri-apps/plugin-store": "^2.4.4",
     "@tauri-apps/plugin-updater": "^2.11.0",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "vosk-browser": "^0.0.8"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.4",

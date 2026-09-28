@@ -3,6 +3,7 @@
 export type * from './model';
 export { PACK_FORMAT } from './model';
 export { documentContents, searchArticles, type ChapterContents, type SearchHit } from './search';
+export { findForSituation, sourceLabel, sourcesText, type SituationOptions } from './situation';
 export { articleText, changedArticles, changesSince, diffPacks, diffWords, recentChanges, type WordDiff } from './changes';
 export {
   calculateCriminal,

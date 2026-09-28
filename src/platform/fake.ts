@@ -12,6 +12,7 @@ export interface FakePlatform extends PlatformAdapter {
   readonly state: {
     overlayVisible: boolean;
     hotkey: string | null;
+    voiceHotkey: string | null;
     /** What is pinned over the game, block by block. */
     pins: PinGroup[];
     /** Files on the internet by URL; «offline» for no connection at all. */
@@ -29,6 +30,9 @@ export interface FakePlatform extends PlatformAdapter {
   pressHotkey(): void;
   /** Simulates what the user does on the pinned cards themselves: closing, moving, joining. */
   changePins(groups: PinGroup[]): void;
+  /** Simulates the push-to-talk key: held down, then let go. */
+  holdVoiceHotkey(): void;
+  releaseVoiceHotkey(): void;
 }
 
 export interface FakeOptions {
@@ -52,6 +56,7 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
   const state: FakePlatform['state'] = {
     overlayVisible: true,
     hotkey: null,
+    voiceHotkey: null,
     pins: [],
     remote: options.remote ?? {},
     laws: new Map(Object.entries(options.laws ?? {})),
@@ -61,6 +66,7 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
     updateInstalled: false,
   };
   let onHotkey: (() => void) | null = null;
+  let onVoice: { down: () => void; up: () => void } | null = null;
   let bounds: WindowBounds | null = null;
 
   const record = (method: keyof PlatformAdapter, ...args: unknown[]) => {
@@ -76,6 +82,12 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
     pressHotkey() {
       onHotkey?.();
     },
+    holdVoiceHotkey() {
+      onVoice?.down();
+    },
+    releaseVoiceHotkey() {
+      onVoice?.up();
+    },
     changePins(groups) {
       state.pins = groups;
       pinListeners.forEach((listener) => listener(groups));
@@ -85,6 +97,16 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
       record('registerHotkey', accelerator);
       state.hotkey = accelerator;
       onHotkey = onPress;
+    },
+    async registerVoiceHotkey(accelerator, onDown, onUp) {
+      record('registerVoiceHotkey', accelerator);
+      state.voiceHotkey = accelerator;
+      onVoice = { down: onDown, up: onUp };
+    },
+    async unregisterVoiceHotkey() {
+      record('unregisterVoiceHotkey');
+      state.voiceHotkey = null;
+      onVoice = null;
     },
     async unregisterHotkey() {
       record('unregisterHotkey');

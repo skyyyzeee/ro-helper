@@ -18,3 +18,10 @@ export function clampOpacity(value: number): number {
 export function applyOpacity(value: number): void {
   document.documentElement.style.setProperty('--glass-alpha', String(clampOpacity(value)));
 }
+
+/**
+ * The push-to-talk key for a question over the game; an empty setting turns it off. Alt+W sits beside the
+ * overlay's Alt+Q; unlike Alt+Q it has not been checked in game, so the settings let the player change it.
+ */
+export const VOICE_HOTKEY_KEY = 'voice.hotkey';
+export const DEFAULT_VOICE_HOTKEY = 'Alt+W';

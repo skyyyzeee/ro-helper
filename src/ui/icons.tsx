@@ -25,7 +25,15 @@ export const SearchIcon = ({ size = 20 }: { size?: number }) => (
   </Icon>
 );
 
-export const MenuIcon = ({ size = 20 }: { size?: number }) => (
+/** The AI analysis: a spark. */
+export const SparkIcon = ({ size = 20 }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M12 3.5l1.9 5.1 5.1 1.9-5.1 1.9L12 17.5l-1.9-5.1L5 10.5l5.1-1.9z" />
+    <path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z" />
+  </Icon>
+);
+
+export const MenuIcon =({ size = 20 }: { size?: number }) => (
   <Icon size={size}>
     <path d="M4 6h16M4 12h16M4 18h10" />
   </Icon>
@@ -180,5 +188,20 @@ export const PagesIcon = ({ size = 14 }: { size?: number }) => (
 export const CompactIcon = ({ size = 14 }: { size?: number }) => (
   <Icon size={size}>
     <path d="M5 9h14M5 15h14M9 4l3 3 3-3M9 20l3-3 3 3" />
+  </Icon>
+);
+
+export const MicIcon = ({ size = 20 }: { size?: number }) => (
+  <Icon size={size}>
+    <rect x="9" y="3.5" width="6" height="11" rx="3" />
+    <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.5" />
+  </Icon>
+);
+
+/** The history of AI analyses: a clock turned back. */
+export const HistoryIcon = ({ size = 20 }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3L4.5 9" />
+    <path d="M4.5 4.5V9H9M12 8v4.3l2.8 1.7" />
   </Icon>
 );
