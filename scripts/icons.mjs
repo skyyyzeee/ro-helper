@@ -15,6 +15,7 @@ const NAMES = [
   'unfold_less', 'keep', 'star', 'star-fill', 'description', 'calculate', 'sticky_note_2', 'account_circle', 'palette',
   // The AI.
   'wand_stars', 'mic', 'history',
+  'tune', 'menu_book', 'info',
   // Organisations.
   'local_police', 'traffic', 'security', 'verified_user', 'military_tech', 'policy', 'gavel', 'balance',
   'account_balance', 'local_hospital', 'newspaper', 'cases', 'how_to_vote', 'skull', 'person',

@@ -393,10 +393,10 @@ describe('a notice over the game', () => {
     vi.useFakeTimers();
     const onToastEnd = vi.fn();
     render(
-      <PinSurface groups={[]} live={false} onChange={() => {}} toast={{ id: 't', title: 'Вышло обновление РО Хелпер', text: 'Версия 1.1.0.' }} onToastEnd={onToastEnd} />,
+      <PinSurface groups={[]} live={false} onChange={() => {}} toast={{ id: 't', title: 'Вышло обновление Кремлёвского Ассистента', text: 'Версия 1.1.0.' }} onToastEnd={onToastEnd} />,
     );
     const notice = () => screen.getByRole('status', { name: 'Уведомление' });
-    expect(notice()).toHaveTextContent('Вышло обновление РО ХелперВерсия 1.1.0.');
+    expect(notice()).toHaveTextContent('Вышло обновление Кремлёвского АссистентаВерсия 1.1.0.');
     expect(notice()).toHaveStyle({ top: '16px', right: '16px' });
 
     act(() => void vi.advanceTimersByTime(TOAST_MS - 100));

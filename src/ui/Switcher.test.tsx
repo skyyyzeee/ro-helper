@@ -41,4 +41,15 @@ describe('the server and the organisation, from the header', () => {
     expect(screen.queryByRole('region', { name: 'Сервер и организация' })).not.toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'Поиск по законам' })).toBeInTheDocument();
   });
+
+  it('is a popover over the search: servers as tiles, factions in a grid, and a click beside it closes it', async () => {
+    const { user } = await renderApp();
+    await user.click(switcher());
+    expect(within(screenOf()).getByRole('radiogroup', { name: 'Сервер' })).toHaveClass('ob__options--tiles');
+    expect(within(screenOf()).getByRole('radiogroup', { name: 'Организация' })).toHaveClass('ob__orgs--grid');
+    // The search stays under it.
+    expect(screen.getByRole('searchbox', { name: 'Поиск по законам' })).toBeInTheDocument();
+    await user.click(document.querySelector('.switch-pop__backdrop')!);
+    expect(screen.queryByRole('region', { name: 'Сервер и организация' })).not.toBeInTheDocument();
+  });
 });

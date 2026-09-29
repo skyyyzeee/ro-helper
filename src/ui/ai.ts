@@ -50,8 +50,11 @@ export type AiProvider = 'server' | 'gemini';
 export const AI_PROVIDER_SETTING = 'ai.provider';
 /** Another AI server than the built-in one (`AI_SERVER`), to try one out; normally unset. */
 export const AI_SERVER_SETTING = 'ai.server';
-/** A random id of this computer: the server's daily limits are counted by it. */
-export const DEVICE_SETTING = 'device.id';
+/**
+ * A random id of this computer for the AI server's daily limits — its own, not the statistics' `device.id`, so the
+ * AI server and the counts at Supabase cannot be tied together.
+ */
+export const DEVICE_SETTING = 'ai.device';
 
 export type AiConnection = { provider: 'server'; server: string; device: string } | { provider: 'gemini'; key: string };
 

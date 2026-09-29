@@ -1,5 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { AccountProvider } from '../account/AccountContext';
+import { createFakeAccounts } from '../account/fake';
+import { SyncProvider } from '../account/SyncContext';
+import { SYNC_RULES } from '../ui/syncedSettings';
+import type { Account } from '../account/types';
 import { createFakePlatform, type FakeOptions, type FakePlatform } from '../platform/fake';
 import { PlatformProvider } from '../platform/PlatformContext';
 import { App } from '../ui/App';
@@ -14,6 +19,8 @@ export interface RenderOptions {
   settings?: Record<string, unknown>;
   /** The saved profile; `null` starts on the first-launch screen. Defaults to Тверской without an organisation. */
   profile?: Partial<Profile> | null;
+  /** The player signed in with Discord; nobody by default. */
+  account?: Account;
 }
 
 /** Every card pinned over the game, block by block, in the order they were pinned. */
@@ -28,12 +35,17 @@ export async function renderApp(options: RenderOptions = {}) {
   platform.settings.set(SEEN_VERSION_KEY, APP_VERSION);
   for (const [key, value] of Object.entries(options.settings ?? {})) platform.settings.set(key, value);
 
+  const accounts = createFakeAccounts(options.account);
   render(
     <PlatformProvider platform={platform}>
-      <App />
+      <AccountProvider accounts={accounts}>
+        <SyncProvider accounts={accounts} rules={SYNC_RULES}>
+          <App />
+        </SyncProvider>
+      </AccountProvider>
     </PlatformProvider>,
   );
   if (profile) await screen.findByRole('searchbox', { name: 'Поиск по законам' });
   else await screen.findByRole('heading', { name: 'Выберите сервер' });
-  return { platform, user: userEvent.setup() };
+  return { platform, accounts, user: userEvent.setup() };
 }

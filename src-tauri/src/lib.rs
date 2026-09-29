@@ -1,3 +1,5 @@
+mod sign_in;
+
 use serde_json::Value;
 use std::sync::Mutex;
 use tauri::{
@@ -241,7 +243,7 @@ fn pin_toast_done(app: AppHandle, state: tauri::State<Pin>) -> Result<(), String
 /// are does the window exist at all (`pin_areas`); the rest of it is cut away.
 fn create_pin_window(app: &AppHandle) -> tauri::Result<()> {
   let window = WebviewWindowBuilder::new(app, PIN_LABEL, WebviewUrl::App("index.html".into()))
-    .title("РО Хелпер — закреплено")
+    .title("Кремлёвский Ассистент — закреплено")
     .inner_size(800.0, 600.0)
     .decorations(false)
     .transparent(true)
@@ -362,7 +364,9 @@ pub fn run() {
       pin_state,
       pin_live,
       pin_toast,
-      pin_toast_done
+      pin_toast_done,
+      sign_in::sign_in_listen,
+      sign_in::sign_in_cancel
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {
@@ -387,7 +391,7 @@ pub fn run() {
       let menu = Menu::with_items(app, &[&toggle, &quit])?;
       TrayIconBuilder::with_id("main")
         .icon(app.default_window_icon().cloned().expect("app icon"))
-        .tooltip("РО Хелпер")
+        .tooltip("Кремлёвский Ассистент")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {

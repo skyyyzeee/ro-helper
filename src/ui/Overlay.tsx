@@ -36,7 +36,7 @@ import { useLawyerCheck } from './lawyer';
 import { useTrainer } from './trainer';
 import { useDocumentWriter } from './documents';
 import { HistoryView } from './HistoryView';
-import { BackIcon, CalculatorIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, DocumentsIcon, HistoryIcon, MemoIcon, MicIcon, OrganizationIcon, PinIcon, ProfileIcon, SearchIcon, ServerIcon, SettingsIcon, SparkIcon } from './icons';
+import { BackIcon, CalculatorIcon, ChevronDownIcon, CloseIcon, DocumentsIcon, HistoryIcon, MemoIcon, MicIcon, OrganizationIcon, PinIcon, ProfileIcon, SearchIcon, ServerIcon, SettingsIcon, SparkIcon } from './icons';
 import { SideRail } from './SideRail';
 import { canRecord, startRecording, type Recording } from './voice';
 import { DEFAULT_OPACITY, DEFAULT_VOICE_HOTKEY, OPACITY_KEY, VOICE_HOTKEY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
@@ -53,13 +53,19 @@ import { ResizeEdges } from './ResizeEdges';
 import { ResultRow } from './ResultRow';
 import { RECENT_LIMIT, entryPart, favoritesKey, hitKey, recentKey, useHitLookup, useStoredKeys } from './saved';
 import { ServerChoice } from './ServerChoice';
-import { SettingsView } from './SettingsView';
+import { SettingsView, type SettingsSection } from './SettingsView';
+import { useStats } from './stats';
+import { Avatar } from './ProfileView';
+import { useAccount } from '../account/AccountContext';
 import type { Laws } from './laws';
 import { APP_VERSION } from './about';
 import { WhatsNewView } from './WhatsNewView';
 import { CHANGELOG, SEEN_VERSION_KEY, compareVersions, notesSince, type VersionNotes } from './whatsNew';
 import { UpdateBanner } from './UpdateBanner';
 import { DISMISSED_KEY, TOASTED_KEY, useUpdates } from './updates';
+
+/** Put off with «Позже», the notice that signing in will be required is not shown again. */
+const LOGIN_NOTICE_KEY = 'login.notice';
 
 /** «1 результат», «3 результата», «11 результатов». */
 function plural(n: number, [one, few, many]: [string, string, string]): string {
@@ -143,6 +149,17 @@ export function Overlay({
   const [open, setOpen] = useState<SearchHit | null>(null);
   const [selected, setSelected] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  /** The part of the settings the side column asked for: the account from the profile, what is pinned from the pin. */
+  const [settingsFocus, setSettingsFocus] = useState<{ section: SettingsSection; at: number }>();
+  const { status: accountStatus } = useAccount();
+  const account = accountStatus.kind === 'signed-in' ? accountStatus.account : null;
+  // Signing in becomes required with the next version: a player not signed in is told so on the home
+  // screen until they sign in or put it off.
+  const [loginNoticeOff, setLoginNoticeOff] = useState(true);
+  useEffect(() => {
+    void platform.readSetting<string>(LOGIN_NOTICE_KEY).then((saved) => setLoginNoticeOff(saved === 'later'));
+  }, [platform]);
+  const loginNotice = accountStatus.kind === 'signed-out' && !loginNoticeOff;
   const [menuOpen, setMenuOpen] = useState(false);
   const [opacity, setOpacity] = useState(DEFAULT_OPACITY);
   const organization = pack.organizations.find((o) => o.id === profile.organization);
@@ -208,8 +225,8 @@ export function Overlay({
       if (!active || told === found || putOff === found) return;
       const toast: Toast = {
         id: `update-${found}`,
-        title: 'Вышло обновление РО Хелпер',
-        text: `Версия ${found}. Откройте хелпер (${formatHotkey(profile.hotkey)}) и нажмите «Обновить».`,
+        title: 'Вышло обновление Кремлёвского Ассистента',
+        text: `Версия ${found}. Откройте ассистент (${formatHotkey(profile.hotkey)}) и нажмите «Обновить».`,
       };
       void platform.showToast(toast);
       // In the browser there is no window over the game: the stand-in scene shows the notice itself.
@@ -290,6 +307,8 @@ export function Overlay({
 
   // Calculator: charges of both codes, the mode and the offender for the whole detention, the fine typed in.
   const [charges, setCharges] = useState<Entry[]>([]);
+  // What the player does, for their profile and — unless turned off — the author's anonymous counts.
+  const count = useStats(platform, pack.server.id);
   const [mode, setMode] = useState<Mode>('custody');
   const [offender, setOffender] = useState<Offender>('citizen');
   const [fineInput, setFineInput] = useState('');
@@ -302,7 +321,11 @@ export function Overlay({
   const inCalculator = (hit: SearchHit) => charges.some((c) => c.key === hitKey(hit));
   const toggleCharge = (hit: SearchHit) => {
     const key = hitKey(hit);
-    if (!inCalculator(hit)) remember(hit);
+    if (!inCalculator(hit)) {
+      remember(hit);
+      count({ kind: 'charge', article: key });
+      if (charges.length === 0) count({ kind: 'calculation' });
+    }
     setCharges((list) =>
       list.some((c) => c.key === key) ? list.filter((c) => c.key !== key) : [...list, { key, hit, stage: 'done', amount: '', days: '', unpaid: '' }],
     );
@@ -735,6 +758,7 @@ export function Overlay({
   const openHit = (hit: SearchHit) => {
     setOpen(hit);
     remember(hit);
+    count({ kind: 'open', article: hitKey(hit) });
     searchRef.current?.focus();
   };
   // Back from an article (or any screen over the list) the list is where it was left, not at its top;
@@ -742,7 +766,7 @@ export function Overlay({
   const contentRef = useRef<HTMLDivElement>(null);
   const listScroll = useRef(0);
   /** The side menu's sections: each closes what is on screen and opens its own. */
-  const openSection = (section: 'search' | 'documents' | 'switch' | 'pinned' | 'settings') => {
+  const openSection = (section: 'search' | 'documents' | 'switch' | 'pinned' | 'settings' | 'profile') => {
     setWhatsNew(null);
     setOrganizationOpen(false);
     setServerOpen(false);
@@ -752,13 +776,18 @@ export function Overlay({
     setHistoryOpen(false);
     setMenuOpen(section === 'documents');
     setSwitchOpen(section === 'switch');
-    setSettingsOpen(section === 'pinned' || section === 'settings');
-    if (section === 'pinned') {
-      // Once the settings are on screen: straight to what is pinned.
-      window.setTimeout(() => document.querySelector('[aria-label="Закреплено поверх игры"]')?.scrollIntoView({ block: 'start' }));
-    }
+    setSettingsOpen(section === 'pinned' || section === 'settings' || section === 'profile');
+    // The profile is the account at the top of the settings; the pin, what is pinned in them.
+    setSettingsFocus(section === 'profile' ? { section: 'account', at: Date.now() } : section === 'pinned' ? { section: 'pinned', at: Date.now() } : undefined);
     searchRef.current?.focus();
   };
+
+  /** The settings are a page of their own (direction C): their name in the header, no search. */
+  const inner = settingsOpen ? 'Настройки' : null;
+  // Back from them the search is there again, with the focus.
+  useEffect(() => {
+    if (!inner) searchRef.current?.focus();
+  }, [inner]);
 
   const onList = !whatsNew && !settingsOpen && !switchOpen && !organizationOpen && !serverOpen && !notesFor && !privacyOpen && !diff && !open && !changesView && !aiOpen && !historyOpen;
   const wasOnList = useRef(onList);
@@ -887,7 +916,7 @@ export function Overlay({
             label: 'ИИ',
             ariaLabel: 'ИИ-разбор ситуации',
             icon: <SparkIcon />,
-            shortcut: 6,
+            shortcut: 7,
             onSelect: () => (aiOpen && !historyOpen ? openSection('search') : openAi()),
           },
           {
@@ -911,14 +940,23 @@ export function Overlay({
             bottom: true,
             onSelect: () => openSection(settingsOpen ? 'search' : 'settings'),
           },
-          { id: 'profile', label: 'Профиль', icon: <ProfileIcon />, bottom: true, disabled: true, hint: 'Профиль — скоро', onSelect: () => {} },
+          {
+            id: 'profile',
+            label: 'Профиль',
+            ariaLabel: account ? `Профиль: ${account.name}` : undefined,
+            icon: account ? <Avatar account={account} size={26} /> : <ProfileIcon />,
+            shortcut: 6,
+            bottom: true,
+            onSelect: () => openSection('profile'),
+          },
         ]}
       />
       <div className="overlay__main">
       <div className="overlay__head" data-tauri-drag-region>
         <span className="brand" data-tauri-drag-region>
-          {pack.server.name}
+          {inner ?? pack.server.name}
         </span>
+        {!inner && (
         <button
           className={switchOpen ? 'chip chip--switch chip--on' : 'chip chip--switch'}
           type="button"
@@ -931,6 +969,7 @@ export function Overlay({
           <span>{organization && organization.id !== 'none' ? organization.name : 'Без организации'}</span>
           <ChevronDownIcon size={16} />
         </button>
+        )}
         <span className="sp" data-tauri-drag-region />
         <button
           className="icon-btn"
@@ -943,6 +982,42 @@ export function Overlay({
         </button>
       </div>
 
+      {switchOpen && (
+        <>
+          {/* Clicked beside it, the switcher closes. */}
+          <div
+            className="switch-pop__backdrop"
+            onClick={() => {
+              setSwitchOpen(false);
+              searchRef.current?.focus();
+            }}
+          />
+          <section className="switch-pop" aria-label="Сервер и организация">
+            <h3 className="switch-pop__title">Сервер</h3>
+            <ServerChoice
+              compact
+              value={profile.server}
+              onPick={(id) => {
+                // It stays open: the organisation is picked next, from the new server's own.
+                const keep = packFor(id).organizations.some((o) => o.id === profile.organization);
+                onProfile({ ...profile, server: id, organization: keep ? profile.organization : 'none' });
+              }}
+            />
+            <h3 className="switch-pop__title">Фракция</h3>
+            <OrganizationChoice
+              compact
+              pack={pack}
+              value={profile.organization}
+              onPick={(id) => {
+                onProfile({ ...profile, organization: id });
+                setSwitchOpen(false);
+                searchRef.current?.focus();
+              }}
+            />
+          </section>
+        </>
+      )}
+
       <UpdateBanner
         updates={updates}
         onNotes={() => {
@@ -951,6 +1026,7 @@ export function Overlay({
         }}
       />
 
+      {!inner && (
       <div className={aiMode ? 'search search--ai' : 'search'}>
         {aiMode ? <SparkIcon /> : <SearchIcon />}
         {scope && !aiMode && (
@@ -989,6 +1065,7 @@ export function Overlay({
               setPrivacyOpen(false);
               return;
             }
+            if (!query.trim() && e.target.value.trim()) count({ kind: 'search' });
             setQuery(e.target.value);
             setAiOpen(false);
             setOpen(null);
@@ -1019,6 +1096,7 @@ export function Overlay({
         )}
         <span className="kbd">{aiMode ? 'Enter' : 'Esc'}</span>
       </div>
+      )}
 
       <div
         ref={contentRef}
@@ -1037,38 +1115,6 @@ export function Overlay({
               searchRef.current?.focus();
             }}
           />
-        ) : switchOpen ? (
-          <section className="art art--switch" aria-label="Сервер и организация">
-            <button
-              className="back"
-              type="button"
-              onClick={() => {
-                setSwitchOpen(false);
-                searchRef.current?.focus();
-              }}
-            >
-              <BackIcon />
-              <span>Поиск</span>
-            </button>
-            <h2 className="art__title">Сервер и организация</h2>
-            <ServerChoice
-              value={profile.server}
-              onPick={(id) => {
-                // The screen stays open: the organisation is picked next, from the new server's own.
-                const keep = packFor(id).organizations.some((o) => o.id === profile.organization);
-                onProfile({ ...profile, server: id, organization: keep ? profile.organization : 'none' });
-              }}
-            />
-            <OrganizationChoice
-              pack={pack}
-              value={profile.organization}
-              onPick={(id) => {
-                onProfile({ ...profile, organization: id });
-                setSwitchOpen(false);
-                searchRef.current?.focus();
-              }}
-            />
-          </section>
         ) : organizationOpen ? (
           <section className="art" aria-label="Ваша организация">
             <button
@@ -1162,11 +1208,6 @@ export function Overlay({
           />
         ) : settingsOpen && !changesView ? (
           <SettingsView
-            backLabel={open ? 'Статья' : 'Поиск'}
-            onBack={() => {
-              setSettingsOpen(false);
-              searchRef.current?.focus();
-            }}
             pack={pack}
             organization={organization}
             onServer={() => setServerOpen(true)}
@@ -1195,6 +1236,7 @@ export function Overlay({
             onPrivacy={() => setPrivacyOpen(true)}
             laws={laws}
             onHistory={() => setWhatsNew({ title: 'История версий', sections: CHANGELOG, backLabel: 'Настройки' })}
+            focus={settingsFocus}
           />
         ) : open ? (
           <ArticleView
@@ -1328,12 +1370,36 @@ export function Overlay({
             {banner && (
               <button className="home__banner" type="button" onClick={showRecentChanges}>
                 <span>
-                  Законы обновлены <b>{formatDate(banner.version).slice(0, 5)}</b> — {plural(banner.documents.length, ['документ', 'документа', 'документов'])}
+                  Законы обновлены <b>{formatDate(banner.version).slice(0, 5)}</b> —{' '}
+                  {plural(banner.documents.length, ['документ изменился', 'документа изменились', 'документов изменились'])}
                 </span>
                 <span className="sp" />
-                <b>Что изменилось</b>
-                <ChevronRightIcon />
+                <b>Смотреть →</b>
               </button>
+            )}
+            {loginNotice && (
+              <section className="home__notice" aria-label="Вход скоро станет обязательным">
+                <span>
+                  <b>Со следующего обновления ассистент попросит войти</b> через Discord или Telegram — это займёт минуту, а
+                  настройки и избранное переедут в аккаунт. Интернет нужен только для самого входа.
+                </span>
+                <span className="home__notice-actions">
+                  <button className="settings__button" type="button" onClick={() => openSection('profile')}>
+                    Войти
+                  </button>
+                  <button
+                    className="link-btn"
+                    type="button"
+                    onClick={() => {
+                      setLoginNoticeOff(true);
+                      void platform.writeSetting(LOGIN_NOTICE_KEY, 'later');
+                      searchRef.current?.focus();
+                    }}
+                  >
+                    Позже
+                  </button>
+                </span>
+              </section>
             )}
             {favorites.length > 0 && (
               <>
@@ -1345,7 +1411,21 @@ export function Overlay({
             )}
             {recent.length > 0 && (
               <>
-                <div className="sec-t home__title">Недавние</div>
+                <div className="home__head">
+                  <div className="sec-t home__title">Недавние</div>
+                  <button
+                    type="button"
+                    className="link-btn home__clear"
+                    aria-label="Очистить недавние"
+                    onClick={() => {
+                      updateRecent(() => []);
+                      setSelected(0);
+                      searchRef.current?.focus();
+                    }}
+                  >
+                    Очистить
+                  </button>
+                </div>
                 <div className="list" role="list" aria-label="Недавние">
                   {recent.map((hit, i) => rowFor(hit, favorites.length + i))}
                 </div>

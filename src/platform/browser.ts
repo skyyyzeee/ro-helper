@@ -45,5 +45,9 @@ export function createBrowserPlatform(): PlatformAdapter {
       await fake.openExternal(url);
       window.open(url, '_blank', 'noopener');
     },
+    // Nothing on this computer listens for the browser coming back from a sign-in.
+    signInInBrowser: async () => {
+      throw new Error('unsupported');
+    },
   };
 }

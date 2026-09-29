@@ -30,7 +30,11 @@
         { "url": "https://docs.github.com/*" },
         { "url": "https://aistudio.google.com/*" },
         { "url": "https://ai.google.dev/*" },
-        { "url": "https://policies.google.com/*" }
+        { "url": "https://policies.google.com/*" },
+        { "url": "https://evwyrdytojwxlvgqrkar.supabase.co/*" },
+        { "url": "https://supabase.com/*" },
+        { "url": "https://t.me/*" },
+        { "url": "https://telegram.org/*" }
       ]
     }
   ]

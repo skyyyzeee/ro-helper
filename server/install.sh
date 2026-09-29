@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sets up the RO Helper AI server on a fresh Ubuntu 24.04, as root:
+# Sets up the AI server of Кремлёвский Ассистент on a fresh Ubuntu 24.04, as root:
 #   curl -fsSL https://raw.githubusercontent.com/skyyyzeee/ro-helper/main/server/install.sh | bash
 # Then give it the AI key:  bash /opt/ro-helper/set-key.sh
 # Running it again updates the server and keeps the settings and the key.
@@ -19,7 +19,7 @@ apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nodejs caddy curl ufw unzip >/dev/null
 node --version
 
-echo "== Сервер РО Хелпера в $DIR"
+echo "== Сервер ИИ Кремлёвского Ассистента в $DIR"
 id rohelper >/dev/null 2>&1 || useradd --system --home "$DIR" --shell /usr/sbin/nologin rohelper
 mkdir -p "$DIR"
 # Fresh copies every time: GitHub keeps its answers a few minutes, a missing file's too.
@@ -30,8 +30,7 @@ fetch server.mjs
 fetch set-key.sh
 fetch env.example
 [ -f "$DIR/.env" ] || cp "$DIR/env.example" "$DIR/.env"
-# Speech is recognised on the players' computers now: the paid recognition here stays off, old app versions too.
-sed -i 's/^VOICE_PER_DEVICE=.*/VOICE_PER_DEVICE=0/' "$DIR/.env"
+# Speech is recognised on the players' computers: this server takes text only.
 
 echo "== Модель распознавания речи (Vosk, русская, ~45 МБ) для программ"
 mkdir -p "$DIR/models"
@@ -50,7 +49,7 @@ chmod 600 "$DIR/.env"
 
 cat > /etc/systemd/system/ro-helper-ai.service <<EOF
 [Unit]
-Description=RO Helper AI server
+Description=Kremlin Assistant AI server
 After=network-online.target
 
 [Service]
@@ -102,5 +101,5 @@ else
   echo "== Почти готово. Теперь вставьте ключ ProxyAPI:  bash $DIR/set-key.sh"
 fi
 echo
-echo "Адрес сервера РО Хелпера:  https://$DOMAIN"
+echo "Адрес сервера ИИ:  https://$DOMAIN"
 echo "Пришлите этот адрес в чат — он пойдёт в программу."

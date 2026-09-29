@@ -1,9 +1,9 @@
-# Types and tests on every push and pull request.
+# Types and tests on every push and pull request, the web side and the native one.
 name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
 
 jobs:
@@ -18,3 +18,15 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+
+  # The native side's own tests (the sign-in listener); they don't need the built page, only its folder.
+  native:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+      - run: mkdir dist
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --lib

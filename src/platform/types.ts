@@ -149,6 +149,16 @@ export interface PlatformAdapter {
   /** Opens a link in the user's browser, outside the overlay. */
   openExternal(url: string): Promise<void>;
 
+  /** Where the browser comes back to after signing in: a listener of the app on this computer. */
+  readonly signInRedirect: string;
+  /**
+   * Opens a sign-in page in the user's browser and waits until it comes back to `signInRedirect`;
+   * returns the query string it came back with («code=…» or «error=…»). Throws «cancelled» after
+   * `cancelSignIn` or when nobody comes back in ten minutes, «unsupported» where there is no listener.
+   */
+  signInInBrowser(url: string): Promise<string>;
+  cancelSignIn(): Promise<void>;
+
   /** Asks the releases for a version newer than this one; `null` when this is the latest. Throws when offline. */
   checkForUpdate(): Promise<AppUpdate | null>;
   /**

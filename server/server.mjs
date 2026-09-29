@@ -1,4 +1,4 @@
-// RO Helper AI server: the app asks the AI through it, so players need no key of their own. The AI key lives only
+// The AI server of Кремлёвский Ассистент: the app asks the AI through it, so players need no key of their own. The AI key lives only
 // here, in the environment of this server (see env.example) — never in the app, which anyone can take apart.
 //
 // It forwards to any OpenAI-compatible API (ProxyAPI, VseGPT…) and keeps the spending in check:
@@ -20,16 +20,13 @@ const CONFIG = {
    * is tried. The first is AI_MODEL; AI_MODELS, comma-separated, replaces the whole list.
    */
   models: env('AI_MODELS', `${env('AI_MODEL', 'gpt-5-nano')},gpt-4.1-nano,gpt-4o-mini`).split(',').map((m) => m.trim()).filter(Boolean),
-  transcribeModels: env('AI_TRANSCRIBE_MODELS', `${env('AI_TRANSCRIBE_MODEL', 'whisper-1')},gpt-4o-mini-transcribe`).split(',').map((m) => m.trim()).filter(Boolean),
-  /** Rubles per 1M tokens, in and out, for counting the budget; and per minute of speech. */
+  /** Rubles per 1M tokens, in and out, for counting the budget. */
   priceIn: num('PRICE_IN_RUB', 20),
   priceOut: num('PRICE_OUT_RUB', 104),
-  pricePerMinute: num('PRICE_MINUTE_RUB', 1.6),
   /** Everyone together may spend this much a day; past it, the AI rests until midnight (Moscow). */
   budgetPerDay: num('BUDGET_RUB_PER_DAY', 20),
   /** Per computer and per address, a day. */
   questionsPerDevice: num('QUESTIONS_PER_DEVICE', 20),
-  voicePerDevice: num('VOICE_PER_DEVICE', 10),
   requestsPerIp: num('REQUESTS_PER_IP', 80),
   maxOutputTokens: num('MAX_OUTPUT_TOKENS', 900),
   stateFile: env('STATE_FILE', './state.json'),
@@ -70,17 +67,15 @@ function rollDay() {
 /** Why this request may not go on today, or nothing when it may. */
 function refusal(device, ip, kind) {
   rollDay();
-  if (state.spent >= CONFIG.budgetPerDay) return 'На сегодня ИИ РО Хелпера исчерпал общий лимит. Он снова заработает после полуночи по Москве.';
+  if (state.spent >= CONFIG.budgetPerDay) return 'На сегодня ИИ Кремлёвского Ассистента исчерпал общий лимит. Он снова заработает после полуночи по Москве.';
   if ((state.ips[ip] ?? 0) >= CONFIG.requestsPerIp) return 'Слишком много вопросов с вашего адреса за сегодня. Попробуйте завтра.';
-  const used = state.devices[device] ?? { questions: 0, voice: 0 };
-  if (kind === 'voice' && used.voice >= CONFIG.voicePerDevice) return `На сегодня голосовые вопросы закончились (${CONFIG.voicePerDevice} в день). Спросите текстом — или завтра.`;
+  const used = state.devices[device] ?? { questions: 0 };
   if (kind === 'question' && used.questions >= CONFIG.questionsPerDevice) return `На сегодня вопросы ИИ закончились (${CONFIG.questionsPerDevice} в день). Они снова появятся после полуночи по Москве.`;
   return null;
 }
 
 function count(device, ip, kind, rubles) {
-  const used = (state.devices[device] ??= { questions: 0, voice: 0 });
-  if (kind === 'voice') used.voice += 1;
+  const used = (state.devices[device] ??= { questions: 0 });
   if (kind === 'question') used.questions += 1;
   state.ips[ip] = (state.ips[ip] ?? 0) + 1;
   state.spent += rubles;
@@ -164,25 +159,10 @@ async function chat({ system, messages, json, think }) {
   return { text, rubles };
 }
 
-async function transcribe(wavBase64) {
-  const audio = Buffer.from(wavBase64, 'base64');
-  const body = await inTurn(CONFIG.transcribeModels, (model) => {
-    const form = new FormData();
-    form.append('file', new Blob([audio], { type: 'audio/wav' }), 'question.wav');
-    form.append('model', model);
-    form.append('language', 'ru');
-    return upstream('/audio/transcriptions', { method: 'POST', headers: { Authorization: `Bearer ${CONFIG.apiKey}` }, body: form }, 2);
-  });
-  // 16-bit mono WAV: 2 bytes a sample; the header's rate tells the seconds. The API bills every started minute.
-  const rate = audio.length > 28 ? audio.readUInt32LE(24) : 16000;
-  const minutes = Math.max(1, Math.ceil(Math.max(0, audio.length - 44) / 2 / rate / 60));
-  return { text: body?.text ?? '', rubles: minutes * CONFIG.pricePerMinute };
-}
-
 // ——— HTTP ———
 
-/** A question with a dozen articles is some 60 KB; a minute of 16 kHz speech some 2.6 MB as base64. */
-const LIMITS = { '/v1/chat': 200_000, '/v1/transcribe': 3_000_000 };
+/** A question with a dozen articles is some 60 KB. Text only: no speech is taken — it is recognised on the players' computers. */
+const LIMITS = { '/v1/chat': 200_000 };
 
 function readBody(request, limit) {
   return new Promise((resolve, reject) => {
@@ -224,7 +204,7 @@ const server = createServer(async (request, response) => {
   // Caddy in front tells the player's address; the device is a random id the app keeps.
   const ip = String(request.headers['x-forwarded-for'] ?? request.socket.remoteAddress ?? '').split(',')[0].trim();
   const device = String(request.headers['x-device'] ?? '').slice(0, 64);
-  if (!/^[\w-]{8,64}$/.test(device)) return send(response, 400, { error: 'Обновите РО Хелпер до последней версии.' });
+  if (!/^[\w-]{8,64}$/.test(device)) return send(response, 400, { error: 'Обновите Кремлёвский Ассистент до последней версии.' });
 
   let input;
   try {
@@ -234,13 +214,6 @@ const server = createServer(async (request, response) => {
   }
 
   try {
-    if (request.url === '/v1/transcribe') {
-      const why = refusal(device, ip, 'voice');
-      if (why) return send(response, 429, { error: why });
-      const { text, rubles } = await transcribe(String(input.audio ?? ''));
-      count(device, ip, 'voice', rubles);
-      return send(response, 200, { text });
-    }
     // Every step of one question — the law terms, then the answer — is one call; only the answer counts as a question.
     const kind = input.counts === false ? 'step' : 'question';
     const why = refusal(device, ip, kind);
@@ -259,4 +232,4 @@ const server = createServer(async (request, response) => {
   }
 });
 
-server.listen(CONFIG.port, '127.0.0.1', () => console.log(`RO Helper AI server on 127.0.0.1:${CONFIG.port}, models ${CONFIG.models.join(' → ')}; voice ${CONFIG.transcribeModels.join(' → ')}`));
+server.listen(CONFIG.port, '127.0.0.1', () => console.log(`AI server on 127.0.0.1:${CONFIG.port}, models ${CONFIG.models.join(' → ')}`));

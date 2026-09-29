@@ -84,6 +84,21 @@ const TOAST_KEY = 'toast::notice';
 /** Room around a block for the outline shown while the overlay is open. */
 const PAD = 4;
 
+/**
+ * Where an element is on screen, and where it will rest once its sliding in or out is over: both together.
+ * The window shows only what lies in these areas, so a notice measured mid-slide would be cut off at its rest.
+ */
+function withoutMotion(element: HTMLElement): { left: number; top: number; width: number; height: number } {
+  const rect = element.getBoundingClientRect();
+  const transform = getComputedStyle(element).transform;
+  const shift = transform && transform !== 'none' && typeof DOMMatrix !== 'undefined' ? new DOMMatrix(transform) : undefined;
+  const dx = shift?.m41 ?? 0;
+  const dy = shift?.m42 ?? 0;
+  const left = Math.min(rect.left, rect.left - dx);
+  const top = Math.min(rect.top, rect.top - dy);
+  return { left, top, width: rect.width + Math.abs(dx), height: rect.height + Math.abs(dy) };
+}
+
 /** The key a card's own element is kept under, so a card can be dragged out of a block. */
 const cardKey = (groupId: string, cardId: string) => `${groupId} :: ${cardId}`;
 
@@ -238,14 +253,23 @@ export function PinSurface({ groups: incoming, live, onChange, onAreas, toast, o
     // The notice, too, takes its place on the screen while it shows.
     const elements = () => [...groups.map((group) => boxes.current.get(group.id)), boxes.current.get(TOAST_KEY)];
     const report = () => {
-      const rects = elements().map((element) => element?.getBoundingClientRect()).filter((rect) => rect !== undefined);
+      const rects = elements()
+        .filter((element) => element !== undefined)
+        .map((element) => withoutMotion(element));
       onAreas(rects.map(physical));
     };
     report();
-    if (typeof ResizeObserver === 'undefined') return;
+    // The notice slides in: once it has come to rest, its place is measured again.
+    const notice = boxes.current.get(TOAST_KEY);
+    notice?.addEventListener('animationend', report);
+    const stopNotice = () => notice?.removeEventListener('animationend', report);
+    if (typeof ResizeObserver === 'undefined') return stopNotice;
     const observer = new ResizeObserver(report);
     for (const element of elements()) if (element) observer.observe(element);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      stopNotice();
+    };
   }, [groups, dragId, live, onAreas, toast]);
 
   // How much room the cards have: the screen in the app, the window in the preview.

@@ -46,6 +46,8 @@ describe('the AI through the AI server', () => {
     // One computer, one id, kept for the limits; the law terms are a step, the answer is the question.
     const device = platform.settings.get(DEVICE_SETTING);
     expect(device).toMatch(/^d[0-9a-f]{32}$/);
+    // Its own id, not the statistics' one: the AI server and the counts cannot be tied together.
+    expect(device).not.toBe(platform.settings.get('device.id'));
     expect(calls.every((c) => c.device === device)).toBe(true);
     expect(calls.map((c) => c.body.counts)).toEqual([false, true]);
     // The found articles go along, in the messages the server passes on.

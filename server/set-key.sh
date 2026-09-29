@@ -22,7 +22,7 @@ chmod 600 "$ENV"
 systemctl restart ro-helper-ai
 sleep 2
 if systemctl is-active --quiet ro-helper-ai; then
-  echo "Ключ сохранён, сервер РО Хелпера работает."
+  echo "Ключ сохранён, сервер ИИ работает."
 else
   echo "Сервер не запустился. Покажите вывод этой команды в чате:  journalctl -u ro-helper-ai -n 30"
 fi

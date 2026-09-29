@@ -48,6 +48,9 @@ export const SparkIcon = icon('wand_stars', 20);
 export const MicIcon = icon('mic', 20);
 /** The history of AI analyses. */
 export const HistoryIcon = icon('history', 20);
+export const TuneIcon = icon('tune', 18);
+export const BookIcon = icon('menu_book', 18);
+export const InfoIcon = icon('info', 18);
 
 /** Star for favourites: outlined, and filled when its button is on (`.fav--on`). */
 export const FavoriteIcon = ({ size = 20 }: Size) => (
@@ -118,6 +121,15 @@ export const DiscordIcon = ({ size = 18 }: { size?: number }) => (
     <path
       fill="currentColor"
       d="M20.32 4.37a19.8 19.8 0 0 0-4.89-1.52.07.07 0 0 0-.08.04c-.21.38-.44.87-.6 1.25a18.3 18.3 0 0 0-5.5 0 12.6 12.6 0 0 0-.62-1.25.08.08 0 0 0-.08-.04 19.7 19.7 0 0 0-4.88 1.52.07.07 0 0 0-.03.03C.53 9.05-.32 13.58.1 18.06a.08.08 0 0 0 .03.06 19.9 19.9 0 0 0 5.99 3.03.08.08 0 0 0 .09-.03c.46-.63.87-1.3 1.22-2a.08.08 0 0 0-.04-.1 13.1 13.1 0 0 1-1.87-.9.08.08 0 0 1 0-.12l.37-.3a.07.07 0 0 1 .08 0c3.93 1.8 8.18 1.8 12.06 0a.07.07 0 0 1 .08 0l.37.3a.08.08 0 0 1 0 .13c-.6.35-1.22.65-1.88.9a.08.08 0 0 0-.04.1c.36.7.78 1.36 1.23 2a.08.08 0 0 0 .08.02 19.8 19.8 0 0 0 6.01-3.03.08.08 0 0 0 .03-.05c.5-5.18-.84-9.68-3.55-13.66a.06.06 0 0 0-.03-.03ZM8.02 15.33c-1.18 0-2.16-1.08-2.16-2.42 0-1.33.96-2.42 2.16-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.34-.96 2.42-2.16 2.42Zm7.97 0c-1.18 0-2.15-1.08-2.15-2.42 0-1.33.95-2.42 2.15-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.34-.95 2.42-2.16 2.42Z"
+    />
+  </svg>
+);
+
+export const TelegramIcon = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      fill="currentColor"
+      d="M21.5 4.3 18.3 19.6c-.2 1-.9 1.3-1.7.8l-4.9-3.6-2.3 2.3c-.3.3-.5.5-1 .5l.3-5 9.1-8.2c.4-.4-.1-.6-.6-.2L5.9 13.3 1 11.8c-1-.3-1-1 .2-1.5L20.2 3c.9-.3 1.6.2 1.3 1.3Z"
     />
   </svg>
 );

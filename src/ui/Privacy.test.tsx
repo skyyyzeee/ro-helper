@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { SUPABASE_URL } from '../account/supabase';
+import { createFakePlatform } from '../platform/fake';
 import { renderApp } from '../test/renderApp';
 
 const root = join(import.meta.dirname, '..', '..');
@@ -14,7 +16,7 @@ describe('the privacy policy', () => {
 
     const policy = screen.getByRole('article', { name: 'Политика конфиденциальности' });
     expect(within(policy).getByRole('heading', { level: 2 })).toHaveTextContent('Политика конфиденциальности');
-    expect(policy).toHaveTextContent('РО Хелпер не собирает данные о вас');
+    expect(policy).toHaveTextContent('Пока вы не вошли в аккаунт, Кремлёвский Ассистент не собирает и не отправляет данные о вас');
     // Only the Russian part: the English one is for GitHub.
     expect(policy).not.toHaveTextContent('English');
 
@@ -23,6 +25,8 @@ describe('the privacy policy', () => {
 
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('article', { name: 'Политика конфиденциальности' })).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Настройки' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
     expect(screen.getByRole('searchbox', { name: 'Поиск по законам' })).toHaveFocus();
   });
 
@@ -31,6 +35,9 @@ describe('the privacy policy', () => {
     const config = JSON.parse(readFileSync(join(root, 'src-tauri', 'tauri.conf.json'), 'utf8'));
     const [endpoint] = config.plugins.updater.endpoints;
     expect(policy).toContain(endpoint);
+    // And the accounts' service, with where the browser comes back to.
+    expect(policy).toContain(SUPABASE_URL);
+    expect(policy).toContain(new URL(createFakePlatform().signInRedirect).origin);
     // Every link the policy opens is one the app may open.
     const capabilities = readFileSync(join(root, 'src-tauri', 'capabilities', 'default.json'), 'utf8');
     for (const [, url] of policy.split('\n---\n')[0].matchAll(/\]\((https:\/\/[^/)]+)/g)) expect(capabilities).toContain(url);

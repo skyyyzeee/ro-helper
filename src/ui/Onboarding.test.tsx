@@ -119,8 +119,11 @@ describe('settings', () => {
     await user.click(screen.getByRole('button', { name: 'Сменить сервер' }));
     await user.click(within(screen.getByRole('region', { name: 'Ваш сервер' })).getByRole('radio', { name: /Арбатский/ }));
 
-    expect(await screen.findByTitle('Арбатский · МВД')).toBeInTheDocument();
+    // Back in the settings, a page of its own; out of them the header shows the new server.
+    expect(await screen.findByRole('group', { name: 'Настройки' })).toHaveTextContent('СерверАрбатский');
     expect(platform.settings.get(PROFILE_KEY)).toMatchObject({ server: 'arbatskiy', organization: 'mvd' });
+    await user.keyboard('{Escape}');
+    expect(screen.getByTitle('Арбатский · МВД')).toBeInTheDocument();
   });
 
   it('leave without saving on «Отмена» or Esc', async () => {
@@ -182,8 +185,10 @@ describe('changing only the organisation', () => {
     expect(screen.queryByRole('heading', { name: 'Выберите сервер' })).not.toBeInTheDocument();
     await user.click(within(choice).getByRole('radio', { name: 'ФСБ' }));
 
-    expect(await screen.findByTitle('Тверской · ФСБ')).toBeInTheDocument();
+    expect(await screen.findByRole('group', { name: 'Настройки' })).toHaveTextContent('ОрганизацияФСБ');
     expect(platform.settings.get(PROFILE_KEY)).toEqual({ server: 'tverskoi', organization: 'fsb', hotkey: 'F9' });
+    await user.keyboard('{Escape}');
+    expect(screen.getByTitle('Тверской · ФСБ')).toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'Поиск по законам' })).toHaveFocus();
   });
 
@@ -194,6 +199,8 @@ describe('changing only the organisation', () => {
     await user.keyboard('{Escape}');
 
     expect(screen.queryByRole('region', { name: 'Ваша организация' })).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Настройки' })).toHaveTextContent('ОрганизацияМВД');
+    await user.keyboard('{Escape}');
     expect(screen.getByTitle('Тверской · МВД')).toBeInTheDocument();
     expect(platform.settings.get(PROFILE_KEY)).toMatchObject({ organization: 'mvd' });
   });

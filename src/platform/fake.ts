@@ -33,6 +33,8 @@ export interface FakePlatform extends PlatformAdapter {
   /** Simulates the push-to-talk key: held down, then let go. */
   holdVoiceHotkey(): void;
   releaseVoiceHotkey(): void;
+  /** Simulates the browser coming back from a sign-in with this query string. */
+  comeBackFromSignIn(query: string): void;
 }
 
 export interface FakeOptions {
@@ -67,6 +69,7 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
   };
   let onHotkey: (() => void) | null = null;
   let onVoice: { down: () => void; up: () => void } | null = null;
+  let signInWaiting: { resolve: (query: string) => void; reject: (error: Error) => void } | null = null;
   let bounds: WindowBounds | null = null;
 
   const record = (method: keyof PlatformAdapter, ...args: unknown[]) => {
@@ -215,6 +218,23 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
 
     async openExternal(url) {
       record('openExternal', url);
+    },
+
+    signInRedirect: 'http://127.0.0.1:47321/auth/callback',
+    signInInBrowser(url) {
+      record('signInInBrowser', url);
+      return new Promise((resolve, reject) => {
+        signInWaiting = { resolve, reject };
+      });
+    },
+    async cancelSignIn() {
+      record('cancelSignIn');
+      signInWaiting?.reject(new Error('cancelled'));
+      signInWaiting = null;
+    },
+    comeBackFromSignIn(query) {
+      signInWaiting?.resolve(query);
+      signInWaiting = null;
     },
 
     async checkForUpdate() {

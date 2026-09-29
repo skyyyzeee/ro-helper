@@ -6,7 +6,7 @@ const results = () => within(screen.getByRole('list', { name: 'Результа�
 const search = () => screen.getByRole('searchbox', { name: 'Поиск по законам' });
 
 describe('finding an article by number', () => {
-  it('shows each punished part of an УК article with its jurisdiction, stars and punishment', async () => {
+  it('shows each punished part of an УК article on one line: its stars and punishment, the rest on its page', async () => {
     const { user } = await renderApp();
     await user.type(search(), 'ук 65');
 
@@ -14,12 +14,13 @@ describe('finding an article by number', () => {
     expect(first).toHaveTextContent('УК');
     expect(first).toHaveTextContent('ст. 65 ч. 1');
     expect(first).toHaveTextContent('Кража');
-    expect(first).toHaveTextContent('Р/Ф');
+    // Direction C: the jurisdiction and the excerpt are on the article's page, not in the row.
+    expect(first).not.toHaveTextContent('Р/Ф');
     expect(within(first).getByRole('img', { name: 'Звёзд розыска: 3' })).toBeInTheDocument();
     expect(first).toHaveTextContent('штраф до 50 000 ₽ либо 30 мес');
 
     expect(second).toHaveTextContent('ст. 65 ч. 2');
-    expect(second).toHaveTextContent('Кража, совершенная');
+    expect(second).not.toHaveTextContent('Кража, совершенная');
     expect(within(second).getByRole('img', { name: 'Звёзд розыска: 4' })).toBeInTheDocument();
     expect(second).toHaveTextContent('штраф до 90 000 ₽ либо 40 мес');
   });

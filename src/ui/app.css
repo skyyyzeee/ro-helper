@@ -70,15 +70,15 @@ input {
 
 .stage--preview .shell {
   position: absolute;
-  top: 24px;
+  top: max(24px, calc(50vh - 310px));
   right: 24px;
   width: auto;
-  height: calc(100vh - 48px);
+  height: min(620px, calc(100vh - 48px));
 }
 
 .stage--preview .shell > .overlay {
   flex: none;
-  width: min(600px, calc(100vw - 48px));
+  width: min(880px, calc(100vw - 48px));
 }
 
 /* Glass panel */
@@ -203,12 +203,120 @@ input {
   transform: scale(0.97);
 }
 
-/* Settings: a screen of its own, in blocks */
+/* Settings: a page of its own — the account and the parts in a column on the left, their blocks on the right. */
 .settings {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
+  padding: 4px 6px 18px;
+}
+
+.settings__body,
+.settings__part {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 4px 16px 18px;
+  min-width: 0;
+}
+
+.settings__part {
+  scroll-margin-top: 4px;
+}
+
+.setnav {
+  position: sticky;
+  top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.setnav__account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 10px;
+  border-radius: 14px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.setnav__account:hover,
+.setnav__account[aria-current='true'] {
+  background: var(--surface-hover);
+}
+
+.setnav__nobody {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-active);
+  color: var(--text-muted);
+}
+
+.setnav__who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.setnav__name {
+  font-size: 14px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.setnav__via {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.setnav__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  text-align: left;
+  color: var(--text-muted);
+}
+
+.setnav__item svg {
+  flex: none;
+}
+
+.setnav__item:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.setnav__item[aria-current='true'] {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.setnav__item[aria-current='true'] svg {
+  color: var(--accent-text);
+}
+
+/* A narrow window has no room for the column: the blocks alone. */
+@media (max-width: 680px) {
+  .settings {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .setnav {
+    display: none;
+  }
 }
 
 .set {
@@ -643,15 +751,6 @@ input {
   padding: 0 10px 12px;
 }
 
-.overlay__content::-webkit-scrollbar {
-  width: 8px;
-}
-
-.overlay__content::-webkit-scrollbar-thumb {
-  background: rgb(255 255 255 / calc(0.14 * var(--tint-scale)));
-  border-radius: 8px;
-}
-
 .overlay__foot {
   display: flex;
   gap: 18px;
@@ -1081,6 +1180,18 @@ input {
   padding: 8px 10px 6px;
 }
 
+.home__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.home__clear {
+  margin-right: 4px;
+  padding: 3px 8px;
+  font-size: 12.5px;
+}
+
 /* Document picked in the menu: a tag in the search field */
 .scope {
   display: inline-flex;
@@ -1256,15 +1367,6 @@ input {
   overflow: visible;
 }
 
-.pin__cards::-webkit-scrollbar {
-  width: 8px;
-}
-
-.pin__cards::-webkit-scrollbar-thumb {
-  border-radius: 8px;
-  background: rgb(255 255 255 / calc(0.18 * var(--tint-scale)));
-}
-
 .pin__card {
   display: flex;
   flex-direction: column;
@@ -1434,7 +1536,8 @@ input {
   border-radius: 16px;
   background: var(--toast-bg);
   border: 1px solid var(--glass-border);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  /* No shadow: the window over the game draws only the notice's own rectangle, so a shadow would be cut
+     off at its edge into a dim frame around it. */
   pointer-events: auto;
   cursor: pointer;
   animation: toast-in 0.28s cubic-bezier(0.22, 1.2, 0.42, 1);
@@ -2779,17 +2882,13 @@ input {
   color: var(--text-faint);
 }
 
-/* Both choices on one screen: the organisation's under the server's. */
-.art--switch .ob__groups {
-  margin-top: 14px;
-}
 
 .ob__org--on .ob__org-mark {
   color: inherit;
 }
 
 /* Direction C: the side column always on screen, the search and the rest in the column beside it. */
-.overlay {
+.overlay:not(.onboarding) {
   flex-direction: row;
 }
 
@@ -2803,7 +2902,7 @@ input {
 
 .rail {
   flex: none;
-  width: 72px;
+  width: 60px;
   padding: 14px 0 12px;
   display: flex;
   flex-direction: column;
@@ -2828,14 +2927,17 @@ input {
 }
 
 .rail__item {
-  width: 62px;
-  padding: 7px 0 6px;
+  width: 46px;
+  height: 46px;
   border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
+  display: grid;
+  place-items: center;
   color: var(--text-muted);
+}
+
+.rail__item svg {
+  width: 24px;
+  height: 24px;
 }
 
 .rail__item:hover:not(:disabled) {
@@ -2853,11 +2955,6 @@ input {
   cursor: default;
 }
 
-.rail__label {
-  font-size: 10px;
-  line-height: 1.2;
-}
-
 /* Home: the latest update of the laws, and the favourites as tiles in two columns. */
 .home__banner {
   display: flex;
@@ -2866,11 +2963,35 @@ input {
   width: calc(100% - 20px);
   margin: 2px 10px 10px;
   padding: 10px 12px;
-  border-radius: var(--radius-control);
-  background: oklch(0.78 0.1 var(--accent-hue) / 0.14);
-  border: 1px solid oklch(0.78 0.1 var(--accent-hue) / 0.32);
+  border-radius: 12px;
+  background: oklch(0.78 0.1 var(--accent-hue) / 0.18);
+  border: 1px solid oklch(0.78 0.1 var(--accent-hue) / 0.35);
   font-size: 13px;
   text-align: left;
+}
+
+/* The notice that signing in will be required, in the colours of the mockup's memo. */
+.home__notice {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 10px 12px;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  background: oklch(0.85 0.12 80 / 0.1);
+  border: 1px solid oklch(0.85 0.12 80 / 0.35);
+}
+
+.home__notice b {
+  color: var(--favorite);
+}
+
+.home__notice-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .home__banner:hover {
@@ -2884,46 +3005,487 @@ input {
 
 .list--tiles {
   display: grid;
-  /* Two columns where they fit, one in a narrow window. */
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  /* Two columns across the whole width, as in the mockup; one in a narrow window. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  /* Room before «Недавние» under them. */
+  margin-bottom: 14px;
+}
+
+@media (max-width: 560px) {
+  .list--tiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/*
+ * Direction C: a result on one line — the document, the number in the accent, the title cut short, the stars,
+ * the punishment at the end (whole in the tooltip).
+ */
+.row:not(.row--tile) .row__main {
+  padding: 9px 8px;
+}
+
+.row:not(.row--tile) .num {
+  font-size: 14.5px;
+  color: var(--accent-text);
+}
+
+.row:not(.row--tile) .ttl {
+  flex: 1 1 auto;
+  min-width: 64px;
+  font-size: 14.5px;
+}
+
+.row:not(.row--tile) .pen {
+  /* A short punishment whole; a long one cut at its share, the title giving way first. */
+  flex: 0 0 auto;
+  max-width: 40%;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row:not(.row--tile) .add {
+  width: 34px;
+  height: 34px;
+}
+
+/*
+ * A favourite's tile, as in the mockup (.tile): a card of its own with a line around it, the document's
+ * badge, «ст. 65 ч. 1 · Кража» in bold over two lines at most, the punishment under it in red (or the chapter,
+ * muted, for an article without one). The calculator's «+» in the corner, out of the text's way.
+ */
+.row--tile {
+  position: relative;
+  box-sizing: border-box;
+  height: 100%;
+  padding: 12px;
+  align-items: stretch;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.row--tile:hover {
+  background: var(--surface-hover);
+}
+
+.row--tile .row__main {
+  padding: 0 34px 0 0;
+  align-items: flex-start;
   gap: 6px;
 }
 
-.row--tile {
-  position: relative;
-  height: 100%;
-  padding: 4px;
-  align-items: stretch;
-  border-radius: var(--radius-card);
-  background: rgb(255 255 255 / calc(0.06 * var(--tint-scale)));
+/* Held to the tile's width: its lines sit at the left, not stretched. */
+.row--tile .row__main > * {
+  max-width: 100%;
 }
 
-/* The calculator's «+» in the corner, out of the text's way. */
-.row--tile .row__main {
-  padding-right: 40px;
-}
-
-.row--tile .add {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 32px;
-  height: 32px;
+.row--tile .badge {
+  font-size: 10.5px;
+  padding: 2px 7px;
+  border-radius: 6px;
 }
 
 .row--tile .row__line {
-  flex-wrap: wrap;
-}
-
-.row--tile .ttl {
-  flex-basis: 100%;
-  font-size: 14.5px;
-  white-space: normal;
-  text-overflow: clip;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  font-weight: 600;
+}
+
+.row--tile .num,
+.row--tile .ttl {
+  display: inline;
+  font-size: 14px;
+  white-space: normal;
+}
+
+.row--tile .num::after {
+  content: ' · ';
+  white-space: pre;
+}
+
+.row--tile .pen {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+  font-size: 12px;
+  color: var(--penalty-text);
+}
+
+.row--tile .pen--muted {
+  color: var(--text-muted);
+}
+
+.row--tile .add {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+}
+
+/*
+ * Scrollbars everywhere (the lists, the documents menu, the settings, the cards): thin, see-through, in the accent
+ * under the mouse — not the system's white ones. WebView2 is Chromium: the -webkit- rules are what it follows.
+ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: rgb(255 255 255 / 0.2) padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.78 0.1 var(--accent-hue) / 0.6) padding-box;
+}
+
+/* Direction C: the server and the faction in a popover under the head. */
+.switch-pop__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 29;
+}
+
+.switch-pop {
+  position: absolute;
+  z-index: 30;
+  top: 58px;
+  left: 14px;
+  right: 14px;
+  max-height: calc(100% - 72px);
+  overflow-y: auto;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgb(22 23 28 / 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  animation: panel-in 0.14s ease-out;
+}
+
+.switch-pop__title {
+  margin: 2px 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.switch-pop .ob__options--tiles + .switch-pop__title {
+  margin-top: 14px;
+}
+
+/* The servers as tiles in a row: the mark on top, the name, the note. */
+.ob__options--tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ob__options--tiles .ob__option {
+  height: auto;
+  padding: 12px 6px 10px;
+  flex-direction: column;
+  gap: 6px;
+  text-align: center;
+  border: 1px solid var(--line);
+}
+
+.ob__options--tiles .ob__option--on {
+  border-color: var(--accent);
+  background: oklch(0.78 0.1 var(--accent-hue) / 0.16);
+}
+
+.ob__options--tiles .ob__option-mark {
+  width: 38px;
+  height: 38px;
+}
+
+.ob__options--tiles .ob__option-name {
+  font-size: 13px;
+}
+
+.ob__options--tiles .ob__option-note {
+  font-size: 10.5px;
+}
+
+.ob__options--tiles .sp,
+.ob__options--tiles .ob__radio {
+  display: none;
+}
+
+/* The factions in a grid of four: the badge in the faction's colour over its name. */
+.ob__orgs--grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.ob__orgs--grid .ob__org {
+  min-height: 0;
+  padding: 8px 4px;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11.5px;
+  line-height: 1.25;
+  border: 1px solid var(--line);
+}
+
+.ob__orgs--grid .ob__org--on {
+  border-color: var(--accent);
+}
+
+/* The account: the player's card of the mockup, or signing in with Discord. */
+.avatar {
+  display: block;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar--initials {
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, oklch(0.7 0.14 280), oklch(0.62 0.16 320));
+}
+
+.pcard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.pcard__who {
+  min-width: 0;
+}
+
+.pcard__name {
+  font-size: 16px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pcard__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.pcard__field {
+  flex: none;
+  width: 104px;
+}
+
+.pcard__via {
+  display: grid;
+  opacity: 0.6;
+}
+
+.login {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 4px;
+  text-align: center;
+}
+
+.login__lead,
+.login__note,
+.login__error {
+  margin: 0;
+  max-width: 340px;
+  line-height: 1.5;
+}
+
+.login__lead {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.login__note {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.login__error {
+  font-size: 13.5px;
+  color: var(--penalty-text);
+}
+
+.login__wait {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.login__wait .settings__button {
+  align-self: center;
+}
+
+.oauth {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  transition: background-color 0.14s ease;
+}
+
+.oauth--discord {
+  background: #5865f2;
+}
+
+.oauth--discord:hover:not(:disabled) {
+  background: #4752c4;
+}
+
+.oauth--tg {
+  background: #2aabee;
+}
+
+.oauth--tg:hover:not(:disabled) {
+  background: #1f95d0;
+}
+
+.oauth:disabled {
+  opacity: 0.5;
+}
+
+.rail__item .avatar {
+  outline: 2px solid transparent;
+  outline-offset: 1px;
+}
+
+.rail__item[aria-current='page'] .avatar {
+  outline-color: var(--accent);
+}
+
+/* Where the settings are with the account, under the player's card. */
+.syncline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.syncline i {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: oklch(0.8 0.15 150);
+}
+
+.syncline--syncing i {
+  background: var(--accent);
+}
+
+.syncline--offline i {
+  background: var(--warn-text);
+}
+
+/* The player's counts, as in the mockup: three numbers, then the articles they use most as bars. */
+.pstats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stat {
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.stat b {
+  display: block;
+  font-size: 20px;
+}
+
+.stat span {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.barrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.barrow .bn {
+  flex: none;
+  width: 130px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barrow .bt {
+  flex: 1;
+  height: 7px;
+  border-radius: 4px;
+  background: var(--surface-active);
+  overflow: hidden;
+}
+
+.barrow .bt i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent);
 }
 
 /* ——— AI: the analysis, documents, trainer, lawyer, voice, history ——— */

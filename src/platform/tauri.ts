@@ -14,6 +14,8 @@ export function isTauri(): boolean {
 }
 
 const BOUNDS_KEY = 'window.bounds';
+/** Set once a copy has moved to the landscape window (2.0.3). */
+const LANDSCAPE_KEY = 'window.landscape';
 /** Emitted by the native side for the tray icon and a second launch of the app. */
 const TOGGLE_EVENT = 'overlay-toggle';
 /** The window of the pinned cards, and the events between it and the native side. */
@@ -27,6 +29,15 @@ const PIN_TOAST_EVENT = 'pin-toast';
 /** The theme and accent of the cards: sent by the overlay, and kept in the settings for the window's next start. */
 const PIN_LOOK_EVENT = 'pin-look';
 const PIN_LOOK_KEY = 'pin.look';
+/**
+ * The browser coming back from a sign-in, told by the native listener: the query string it brought,
+ * or null when the sign-in was given up or timed out. `generation` tells one sign-in from the next.
+ */
+const SIGN_IN_EVENT = 'sign-in-back';
+interface SignInBack {
+  generation: number;
+  query: string | null;
+}
 
 /** True in the window of the pinned cards, which renders them instead of the overlay. */
 export function isPinWindow(): boolean {
@@ -86,16 +97,19 @@ export async function createTauriPlatform(): Promise<PlatformAdapter> {
   let hotkey: string | null = null;
   let voiceHotkey: string | null = null;
 
-  /** The right third of the work area (screen minus taskbar), with a margin, in physical pixels. */
+  /**
+   * A landscape window at the right of the work area (screen minus taskbar), centred top to bottom, in
+   * physical pixels: the side column, and the search wide enough for a result on one line.
+   */
   const defaultBounds = async (): Promise<WindowBounds> => {
     const monitor = (await currentMonitor()) ?? (await primaryMonitor());
-    if (!monitor) return { x: 100, y: 100, width: 600, height: 900 };
+    if (!monitor) return { x: 100, y: 100, width: 900, height: 620 };
     const { position, size } = monitor.workArea;
     const scale = monitor.scaleFactor;
     const margin = Math.round(24 * scale);
-    // The side column (direction C) takes 72 px of it.
-    const width = Math.round(Math.min(Math.max(size.width / 3, 560 * scale), 800 * scale));
-    return { x: position.x + size.width - width - margin, y: position.y + margin, width, height: size.height - 2 * margin };
+    const width = Math.round(Math.min(Math.max(size.width * 0.42, 820 * scale), 1040 * scale, size.width - 2 * margin));
+    const height = Math.round(Math.min(Math.max(width * 0.7, 520 * scale), size.height - 2 * margin));
+    return { x: position.x + size.width - width - margin, y: position.y + Math.round((size.height - height) / 2), width, height };
   };
 
   /** A saved position is only reused if the window would still be on some screen. */
@@ -115,7 +129,13 @@ export async function createTauriPlatform(): Promise<PlatformAdapter> {
     return { x: position.x, y: position.y, width: size.width, height: size.height };
   };
 
-  const saved = await store.get<WindowBounds>(BOUNDS_KEY);
+  // Up to 2.0.2 the window opened as a tall column: a copy that kept that shape gets the landscape
+  // window once. A window made tall again after that is the player's choice and stays.
+  let saved = await store.get<WindowBounds>(BOUNDS_KEY);
+  if (!(await store.get<boolean>(LANDSCAPE_KEY))) {
+    if (saved && saved.height > saved.width) saved = undefined;
+    await store.set(LANDSCAPE_KEY, true);
+  }
   await applyBounds(saved && (await onSomeScreen(saved)) ? saved : await defaultBounds());
 
   /** While the calculator is out, the window is wider than the overlay by this much (physical px). */
@@ -264,6 +284,36 @@ export async function createTauriPlatform(): Promise<PlatformAdapter> {
     readSetting: <T,>(key: string) => store.get<T>(key),
     writeSetting: (key, value) => store.set(key, value),
     openExternal: (url) => openUrl(url),
+
+    signInRedirect: 'http://127.0.0.1:47321/auth/callback',
+    async signInInBrowser(url) {
+      // Listening before the listener starts: the answer can't be missed, and is matched to this sign-in.
+      const heard: SignInBack[] = [];
+      let settle: ((back: SignInBack) => void) | null = null;
+      let generation: number | null = null;
+      const unlisten = await listen<SignInBack>(SIGN_IN_EVENT, (event) => {
+        heard.push(event.payload);
+        if (event.payload.generation === generation) settle?.(event.payload);
+      });
+      try {
+        generation = await invoke<number>('sign_in_listen');
+        const back = new Promise<SignInBack>((resolve) => {
+          settle = resolve;
+          const early = heard.find((b) => b.generation === generation);
+          if (early) resolve(early);
+        });
+        await openUrl(url).catch(async (error: unknown) => {
+          await invoke('sign_in_cancel');
+          throw error;
+        });
+        const { query } = await back;
+        if (query === null) throw new Error('cancelled');
+        return query;
+      } finally {
+        unlisten();
+      }
+    },
+    cancelSignIn: () => invoke('sign_in_cancel'),
 
     async checkForUpdate() {
       found = await check();

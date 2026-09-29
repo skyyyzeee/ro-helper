@@ -2,9 +2,10 @@ import { ServerIcon } from './icons';
 import { SERVERS } from './profile';
 
 /** Picking a server: at the first launch and from the settings, the same list. */
-export function ServerChoice({ value, onPick }: { value: string; onPick: (id: string) => void }) {
+/** `compact`: the three as tiles in a row, for the switcher over the search (direction C). */
+export function ServerChoice({ value, onPick, compact = false }: { value: string; onPick: (id: string) => void; compact?: boolean }) {
   return (
-    <div className="ob__options" role="radiogroup" aria-label="Сервер">
+    <div className={compact ? 'ob__options ob__options--tiles' : 'ob__options'} role="radiogroup" aria-label="Сервер">
       {SERVERS.map((choice) => (
         <button
           key={choice.id}

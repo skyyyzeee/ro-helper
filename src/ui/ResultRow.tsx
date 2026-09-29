@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { articleLabel, articleTitle, chapterHeading, formatPunishment, leadPart, penaltyNote, type SearchHit } from '../core';
 import { CheckIcon, PlusIcon } from './icons';
-import { DocBadge, JurisdictionPill, Stars } from './lawBits';
+import { DocBadge, Stars } from './lawBits';
 
 export interface ResultRowProps {
   hit: SearchHit;
@@ -34,37 +34,57 @@ export function ResultRow({ hit, selected, onOpen, calculator, inChapter, change
     wasSelected.current = selected;
   }, [selected]);
 
+  // The punishment, or what the article is about when it has none: at the end of the line, whole in the tooltip.
+  const outcome = part?.punishment ? (
+    <span className="pen">{formatPunishment(part.punishment)}</span>
+  ) : penalty ? (
+    <span className="pen pen--penalty">{penalty}</span>
+  ) : (
+    <span className="pen pen--muted">
+      {inChapter
+        ? // An article without a title (ПДД) already shows its text as the title.
+          article.title
+          ? article.parts.find((p) => p.text)?.text
+          : article.group
+        : chapter
+          ? chapterHeading(chapter)
+          : document.title}
+    </span>
+  );
+  const summary = [label, articleTitle(article), part?.punishment ? formatPunishment(part.punishment) : penalty].filter(Boolean).join(' · ');
+
   return (
     <div className={['row', selected && 'row--selected', tile && 'row--tile'].filter(Boolean).join(' ')}>
-      <button ref={ref} className="row__main" type="button" aria-current={selected ? 'true' : undefined} tabIndex={-1} onClick={onOpen}>
-        <span className="row__line">
-          <DocBadge document={document} />
-          <span className="num">{label}</span>
-          <span className="ttl">{articleTitle(article)}</span>
-          {changed && <span className="chg chg--changed chg--small">изменено</span>}
-          <span className="sp" />
-          {!tile && part?.jurisdiction && <JurisdictionPill jurisdiction={part.jurisdiction} />}
-          {!tile && part?.stars && <Stars stars={part.stars} />}
-        </span>
-        {!tile && hit.part && article.title && <span className="row__excerpt">{hit.part.text}</span>}
-        <span className="row__line">
-          {part?.punishment ? (
-            <span className="pen">{formatPunishment(part.punishment)}</span>
-          ) : penalty ? (
-            <span className="pen pen--penalty">{penalty}</span>
-          ) : (
-            <span className="pen pen--muted">
-              {inChapter
-                ? // An article without a title (ПДД) already shows its text as the title.
-                  article.title
-                  ? article.parts.find((p) => p.text)?.text
-                  : article.group
-                : chapter
-                  ? chapterHeading(chapter)
-                  : document.title}
+      <button
+        ref={ref}
+        className="row__main"
+        type="button"
+        aria-current={selected ? 'true' : undefined}
+        tabIndex={-1}
+        title={summary}
+        onClick={onOpen}
+      >
+        {tile ? (
+          // A favourite: the document, the article on its own line, its punishment under it.
+          <>
+            <DocBadge document={document} />
+            <span className="row__line">
+              <span className="num">{label}</span>
+              <span className="ttl">{articleTitle(article)}</span>
             </span>
-          )}
-        </span>
+            {outcome}
+          </>
+        ) : (
+          // Direction C: all on one line; the excerpt and the jurisdiction are on the article's own page.
+          <span className="row__line">
+            <DocBadge document={document} />
+            <span className="num">{label}</span>
+            <span className="ttl">{articleTitle(article)}</span>
+            {changed && <span className="chg chg--changed chg--small">изменено</span>}
+            {part?.stars && <Stars stars={part.stars} />}
+            {outcome}
+          </span>
+        )}
       </button>
       {calculator && (
         <button

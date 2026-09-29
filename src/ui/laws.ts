@@ -134,7 +134,7 @@ export function useLaws(server: string | null): Laws {
           void platform.showToast({
             id: `laws-${server}-${next.built}`,
             title: 'Законы обновлены',
-            text: `${next.server.name}: актуально на ${formatDate(next.version)}. Что изменилось — в хелпере.`,
+            text: `${next.server.name}: актуально на ${formatDate(next.version)}. Что изменилось — в ассистенте.`,
           });
         }
       } catch {

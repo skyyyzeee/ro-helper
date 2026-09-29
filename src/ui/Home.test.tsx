@@ -54,4 +54,48 @@ describe('home', () => {
     expect(screen.getByRole('list', { name: 'Недавние' }).querySelector('.row--tile')).not.toBeInTheDocument();
     expect(tile.querySelector('[aria-current="true"]')).toBeInTheDocument();
   });
+
+  it('clears the recent articles, keeping the favourites', async () => {
+    const settings = { [SEEN]: TVERSKOI_PACK.version, [BANNER_KEY]: TVERSKOI_PACK.changes[0].version };
+    const { platform, user } = await renderApp({ settings });
+    for (const query of ['ук 65', 'ук 66', 'коап 8.6']) {
+      await user.clear(search());
+      await user.type(search(), query);
+      await user.keyboard('{ArrowRight}');
+      if (query === 'ук 65') await user.click(screen.getByRole('button', { name: 'В избранное' }));
+    }
+    await user.clear(search());
+    await user.keyboard('{Escape}');
+    expect(within(screen.getByRole('list', { name: 'Недавние' })).getAllByRole('listitem')).toHaveLength(2);
+
+    await user.click(screen.getByRole('button', { name: 'Очистить недавние' }));
+    expect(screen.queryByRole('list', { name: 'Недавние' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Очистить недавние' })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'Избранное' })).getAllByRole('listitem')).toHaveLength(1);
+    expect(platform.settings.get('recent:tverskoi')).toEqual([]);
+    expect(search()).toHaveFocus();
+  });
+});
+
+describe('the notice that signing in will be required', () => {
+  it('asks a player not signed in to sign in, leads to the account, and goes once put off', async () => {
+    const settings = { [SEEN]: TVERSKOI_PACK.version, [BANNER_KEY]: TVERSKOI_PACK.changes[0].version };
+    const { platform, user } = await renderApp({ settings });
+    const notice = await screen.findByRole('region', { name: 'Вход скоро станет обязательным' });
+    expect(notice).toHaveTextContent('Со следующего обновления');
+
+    await user.click(within(notice).getByRole('button', { name: 'Войти' }));
+    expect(within(screen.getByRole('group', { name: 'Настройки' })).getByRole('region', { name: 'Аккаунт' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+
+    await user.click(within(screen.getByRole('region', { name: 'Вход скоро станет обязательным' })).getByRole('button', { name: 'Позже' }));
+    expect(screen.queryByRole('region', { name: 'Вход скоро станет обязательным' })).not.toBeInTheDocument();
+    expect(platform.settings.get('login.notice')).toBe('later');
+  });
+
+  it('is not shown to a player signed in', async () => {
+    await renderApp({ settings: { [SEEN]: TVERSKOI_PACK.version }, account: { id: 'user-1', name: 'Skyze', via: 'discord' } });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole('region', { name: 'Вход скоро станет обязательным' })).not.toBeInTheDocument();
+  });
 });

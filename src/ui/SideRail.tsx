@@ -3,7 +3,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 /** A section of the app in the side column. */
 export interface RailItem {
   id: string;
-  /** Under the icon. */
+  /** Its name: the tip over the icon and what a screen reader says. */
   label: string;
   icon: ReactNode;
   /** What a screen reader names it, when it is more than its label («Все документы»). */
@@ -21,7 +21,7 @@ export interface RailItem {
 }
 
 /**
- * The side column (direction C): always on screen, the server's mark on top, the sections under it and the
+ * The side column (direction C): icons only, always on screen, the server's mark on top, the sections under it and the
  * settings and the profile at its foot. Ctrl and a section's number opens it from the keyboard.
  */
 export function SideRail({ top, items, current }: { top?: ReactNode; items: RailItem[]; current?: string }) {
@@ -46,7 +46,7 @@ export function SideRail({ top, items, current }: { top?: ReactNode; items: Rail
       key={item.id}
       type="button"
       className="rail__item"
-      aria-label={item.ariaLabel}
+      aria-label={item.ariaLabel ?? item.label}
       aria-current={current === item.id ? 'page' : undefined}
       aria-expanded={item.expanded}
       disabled={item.disabled}
@@ -54,7 +54,6 @@ export function SideRail({ top, items, current }: { top?: ReactNode; items: Rail
       onClick={item.onSelect}
     >
       {item.icon}
-      <span className="rail__label">{item.label}</span>
     </button>
   );
 

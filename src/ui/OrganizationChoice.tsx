@@ -10,7 +10,18 @@ const GROUPS: { kind: NonNullable<Organization['kind']>; title: string }[] = [
 ];
 
 /** Picking an organisation: at the first launch and from the settings, the same list. */
-export function OrganizationChoice({ pack, value, onPick }: { pack: ServerPack; value: string; onPick: (id: string) => void }) {
+/** `compact`: all in one grid, without the group titles, for the switcher over the search (direction C). */
+export function OrganizationChoice({
+  pack,
+  value,
+  onPick,
+  compact = false,
+}: {
+  pack: ServerPack;
+  value: string;
+  onPick: (id: string) => void;
+  compact?: boolean;
+}) {
   const option = (org: Organization) => (
     <button
       key={org.id}
@@ -26,6 +37,14 @@ export function OrganizationChoice({ pack, value, onPick }: { pack: ServerPack; 
       <span>{org.name}</span>
     </button>
   );
+
+  if (compact) {
+    return (
+      <div className="ob__orgs ob__orgs--grid" role="radiogroup" aria-label="Организация">
+        {pack.organizations.map(option)}
+      </div>
+    );
+  }
 
   return (
     <div className="ob__groups" role="radiogroup" aria-label="Организация">

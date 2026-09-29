@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Кремлёвский Ассистент — {title}</title>
+    <style>
+      /* The helper's look: its panel on plain black, the accent of the app (its default hue). */
+      :root {
+        --accent: oklch(0.78 0.1 245);
+        --accent-soft: oklch(0.78 0.1 245 / 0.18);
+        --accent-text: oklch(0.86 0.08 245);
+        --ok: oklch(0.8 0.15 150);
+        --fail: oklch(0.7 0.16 25);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        font-family: 'Onest', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+        color: #fff;
+        -webkit-font-smoothing: antialiased;
+        background: #000;
+      }
+      .card {
+        width: min(420px, 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        padding: 36px 32px 28px;
+        border-radius: 24px;
+        text-align: center;
+        background: #0f0f12;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        animation: in 0.32s cubic-bezier(0.22, 1.2, 0.42, 1);
+      }
+      @keyframes in {
+        from {
+          opacity: 0;
+          transform: translateY(10px) scale(0.98);
+        }
+      }
+      .logo {
+        position: relative;
+        width: 64px;
+        height: 64px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        background: var(--accent-soft);
+        color: var(--accent-text);
+        font-size: 28px;
+        font-weight: 700;
+      }
+      .mark {
+        position: absolute;
+        right: -7px;
+        bottom: -7px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        border: 3px solid #17181d;
+        color: #0d1118;
+        background: var({mark-color});
+      }
+      h1 {
+        margin: 6px 0 0;
+        font-size: 22px;
+      }
+      p {
+        margin: 0;
+        max-width: 320px;
+        font-size: 14.5px;
+        line-height: 1.5;
+        color: rgba(255, 255, 255, 0.62);
+      }
+      .hint {
+        margin-top: 8px;
+        padding: 9px 14px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.07);
+        font-size: 12.5px;
+        color: rgba(255, 255, 255, 0.55);
+      }
+      .brand {
+        margin-top: 4px;
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.35);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <div class="logo">
+        РО
+        <span class="mark">{mark}</span>
+      </div>
+      <h1>{title}</h1>
+      <p>{text}</p>
+      <div class="hint">{hint}</div>
+      <div class="brand">Кремлёвский Ассистент</div>
+    </main>
+  </body>
+</html>
