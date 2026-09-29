@@ -1,18 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#232838"/>
-      <stop offset="1" stop-color="#0d0f15"/>
-    </linearGradient>
-    <linearGradient id="ink" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#b9dcff"/>
-      <stop offset="1" stop-color="#5d9ce6"/>
-    </linearGradient>
-  </defs>
-  <rect x="32" y="32" width="960" height="960" rx="216" fill="url(#bg)"/>
-  <rect x="33.5" y="33.5" width="957" height="957" rx="214.5" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="3"/>
-  <g fill="none" stroke="url(#ink)" stroke-width="110" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M202 744V280h80a120 120 0 0 1 0 240h-80"/>
-    <ellipse cx="682" cy="512" rx="140" ry="232"/>
+  <!-- «Кремлёвский ассистент»: the Kremlin wall in front, the Spasskaya tower with its clock and star behind it.
+       Drawn in a 120-unit grid, scaled into the 960-pixel tile. No emblems or coats of arms.
+       Build the app's icons from it: npx tauri icon design/icon/icon.svg -o src-tauri/icons -->
+  <g transform="translate(32 32) scale(8)">
+    <rect width="120" height="120" rx="27" fill="#2A2625"/>
+    <!-- The tower: its body, the clock tier, the upper tier, the green tent roof and the star. -->
+    <rect x="42" y="54" width="36" height="32" fill="#A0584F"/>
+    <rect x="45" y="38" width="30" height="16" fill="#A0584F"/>
+    <circle cx="60" cy="46" r="5.5" fill="#E6DFD4"/>
+    <line x1="60" y1="46" x2="60" y2="42.5" stroke="#2A2625" stroke-width="1.4" stroke-linecap="round"/>
+    <line x1="60" y1="46" x2="62.8" y2="47.4" stroke="#2A2625" stroke-width="1.4" stroke-linecap="round"/>
+    <rect x="50" y="29" width="20" height="9" fill="#A0584F"/>
+    <polygon points="50,29 70,29 60,13" fill="#7C8C7A"/>
+    <polygon transform="translate(60 9.5) scale(1.15)" points="0,-5 1.18,-1.62 4.76,-1.55 1.9,0.62 2.94,4.05 0,2 -2.94,4.05 -1.9,0.62 -4.76,-1.55 -1.18,-1.62" fill="#C9A45C"/>
+    <!-- The wall with its swallowtail merlons. -->
+    <rect x="14" y="86" width="92" height="22" fill="#8A4A43"/>
+    <g fill="#8A4A43">
+      <polygon points="16,86 16,77 19,80.5 22,77 22,86"/>
+      <polygon points="26,86 26,77 29,80.5 32,77 32,86"/>
+      <polygon points="36,86 36,77 39,80.5 42,77 42,86"/>
+      <polygon points="46,86 46,77 49,80.5 52,77 52,86"/>
+      <polygon points="57,86 57,77 60,80.5 63,77 63,86"/>
+      <polygon points="68,86 68,77 71,80.5 74,77 74,86"/>
+      <polygon points="78,86 78,77 81,80.5 84,77 84,86"/>
+      <polygon points="88,86 88,77 91,80.5 94,77 94,86"/>
+      <polygon points="98,86 98,77 101,80.5 104,77 104,86"/>
+    </g>
   </g>
+  <rect x="33.5" y="33.5" width="957" height="957" rx="214.5" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="3"/>
 </svg>
