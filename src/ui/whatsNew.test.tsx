@@ -31,18 +31,18 @@ describe('«Что нового» after an update', () => {
   it('shows every version since the one last run, newest first, once', async () => {
     const seen = CHANGELOG[2].version;
     const { platform, user } = await renderApp({ settings: { [SEEN_VERSION_KEY]: seen } });
-    expect(await screen.findByRole('article', { name: `Хелпер обновлён до версии ${APP_VERSION}` })).toBeInTheDocument();
+    expect(await screen.findByRole('article', { name: `Кремлёвский Ассистент обновлён до версии ${APP_VERSION}` })).toBeInTheDocument();
     expect(versions()).toEqual([`Версия ${CHANGELOG[0].version}`, `Версия ${CHANGELOG[1].version}`]);
     await vi.waitFor(() => expect(platform.settings.get(SEEN_VERSION_KEY)).toBe(APP_VERSION));
 
     await user.keyboard('{Escape}');
-    expect(article(/^Хелпер обновлён/)).not.toBeInTheDocument();
+    expect(article(/^Кремлёвский Ассистент обновлён/)).not.toBeInTheDocument();
     expect(search()).toHaveFocus();
   });
 
   it('shows only this version to a copy updated from before the app remembered the version', async () => {
     await renderApp({ settings: { [SEEN_VERSION_KEY]: undefined } });
-    await screen.findByRole('article', { name: `Хелпер обновлён до версии ${APP_VERSION}` });
+    await screen.findByRole('article', { name: `Кремлёвский Ассистент обновлён до версии ${APP_VERSION}` });
     expect(versions()).toEqual([`Версия ${APP_VERSION}`]);
   });
 
@@ -54,7 +54,7 @@ describe('«Что нового» after an update', () => {
     await user.click(screen.getByRole('button', { name: 'Готово' }));
     await screen.findByRole('searchbox', { name: 'Поиск по законам' });
     await vi.waitFor(() => expect(platform.settings.get(SEEN_VERSION_KEY)).toBe(APP_VERSION));
-    expect(article(/^Хелпер обновлён/)).not.toBeInTheDocument();
+    expect(article(/^Кремлёвский Ассистент обновлён/)).not.toBeInTheDocument();
   });
 
   it('keeps the whole history in the settings', async () => {

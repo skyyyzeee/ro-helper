@@ -1,6 +1,6 @@
 # AI pipeline
 
-РО Хелпер with the AI is laws + search + a deterministic calculator + sources, with the AI as an interpreter on top. The AI is
+Кремлёвский Ассистент with the AI is laws + search + a deterministic calculator + sources, with the AI as an interpreter on top. The AI is
 never a source of law. The pipeline lives in `src/protocol` (pure TypeScript, no React/Tauri — a boundary test
 enforces it); the React side (`src/ui/ai.ts`, `AiView`, `AnswerView`) only asks and shows.
 

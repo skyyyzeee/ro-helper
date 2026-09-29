@@ -97,6 +97,23 @@ the bot, README and PRIVACY; «хелпер» in players' texts became «асс�
 - `data/<server>/overrides.json` — manual fixes laid over the parser output, keyed by article id (part keys: number or `#<position>`); each has a `reason`
 - `src/importer` — `parseLawText` with per-format rules (`criminal-code` УК, `administrative-code` КоАП, `traffic-rules` ПДД, `law` for every other law); reports unparsed lines instead of dropping them
 
+
+## The AI helper (AidenArokij's part)
+
+- «ИИ» in the side column (Ctrl+7) and in the settings: situation analysis, documents, the exam trainer, the lawyer's
+  demands, voice (🎤 and push-to-talk over the game, Alt+W), the history of analyses.
+- `src/protocol` — the pipeline, pure TypeScript like `src/core` (its own boundary test). **The AI is never a source
+  of law**: it gets only the articles the search found, under ids, answers in JSON, and `validate.ts` checks every
+  article, part and figure against the pack without the AI; the calculator, not the AI, counts punishments. Keep it so.
+  `docs/ARCHITECTURE.md`, `docs/AI_PIPELINE.md`, `docs/SOURCE_GROUNDING.md`.
+- The AI server: `server/` (Node, no dependencies, OpenAI-compatible upstream — ProxyAPI now), run and paid for by
+  AidenArokij at `AI_SERVER` in `src/ui/about.ts`. **No AI key ever goes into the app** — it lives only in the
+  server's `.env`, typed in with `server/set-key.sh`. The server takes text only; speech is recognised on the
+  player's computer (Vosk, `src/ui/localSpeech.ts`) and never sent. Whatever the AI sends or keeps must be in
+  `PRIVACY.md` — change both together. The optional «Свой ключ Gemini» is the player's own key, local.
+- Tests talk to a fake AI (`src/test/fakeAi.ts`); the one that matters most: an answer citing an article the laws do
+  not have does not pass the checks.
+
 ## Getting forum text
 
 The user wrote the Tverskoi law texts and allows copying them. The forum sits behind a JS anti-DDoS check — never bypass it; read threads in the user's Chrome (Claude in Chrome), in a tab you open yourself. Don't retype law text: in the page, take `document.querySelector('article.message .bbWrapper').innerText`, compute its FNV-1a checksum, return it in ~50k-char chunks (`{doc, from, to, total, parts: string[]}` with 800-char parts) so the tool saves each result to a file, then run `node scripts/snapshot-from-chunks.mjs <server> <doc> <fnv> <files…>` — it checks for gaps and the checksum before writing the snapshot.

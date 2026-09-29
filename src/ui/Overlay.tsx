@@ -251,7 +251,7 @@ export function Overlay({
       // Just installed, the same version, or an older one put back: nothing to tell.
       if (newUser || seen === APP_VERSION || (seen !== undefined && compareVersions(seen, APP_VERSION) > 0)) return;
       const sections = notesSince(seen, APP_VERSION);
-      if (sections.length) setWhatsNew({ title: `Хелпер обновлён до версии ${APP_VERSION}`, sections, backLabel: 'Закрыть' });
+      if (sections.length) setWhatsNew({ title: `Кремлёвский Ассистент обновлён до версии ${APP_VERSION}`, sections, backLabel: 'Закрыть' });
     });
     // Once, at the start of the session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
