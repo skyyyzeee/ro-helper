@@ -37,7 +37,7 @@ fn page(done: bool) -> String {
   } else {
     (
       "Войти не получилось",
-      "Discord не подтвердил вход. Вернитесь в хелпер и попробуйте ещё раз.",
+      "Discord не подтвердил вход. Вернитесь в ассистент и попробуйте ещё раз.",
       "«Настройки» → «Аккаунт» → «Войти через Discord»",
       CROSS,
       "--fail",
@@ -154,7 +154,7 @@ mod tests {
   #[test]
   fn fills_in_the_page() {
     let done = super::page(true);
-    assert!(done.contains("<title>РО Хелпер — Вход выполнен</title>") && done.contains("var(--ok)"));
+    assert!(done.contains("<title>Кремлёвский Ассистент — Вход выполнен</title>") && done.contains("var(--ok)"));
     let failed = super::page(false);
     assert!(failed.contains("<h1>Войти не получилось</h1>") && failed.contains("var(--fail)"));
     for placeholder in ["{title}", "{text}", "{hint}", "{mark}", "{mark-color}"] {

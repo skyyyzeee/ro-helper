@@ -9,8 +9,11 @@ it too, through branches and pull requests. This file is shared by everyone's Cl
 rename: a separate pull request). What players read says «Кремлёвский Ассистент». What installed copies depend on
 stays as it is, so their settings, sign-in and updates carry on: the identifier `com.skyze.rohelper` (and the
 `%APPDATA%com.skyze.rohelper` folder), the repository `skyyyzeee/ro-helper` and its URLs (updates, laws,
-`latest.json`), the binary `ro-helper`, the settings keys, the Supabase project and the bot. Code and docs may
-still say «РО Хелпер» until that pull request lands.
+`latest.json`), the binary `ro-helper`, the settings keys, the Supabase project and the bot — and the `productName` «РО Хелпер»
+in `tauri.conf.json`: the Windows installer keys the install folder, the uninstall entry and the Start menu
+shortcut by it, so changing it would install a second copy beside the old one (see the rename pull request).
+Everything else players read says «Кремлёвский Ассистент» — the UI, the window title, the tray, the sign-in page,
+the bot, README and PRIVACY; «хелпер» in players' texts became «ассистент». Older CHANGELOG entries keep the old name.
 
 ## Working in this repository
 

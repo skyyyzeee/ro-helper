@@ -30,14 +30,14 @@ function GameSetupNotice({ onClose }: { onClose: () => void }) {
         </div>
         <div className="notice__item">
           <p className="notice__text">
-            <b>Включите «Оконный без рамки»</b> — поверх полноэкранного режима Windows других окон не показывает, и хелпера
+            <b>Включите «Оконный без рамки»</b> — поверх полноэкранного режима Windows других окон не показывает, и ассистента
             не будет видно.
           </p>
           <p className="notice__where">Настройки GTA V → «Графика» → «Тип экрана» → «Оконный без рамки».</p>
         </div>
         <div className="notice__item">
           <p className="notice__text">
-            <b>Выключите потерю звука</b> — иначе, когда открыт хелпер, игра теряет фокус и глушит звук.
+            <b>Выключите потерю звука</b> — иначе, когда открыт ассистент, игра теряет фокус и глушит звук.
           </p>
           <p className="notice__where">Настройки GTA V → «Аудио» → «Отключение звука при потере фокуса» → «Выкл».</p>
         </div>
@@ -124,7 +124,7 @@ export function Onboarding({
       <div className="overlay glass onboarding">
       <div className="ob__head" data-tauri-drag-region>
         <span className="brand" data-tauri-drag-region>
-          {mode === 'first' ? 'РО Хелпер' : 'Настройки'}
+          {mode === 'first' ? 'Кремлёвский Ассистент' : 'Настройки'}
         </span>
         <span className="sp" data-tauri-drag-region />
         <span className="muted" data-tauri-drag-region>

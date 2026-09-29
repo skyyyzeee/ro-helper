@@ -1,4 +1,4 @@
-// Signing in to RO Helper with Telegram (ticket 18), as a Supabase edge function (Deno), deployed with JWT
+// Signing in to Кремлёвский Ассистент with Telegram (ticket 18), as a Supabase edge function (Deno), deployed with JWT
 // verification off: Telegram calls it too.
 //
 // - Telegram's updates (the bot's webhook, told apart by its secret header): «/start <id>» from the link the
@@ -82,12 +82,12 @@ async function onUpdate(request: Request) {
     const name = [from.first_name, from.last_name].filter(Boolean).join(' ') || from.username || 'Игрок';
     // A second «Start» on the same link changes nothing: the first one counts.
     const { error } = await admin.from('telegram_logins').insert({ id: start[1], telegram_id: from.id, name, username: from.username ?? null });
-    const text = error && error.code !== '23505' ? 'Не получилось — попробуйте ещё раз из хелпера.' : 'Готово! Вернитесь в РО Хелпер — вход завершится сам.';
+    const text = error && error.code !== '23505' ? 'Не получилось — попробуйте ещё раз из ассистента.' : 'Готово! Вернитесь в Кремлёвский Ассистент — вход завершится сам.';
     await telegram('sendMessage', { chat_id: message.chat.id, text });
   } else {
     await telegram('sendMessage', {
       chat_id: message.chat.id,
-      text: 'Это бот входа в РО Хелпер. Откройте хелпер → «Настройки» → «Аккаунт» и нажмите «Войти через Telegram».',
+      text: 'Это бот входа в Кремлёвский Ассистент. Откройте ассистент → «Настройки» → «Аккаунт» и нажмите «Войти через Telegram».',
     });
   }
   return new Response('ok');

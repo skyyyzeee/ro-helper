@@ -191,8 +191,8 @@ export function Overlay({
       if (!active || told === found || putOff === found) return;
       const toast: Toast = {
         id: `update-${found}`,
-        title: 'Вышло обновление РО Хелпер',
-        text: `Версия ${found}. Откройте хелпер (${formatHotkey(profile.hotkey)}) и нажмите «Обновить».`,
+        title: 'Вышло обновление Кремлёвского Ассистента',
+        text: `Версия ${found}. Откройте ассистент (${formatHotkey(profile.hotkey)}) и нажмите «Обновить».`,
       };
       void platform.showToast(toast);
       // In the browser there is no window over the game: the stand-in scene shows the notice itself.
@@ -1005,7 +1005,7 @@ export function Overlay({
             {loginNotice && (
               <section className="home__notice" aria-label="Вход скоро станет обязательным">
                 <span>
-                  <b>Со следующего обновления хелпер попросит войти</b> через Discord или Telegram — это займёт минуту, а
+                  <b>Со следующего обновления ассистент попросит войти</b> через Discord или Telegram — это займёт минуту, а
                   настройки и избранное переедут в аккаунт. Интернет нужен только для самого входа.
                 </span>
                 <span className="home__notice-actions">

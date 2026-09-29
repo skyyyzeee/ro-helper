@@ -16,7 +16,7 @@ describe('the privacy policy', () => {
 
     const policy = screen.getByRole('article', { name: 'Политика конфиденциальности' });
     expect(within(policy).getByRole('heading', { level: 2 })).toHaveTextContent('Политика конфиденциальности');
-    expect(policy).toHaveTextContent('Пока вы не вошли в аккаунт, РО Хелпер не собирает и не отправляет данные о вас');
+    expect(policy).toHaveTextContent('Пока вы не вошли в аккаунт, Кремлёвский Ассистент не собирает и не отправляет данные о вас');
     // Only the Russian part: the English one is for GitHub.
     expect(policy).not.toHaveTextContent('English');
 

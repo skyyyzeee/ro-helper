@@ -394,10 +394,10 @@ export function SettingsView({
       <Block title="Настройки игры">
         <p className="set__hint">
           <b>Тип экрана — «Оконный без рамки»</b> (GTA V → «Графика»): поверх полноэкранного режима Windows других окон не
-          показывает, и хелпера не будет видно.
+          показывает, и ассистента не будет видно.
         </p>
         <p className="set__hint">
-          <b>«Отключение звука при потере фокуса» — «Выкл»</b> (GTA V → «Аудио»): иначе, пока открыт хелпер, игра глушит
+          <b>«Отключение звука при потере фокуса» — «Выкл»</b> (GTA V → «Аудио»): иначе, пока открыт ассистент, игра глушит
           звук.
         </p>
       </Block>
@@ -509,7 +509,7 @@ export function SettingsView({
       <Block title="О программе">
         <div className="set__row settings__about">
           <span>
-            РО Хелпер {APP_VERSION} · автор {AUTHOR}
+            Кремлёвский Ассистент {APP_VERSION} · автор {AUTHOR}
           </span>
           <span className="sp" />
           <button className="icon-btn icon-btn--sm" type="button" aria-label="GitHub" title="GitHub" onClick={() => void platform.openExternal(LINKS.repository)}>

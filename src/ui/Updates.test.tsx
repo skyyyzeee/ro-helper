@@ -106,7 +106,7 @@ describe('updates of the app', () => {
   it('names the version and the author, with links to GitHub and Discord', async () => {
     const { platform, user } = await renderApp();
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
-    expect(settings()).toHaveTextContent(`РО Хелпер ${APP_VERSION} · автор skyze`);
+    expect(settings()).toHaveTextContent(`Кремлёвский Ассистент ${APP_VERSION} · автор skyze`);
     await user.click(within(settings()).getByRole('button', { name: 'GitHub' }));
     expect(platform.calls.at(-1)?.args).toEqual(['https://github.com/skyyyzeee/ro-helper']);
     await user.click(within(settings()).getByRole('button', { name: 'Discord' }));
@@ -142,8 +142,8 @@ describe('updates of the app', () => {
     const { platform } = await renderApp({ platform: { update: { version: '1.1.0' } } });
     await vi.waitFor(() => expect(platform.state.toast).not.toBeNull());
     expect(platform.state.toast).toMatchObject({
-      title: 'Вышло обновление РО Хелпер',
-      text: 'Версия 1.1.0. Откройте хелпер (Alt + Q) и нажмите «Обновить».',
+      title: 'Вышло обновление Кремлёвского Ассистента',
+      text: 'Версия 1.1.0. Откройте ассистент (Alt + Q) и нажмите «Обновить».',
     });
     expect(platform.settings.get(TOASTED_KEY)).toBe('1.1.0');
 
