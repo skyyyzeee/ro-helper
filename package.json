@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "import": "tsx src/importer/cli.ts",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "eval": "tsx scripts/ai-eval.ts"
   },
   "dependencies": {
     "@fontsource/onest": "^5.3.1",
