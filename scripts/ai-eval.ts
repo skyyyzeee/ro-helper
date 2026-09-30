@@ -6,6 +6,9 @@
 //   npm run eval -- --limit 3 --server tverskoi    — a few only
 //   npm run eval -- --url https://openrouter.ai/api/v1 --model some/model   — any OpenAI-compatible AI;
 //                                                    its key, if it needs one, in the AI_EVAL_KEY environment variable
+//   npm run eval -- --gigachat [--model GigaChat-2-Max]  — GigaChat; its authorization key in GIGACHAT_AUTH_KEY,
+//                                                    and NODE_EXTRA_CA_CERTS=<the Russian root certificate>;
+//                                                    `--gigachat --models` lists the models the key may use
 //   --depth full                                   — the full analysis instead of the quick one
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -21,6 +24,8 @@ interface Case {
   situation: string;
   /** «УК 65», or several right answers: «УК 10.1|УК 10.2». Every entry must be found. */
   expect: string[];
+  /** base — the cases the prompts were tuned on; fresh — ones the tuning never saw, the honest score. */
+  group?: string;
 }
 
 const root = join(import.meta.dirname, '..');
@@ -30,18 +35,78 @@ const arg = (name: string) => {
   return at >= 0 ? args[at + 1] : undefined;
 };
 
+/**
+ * GigaChat (Sber): the authorization key is exchanged for a token that lasts 30 minutes, and the questions are asked
+ * with the token. Its servers are signed by the Russian root certificate: run with NODE_EXTRA_CA_CERTS pointing to it.
+ */
+const GIGACHAT = { oauth: 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth', api: 'https://gigachat.devices.sberbank.ru/api/v1' };
+/**
+ * The authorization key as Sber gives it: base64 of «Client ID:Client Secret». What was copied around it — «Basic »,
+ * spaces, line breaks — is dropped; what cannot be one is said without showing the key.
+ */
+function gigachatKey(raw: string): string {
+  const key = raw.replace(/^\s*(?:basic\s+)?/i, '').replace(/\s+/g, '');
+  const decoded = /^[A-Za-z0-9+/=_-]+$/.test(key) ? Buffer.from(key, 'base64').toString('utf8') : '';
+  if (!/^[\w-]+:[\w-]+$/.test(decoded)) {
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key);
+    throw new Error(
+      uuid
+        ? 'Скопирован Client ID или Client Secret (он похож на номер с дефисами), а нужен «Ключ авторизации» — длинная строка без дефисов, обычно кончается на «==».'
+        : `Это не похоже на ключ авторизации GigaChat (скопировано ${key.length} символов). Скопируйте «Ключ авторизации» заново — целиком, без лишнего.`,
+    );
+  }
+  return key;
+}
+
+async function gigachatToken(raw: string): Promise<string> {
+  const key = gigachatKey(raw);
+  const response = await fetch(GIGACHAT.oauth, {
+    method: 'POST',
+    headers: { Authorization: `Basic ${key}`, RqUID: crypto.randomUUID(), 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+    body: new URLSearchParams({ scope: process.env.GIGACHAT_SCOPE ?? 'GIGACHAT_API_PERS' }),
+  }).catch((error: unknown) => {
+    const cause = (error as { cause?: { code?: string } }).cause?.code ?? String(error);
+    throw new Error(`Нет связи с GigaChat (${cause}). Если про сертификат — запустите с NODE_EXTRA_CA_CERTS, как в инструкции.`);
+  });
+  const body = (await response.json().catch(() => null)) as { access_token?: string; message?: string } | null;
+  if (!response.ok || !body?.access_token) throw new Error(`GigaChat не выдал доступ (код ${response.status}): ${body?.message ?? 'проверьте ключ авторизации'}`);
+  return body.access_token;
+}
+/** The OpenAI-compatible provider over GigaChat, with a fresh token every 25 minutes. */
+async function gigachat(key: string, model: string): Promise<AiProvider> {
+  let token = await gigachatToken(key);
+  let at = Date.now();
+  return {
+    async complete(request) {
+      if (Date.now() - at > 25 * 60_000) [token, at] = [await gigachatToken(key), Date.now()];
+      return openaiProvider({ url: GIGACHAT.api, key: token, model }).complete(request);
+    },
+  };
+}
+
 const url = arg('url');
 const model = arg('model');
+const giga = args.includes('--gigachat');
 if (url && !model) throw new Error('С --url нужен и --model.');
-const provider: AiProvider = url
-  ? openaiProvider({ url, model: model!, key: process.env.AI_EVAL_KEY ?? '' })
-  : serverProvider(AI_SERVER, `deval${Math.random().toString(36).slice(2, 12)}`);
-const via = url ? `${url} · ${model}` : `сервер ИИ ${AI_SERVER}`;
+if (giga && !process.env.GIGACHAT_AUTH_KEY) throw new Error('Для GigaChat задайте ключ авторизации в переменной GIGACHAT_AUTH_KEY.');
+if (giga && args.includes('--models')) {
+  const token = await gigachatToken(process.env.GIGACHAT_AUTH_KEY!);
+  const list = (await (await fetch(`${GIGACHAT.api}/models`, { headers: { Authorization: `Bearer ${token}` } })).json()) as { data?: { id: string }[] };
+  console.log('Модели GigaChat:', (list.data ?? []).map((m) => m.id).join(', '));
+  process.exit(0);
+}
+const provider: AiProvider = giga
+  ? await gigachat(process.env.GIGACHAT_AUTH_KEY!, model ?? 'GigaChat-2')
+  : url
+    ? openaiProvider({ url, model: model!, key: process.env.AI_EVAL_KEY ?? '' })
+    : serverProvider(AI_SERVER, `deval${Math.random().toString(36).slice(2, 12)}`);
+const via = giga ? `GigaChat · ${model ?? 'GigaChat-2'}` : url ? `${url} · ${model}` : `сервер ИИ ${AI_SERVER}`;
 const depth = (arg('depth') ?? 'quick') as Depth;
 
 const { cases: all } = JSON.parse(readFileSync(join(root, 'eval', 'cases.json'), 'utf8')) as { cases: Case[] };
 const only = arg('server');
-const cases = all.filter((c) => !only || c.server === only).slice(0, Number(arg('limit') ?? Infinity));
+const group = arg('group');
+const cases = all.filter((c) => (!only || c.server === only) && (!group || c.group === group)).slice(0, Number(arg('limit') ?? Infinity));
 
 const packs = new Map<string, ServerPack>();
 const pack = (id: string) => {
@@ -82,7 +147,7 @@ for (const [i, c] of cases.entries()) {
   const icon = { верно: '✓', частично: '½', мимо: '✗', ошибка: '!' }[mark];
   console.log(`${icon} ${String(i + 1).padStart(2)}. [${c.server}] ${c.situation}\n      нужно ${c.expect.join(', ')} → ${detail} · ${seconds.toFixed(1)} с`);
   // The server's per-IP limit counts requests: a pause keeps a long run from looking like a flood.
-  if (!url) await new Promise((resolve) => setTimeout(resolve, 1500));
+  if (!url && !giga) await new Promise((resolve) => setTimeout(resolve, 1500));
 }
 
 const count = (mark: Mark) => rows.filter((r) => r.mark === mark).length;

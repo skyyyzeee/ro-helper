@@ -117,7 +117,7 @@ export function openaiProvider({ url, key, model }: CustomAi): AiProvider {
     async complete(request) {
       let response = await send(request, !!request.json);
       // Not every service knows the JSON mode; the prompt asks for JSON anyway.
-      if (response.status === 400 && request.json) response = await send(request, false);
+      if ((response.status === 400 || response.status === 422) && request.json) response = await send(request, false);
       const body = (await response.json().catch(() => null)) as {
         choices?: { message?: { content?: string } }[];
         error?: { message?: string } | string;
