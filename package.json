@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "import": "tsx src/importer/cli.ts",
     "tauri": "tauri",
+    "eval": "tsx scripts/ai-eval.ts",
     "test:server": "node --test server/server.test.mjs"
   },
   "dependencies": {

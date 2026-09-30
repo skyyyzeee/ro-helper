@@ -51,3 +51,17 @@ in `context.ts`); the search and the facts are the same for all four (a test che
 `geminiProvider` (the player's key, sent in a header). A new model is a new provider; nothing else changes.
 Failures are `AiError` with a `kind`: `offline`, `key`, `busy`, `limit`, `timeout` (90 s, 150 s when thinking),
 `empty`, `format`, `failed`. Whatever fails, the search keeps working and the screen says so.
+`openaiProvider` is the player's own OpenAI-compatible service («Свой ИИ»).
+
+## The exam (`npm run eval`)
+
+`eval/cases.json` holds situations as a player would tell them, each with the article that is the right answer on
+its server. `scripts/ai-eval.ts` asks each one the way the app does (law terms → search → analysis → checks) and
+scores it: right (a direct charge), partly (cited, not as the charge), missed, or failed — and says apart whether
+the search found the article at all, so a miss of the search is not blamed on the model. Run it before and after
+changing a prompt, the synonyms or the model: `npm run eval` goes through the AI server (it counts against the
+server's daily limits — some 2 requests a case), `--url … --model …` through any OpenAI-compatible AI (its key in
+`AI_EVAL_KEY`), `--server`, `--limit`, `--depth full` narrow it.
+
+First results, gpt-5-nano through the AI server, 15 cases: 8/15 before, 12/15 after the rule «only УК and КоАП
+punish» in the analysis prompt, examples of offences in the law-terms prompt and more synonyms.
