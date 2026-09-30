@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
 // package.json holds the version for both the app (tauri.conf.json points at it) and the settings' «о программе».
@@ -22,5 +22,7 @@ export default defineConfig({
     // UI tests type into the whole app over the real 49-document pack; in jsdom, and with every file
     // running at once, the longest (opening a document's table of contents) take several seconds.
     testTimeout: 15_000,
+    // The AI server is plain Node with its own tests (node:test): `npm run test:server`.
+    exclude: [...configDefaults.exclude, 'server/**'],
   },
 });
