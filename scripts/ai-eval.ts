@@ -95,18 +95,31 @@ if (giga && args.includes('--models')) {
   console.log('Модели GigaChat:', (list.data ?? []).map((m) => m.id).join(', '));
   process.exit(0);
 }
-const provider: AiProvider = giga
+const service: AiProvider = giga
   ? await gigachat(process.env.GIGACHAT_AUTH_KEY!, model ?? 'GigaChat-2')
   : url
     ? openaiProvider({ url, model: model!, key: process.env.AI_EVAL_KEY ?? '' })
     : serverProvider(AI_SERVER, `deval${Math.random().toString(36).slice(2, 12)}`);
+/** The model's last answers, to show what it said when an answer could not be read. */
+const said: string[] = [];
+const provider: AiProvider = {
+  async complete(request) {
+    const text = await service.complete(request);
+    said.push(text);
+    return text;
+  },
+};
 const via = giga ? `GigaChat · ${model ?? 'GigaChat-2'}` : url ? `${url} · ${model}` : `сервер ИИ ${AI_SERVER}`;
 const depth = (arg('depth') ?? 'quick') as Depth;
 
 const { cases: all } = JSON.parse(readFileSync(join(root, 'eval', 'cases.json'), 'utf8')) as { cases: Case[] };
 const only = arg('server');
 const group = arg('group');
-const cases = all.filter((c) => (!only || c.server === only) && (!group || c.group === group)).slice(0, Number(arg('limit') ?? Infinity));
+/** --cases 29,40 — those numbers of the whole list only. */
+const picked = arg('cases')?.split(',').map(Number);
+const cases = all
+  .filter((c, i) => (!only || c.server === only) && (!group || c.group === group) && (!picked || picked.includes(i + 1)))
+  .slice(0, Number(arg('limit') ?? Infinity));
 
 const packs = new Map<string, ServerPack>();
 const pack = (id: string) => {
@@ -127,6 +140,7 @@ for (const [i, c] of cases.entries()) {
   let searched = false;
   let wrongCitations = 0;
   let detail = '';
+  said.length = 0;
   try {
     const result = await analyse({ provider, pack: pack(c.server), message: c.situation, depth });
     const sources = result.sources.map((s) => ref(s.hit));
@@ -141,6 +155,9 @@ for (const [i, c] of cases.entries()) {
     if (wrongCitations) detail += ` · не прошли проверку: ${result.validation.norms.flatMap((n) => (n.hit ? n.issues : n.issues.length ? n.issues : [n.norm.ref])).join('; ')}`;
   } catch (error) {
     detail = error instanceof AiError ? `${error.kind}: ${error.message}` : String(error);
+    // What the model said instead of an answer: a refusal reads differently from broken JSON.
+    if (args.includes('--debug')) detail += said.map((text) => `
+      ИИ ответил: ${text.replace(/s+/g, ' ').slice(0, 300)}`).join('');
   }
   const seconds = (Date.now() - started) / 1000;
   rows.push({ mark, searched, wrongCitations, seconds });
