@@ -1,8 +1,10 @@
 // The AI server of Кремлёвский Ассистент: the app asks the AI through it, so players need no key of their own. The AI key lives only
 // here, in the environment of this server (see env.example) — never in the app, which anyone can take apart.
 //
-// It forwards to any OpenAI-compatible API (ProxyAPI, VseGPT…) and keeps the spending in check:
-// a few questions a day per computer and per address, and a daily budget in rubles for everyone together.
+// It asks GigaChat (Sber's free tier) first when its key is set, and any OpenAI-compatible API (ProxyAPI, VseGPT…)
+// when GigaChat refuses, is busy or has used up its free tokens — so the paid API pays only for what GigaChat does
+// not answer. It keeps the spending in check: a few questions a day per computer and per address, and a daily
+// budget in rubles for everyone together.
 // Plain Node (20+), no packages: `node server.mjs`, behind Caddy for HTTPS (see README.md).
 import { createServer } from 'node:http';
 import { readFileSync, writeFileSync, renameSync, existsSync } from 'node:fs';
@@ -30,10 +32,24 @@ const CONFIG = {
   requestsPerIp: num('REQUESTS_PER_IP', 80),
   maxOutputTokens: num('MAX_OUTPUT_TOKENS', 900),
   stateFile: env('STATE_FILE', './state.json'),
+  /**
+   * GigaChat, asked first when its authorization key is set (base64 of «Client ID:Client Secret», from the
+   * project's page at developers.sber.ru). Its servers are signed by the Russian root certificate: the service
+   * starts with NODE_EXTRA_CA_CERTS pointing to it (install.sh does that).
+   */
+  gigachat: {
+    key: env('GIGACHAT_AUTH_KEY', '').replace(/^\s*basic\s+/i, '').replace(/\s+/g, ''),
+    scope: env('GIGACHAT_SCOPE', 'GIGACHAT_API_PERS'),
+    model: env('GIGACHAT_MODEL', 'GigaChat-2'),
+    oauth: env('GIGACHAT_OAUTH_URL', 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth'),
+    api: env('GIGACHAT_API_URL', 'https://gigachat.devices.sberbank.ru/api/v1').replace(/\/$/, ''),
+    /** It answers one request at a time: past this many waiting, a question goes to the paid API at once. */
+    maxWaiting: num('GIGACHAT_MAX_WAITING', 3),
+  },
 };
 
-if (!CONFIG.apiKey) {
-  console.error('AI_API_KEY is not set: put the key of the AI API in /opt/ro-helper/.env');
+if (!CONFIG.apiKey && !CONFIG.gigachat.key) {
+  console.error('No AI key: put AI_API_KEY (bash set-key.sh) or GIGACHAT_AUTH_KEY (bash set-key.sh gigachat) in /opt/ro-helper/.env');
   process.exit(1);
 }
 
@@ -42,10 +58,12 @@ const today = () => new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 1
 
 // ——— What was spent today, kept on disk so a restart does not reset the limits ———
 
-let state = { day: today(), spent: 0, devices: {}, ips: {} };
+/** A fresh day: nothing spent, nothing asked; `answered` — who answered, and why the paid API had to. */
+const freshDay = () => ({ day: today(), spent: 0, devices: {}, ips: {}, answered: { gigachat: 0, paid: 0, why: {} } });
+let state = freshDay();
 if (existsSync(CONFIG.stateFile)) {
   try {
-    state = JSON.parse(readFileSync(CONFIG.stateFile, 'utf8'));
+    state = { ...freshDay(), ...JSON.parse(readFileSync(CONFIG.stateFile, 'utf8')) };
   } catch {
     // A broken file starts the day over.
   }
@@ -60,7 +78,7 @@ setInterval(() => {
 
 function rollDay() {
   if (state.day === today()) return;
-  state = { day: today(), spent: 0, devices: {}, ips: {} };
+  state = freshDay();
   dirty = true;
 }
 
@@ -132,7 +150,9 @@ async function inTurn(models, call) {
   throw last;
 }
 
-async function chat({ system, messages, json, think }) {
+/** The paid OpenAI-compatible API, model after model while they are busy. */
+async function paid({ system, messages, json, think }) {
+  if (!CONFIG.apiKey) throw new UpstreamError(503, null, 'no paid API key');
   const body = await inTurn(CONFIG.models, (model) =>
     upstream(
       '/chat/completions',
@@ -157,6 +177,91 @@ async function chat({ system, messages, json, think }) {
   const usage = body?.usage ?? {};
   const rubles = ((usage.prompt_tokens ?? 0) * CONFIG.priceIn + (usage.completion_tokens ?? 0) * CONFIG.priceOut) / 1e6;
   return { text, rubles };
+}
+
+// ——— GigaChat ———
+
+/** Why GigaChat did not answer this one: the paid API then does. */
+class Declined extends Error {}
+
+/** The access token: its authorization key is exchanged for one that lasts 30 minutes, renewed a minute early. */
+let token = { value: '', until: 0 };
+async function gigachatToken() {
+  if (token.value && Date.now() < token.until - 60_000) return token.value;
+  const response = await fetch(CONFIG.gigachat.oauth, {
+    method: 'POST',
+    headers: { Authorization: `Basic ${CONFIG.gigachat.key}`, RqUID: crypto.randomUUID(), 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+    body: new URLSearchParams({ scope: CONFIG.gigachat.scope }),
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok || !body?.access_token) throw new Declined(`token ${response.status}: ${body?.message ?? ''}`);
+  token = { value: body.access_token, until: Number(body.expires_at) || Date.now() + 30 * 60_000 };
+  return token.value;
+}
+
+/** One request at a time, as GigaChat takes them; how many wait for their turn. */
+let turn = Promise.resolve();
+let waiting = 0;
+function inGigachatTurn(call) {
+  if (waiting >= CONFIG.gigachat.maxWaiting) return Promise.reject(new Declined('queue'));
+  waiting += 1;
+  const mine = turn.then(call);
+  turn = mine.catch(() => undefined).finally(() => {
+    waiting -= 1;
+  });
+  return mine;
+}
+
+/** A JSON answer must be JSON: a broken one is the paid API's to give, not the player's to see. */
+function readableJson(text) {
+  try {
+    JSON.parse(text.trim().replace(/^```(?:json)?\s*|```\s*$/g, ''));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function gigachat({ system, messages, json }) {
+  return inGigachatTurn(async () => {
+    const response = await fetch(`${CONFIG.gigachat.api}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await gigachatToken()}` },
+      body: JSON.stringify({ model: CONFIG.gigachat.model, messages: [{ role: 'system', content: system }, ...messages], max_tokens: CONFIG.maxOutputTokens }),
+    });
+    const body = await response.json().catch(() => null);
+    // 401: the token went stale early — the next request takes a new one. 402/429: the free tokens are used up, or too fast.
+    if (response.status === 401) token = { value: '', until: 0 };
+    if (!response.ok) throw new Declined(`http ${response.status}`);
+    const choice = body?.choices?.[0];
+    const text = choice?.message?.content ?? '';
+    // Sber's filter answers some topics (drugs, say) with a stock text and this reason — whatever the prompt says.
+    if (choice?.finish_reason === 'blacklist') throw new Declined('blacklist');
+    if (!text.trim()) throw new Declined('empty');
+    if (json && !readableJson(text)) throw new Declined('format');
+    return { text, rubles: 0 };
+  });
+}
+
+/** GigaChat first, when it is set up; the paid API for whatever it does not answer. */
+async function chat(request) {
+  if (CONFIG.gigachat.key) {
+    try {
+      const answer = await gigachat(request);
+      state.answered.gigachat += 1;
+      dirty = true;
+      return answer;
+    } catch (error) {
+      const why = error instanceof Declined ? error.message.split(' ')[0] : 'network';
+      state.answered.why[why] = (state.answered.why[why] ?? 0) + 1;
+      if (!(error instanceof Declined) || why === 'token') console.error(new Date().toISOString(), 'GigaChat:', error.message ?? error);
+      if (!CONFIG.apiKey) throw new UpstreamError(502, null, `GigaChat: ${why}`);
+    }
+  }
+  const answer = await paid(request);
+  state.answered.paid += 1;
+  dirty = true;
+  return answer;
 }
 
 // ——— HTTP ———
@@ -196,7 +301,7 @@ const server = createServer(async (request, response) => {
   }
   if (request.method === 'GET' && request.url === '/v1/status') {
     rollDay();
-    return send(response, 200, { ok: true, open: state.spent < CONFIG.budgetPerDay });
+    return send(response, 200, { ok: true, open: state.spent < CONFIG.budgetPerDay, answered: state.answered, spent: Math.round(state.spent * 100) / 100 });
   }
   const limit = LIMITS[request.url];
   if (request.method !== 'POST' || !limit) return send(response, 404, { error: 'Нет такого адреса' });
@@ -232,4 +337,8 @@ const server = createServer(async (request, response) => {
   }
 });
 
-server.listen(CONFIG.port, '127.0.0.1', () => console.log(`AI server on 127.0.0.1:${CONFIG.port}, models ${CONFIG.models.join(' → ')}`));
+server.listen(CONFIG.port, '127.0.0.1', () =>
+  console.log(
+    `AI server on 127.0.0.1:${CONFIG.port}: ${CONFIG.gigachat.key ? `GigaChat ${CONFIG.gigachat.model} first, then ` : ''}${CONFIG.apiKey ? `paid ${CONFIG.models.join(' → ')}` : 'no paid API'}`,
+  ),
+);

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Sets up the AI server of Кремлёвский Ассистент on a fresh Ubuntu 24.04, as root:
 #   curl -fsSL https://raw.githubusercontent.com/skyyyzeee/ro-helper/main/server/install.sh | bash
-# Then give it the AI key:  bash /opt/ro-helper/set-key.sh
+# Then give it the AI keys:  bash /opt/ro-helper/set-key.sh gigachat  (free, asked first)
+#                        and bash /opt/ro-helper/set-key.sh           (paid, for what GigaChat does not answer)
 # Running it again updates the server and keeps the settings and the key.
 set -euo pipefail
 
@@ -32,6 +33,11 @@ fetch env.example
 [ -f "$DIR/.env" ] || cp "$DIR/env.example" "$DIR/.env"
 # Speech is recognised on the players' computers: this server takes text only.
 
+# GigaChat's servers are signed by the Russian root certificate (Минцифры): Node trusts it through
+# NODE_EXTRA_CA_CERTS, for this service only — the system's own certificates are not touched.
+curl -fsSL https://gu-st.ru/content/lending/russian_trusted_root_ca_pem.crt -o "$DIR/russian_trusted_root_ca.crt" \
+  || echo "Не скачался сертификат Минцифры: без него не заработает GigaChat, платный ИИ — да. Запустите установку снова позже."
+
 echo "== Модель распознавания речи (Vosk, русская, ~45 МБ) для программ"
 mkdir -p "$DIR/models"
 if [ ! -s "$DIR/models/vosk-model-small-ru.tar.gz" ]; then
@@ -56,6 +62,7 @@ After=network-online.target
 User=rohelper
 WorkingDirectory=$DIR
 EnvironmentFile=$DIR/.env
+Environment=NODE_EXTRA_CA_CERTS=$DIR/russian_trusted_root_ca.crt
 ExecStart=/usr/bin/node $DIR/server.mjs
 Restart=always
 RestartSec=3
@@ -94,11 +101,11 @@ systemctl daemon-reload
 systemctl enable caddy >/dev/null 2>&1
 systemctl restart caddy
 systemctl enable ro-helper-ai >/dev/null 2>&1
-if grep -q '^AI_API_KEY=.\+' "$DIR/.env"; then
+if grep -Eq '^(AI_API_KEY|GIGACHAT_AUTH_KEY)=.+' "$DIR/.env"; then
   systemctl restart ro-helper-ai
   echo "== Готово: сервер работает."
 else
-  echo "== Почти готово. Теперь вставьте ключ ProxyAPI:  bash $DIR/set-key.sh"
+  echo "== Почти готово. Теперь вставьте ключи ИИ:  bash $DIR/set-key.sh gigachat  (бесплатный GigaChat)  и  bash $DIR/set-key.sh  (платный ProxyAPI, запасной)"
 fi
 echo
 echo "Адрес сервера ИИ:  https://$DOMAIN"

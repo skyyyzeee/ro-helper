@@ -106,7 +106,7 @@ the bot, README and PRIVACY; «хелпер» in players' texts became «асс�
   of law**: it gets only the articles the search found, under ids, answers in JSON, and `validate.ts` checks every
   article, part and figure against the pack without the AI; the calculator, not the AI, counts punishments. Keep it so.
   `docs/ARCHITECTURE.md`, `docs/AI_PIPELINE.md`, `docs/SOURCE_GROUNDING.md`.
-- The AI server: `server/` (Node, no dependencies, OpenAI-compatible upstream — ProxyAPI now), run and paid for by
+- The AI server: `server/` (Node, no dependencies: GigaChat first when its key is set, an OpenAI-compatible paid API — ProxyAPI — for what it declines; `npm run test:server`), run and paid for by
   AidenArokij at `AI_SERVER` in `src/ui/about.ts`. **No AI key ever goes into the app** — it lives only in the
   server's `.env`, typed in with `server/set-key.sh`. The server takes text only; speech is recognised on the
   player's computer (Vosk, `src/ui/localSpeech.ts`) and never sent. Whatever the AI sends or keeps must be in
