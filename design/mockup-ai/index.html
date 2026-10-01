@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Кремлёвский Ассистент — макеты ИИ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* Tokens follow src/ui/tokens.css (direction C); the accent hue follows the organisation. */
+:root {
+  --font: 'Onest', system-ui, sans-serif;
+  --hue: 245;
+  --accent: oklch(0.78 0.1 var(--hue));
+  --accent-text: oklch(0.86 0.08 var(--hue));
+  --accent-soft: oklch(0.78 0.1 var(--hue) / 0.18);
+  --on-accent: #0d1118;
+  --text: #fff;
+  --text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  --text-muted: rgba(255, 255, 255, 0.58);
+  --text-faint: rgba(255, 255, 255, 0.42);
+  --surface: rgba(255, 255, 255, 0.07);
+  --surface-hover: rgba(255, 255, 255, 0.11);
+  --surface-active: rgba(255, 255, 255, 0.14);
+  --line: rgba(255, 255, 255, 0.08);
+  --penalty-text: oklch(0.85 0.11 25);
+  --penalty-bg: oklch(0.7 0.16 25 / 0.16);
+  --warn-bg: oklch(0.78 0.1 30 / 0.2);
+  --warn-text: oklch(0.92 0.05 35);
+  --ok-text: oklch(0.88 0.1 155);
+  --ok-bg: oklch(0.8 0.12 155 / 0.16);
+  --likely-text: oklch(0.9 0.1 90);
+  --likely-bg: oklch(0.85 0.12 90 / 0.16);
+  --badge-codes-text: oklch(0.87 0.07 245);
+  --badge-codes-bg: oklch(0.78 0.1 245 / 0.22);
+  --badge-charters-text: oklch(0.87 0.07 150);
+  --badge-charters-bg: oklch(0.78 0.1 150 / 0.22);
+  --badge-fz-text: oklch(0.87 0.07 195);
+  --badge-fz-bg: oklch(0.78 0.1 195 / 0.22);
+  --badge-rules-text: rgba(255, 255, 255, 0.88);
+  --badge-rules-bg: rgba(255, 255, 255, 0.13);
+  --glass-bg: rgb(15 15 18 / 0.62);
+  --radius-panel: 22px;
+  --radius-field: 16px;
+  --radius-card: 14px;
+  --radius-control: 12px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { font-family: var(--font); color: var(--text); background: #0b0c10; display: flex; flex-direction: column; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+.sp { flex: 1; }
+
+/* The mockup's own control bar. */
+.bar { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; padding: 12px 20px; background: #111217; border-bottom: 1px solid #22242b; font-size: 13px; color: #c9ccd4; }
+.bar h1 { font-size: 14px; margin: 0 8px 0 0; font-weight: 600; color: #fff; }
+.seg { display: inline-flex; background: #1b1d23; border-radius: 9px; padding: 3px; gap: 2px; }
+.seg button { padding: 6px 11px; border-radius: 7px; color: #aeb3be; }
+.seg button[aria-pressed='true'] { background: #2c3039; color: #fff; }
+.seg button[disabled] { opacity: 0.35; cursor: default; }
+.bar label { color: #8b909b; margin-right: 6px; }
+
+/* The game behind. */
+.stage {
+  flex: 1; position: relative; overflow: auto; padding: 32px; display: flex; justify-content: center; align-items: flex-start; gap: 28px;
+  background: radial-gradient(1200px 500px at 20% 110%, #3b4a2e 0%, transparent 60%), radial-gradient(900px 500px at 90% 0%, #5c3c2a 0%, transparent 55%), linear-gradient(180deg, #56708a 0%, #8a9aa6 45%, #4b5446 70%, #2d2f28 100%);
+}
+.note { position: relative; z-index: 1; width: 300px; flex: none; font-size: 13px; line-height: 1.5; background: rgba(10, 12, 16, 0.78); border-radius: 12px; padding: 14px 16px; }
+.note h2 { font-size: 14px; margin: 0 0 6px; }
+.note ul { padding-left: 18px; margin: 6px 0 0; }
+.note li { margin: 5px 0; }
+.note .was { color: #b9bec8; }
+
+/* The overlay, direction C. */
+.panel {
+  position: relative; z-index: 1; width: 760px; height: 720px; flex: none; display: flex;
+  background: var(--glass-bg); backdrop-filter: blur(28px) saturate(115%); -webkit-backdrop-filter: blur(28px) saturate(115%);
+  border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-panel); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  text-shadow: var(--text-shadow); overflow: hidden;
+}
+.rail { width: 64px; flex: none; border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 0; }
+.rail .srvbig { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgba(0,0,0,.25); border: 1px solid var(--line); margin-bottom: 10px; }
+.rail .srvbig svg { width: 24px; height: 24px; }
+.icon-btn { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; color: var(--text-muted); }
+.icon-btn:hover { background: var(--surface-hover); color: var(--text); }
+.icon-btn svg { width: 18px; height: 18px; }
+.rail .icon-btn { width: 42px; height: 42px; border-radius: 12px; }
+.rail .icon-btn[aria-current='true'] { background: var(--accent-soft); color: var(--accent-text); }
+.rail .icon-btn svg { width: 20px; height: 20px; }
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
+.head { display: flex; align-items: center; gap: 8px; padding: 14px 16px 10px; }
+.brand { font-weight: 700; font-size: 15px; }
+.org { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: 12.5px; font-weight: 600; color: var(--accent-text); }
+
+/* The field: the search's, given to the AI. */
+.field { margin: 2px 16px 10px; display: flex; align-items: center; gap: 10px; padding: 11px 12px 11px 14px; border-radius: var(--radius-field); background: var(--surface); border: 1px solid var(--accent); color: var(--text-faint); font-size: 14.5px; }
+.field svg { width: 18px; height: 18px; flex: none; }
+.field .ph { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.field .typed { color: var(--text); }
+.scope { display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 99px; background: var(--surface-active); color: var(--text-muted); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.scope svg { width: 12px; height: 12px; }
+.kbd { font-size: 11px; padding: 2px 6px; border-radius: 6px; background: var(--surface-active); color: var(--text-muted); }
+
+/* One row under the field: the state's tabs, the history on the right. */
+.tabsrow { display: flex; align-items: center; gap: 8px; margin: 0 16px 10px; }
+.tabs { display: inline-flex; padding: 3px; gap: 2px; border-radius: var(--radius-control); background: var(--surface); }
+.tabs button { padding: 6px 14px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--text-muted); }
+.tabs button[aria-pressed='true'] { background: var(--surface-active); color: var(--text); }
+.ghost { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
+.ghost:hover { background: var(--surface-hover); color: var(--text); }
+.ghost svg { width: 15px; height: 15px; }
+
+.body { flex: 1; overflow: auto; padding: 0 16px 14px; display: flex; flex-direction: column; gap: 12px; }
+.foot { padding: 10px 16px; font-size: 11.5px; color: var(--text-faint); border-top: 1px solid var(--line); display: flex; gap: 14px; }
+.foot b { color: var(--text-muted); font-weight: 600; }
+
+.intro { font-size: 13.5px; line-height: 1.55; color: var(--text-muted); margin: 2px 0 0; }
+.h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); margin: 6px 2px 0; font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12.5px; font-weight: 500; padding: 6px 11px; border-radius: 99px; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.85); }
+.chip--example { font-style: italic; text-align: left; border-radius: 12px; padding: 7px 12px; }
+.chip--on { background: var(--accent); color: var(--on-accent); text-shadow: none; }
+.hint { font-size: 12px; color: var(--text-faint); line-height: 1.5; }
+.hint b { color: var(--text-muted); }
+
+.q { align-self: flex-end; max-width: 86%; padding: 10px 14px; border-radius: var(--radius-card) var(--radius-card) 4px var(--radius-card); background: var(--accent); color: var(--on-accent); text-shadow: none; font-size: 14.5px; line-height: 1.5; }
+.card { padding: 14px 16px; border-radius: var(--radius-card); background: var(--surface); display: flex; flex-direction: column; gap: 10px; }
+.card p { margin: 0; font-size: 14.5px; line-height: 1.55; }
+.status { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; }
+.st-ok { color: var(--ok-text); background: var(--ok-bg); }
+.st-likely { color: var(--likely-text); background: var(--likely-bg); }
+.st-warn { color: var(--warn-text); background: var(--warn-bg); }
+.side { font-size: 11.5px; font-weight: 600; color: var(--text-faint); }
+.group { font-size: 12px; font-weight: 700; color: var(--accent-text); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+.norm { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: rgba(0, 0, 0, 0.18); border: 1px solid var(--line); }
+.norm .what { flex: 1; display: flex; flex-direction: column; gap: 3px; font-size: 13.5px; line-height: 1.45; }
+.norm .what b { font-weight: 700; }
+.norm .why { color: var(--text-muted); font-size: 12.5px; }
+.badge { flex: none; font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 6px; margin-top: 1px; }
+.b-codes { color: var(--badge-codes-text); background: var(--badge-codes-bg); }
+.b-charter { color: var(--badge-charters-text); background: var(--badge-charters-bg); }
+.b-fz { color: var(--badge-fz-text); background: var(--badge-fz-bg); }
+.b-rules { color: var(--badge-rules-text); background: var(--badge-rules-bg); }
+.calc { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--penalty-bg); color: var(--penalty-text); font-size: 13.5px; font-weight: 600; }
+.calc svg { width: 17px; height: 17px; flex: none; }
+.calc small { margin-left: auto; color: var(--text-faint); font-weight: 500; font-size: 11.5px; }
+.cite { text-decoration: underline; text-decoration-color: oklch(0.78 0.1 245 / 0.55); text-underline-offset: 3px; }
+.steps { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.55; }
+.steps li { margin: 2px 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 4px; border-top: 1px solid var(--line); }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 10px; font-size: 13px; font-weight: 600; background: var(--surface-active); }
+.btn:hover { background: rgba(255, 255, 255, 0.18); }
+.btn svg { width: 15px; height: 15px; }
+.btn--accent { background: var(--accent); color: var(--on-accent); text-shadow: none; }
+.btn--plain { background: none; color: var(--text-muted); }
+.more { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 12px; background: rgba(0, 0, 0, 0.16); }
+.more h4 { margin: 0; font-size: 12.5px; color: var(--text-muted); font-weight: 700; }
+.more ul { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.5; }
+
+/* The document sheet. */
+.sheet { padding: 18px 20px; border-radius: var(--radius-card); background: rgba(255, 255, 255, 0.92); color: #15171c; text-shadow: none; font-size: 13.5px; line-height: 1.6; }
+.sheet .t { text-align: center; font-weight: 700; letter-spacing: 0.06em; margin: 10px 0; }
+.sheet .r { text-align: right; }
+.gap { background: oklch(0.9 0.1 90 / 0.6); border-radius: 4px; padding: 0 4px; }
+.sheet .cite { text-decoration-color: oklch(0.5 0.12 245); color: oklch(0.42 0.12 245); }
+
+/* The checks. */
+.item { display: flex; flex-direction: column; gap: 5px; padding: 11px 12px; border-radius: 12px; background: rgba(0, 0, 0, 0.18); border: 1px solid var(--line); font-size: 13.5px; line-height: 1.45; }
+.item .top { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.item .basis { color: var(--text-muted); font-size: 12.5px; }
+
+/* The trainer. */
+.progress { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--text-muted); }
+.progress .tr { flex: 1; height: 6px; border-radius: 4px; background: var(--surface-active); overflow: hidden; }
+.progress .tr i { display: block; height: 100%; width: 30%; background: var(--accent); }
+
+/* The history: a drawer over the AI screen. */
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 300px; background: rgb(20 21 26 / 0.97); border-left: 1px solid var(--line); box-shadow: -20px 0 60px rgba(0, 0, 0, 0.45); display: flex; flex-direction: column; z-index: 3; }
+.drawer .dh { display: flex; align-items: center; padding: 14px 14px 8px; font-weight: 700; font-size: 14.5px; }
+.drawer .dsearch { margin: 0 14px 8px; padding: 8px 10px; border-radius: 10px; background: var(--surface); font-size: 13px; color: var(--text-faint); }
+.conv { padding: 9px 14px; display: flex; flex-direction: column; gap: 3px; font-size: 13px; border-radius: 10px; margin: 0 6px; }
+.conv:hover, .conv--on { background: var(--surface-hover); }
+.conv span { color: var(--text-faint); font-size: 11.5px; }
+.dim::after { content: ''; position: absolute; inset: 0; background: rgba(0, 0, 0, 0.35); z-index: 2; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <h1>Кремлёвский Ассистент · ИИ (P1)</h1>
+  <span><label>Профиль</label><span class="seg" data-key="profile">
+    <button data-v="citizen">Гражданский</button><button data-v="state">Государство · МВД</button><button data-v="crime">Крайм · ОПГ</button>
+  </span></span>
+  <span><label>Экран</label><span class="seg" data-key="screen">
+    <button data-v="start">Начало</button><button data-v="answer">Ответ</button><button data-v="more">Подробнее</button><button data-v="document">Документ</button><button data-v="check" data-state>Проверка</button><button data-v="practice" data-state>Практика</button><button data-v="history">История</button>
+  </span></span>
+</div>
+<div class="stage" id="stage"></div>
+
+<script>
+const TVERSKOI = "M8.77512 2.3172C8.34442 1.20526 9.83589 0.47051 10.4112 1.47566C10.6108 1.82443 10.5215 2.79568 10.1043 2.97458C9.95317 2.97841 9.9011 2.95124 9.76165 2.89757C9.75498 3.0059 9.7581 3.00158 9.84982 3.10739C9.99647 3.27817 10.1771 3.41588 10.3788 3.51142C10.4044 3.52134 10.4256 3.52894 10.4435 3.53486L11.0618 3.68107C11.4768 3.12895 12.1359 2.71961 13.3351 2.59176C13.5368 2.3668 13.7877 2.04618 14.1163 2.12299C14.2538 2.20033 14.2757 2.27898 14.3428 2.421C14.8949 2.50485 15.2981 2.77924 15.8237 2.81832C15.9642 2.82872 15.9901 2.82292 16.0347 2.95672C15.9787 3.24008 15.69 3.55643 15.5057 3.78487C16.1418 4.61206 15.6784 4.54124 15.5324 5.36079C15.5114 5.70397 15.5666 6.05094 15.5481 6.3943C15.5304 6.71497 15.269 7.16589 14.9097 7.12645C14.7829 7.02529 14.7166 6.81551 14.6486 6.65435C14.5196 6.83819 14.3755 7.08188 14.1341 7.02154C14.0056 6.87727 13.9916 6.38351 14.008 6.1867C14.0423 5.77767 13.5646 5.46444 13.2302 5.14204C13.2869 5.57932 13.3008 6.05599 13.4221 6.53158C13.6197 7.30348 14.3704 8.4749 13.9131 9.26712C13.7946 9.47239 13.332 9.47345 13.1029 9.49146C14.0825 9.68686 15.71 9.7018 16.4944 10.2102C16.6503 10.5737 16.8886 12.0514 17 12.5429C16.7289 12.9453 16.1563 13.6397 15.7512 13.8878C15.4609 14.0656 15.2185 13.3937 15.1854 13.1679C15.018 12.0363 16.0547 12.8435 15.8081 11.6332C15.5623 10.4268 14.3336 11.0103 13.5583 11.2359C12.6923 11.5002 12.727 10.8835 12.1264 10.5517L12.084 10.5283C12.0634 10.84 11.996 11.6381 12.0205 11.9033C12.1087 12.8544 12.5851 14.2644 12.9389 15.1378C13.4825 15.5073 13.5241 15.5627 13.7379 16.197C13.2325 16.1182 12.5312 15.995 12.0416 15.8755C11.7093 15.2418 11.4806 14.3967 11.1466 13.7237L10.9189 12.121L6.82659 12.7515C6.81988 12.7531 6.81364 12.7557 6.80762 12.7571C7.02096 12.1306 7.0588 11.9734 6.97726 11.3051C6.95402 11.0729 6.93264 10.8697 6.89356 10.6399C6.87121 10.9003 6.84886 11.3114 6.79088 11.554C6.58044 12.9714 5.84913 13.7824 4.67608 14.457C4.3823 15.117 4.16856 15.7674 4.6147 16.3354C4.72874 16.4805 4.9523 16.7578 4.87249 16.9268C4.62214 17.0632 4.07808 16.9721 3.77547 16.9459L3.64936 16.4682L3.2956 16.2438C3.33711 15.9945 3.36525 15.8483 3.39046 15.5787C3.4266 15.1911 3.25847 14.4273 3.43397 14.1155C3.51325 13.9748 3.91594 13.7122 4.03215 13.5641C4.40268 13.0913 4.08674 12.1758 4.04777 11.5875C3.99302 10.7598 4.04832 9.86846 4.59126 9.20686C5.14694 8.52986 6.01655 8.49056 6.80762 8.41554C6.93748 8.1042 7.00295 7.28261 7.30983 6.97801L6.87012 5.48021C6.71942 5.45543 6.5639 5.41877 6.43376 5.39874C6.14059 5.75874 5.89846 6.10339 5.40259 6.14764C5.30504 6.15554 5.20689 6.16077 5.10908 6.16326C4.81313 6.6248 4.59293 6.84827 4.05112 6.50591C3.6119 6.70349 3.17886 6.90423 2.7443 7.11195C2.52158 7.21841 2.12015 7.51952 1.90172 7.4903C1.84761 7.35521 1.86928 7.37963 1.89279 7.21127C2.15912 6.79657 3.58177 6.07542 4.03773 5.73356C4.06242 5.71505 4.08527 5.69416 4.10915 5.67442L4.96066 4.6543L4.9629 4.65318C5.20265 4.34543 5.96734 3.8093 6.36569 3.7458L7.53748 3.14757C7.78081 3.0359 8.24742 3.11117 8.48831 3.12079L8.53741 3.09512C8.9269 2.89459 8.93643 2.73417 8.77512 2.3172Z";
+const I = {
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7M9 8h3"/></svg>',
+  calc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2"/></svg>',
+  pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 17v5M8 3h8l-1 6 3 4H6l3-4z"/></svg>',
+  wand: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m4 20 10-10M15 4v2M19 8h2M17.5 5.5l1.5-1.5M12 3l.5 1.5M20 11l-1.5.5"/><path d="m13 11 1-1"/></svg>',
+  memo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 4h14v16l-4-3H5z"/><path d="M9 9h6M9 13h4"/></svg>',
+  gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>',
+  user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
+  close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>',
+  chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>',
+  copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>',
+  pen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>',
+};
+
+const PROFILES = {
+  citizen: { org: 'Без организации', hue: 245, label: 'Гражданский', side: 'как гражданин',
+    examples: ['У меня украли телефон из кармана — что будет вору?', 'Сотрудник остановил без причины и требует документы — я обязан?', 'Меня задержали — сколько меня могут держать?', 'Меня оскорбили в чате — это нарушение?'],
+    docs: ['Заявление', 'Жалоба', 'Иск'], doc: 'Заявление',
+    question: 'У меня у метро незаметно вытащили телефон из кармана',
+    steps: ['Подать <span class="cite">заявление</span> в полицию: где, когда, приметы — кнопка ниже составит его по этому разбору.', 'Сохранить доказательства: время, место, свидетели.'],
+    action: 'Составить заявление' },
+  state: { org: 'МВД', hue: 245, label: 'Государство', side: 'как сотрудник',
+    examples: ['Человек в маске с электродубинкой у здания МВД — что ему грозит?', 'Задержанный предложил 50 000, чтобы отпустили', 'Водитель проехал на красный и уехал от патруля', 'При обыске нашли пистолет без лицензии'],
+    docs: ['Рапорт', 'Протокол задержания', 'Заявление', 'Жалоба', 'Иск'], doc: 'Рапорт',
+    question: 'Задержал у метро: незаметно вытащил телефон у прохожего из кармана',
+    steps: ['Задержать и доставить в отдел, разъяснить права — <span class="cite">УПК ст. 46</span>.', 'Изъять телефон, составить протокол задержания.'],
+    action: 'Составить рапорт' },
+  crime: { org: 'ОПГ', hue: 5, label: 'Крайм', side: 'как крайм',
+    examples: ['Нас взяли с оружием в машине — что светит?', 'Сколько могут держать без адвоката?', 'Что можно требовать при задержании?', 'Захват территории — что по правилам сервера?'],
+    docs: ['Заявление', 'Жалоба', 'Иск'], doc: 'Жалоба',
+    question: 'Взяли у метро: тайком вытащил телефон у прохожего',
+    steps: ['Требовать адвоката и разъяснения прав — <span class="cite">УПК ст. 46</span>.', 'Срок задержания — не дольше, чем в <span class="cite">УПК ст. 94</span>; после — требовать освобождения.'],
+    action: 'Составить жалобу' },
+};
+
+const state = { profile: 'citizen', screen: 'answer' };
+try { Object.assign(state, JSON.parse(localStorage.getItem('mock-ai') || '{}')); } catch {}
+
+const P = () => PROFILES[state.profile];
+const isState = () => state.profile === 'state';
+
+function field(text, placeholder) {
+  return `<div class="field">${I.wand}<span class="ph ${text ? 'typed' : ''}">${text || placeholder}</span>
+    <span class="scope" title="Где искать ответ">Законы и правила ${I.chev}</span>${I.mic}<span class="kbd">Enter</span></div>`;
+}
+
+function tabsRow(current) {
+  const tabs = isState()
+    ? `<span class="tabs">${[['analysis', 'Разбор'], ['check', 'Проверка'], ['practice', 'Практика']].map(([id, n]) => `<button aria-pressed="${current === id}" data-go="${id === 'analysis' ? 'start' : id}">${n}</button>`).join('')}</span>`
+    : '';
+  return `<div class="tabsrow">${tabs}<span class="sp"></span>
+    ${current === 'analysis' ? `<button class="ghost" data-go="start">Новый разбор</button>` : ''}
+    <button class="ghost" data-go="history">${I.clock}История</button></div>`;
+}
+
+function answerCard(expanded) {
+  const p = P();
+  return `
+    <div class="q">${p.question}</div>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px"><span class="status st-ok">✓ Подтверждено</span><span class="side">разбор ${p.side}</span></div>
+      <p>Тайное хищение чужого имущества — <b>кража</b>.</p>
+      <div class="group">По закону</div>
+      <div class="norm"><span class="badge b-codes">УК</span><div class="what"><b><span class="cite">ст. 65 ч. 1</span> · Кража</b><span class="why">телефон взяли тайно, владелец не видел</span></div></div>
+      <div class="calc">${I.calc}Штраф до 50 000 ₽ или лишение свободы до 30 мес.<small>посчитал калькулятор</small></div>
+      <div class="group">Что делать</div>
+      <ol class="steps">${p.steps.map((s) => `<li>${s}</li>`).join('')}</ol>
+      ${expanded ? more() : ''}
+      <div class="actions">
+        <button class="btn" data-go="${expanded ? 'answer' : 'more'}">${expanded ? 'Свернуть' : 'Подробнее'} ${I.chev}</button>
+        <button class="btn btn--accent" data-go="document">${I.pen}${p.action}</button>
+        <button class="btn btn--plain">${I.copy}Копировать</button>
+      </div>
+    </div>
+    <div class="hint">Уточните в поле: <b>«а если он был в маске?»</b> — разбор пересчитается на тех же статьях.</div>`;
+}
+
+function more() {
+  return `<div class="more">
+    <h4>Факты</h4><ul><li>телефон взяли из кармана незаметно</li><li>у метро, днём</li></ul>
+    <h4>Допущения</h4><ul><li>стоимость телефона не указана — если дороже 15 000 ₽, часть может быть другой</li></ul>
+    <h4>Другие подходящие нормы</h4>
+    <div class="norm"><span class="badge b-codes">УК</span><div class="what"><b><span class="cite">ст. 66</span> · Грабёж</b><span class="why">если взяли открыто, на глазах у владельца</span></div></div>
+    <h4>Источники · 6 найдено в базе сервера</h4>
+    <div class="chips"><span class="chip">УК ст. 65</span><span class="chip">УК ст. 66</span><span class="chip">УПК ст. 46</span><span class="chip">УПК ст. 94</span><span class="chip">6-ФЗ ст. 13</span><span class="chip">Устав МВД 4.3</span></div>
+  </div>`;
+}
+
+function start() {
+  const p = P();
+  return `${tabsRow('analysis')}
+    <div class="body">
+      <p class="intro">Опишите ситуацию своими словами — ассистент найдёт нормы в законах и правилах вашего сервера и объяснит, что к чему. Опирается только на найденное в базе: каждую норму можно открыть.</p>
+      <div class="h3">Например</div>
+      <div class="chips">${p.examples.map((e) => `<button class="chip chip--example">${e}</button>`).join('')}</div>
+      <div class="hint" style="margin-top:auto">Профиль: <b>${p.label}</b> — по организации в профиле. ${isState() ? 'Вам доступны Проверка действий сотрудника и Практика.' : 'Проверка действий сотрудника и Практика — для государственных организаций.'}</div>
+    </div>`;
+}
+
+function documentScreen() {
+  const p = P();
+  const official = p.doc === 'Рапорт';
+  return `${tabsRow('analysis')}
+    <div class="body">
+      <div style="display:flex;align-items:center;gap:8px"><button class="ghost" data-go="answer">${I.back}К разбору</button><span class="side">по разбору «Кража телефона у метро»</span></div>
+      <div class="chips">${p.docs.map((d) => `<button class="chip ${d === p.doc ? 'chip--on' : ''}">${d}</button>`).join('')}</div>
+      <div class="sheet">
+        ${official
+          ? `<div class="r">Начальнику ОВД «Тверское»<br>от <span class="gap">звание, ФИО</span></div><div class="t">РАПОРТ</div>
+             Докладываю, что <span class="gap">дата</span> в <span class="gap">время</span> у станции метро задержан гражданин <span class="gap">ФИО</span>, который тайно похитил мобильный телефон у прохожего. В действиях усматриваются признаки преступления, предусмотренного <span class="cite">ч. 1 ст. 65 УК</span>. Задержанному разъяснены права (<span class="cite">ст. 46 УПК</span>), телефон изъят.`
+          : `<div class="r">Начальнику ОВД «Тверское»<br>от <span class="gap">ФИО</span></div><div class="t">${p.doc.toUpperCase()}</div>
+             Прошу привлечь к ответственности неизвестное лицо, которое <span class="gap">дата</span> около <span class="gap">время</span> у станции метро тайно похитило мой мобильный телефон из кармана. Считаю, что в его действиях есть признаки кражи (<span class="cite">ч. 1 ст. 65 УК</span>).`}
+        <div class="r" style="margin-top:12px"><span class="gap">дата</span> · <span class="gap">подпись</span></div>
+      </div>
+      <div class="hint">Факты и статьи взяты из разбора — заново описывать не нужно. Жёлтым — что заполнить; ссылки открывают статью.</div>
+      <div style="display:flex;gap:6px"><button class="btn btn--accent">${I.copy}Копировать</button><button class="btn">${I.pen}Изменить</button></div>
+    </div>`;
+}
+
+function check() {
+  return `${tabsRow('check')}
+    <div class="body">
+      <div class="chips"><button class="chip chip--on">Требования адвоката</button><button class="chip">Ход задержания</button></div>
+      <div class="q">Адвокат требует свидание с задержанным наедине и отпустить его через 30 минут</div>
+      <div class="item"><div class="top"><span class="status st-ok">Законно</span>Свидание наедине</div>Нужно выполнить: предоставить свидание до допроса.<div class="basis">Основание: <span class="cite">УПК ст. 46 ч. 4</span></div></div>
+      <div class="item"><div class="top"><span class="status st-warn">Можно отказать</span>Отпустить через 30 минут</div>Срок задержания не истёк — продолжить задержание в пределах срока.<div class="basis">Основание: <span class="cite">УПК ст. 94</span></div></div>
+      <div class="item"><div class="top"><span class="status st-likely">Не нашлось</span>«Снять наручники»</div>В законах сервера нормы об этом не нашлось — решайте по уставу.</div>
+      <div class="card"><p><b>Ответ адвокату:</b> свидание наедине предоставлю; отпустить сейчас не могу — срок задержания не истёк.</p><div class="actions"><button class="btn">${I.copy}Скопировать ответ</button></div></div>
+    </div>`;
+}
+
+function practice() {
+  return `${tabsRow('practice')}
+    <div class="body">
+      <div class="progress">Вопрос 3 из 10<span class="tr"><i></i></span>2 верно</div>
+      <div class="chips"><span class="side" style="align-self:center">Вопросы по:</span><button class="chip chip--on">Устав МВД</button><button class="chip chip--on">УК</button><button class="chip">УПК</button><button class="chip">КоАП</button></div>
+      <div class="card"><span class="side">Вопрос по УК ст. 104</span><p style="font-size:16px;font-weight:600">Что считается оскорблением представителя власти и какое за него наказание?</p></div>
+      <div class="q">Публичное оскорбление сотрудника при исполнении, до 30 месяцев</div>
+      <div class="card"><span class="status st-likely">Почти верно</span><p>Не сказали про штраф: санкция — штраф до 40 000 ₽ <b>или</b> лишение свободы до 30 мес.</p><div class="norm"><span class="badge b-codes">УК</span><div class="what"><b><span class="cite">ст. 104 ч. 1</span> · Оскорбление представителя власти</b></div></div>
+        <div class="actions"><button class="btn btn--accent">Следующий вопрос</button></div></div>
+    </div>`;
+}
+
+function history() {
+  return `<div class="drawer"><div class="dh">История разборов<span class="sp"></span><button class="icon-btn" data-go="answer">${I.close}</button></div>
+    <div class="dsearch">Поиск по истории</div>
+    <div class="h3" style="margin:6px 14px 4px">Сегодня</div>
+    <div class="conv conv--on">${P().question}<span>УК ст. 65 · 21:40</span></div>
+    <div class="conv">Обматерил сотрудника при исполнении<span>УК ст. 104 · 19:12</span></div>
+    <div class="h3" style="margin:10px 14px 4px">Вчера</div>
+    <div class="conv">Проехал на красный и уехал от патруля<span>КоАП 13.1, 8.11 · 23:05</span></div>
+    <div class="conv">Ник Вася Пупкин — это nonRP?<span>Правила 2.9 · 18:30</span></div>
+    <div class="conv">Двое отобрали сумку у прохожего<span>УК ст. 66 · 14:02</span></div>
+  </div>`;
+}
+
+function screen() {
+  const s = state.screen;
+  if (s === 'start') return { field: field('', 'Опишите ситуацию своими словами…'), body: start() };
+  if (s === 'document') return { field: field('', 'Что добавить в документ…'), body: documentScreen() };
+  if (s === 'check') return { field: field('', 'Что требует адвокат — или как прошло задержание…'), body: check() };
+  if (s === 'practice') return { field: field('', 'Ваш ответ…'), body: practice() };
+  const body = `${tabsRow('analysis')}<div class="body">${answerCard(s === 'more')}</div>`;
+  return { field: field('', 'Уточните: «а если…»'), body, drawer: s === 'history' ? history() : '' };
+}
+
+const NOTES = {
+  start: ['Начало', 'Один экран вместо пяти вкладок. У гражданского и крайма вкладок нет совсем — только разбор.', 'Переключатель «Быстрый / Полный» убран: ответ всегда короткий, полный — по «Подробнее».', '«Где искать» — компактный выбор в поле («Законы и правила ▾»), а не отдельная строка.', 'Внизу — какой профиль и почему (организация в профиле).'],
+  answer: ['Ответ', 'Статус сверху — из проверок, не со слов ИИ.', 'Нормы с бейджем документа, «По закону» / «По правилам сервера» раздельно; наказание считает калькулятор.', 'Точка зрения берётся из профиля («разбор как гражданин») — четырёх кнопок больше нет.', 'Документ — действие над разбором: «Составить заявление» (гражданин), «Составить рапорт» (сотрудник).'],
+  more: ['Подробнее', 'Вместо «Полного разбора»: факты, допущения, другие подходящие нормы и все источники раскрываются под тем же ответом.'],
+  document: ['Документ', 'Открывается из разбора: факты и статьи уже подставлены.', 'Виды по профилю: сотруднику — рапорт, протокол задержания и документы гражданина; остальным — заявление, жалоба, иск.', 'Жёлтым — что заполнить; ссылки открывают статью.'],
+  check: ['Проверка (только Государство)', 'Бывшие «Требования адвоката» и «Разбор задержания» — одна вкладка, выбор вверху.', 'Каждый пункт: вердикт, что делать, основание; без основания — «Не нашлось», без вердикта.'],
+  practice: ['Практика (только Государство)', 'Бывший «Тренажёр»: вопросы по документам своей организации, ответ — в том же поле.', 'Оценка сверяется со статьёй; эталон без источника не показывается.'],
+  history: ['История', 'Боковая панель внутри ИИ; пункт «История» из левой колонки убирается.', 'Каждая запись — вопрос и найденные статьи; открытый разговор перепроверяется по базе.'],
+};
+
+function render() {
+  if (!isState() && (state.screen === 'check' || state.screen === 'practice')) state.screen = 'start';
+  document.documentElement.style.setProperty('--hue', P().hue);
+  for (const seg of document.querySelectorAll('.seg')) for (const b of seg.children) {
+    b.setAttribute('aria-pressed', String(state[seg.dataset.key] === b.dataset.v));
+    if (b.hasAttribute('data-state')) b.disabled = !isState();
+  }
+  try { localStorage.setItem('mock-ai', JSON.stringify(state)); } catch {}
+  const { field, body, drawer = '' } = screen();
+  const p = P();
+  const n = NOTES[state.screen];
+  document.getElementById('stage').innerHTML = `
+    <div class="panel">
+      <nav class="rail">
+        <span class="srvbig"><svg viewBox="0 0 18 18" style="color:rgb(72,184,94)" fill="currentColor"><path d="${TVERSKOI}"/></svg></span>
+        ${[['search', 'Поиск'], ['doc', 'Документы'], ['calc', 'Калькулятор'], ['pin', 'Закреплённое'], ['wand', 'ИИ'], ['memo', 'Памятки']].map(([k, t]) => `<button class="icon-btn" title="${t}" aria-current="${k === 'wand'}">${I[k]}</button>`).join('')}
+        <span class="sp"></span>
+        <button class="icon-btn" title="Настройки">${I.gear}</button>
+        <button class="icon-btn" title="Профиль">${I.user}</button>
+      </nav>
+      <div class="main ${drawer ? 'dim' : ''}">
+        <div class="head"><span class="brand">Тверской</span><span class="org">${p.org}</span><span class="sp"></span><button class="icon-btn">${I.close}</button></div>
+        ${field}
+        ${body}
+        <div class="foot"><span><b>Enter</b> спросить ИИ</span><span><b>Alt+W</b> голосом</span><span>клик по статье — открыть</span><span><b>Esc</b> к поиску</span></div>
+      </div>
+      ${drawer}
+    </div>
+    <aside class="note"><h2>${n[0]}</h2><ul>${n.slice(1).map((x) => `<li>${x}</li>`).join('')}</ul>
+      <ul class="was"><li>Сейчас: 5 вкладок (Разбор, Документ, Требования адвоката, Разбор задержания, Тренажёр), «Авто / Законы / Правила», «Быстрый / Полный», 4 кнопки точки зрения, отдельный пункт «История».</li>
+      <li>Будет: гражданскому и крайму — один экран; сотруднику — Разбор · Проверка · Практика.</li></ul></aside>`;
+}
+
+document.addEventListener('click', (e) => {
+  const seg = e.target.closest('.seg button');
+  if (seg && !seg.disabled) { state[seg.parentElement.dataset.key] = seg.dataset.v; return render(); }
+  const go = e.target.closest('[data-go]');
+  if (go) { state.screen = go.dataset.go; return render(); }
+});
+
+render();
+</script>
+</body>
+</html>
