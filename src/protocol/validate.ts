@@ -1,16 +1,17 @@
-// The AI's answer checked against the laws themselves, without the AI: every article it cites must be one it was
-// shown, of this server, with the part it names, and every figure of the punishment must stand in those articles.
-// What does not pass marks the answer as one to check — it is never shown as confirmed.
+// The AI's answer checked against the sources themselves, without the AI. Every norm it names must be one it was
+// shown, of this server, with the part it names, of a type the question's scope allows; every statement about the
+// norms must name its own sources, and every figure in it must stand in those very sources; an article the answer
+// mentions must be among them. What does not pass marks the answer as one to check — it is never shown as confirmed.
 import { articleText, calculateDetention, leadPart, type Charge, type DetentionResult, type SearchHit, type ServerPack } from '../core';
-import type { AnswerNorm, LegalAnswer } from './answer';
-import type { Source } from './context';
+import type { AnswerNorm, Claim, LegalAnswer } from './answer';
+import { SOURCE_TYPE_LABELS, inScope, type Scope, type Source, type SourceType } from './sources';
 
 /**
  * How firm the answer is, from the sources and the checks — never the model's own opinion of itself:
- * - confirmed — a found article fits the facts outright and every check passed;
- * - likely — articles fit, but only partly, or on an assumption, or a check failed;
+ * - confirmed — a found norm fits the facts outright and every check passed;
+ * - likely — norms fit, but only partly, or on an assumption, or a check failed;
  * - clarify — it turns on a fact not known yet: the AI asks;
- * - not-found — no article of the server's laws bears on it.
+ * - not-found — no norm of the server's base bears on it (decided by the checks, not by the model's flag).
  */
 export type Status = 'confirmed' | 'likely' | 'clarify' | 'not-found';
 
@@ -25,6 +26,8 @@ export interface CheckedNorm {
   norm: AnswerNorm;
   /** The article (and part) it names, when it is one of the found ones. */
   hit?: SearchHit;
+  /** Its kind of norm, when it is one of the found ones. */
+  type?: SourceType;
   /** What is wrong with it; empty when it passed. */
   issues: string[];
 }
@@ -34,7 +37,7 @@ export interface Validation {
   /** Everything that failed, for the player to see. */
   issues: string[];
   status: Status;
-  /** Something failed: the answer is shown as one to check against the articles. */
+  /** Something failed: the answer is shown as one to check against the sources. */
   needsReview: boolean;
 }
 
@@ -55,16 +58,27 @@ export function articleExists(pack: ServerPack, ref: string): boolean {
 
 /** Figures of a text: «50 000», «50.000» and «50000» are one number; article and part numbers are not figures. */
 export function figures(text: string): number[] {
-  const cleaned = text.replace(/(?:ст|ч|п|статья|часть|пункт)\.?\s*\d+(?:\.\d+)*/gi, ' ');
-  return (cleaned.match(/\d{1,3}(?:[\s .]\d{3})+(?!\d)|\d+/g) ?? []).map((n) => Number(n.replace(/[\s .]/g, '')));
+  const cleaned = text.replace(/(?:ст|ч|п|статья|статье|статьи|часть|части|пункт)\.?\s*\d+(?:\.\d+)*/gi, ' ');
+  return (cleaned.match(/\d{1,3}(?:[\s .]\d{3})+(?!\d)|\d+/g) ?? []).map((n) => Number(n.replace(/[\s .]/g, '')));
 }
 
-function checkNorm(pack: ServerPack, sources: Map<string, Source>, norm: AnswerNorm): CheckedNorm {
+/** Article numbers a text names: «по ст. 65», «статья 777», «статьи 10.2». */
+export function namedArticles(text: string): string[] {
+  return [...text.matchAll(/(?:ст\.?|стать[яиеюей]+)\s*(\d+(?:\.\d+)*)/gi)].map((m) => m[1]);
+}
+
+/** Figures a source vouches for: its text and the stars of its parts. */
+const figuresOf = (source: Source) => [
+  ...figures(articleText(source.hit.article)),
+  ...source.hit.article.parts.flatMap((p) => (p.stars ? [p.stars.min, p.stars.max] : [])),
+];
+
+function checkNorm(pack: ServerPack, sources: Map<string, Source>, norm: AnswerNorm, scope?: Scope): CheckedNorm {
   const source = sources.get(norm.source);
   if (!source) {
     const issue = articleExists(pack, norm.ref)
-      ? `${norm.ref}: ИИ сослался на статью, которой не было среди найденных, — её текст он не видел`
-      : `${norm.ref || norm.source}: такой статьи нет в законах сервера «${pack.server.name}»`;
+      ? `${norm.ref}: ИИ сослался на норму, которой не было среди найденных, — её текст он не видел`
+      : `${norm.ref || norm.source}: такой нормы нет в базе сервера «${pack.server.name}»`;
     return { norm, issues: [issue] };
   }
   const { article, document } = source.hit;
@@ -73,30 +87,66 @@ function checkNorm(pack: ServerPack, sources: Map<string, Source>, norm: AnswerN
   if (named && (named.number !== article.number || !(document.short.toLowerCase() === named.short || document.aliases.includes(named.short)))) {
     issues.push(`${norm.ref}: ИИ указал не тот номер — источник ${norm.source} это ${document.short} ${article.number}`);
   }
+  if (scope && !inScope(source.type, scope)) {
+    issues.push(`${norm.ref || norm.source}: это ${SOURCE_TYPE_LABELS[source.type].toLowerCase()}, а вопрос — о другом`);
+  }
   let part = source.hit.part;
   // An article written as one whole has no parts to get wrong: «ч. 1» of it is the article itself.
   if (norm.part && article.parts.some((p) => p.number)) {
     part = article.parts.find((p) => p.number === norm.part);
     if (!part) issues.push(`${document.short} ${article.number}: в статье нет части ${norm.part}`);
   }
-  return { norm, hit: { article, document, ...(part ? { part } : {}) }, issues };
+  return { norm, hit: { article, document, ...(part ? { part } : {}) }, type: source.type, issues };
 }
 
-/** Checks an answer against the sources it was given and the server's laws. */
-export function validateAnswer(pack: ServerPack, sources: Source[], answer: LegalAnswer): Validation {
+const LAW_SIDE = new Set<SourceType>(['law', 'charter']);
+
+/**
+ * One statement about the norms: it names sources, every one was given, of a type the scope allows, not a law and
+ * a rule of the server at once, and every figure in it stands in the sources it names.
+ */
+function checkClaim(claim: Claim, what: string, sources: Map<string, Source>, scope: Scope | undefined, fallback: string[]): string[] {
+  const named = claim.sources.length ? claim.sources : fallback;
+  if (!named.length) return [`${what}: утверждение без источника — проверьте его по статьям`];
+  const issues: string[] = [];
+  const given = named.flatMap((id) => {
+    const source = sources.get(id);
+    if (!source) issues.push(`${what}: ссылка на источник ${id}, которого ИИ не передавали`);
+    return source ? [source] : [];
+  });
+  for (const source of given) {
+    if (scope && !inScope(source.type, scope)) issues.push(`${what}: опирается на ${SOURCE_TYPE_LABELS[source.type].toLowerCase()}, а вопрос — о другом`);
+  }
+  if (given.some((s) => LAW_SIDE.has(s.type)) && given.some((s) => s.type === 'server_rule')) {
+    issues.push(`${what}: закон и правило сервера смешаны в одном утверждении`);
+  }
+  const known = new Set(given.flatMap(figuresOf));
+  const invented = [...new Set(figures(claim.text).filter((n) => n >= 2 && !known.has(n)))];
+  if (invented.length) issues.push(`${what}: в указанных источниках нет цифр ${invented.join(', ')}`);
+  return issues;
+}
+
+/**
+ * Checks an answer against the sources it was given and the server's base. `scope`: what the question was about —
+ * a norm of another kind in the answer is an issue. Answers saved before claims had sources are held to the norms
+ * they cited, as they were then.
+ */
+export function validateAnswer(pack: ServerPack, sources: Source[], answer: LegalAnswer, scope?: Scope): Validation {
   const byId = new Map(sources.map((s) => [s.id, s]));
-  const norms = answer.norms.map((norm) => checkNorm(pack, byId, norm));
+  const norms = answer.norms.map((norm) => checkNorm(pack, byId, norm, scope));
   const issues = norms.flatMap((n) => n.issues);
 
-  // Figures of the punishment and the procedure must be in the articles the answer stands on.
-  const known = new Set(
-    norms.flatMap((n) =>
-      n.hit ? [...figures(articleText(n.hit.article)), ...n.hit.article.parts.flatMap((p) => (p.stars ? [p.stars.min, p.stars.max] : []))] : [],
-    ),
-  );
-  const said = [...figures(answer.punishment), ...answer.procedure.flatMap(figures)];
-  const invented = [...new Set(said.filter((n) => n >= 2 && !known.has(n)))];
-  if (invented.length) issues.push(`В названных статьях нет цифр: ${invented.join(', ')} — проверьте наказание по тексту статей`);
+  const fallback = answer.legacy ? norms.filter((n) => n.hit).map((n) => n.norm.source) : [];
+  if (answer.violation) issues.push(...checkClaim(answer.violation, 'Нарушение', byId, scope, fallback));
+  if (answer.punishment) issues.push(...checkClaim(answer.punishment, 'Наказание', byId, scope, fallback));
+  answer.procedure.forEach((step, i) => issues.push(...checkClaim(step, `Порядок, шаг ${i + 1}`, byId, scope, fallback)));
+
+  // An article the answer mentions must be one of its sources: a number the player suggested («это же 777») or the
+  // model remembered is not a source.
+  const numbers = new Set(sources.map((s) => s.hit.article.number));
+  const prose = [answer.situation, ...answer.uncertainty, ...answer.norms.map((n) => n.why), answer.violation?.text ?? '', answer.punishment?.text ?? '', ...answer.procedure.map((s) => s.text)];
+  const stray = [...new Set(prose.flatMap(namedArticles).filter((n) => !numbers.has(n)))];
+  if (stray.length) issues.push(`Упомянута статья ${stray.join(', ')}, которой нет среди найденных источников`);
 
   const valid = norms.filter((n) => n.hit && !n.issues.length);
   let status: Status;

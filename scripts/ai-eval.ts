@@ -10,23 +10,15 @@
 //                                                    and NODE_EXTRA_CA_CERTS=<the Russian root certificate>;
 //                                                    `--gigachat --models` lists the models the key may use
 //   --depth full                                   — the full analysis instead of the quick one
-import { readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ServerPack } from '../src/core';
-import { AiError, analyse, openaiProvider, serverProvider, type AiProvider, type Depth } from '../src/protocol';
+import { AiError, answerQuestion, gradeCase, openaiProvider, serverProvider, type AiProvider, type Category, type Depth, type EvalCase, type Grade } from '../src/protocol';
 
 // about.ts reads the version Vite puts in at build time; outside Vite it is set here, before about.ts is loaded.
 (globalThis as { __APP_VERSION__?: string }).__APP_VERSION__ = 'eval';
 const { AI_SERVER } = await import('../src/ui/about');
 
-interface Case {
-  server: string;
-  situation: string;
-  /** «УК 65», or several right answers: «УК 10.1|УК 10.2». Every entry must be found. */
-  expect: string[];
-  /** base — the cases the prompts were tuned on; fresh — ones the tuning never saw, the honest score. */
-  group?: string;
-}
 
 const root = join(import.meta.dirname, '..');
 const args = process.argv.slice(2);
@@ -112,13 +104,21 @@ const provider: AiProvider = {
 const via = giga ? `GigaChat · ${model ?? 'GigaChat-2'}` : url ? `${url} · ${model}` : `сервер ИИ ${AI_SERVER}`;
 const depth = (arg('depth') ?? 'quick') as Depth;
 
-const { cases: all } = JSON.parse(readFileSync(join(root, 'eval', 'cases.json'), 'utf8')) as { cases: Case[] };
+const { cases: all } = JSON.parse(readFileSync(join(root, 'eval', 'cases.json'), 'utf8')) as { cases: EvalCase[] };
 const only = arg('server');
 const group = arg('group');
+const category = arg('category');
 /** --cases 29,40 — those numbers of the whole list only. */
 const picked = arg('cases')?.split(',').map(Number);
-const cases = all
-  .filter((c, i) => (!only || c.server === only) && (!group || c.group === group) && (!picked || picked.includes(i + 1)))
+const numbered = all.map((c, i) => ({ ...c, number: i + 1 }));
+const cases = numbered
+  .filter(
+    (c) =>
+      (!only || c.server === only) &&
+      (!group || c.group === group) &&
+      (!category || (c.category ?? 'LAW') === category) &&
+      (!picked || picked.includes(c.number)),
+  )
   .slice(0, Number(arg('limit') ?? Infinity));
 
 const packs = new Map<string, ServerPack>();
@@ -126,56 +126,107 @@ const pack = (id: string) => {
   if (!packs.has(id)) packs.set(id, JSON.parse(readFileSync(join(root, 'src', 'data', `${id}.json`), 'utf8')) as ServerPack);
   return packs.get(id)!;
 };
-/** «УК 65» for an article: the document's short name and the article's number. */
-const ref = (hit: { document: { short: string }; article: { number: string } }) => `${hit.document.short} ${hit.article.number}`;
-const matches = (wanted: string, refs: string[]) => wanted.split('|').some((one) => refs.includes(one.trim()));
 
-type Mark = 'верно' | 'частично' | 'мимо' | 'ошибка';
-const rows: { mark: Mark; searched: boolean; wrongCitations: number; seconds: number }[] = [];
+interface Row {
+  number: number;
+  category: Category;
+  grade: Grade | null;
+  error?: string;
+}
+const rows: Row[] = [];
 
 console.log(`Экзамен ИИ: ${cases.length} ситуаций, ${depth === 'full' ? 'полный' : 'быстрый'} разбор, ${via}\n`);
-for (const [i, c] of cases.entries()) {
+for (const c of cases) {
   const started = Date.now();
-  let mark: Mark = 'ошибка';
-  let searched = false;
-  let wrongCitations = 0;
-  let detail = '';
+  const categoryOf: Category = c.category ?? 'LAW';
+  const row: Row = { number: c.number, category: categoryOf, grade: null };
   said.length = 0;
   try {
-    const result = await analyse({ provider, pack: pack(c.server), message: c.situation, depth });
-    const sources = result.sources.map((s) => ref(s.hit));
-    searched = c.expect.every((e) => matches(e, sources));
-    const valid = result.validation.norms.filter((n) => n.hit && !n.issues.length);
-    const direct = valid.filter((n) => n.norm.fit === 'direct').map((n) => ref(n.hit!));
-    const cited = valid.map((n) => ref(n.hit!));
-    wrongCitations = result.validation.norms.filter((n) => !n.hit || n.issues.length).length;
-    mark = c.expect.every((e) => matches(e, direct)) ? 'верно' : c.expect.every((e) => matches(e, cited)) ? 'частично' : 'мимо';
-    detail = `ИИ: ${direct.join(', ') || '—'}${cited.length > direct.length ? ` (ещё ${cited.filter((r) => !direct.includes(r)).join(', ')})` : ''}`;
-    if (!searched) detail += ' · поиск не нашёл нужную статью';
-    if (wrongCitations) detail += ` · не прошли проверку: ${result.validation.norms.flatMap((n) => (n.hit ? n.issues : n.issues.length ? n.issues : [n.norm.ref])).join('; ')}`;
+    const base = { provider, pack: pack(c.server), depth, choice: c.choice ?? 'auto' } as const;
+    let outcome = await answerQuestion({ ...base, message: c.situation });
+    // A follow-up goes on from the case the first answer left; the calls of both are counted.
+    if (c.followUp && outcome.kind === 'analysis') {
+      const first = outcome.analysis.aiCalls ?? 0;
+      outcome = await answerQuestion({ ...base, message: c.followUp, previous: outcome.analysis.case });
+      if (outcome.kind === 'analysis') outcome.analysis.aiCalls = (outcome.analysis.aiCalls ?? 0) + first;
+    }
+    row.grade = gradeCase(c, outcome);
   } catch (error) {
-    detail = error instanceof AiError ? `${error.kind}: ${error.message}` : String(error);
+    row.error = error instanceof AiError ? `${error.kind}: ${error.message}` : String(error);
     // What the model said instead of an answer: a refusal reads differently from broken JSON.
-    if (args.includes('--debug')) detail += said.map((text) => `
-      ИИ ответил: ${text.replace(/s+/g, ' ').slice(0, 300)}`).join('');
+    if (args.includes('--debug')) row.error += said.map((text) => `\n      ИИ ответил: ${text.replace(/\s+/g, ' ').slice(0, 300)}`).join('');
   }
-  const seconds = (Date.now() - started) / 1000;
-  rows.push({ mark, searched, wrongCitations, seconds });
-  const icon = { верно: '✓', частично: '½', мимо: '✗', ошибка: '!' }[mark];
-  console.log(`${icon} ${String(i + 1).padStart(2)}. [${c.server}] ${c.situation}\n      нужно ${c.expect.join(', ')} → ${detail} · ${seconds.toFixed(1)} с`);
+  rows.push(row);
+  const g = row.grade;
+  const icon = !g ? '!' : g.hardGates.length ? '⛔' : g.pass ? '✓' : g.found === 'partly' ? '½' : '✗';
+  const seconds = ((Date.now() - started) / 1000).toFixed(1);
+  console.log(`${icon} ${String(c.number).padStart(2)}. [${c.server} · ${categoryOf}] ${c.followUp ? `${c.situation} → ${c.followUp}` : c.situation}`);
+  console.log(`      ${c.expect?.length ? `нужно ${c.expect.join(', ')} → ` : ''}${g ? g.detail : row.error} · вызовов ИИ ${g?.aiCalls ?? '?'} · ${seconds} с`);
+  if (g?.hardGates.length) console.log(`      ЖЁСТКИЕ ВОРОТА: ${g.hardGates.join(' | ')}`);
   // The server's per-IP limit counts requests: a pause keeps a long run from looking like a flood.
   if (!url && !giga) await new Promise((resolve) => setTimeout(resolve, 1500));
 }
 
-const count = (mark: Mark) => rows.filter((r) => r.mark === mark).length;
-const score = count('верно') + count('частично') / 2;
-const times = rows.map((r) => r.seconds).sort((a, b) => a - b);
+// ——— The report ———
+const graded = rows.filter((r) => r.grade);
+const passed = rows.filter((r) => r.grade?.pass).length;
+const hard = rows.filter((r) => r.grade?.hardGates.length);
+const analyses = graded.filter((r) => r.grade!.detail.startsWith('ИИ:'));
+const hallucinated = graded.filter((r) => r.grade!.hallucinations.length).length;
+const expectsArticle = graded.filter((r) => r.grade!.found !== 'n/a');
+const byCategory = new Map<Category, { total: number; passed: number; calls: number }>();
+for (const r of rows) {
+  const entry = byCategory.get(r.category) ?? { total: 0, passed: 0, calls: 0 };
+  entry.total += 1;
+  if (r.grade?.pass) entry.passed += 1;
+  entry.calls += r.grade?.aiCalls ?? 0;
+  byCategory.set(r.category, entry);
+}
+const rate = analyses.length ? Math.round((hallucinated / analyses.length) * 1000) / 10 : 0;
 console.log(
   [
     '',
-    `Итог: ${score} из ${rows.length} (${Math.round((score / Math.max(rows.length, 1)) * 100)}%) — верно ${count('верно')}, частично ${count('частично')}, мимо ${count('мимо')}, ошибок ${count('ошибка')}`,
-    `Поиск нашёл нужную статью: ${rows.filter((r) => r.searched).length} из ${rows.length}`,
-    `Ссылок, не прошедших проверку по законам: ${rows.reduce((n, r) => n + r.wrongCitations, 0)}`,
-    `Время ответа: медиана ${(times[Math.floor(times.length / 2)] ?? 0).toFixed(1)} с, худшее ${(times.at(-1) ?? 0).toFixed(1)} с`,
+    `Итог: прошло ${passed} из ${rows.length}, провалено ${rows.length - passed} (из них ошибок связи или формата ${rows.length - graded.length})`,
+    `Жёсткие ворота провалены: ${hard.length}${hard.length ? ` (№ ${hard.map((r) => r.number).join(', ')})` : ''}`,
+    `CONFIRMED_HALLUCINATION_RATE: ${rate}% — ${hallucinated} из ${analyses.length} разборов`,
+    `Нужная статья применена: ${expectsArticle.filter((r) => r.grade!.found === 'right').length} из ${expectsArticle.length}; поиск её нашёл: ${expectsArticle.filter((r) => r.grade!.searched).length} из ${expectsArticle.length}`,
+    `Вопрос понят верно (тип): ${graded.filter((r) => r.grade!.classified).length} из ${graded.length}`,
+    '',
+    'По категориям — прошло / всего · вызовов ИИ:',
+    ...[...byCategory].map(([name, e]) => `  ${name.padEnd(19)} ${e.passed}/${e.total} · ${e.calls}`),
   ].join('\n'),
 );
+
+// The run is kept, and set beside the baseline: what broke, what was fixed.
+const resultsDir = join(root, 'eval', 'results');
+mkdirSync(resultsDir, { recursive: true });
+const result = {
+  at: new Date().toISOString(),
+  via,
+  depth,
+  cases: Object.fromEntries(rows.map((r) => [r.number, { pass: !!r.grade?.pass, hard: r.grade?.hardGates ?? [], category: r.category }])),
+};
+writeFileSync(join(resultsDir, 'last.json'), JSON.stringify(result, null, 2));
+const baselineFile = join(resultsDir, 'baseline.json');
+if (args.includes('--save-baseline')) {
+  writeFileSync(baselineFile, JSON.stringify(result, null, 2));
+  console.log(`\nБазовая линия сохранена: ${baselineFile}`);
+} else if (existsSync(baselineFile)) {
+  const baseline = JSON.parse(readFileSync(baselineFile, 'utf8')) as typeof result;
+  const changes: Record<string, number[]> = { 'НОВЫЕ ПРОВАЛЫ': [], ИСПРАВЛЕНО: [], 'РЕГРЕССИИ (новые жёсткие ворота)': [], 'БЕЗ ИЗМЕНЕНИЙ': [] };
+  for (const r of rows) {
+    const before = baseline.cases[r.number];
+    const now = result.cases[r.number];
+    if (!before) continue;
+    if (now.hard.length && !before.hard.length) changes['РЕГРЕССИИ (новые жёсткие ворота)'].push(r.number);
+    else if (before.pass && !now.pass) changes['НОВЫЕ ПРОВАЛЫ'].push(r.number);
+    else if (!before.pass && now.pass) changes['ИСПРАВЛЕНО'].push(r.number);
+    else changes['БЕЗ ИЗМЕНЕНИЙ'].push(r.number);
+  }
+  console.log(`\nСравнение с базовой линией от ${baseline.at.slice(0, 10)} (${baseline.via}):`);
+  for (const [name, list] of Object.entries(changes)) {
+    console.log(`  ${name}: ${list.length}${list.length && name !== 'БЕЗ ИЗМЕНЕНИЙ' ? ` (№ ${list.join(', ')})` : ''}`);
+  }
+}
+// A hard gate failed: the run fails, so whatever runs it sees it.
+if (hard.length) process.exitCode = 1;

@@ -23,9 +23,10 @@ function fakeServer() {
     vi.fn(async (_url: string, init: RequestInit) => {
       const body = JSON.parse(String(init.body)) as (typeof bodies)[number];
       bodies.push(body);
-      // The answer cites the first article the search really found, as the AI would.
-      const found = body.messages?.at(-1)?.content.match(/### (\S+ (?:ст|п)\. [\d.]+)/)?.[1] ?? 'нет';
-      const text = body.counts === false ? '["права защитника", "свидание с задержанным"]' : JSON.stringify(ANSWER).replaceAll('УК ст. 65', found);
+      // The answer cites the first article the search really found, by its id and label, as an honest AI would.
+      const [, id = 'S1', found = 'нет'] = body.messages?.at(-1)?.content.match(/\[([SRCO]\d+)\] (\S+ (?:ст|п)\. [\d.]+)/) ?? [];
+      const cited = { ...ANSWER, demands: ANSWER.demands.map((d) => ({ ...d, sources: [id] })) };
+      const text = body.counts === false ? '["права защитника", "свидание с задержанным"]' : JSON.stringify(cited).replaceAll('УК ст. 65', found);
       return new Response(JSON.stringify({ text }), { status: 200 });
     }),
   );
@@ -62,7 +63,33 @@ describe('the lawyer\'s demands', () => {
     expect(asked.system).toMatch(/БУДЬ БЕСПРИСТРАСТЕН/);
     expect(asked.system).toMatch(/ОБЯЗАН сделать/);
     expect(asked.think).toBe(true);
-    expect(asked.messages?.at(-1)?.content).toMatch(/### .+ ст\. /);
+    expect(asked.messages?.at(-1)?.content).toMatch(/\[S\d+\] .+ ст\. /);
+    // Laws only: what a lawyer may demand is no rule of the server; and the officer's words come fenced, as data.
+    expect(asked.messages?.at(-1)?.content).not.toMatch(/\[R\d+\]/);
+    expect(asked.messages?.at(-1)?.content).toContain('<<<');
+    expect(asked.system).toContain('Ты не источник законодательства');
+  });
+
+  it('shows a verdict with no source behind it as not found, and says why', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: RequestInit) => {
+        const body = JSON.parse(String(init.body)) as { counts?: boolean };
+        // A model sure of itself with nothing to stand on: «lawful», no sources.
+        const text = body.counts === false ? '["свидание"]' : JSON.stringify({ ...ANSWER, demands: [ANSWER.demands[0]] });
+        return new Response(JSON.stringify({ text }), { status: 200 });
+      }),
+    );
+    await renderApp({ settings: SERVER }).then(async ({ user }) => {
+      await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
+      await user.click(screen.getByRole('radio', { name: 'Требования адвоката' }));
+      await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'свидание наедине{Enter}');
+    });
+    const view = screen.getByRole('region', { name: 'Требования адвоката' });
+    const [demand] = await within(view).findAllByRole('listitem');
+    expect(demand).toHaveTextContent('В законах сервера не нашлось');
+    expect(demand).not.toHaveTextContent('Законно — нужно выполнить');
+    expect(within(view).getByRole('alert')).toHaveTextContent(/нет источника/);
   });
 
   it('gives the reply as it is said, without a lead-in', () => {

@@ -2,7 +2,8 @@
 // in the forms RP players post on the forum. As with the analysis, the AI is given only the articles the search
 // found in the server's laws, and may cite only those.
 import { useCallback, useEffect, useState } from 'react';
-import { findForSituation, sourcesText, type SearchHit, type ServerPack } from '../core';
+import { findForSituation, type SearchHit, type ServerPack } from '../core';
+import { coreRules, labelSources, packInScope, playerData, sourcesBlock, textIssues } from '../protocol';
 import type { PlatformAdapter } from '../platform/types';
 import { SOURCES, ask, connect, lawTerms } from './ai';
 
@@ -65,7 +66,8 @@ function documentPrompt(pack: ServerPack, kind: (typeof DOCUMENT_KINDS)[number],
     .filter(Boolean)
     .join('; ');
   return [
-    `Ты составляешь документ для игрового RP-сервера Russia Online (GTA 5 RP), сервер «${pack.server.name}». Законы сервера вымышленные и не совпадают с законами РФ.`,
+    coreRules(pack, 'law'),
+    'ЗАДАЧА: ты составляешь документ для игры.',
     `Документ: ${kind.label}. Ситуация: ${kind.who}.`,
     `Форма: ${kind.form}`,
     `Автор документа — ${me || 'не указан'}. Где данных автора нет, оставь поле в фигурных скобках: {ФИО}, {звание}, {должность}. Так же — для любых сведений, которых нет в описании игрока: {время}, {место}, {ФИО задержанного} и т.п. Ничего не выдумывай.`,
@@ -81,6 +83,8 @@ export interface WrittenDocument {
   text: string;
   /** The articles the AI was given to cite. */
   sources: SearchHit[];
+  /** What the checks found wrong in the text: an article none of the sources is. */
+  issues: string[];
 }
 
 export interface DocumentWriter {
@@ -126,12 +130,14 @@ export function useDocumentWriter(platform: PlatformAdapter, pack: ServerPack, b
         const key = await connect(platform);
         const form = DOCUMENT_KINDS.find((k) => k.id === kind)!;
         const terms = await lawTerms(key, text);
-        const sources = findForSituation(pack, text, { boostDocuments, lawTerms: terms, limit: SOURCES });
+        // A document cites the laws and charters: the rules of the server are no ground for a report or a lawsuit.
+        const sources = labelSources(findForSituation(packInScope(pack, 'law'), text, { boostDocuments, lawTerms: terms, limit: SOURCES }));
         const prompt = sources.length
-          ? `Описание игрока: ${text}\n\nНайденные в законах сервера источники (ссылайся только на них):\n\n${sourcesText(sources)}`
-          : `Описание игрока: ${text}\n\nПоиск по законам сервера ничего не нашёл: статей не указывай, поставь {статья не найдена в законах сервера}.`;
+          ? `Описание игрока.\n${playerData(text)}\n\n${sourcesBlock(sources)}`
+          : `Описание игрока.\n${playerData(text)}\n\nПоиск по законам сервера ничего не нашёл: статей не указывай, поставь {статья не найдена в законах сервера}.`;
         const written = await ask(key, documentPrompt(pack, form, author, new Date()), [{ role: 'user', parts: [{ text: prompt }] }]);
-        setResult({ kind, situation: text, text: written.trim().replace(/^```\w*\n?|```$/g, '').trim(), sources });
+        const document = written.trim().replace(/^```\w*\n?|```$/g, '').trim();
+        setResult({ kind, situation: text, text: document, sources: sources.map((source) => source.hit), issues: textIssues(document, sources) });
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {

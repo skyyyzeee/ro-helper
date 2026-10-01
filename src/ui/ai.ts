@@ -4,8 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Organization, ServerPack } from '../core';
 import {
   AiError,
-  analyse,
+  answerQuestion,
   calculateCharges,
+  labelSources,
+  readAnswer,
   geminiProvider,
   lawTerms as findLawTerms,
   openaiProvider,
@@ -18,8 +20,11 @@ import {
   type Depth,
   type LegalAnswer,
   type Perspective,
+  type ScopeChoice,
+  type SystemReason,
   type Turn,
 } from '../protocol';
+import type { SearchHit } from '../core';
 import type { PlatformAdapter } from '../platform/types';
 import { AI_SERVER } from './about';
 import { recognize } from './localSpeech';
@@ -122,11 +127,18 @@ export interface AiMessage {
   /** The AI could not answer: the text says why. */
   failed?: boolean;
   pending?: boolean;
+  /**
+   * The app answered itself, with no AI: a greeting, something outside the base, an article number (with what the
+   * search found), or «закон или правила?» (with the choices and the question to ask again).
+   */
+  system?: { reason: SystemReason; hits?: SearchHit[]; options?: { label: string; choice: ScopeChoice }[]; question?: string };
 }
 
 export interface SendOptions {
   /** A few short lines for a card over the game: always the quick analysis. */
   brief?: boolean;
+  /** The laws or the rules for this one question (an answer to «закон или правила?»), whatever the switch says. */
+  choice?: ScopeChoice;
 }
 
 export interface AiChat {
@@ -135,6 +147,9 @@ export interface AiChat {
   /** Quick (article → punishment) or full (facts → norms → alternatives → procedure). */
   depth: Depth;
   setDepth: (depth: Depth) => void;
+  /** Which documents answer: the app decides (auto), the laws, or the rules of the server. */
+  choice: ScopeChoice;
+  setChoice: (choice: ScopeChoice) => void;
   /** The case so far: its facts, assumptions and articles; null before the first answer. */
   current: CaseState | null;
   /** Asks; resolves with the answer, or a failed one saying why — or nothing while another question is on its way. */
@@ -151,6 +166,8 @@ export interface AiChat {
 }
 
 export const DEPTH_SETTING = 'ai.depth';
+/** The player's choice of laws, rules or auto, kept for the next time. */
+export const SCOPE_SETTING = 'ai.scope';
 
 /** The case the latest analysis left, if any. */
 const caseOf = (messages: AiMessage[]): CaseState | undefined =>
@@ -161,6 +178,7 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
   const [messages, setMessages] = useState<AiMessage[]>([]);
   const [busy, setBusy] = useState(false);
   const [depth, setDepthState] = useState<Depth>('quick');
+  const [choice, setChoiceState] = useState<ScopeChoice>('auto');
   const nextId = useRef(1);
   // The messages as last rendered, for a question asked from an event: read there, never while rendering.
   const current = useRef(messages);
@@ -173,6 +191,18 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
       if (saved) setDepthState(saved === 'full' ? 'full' : 'quick');
     });
   }, [platform]);
+  useEffect(() => {
+    void platform.readSetting<ScopeChoice>(SCOPE_SETTING).then((saved) => {
+      if (saved === 'law' || saved === 'server_rule') setChoiceState(saved);
+    });
+  }, [platform]);
+  const setChoice = useCallback(
+    (next: ScopeChoice) => {
+      setChoiceState(next);
+      void platform.writeSetting(SCOPE_SETTING, next);
+    },
+    [platform],
+  );
   const setDepth = useCallback(
     (next: Depth) => {
       setDepthState(next);
@@ -232,7 +262,7 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
       try {
         const connection = await connect(platform);
         const side = PERSPECTIVES.find((p) => p.id === perspective)?.label;
-        const analysis = await analyse({
+        const outcome = await answerQuestion({
           provider: serviceFor(connection),
           pack,
           organization,
@@ -240,15 +270,26 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
           previous,
           perspective,
           depth: options.brief ? 'quick' : depth,
+          choice: options.choice ?? choice,
         });
-        return finish({ text: answerText(analysis.answer), analysis, perspective });
+        if (outcome.kind === 'system') {
+          return finish({
+            text: outcome.text,
+            system: {
+              reason: outcome.reason,
+              ...(outcome.hits ? { hits: outcome.hits } : {}),
+              ...(outcome.options ? { options: outcome.options, question } : {}),
+            },
+          });
+        }
+        return finish({ text: answerText(outcome.analysis.answer), analysis: outcome.analysis, perspective });
       } catch (error) {
         return finish({ failed: true, text: error instanceof Error ? error.message : String(error) });
       } finally {
         setBusy(false);
       }
     },
-    [busy, platform, pack, organization, depth],
+    [busy, platform, pack, organization, depth, choice],
   );
 
   const clear = useCallback(() => {
@@ -287,7 +328,7 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
     setMessages((list) => [...list, { id: nextId.current++, role: 'ai', text, failed: true }]);
   }, []);
 
-  return { messages, busy, depth, setDepth, current: caseOf(messages) ?? null, send, clear, note, history, open, forget };
+  return { messages, busy, depth, setDepth, choice, setChoice, current: caseOf(messages) ?? null, send, clear, note, history, open, forget };
 }
 
 /** The analysis as plain lines: for the card over the game, copying, and the saved history. */
@@ -296,8 +337,8 @@ export function answerText(answer: LegalAnswer): string {
   return [
     answer.situation && `Суть: ${answer.situation}`,
     answer.norms.length ? `Статьи: ${answer.norms.map((n) => n.ref + (n.part ? ` ч. ${n.part}` : '')).join(', ')}` : '',
-    answer.punishment && `Наказание: ${answer.punishment}`,
-    answer.procedure[0] && `Что делать: ${answer.procedure[0]}`,
+    answer.punishment && `Наказание: ${answer.punishment.text}`,
+    answer.procedure[0] && `Что делать: ${answer.procedure[0].text}`,
   ]
     .filter(Boolean)
     .join('\n');
@@ -361,22 +402,27 @@ function restoreMessage(pack: ServerPack, message: StoredMessage): Omit<AiMessag
   const restored: Omit<AiMessage, 'id'> = { role: message.role, text: message.text, perspective: message.perspective, failed: message.failed };
   if (!message.answer) return restored;
   // Under the ids the AI cited them by; an article the laws no longer have is missing, and the checks say so.
+  // The type of each comes from the document, as it is in the laws now.
   const sources = (message.sources ?? []).flatMap(({ id, document, article, part }, i) => {
     const doc = pack.documents.find((d) => d.id === document);
     const found = doc?.articles.find((a) => a.id === article);
     if (!doc || !found) return [];
     const piece = part ? found.parts.find((p) => p.number === part) : undefined;
-    return [{ id: id ?? `S${i + 1}`, hit: { document: doc, article: found, ...(piece ? { part: piece } : {}) } }];
+    const hit = { document: doc, article: found, ...(piece ? { part: piece } : {}) };
+    return [{ ...labelSources([hit])[0], id: id ?? `S${i + 1}` }];
   });
-  const validation = validateAnswer(pack, sources, message.answer);
+  // Saved in either format: an answer from before statements carried sources is read as one.
+  const answer = readAnswer(message.answer as unknown as Record<string, unknown>);
+  const validation = validateAnswer(pack, sources, answer, message.case?.scope);
   return {
     ...restored,
     analysis: {
-      answer: message.answer,
+      answer,
       sources,
       validation,
       calculation: calculateCharges(pack, validation),
-      case: message.case ?? { facts: message.answer.facts, assumptions: message.answer.assumptions, norms: [], conclusion: message.answer.situation },
+      scope: message.case?.scope ?? 'law',
+      case: message.case ?? { facts: answer.facts, assumptions: answer.assumptions, norms: [], conclusion: answer.situation },
     },
   };
 }

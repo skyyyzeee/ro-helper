@@ -78,3 +78,24 @@ describe('writing a document with the AI', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Сначала вставьте ключ Gemini');
   });
 });
+
+describe('a document is checked against the laws it was given', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('warns of an article that is none of the found ones — the model may not cite from memory', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: RequestInit) => {
+        const body = JSON.parse(String(init.body)) as { generationConfig?: { responseMimeType?: string } };
+        const text = body.generationConfig?.responseMimeType === 'application/json' ? '["кража"]' : 'РАПОРТ\nКвалификация: УК ст. 777 «Кража по-крупному».';
+        return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] }), { status: 200 });
+      }),
+    );
+    const { user } = await renderApp({ settings: GEMINI });
+    await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
+    await user.click(screen.getByRole('radio', { name: 'Составить документ' }));
+    await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'у прохожего украли телефон{Enter}');
+    const view = screen.getByRole('region', { name: 'Составить документ' });
+    expect(await within(view).findByRole('alert')).toHaveTextContent(/Упомянута статья 777, которой нет среди найденных источников/);
+  });
+});

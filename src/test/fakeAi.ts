@@ -7,21 +7,22 @@ export const isAnalysis = (system: string) => system.includes('Ответь ТО
 
 /** The id and label of the found article the context lists under a label matching `wanted` (the first one by default). */
 export function sourceIn(context: string, wanted = /\S+/): { id: string; ref: string } | null {
-  for (const [, id, ref] of context.matchAll(/\[(S\d+)\] (\S+ (?:ст|п)\. [\d.]+)/g)) if (wanted.test(ref)) return { id, ref };
+  for (const [, id, ref] of context.matchAll(/\[([SRCO]\d+)\] (\S+ (?:ст|п)\. [\d.]+)/g)) if (wanted.test(ref)) return { id, ref };
   return null;
 }
 
 /** An analysis of a stolen phone, citing УК ст. 65 when it was found, or saying nothing was. */
 export function analysisOf(context: string, patch: Partial<LegalAnswer> = {}): string {
   const found = sourceIn(context, /^УК ст\. 65$/) ?? sourceIn(context);
+  const cited = found ? [found.id] : [];
   const answer: Partial<LegalAnswer> = {
     situation: 'Это кража телефона.',
     facts: ['у игрока украли телефон'],
     assumptions: [],
     norms: found ? [{ source: found.id, ref: found.ref, part: '1', why: 'тайное хищение чужого имущества', fit: 'direct', charge: true, stage: 'done' }] : [],
-    violation: 'кража',
-    punishment: 'штраф до 50 000 ₽ либо 30 мес',
-    procedure: ['заявить в полицию'],
+    violation: { text: 'кража', sources: cited },
+    punishment: { text: 'штраф до 50 000 ₽ либо 30 мес', sources: cited },
+    procedure: [{ text: 'заявить в полицию', sources: cited }],
     uncertainty: [],
     questions: [],
     notFound: !found,

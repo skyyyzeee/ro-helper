@@ -124,6 +124,12 @@ export function LawyerView({
               </li>
             ))}
           </ul>
+          {result.issues.length > 0 && (
+            <div className="warn" role="alert">
+              <WarnIcon />
+              <span>Не подтвердилось по законам сервера: {result.issues.join(' · ')}</span>
+            </div>
+          )}
           {result.reply && (
             <div className="lawyer__reply">
               <span className="demand__label">Как ответить адвокату</span>

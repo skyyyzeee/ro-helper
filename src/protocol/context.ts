@@ -1,14 +1,9 @@
-// What the AI is given for one question: the case as structured blocks and the found articles under ids,
-// so every article it cites can be traced back to a text it was actually shown.
-import { articleText, sourceLabel, type Organization, type SearchHit, type ServerPack } from '../core';
-
-/** A found article under the id the AI cites it by: «S1», «S2»… */
-export interface Source {
-  id: string;
-  hit: SearchHit;
-}
-
-export const labelSources = (hits: SearchHit[]): Source[] => hits.map((hit, i) => ({ id: `S${i + 1}`, hit }));
+// What the AI is given for one question: the case as structured blocks and the found sources under ids, each type
+// in a block of its own, so every norm it cites can be traced back to a text it was actually shown — and the
+// player's words come as fenced data, not as instructions.
+import { articleText, sourceLabel, type Organization, type ServerPack } from '../core';
+import { playerData } from './prompt';
+import { SOURCE_TYPE_LABELS, type Scope, type Source, type SourceType } from './sources';
 
 /** How long one article may be, so a dozen fit and a huge one does not crowd out the rest. */
 const SOURCE_CHARS = 1800;
@@ -27,12 +22,14 @@ export const PERSPECTIVE_FOCUS: Record<Perspective, string> = {
 export interface CaseState {
   facts: string[];
   assumptions: string[];
-  /** Labels of the articles the last answer held applicable. */
+  /** Labels of the norms the last answer held applicable. */
   norms: string[];
   /** Their ids in the laws: a follow-up keeps them among its sources. */
   articles?: string[];
   /** The last answer's conclusion, in a sentence. */
   conclusion: string;
+  /** What the question was about, so a follow-up stays in it. */
+  scope?: Scope;
 }
 
 export interface ContextInput {
@@ -48,6 +45,15 @@ export interface ContextInput {
 
 const list = (items: string[]) => (items.length ? items.map((item) => `- ${item}`).join('\n') : '- нет');
 
+/** The heading of each type's block, plural. */
+const BLOCK_HEADING: Record<SourceType, string> = {
+  law: 'ЗАКОНЫ',
+  charter: 'УСТАВЫ И ПОЛОЖЕНИЯ',
+  server_rule: 'ПРАВИЛА СЕРВЕРА',
+  other: 'ДРУГИЕ ДОКУМЕНТЫ',
+};
+const BLOCK_ORDER: SourceType[] = ['law', 'charter', 'server_rule', 'other'];
+
 /** The whole package, in blocks the prompt names. */
 export function buildContext(input: ContextInput): string {
   const { pack, organization, message, sources, perspective, previous } = input;
@@ -60,22 +66,29 @@ export function buildContext(input: ContextInput): string {
     blocks.push(
       `ФАКТЫ ДЕЛА ДО ЭТОГО СООБЩЕНИЯ:\n${list(previous.facts)}`,
       `ДОПУЩЕНИЯ ПРОШЛОГО ОТВЕТА:\n${list(previous.assumptions)}`,
-      `ПРОШЛЫЙ ВЫВОД: ${previous.conclusion || '—'}; статьи: ${previous.norms.join(', ') || 'не найдены'}`,
-      `НОВОЕ СООБЩЕНИЕ ИГРОКА (уточнение, поправка или «а если…»): ${message}`,
+      `ПРОШЛЫЙ ВЫВОД: ${previous.conclusion || '—'}; нормы: ${previous.norms.join(', ') || 'не найдены'}`,
+      `НОВОЕ СООБЩЕНИЕ ИГРОКА — уточнение, поправка или «а если…».\n${playerData(message)}`,
     );
   } else {
-    blocks.push(`СИТУАЦИЯ СО СЛОВ ИГРОКА: ${message}`);
+    blocks.push(`СИТУАЦИЯ СО СЛОВ ИГРОКА.\n${playerData(message)}`);
   }
-  blocks.push(
-    sources.length
-      ? `НАЙДЕННЫЕ СТАТЬИ ЗАКОНОВ СЕРВЕРА (других нет; ссылайся по id):\n\n${sources.map(sourceBlock).join('\n\n')}`
-      : 'НАЙДЕННЫЕ СТАТЬИ: поиск по законам сервера ничего не нашёл.',
-  );
+  blocks.push(sourcesBlock(sources));
   return blocks.filter(Boolean).join('\n\n');
 }
 
-function sourceBlock({ id, hit }: Source): string {
+/** The found sources, each type apart: the model sees which is a law and which a rule of the server. */
+export function sourcesBlock(sources: Source[]): string {
+  if (!sources.length) return 'НАЙДЕННЫЕ ИСТОЧНИКИ: поиск по базе сервера ничего не нашёл.';
+  const parts = BLOCK_ORDER.flatMap((type) => {
+    const ofType = sources.filter((s) => s.type === type);
+    return ofType.length ? [`— ${BLOCK_HEADING[type]} —\n\n${ofType.map(sourceText).join('\n\n')}`] : [];
+  });
+  return `НАЙДЕННЫЕ ИСТОЧНИКИ (других нет; ссылайся по id):\n\n${parts.join('\n\n')}`;
+}
+
+function sourceText({ id, type, hit }: Source): string {
   const text = articleText(hit.article);
   const cut = text.length > SOURCE_CHARS ? `${text.slice(0, SOURCE_CHARS)}…` : text;
-  return `[${id}] ${sourceLabel(hit)} — ${hit.document.title}\n${cut}`;
+  // The label first, as the model copies it into "ref"; the type after the document's name.
+  return `[${id}] ${sourceLabel(hit)} — ${hit.document.title} (${SOURCE_TYPE_LABELS[type].toLowerCase()})\n${cut}`;
 }

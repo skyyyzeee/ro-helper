@@ -52,7 +52,9 @@ describe('the exam trainer', () => {
     expect(within(view).getByText(/Полный ответ: Тайное хищение/)).toBeInTheDocument();
     expect(within(view).getByLabelText('Вопрос 1 из 10')).toHaveTextContent('верно 0,5');
     // The answer is checked against the same article the question came from.
-    expect(bodies[1]).toContain('Ответ игрока: когда берут чужое');
+    // The player's answer goes as fenced data, and the examiner starts from the same core rules as every mode.
+    expect(bodies[1]).toContain('<<<\\nкогда берут чужое\\n>>>');
+    expect(bodies[1]).toContain('Ты не источник законодательства');
 
     await user.click(within(view).getByRole('button', { name: 'Следующий вопрос' }));
     expect(await within(view).findByLabelText('Вопрос 2 из 10')).toBeInTheDocument();

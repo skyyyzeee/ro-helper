@@ -5,7 +5,10 @@ import { AI_SERVER_SETTING } from './ai';
 
 const SERVER = { [AI_SERVER_SETTING]: 'https://ai.example' };
 
-/** The AI server: the law terms, then the review — citing the first article the search really found as `FOUND`. */
+/**
+ * The AI server: the law terms, then the review — citing the first article the search really found: `FOUND_ID` is
+ * its id, `FOUND` its label.
+ */
 function fakeServer(answer: object) {
   const bodies: { system?: string; messages?: { content: string }[]; counts?: boolean; think?: boolean }[] = [];
   vi.stubGlobal(
@@ -13,8 +16,9 @@ function fakeServer(answer: object) {
     vi.fn(async (_url: string, init: RequestInit) => {
       const body = JSON.parse(String(init.body)) as (typeof bodies)[number];
       bodies.push(body);
-      const found = body.messages?.at(-1)?.content.match(/### (\S+ (?:ст|п)\. [\d.]+)/)?.[1] ?? 'нет';
-      const text = body.counts === false ? '{"phrases": ["задержание", "права задержанного"]}' : JSON.stringify(answer).replaceAll('FOUND', found);
+      const [, id = 'S1', found = 'нет'] = body.messages?.at(-1)?.content.match(/\[([SRCO]\d+)\] (\S+ (?:ст|п)\. [\d.]+)/) ?? [];
+      const text =
+        body.counts === false ? '{"phrases": ["задержание", "права задержанного"]}' : JSON.stringify(answer).replaceAll('FOUND_ID', id).replaceAll('FOUND', found);
       return new Response(JSON.stringify({ text }), { status: 200 });
     }),
   );
@@ -23,14 +27,14 @@ function fakeServer(answer: object) {
 
 const REVIEW = {
   steps: [
-    { step: 'Представился задержанному', verdict: 'ok', basis: 'FOUND — сотрудник называет себя', fix: '' },
-    { step: 'Обыскал без понятых', verdict: 'violation', basis: 'FOUND — обыск при понятых', fix: 'Пригласить двух понятых.' },
+    { step: 'Представился задержанному', verdict: 'ok', basis: 'FOUND — сотрудник называет себя', fix: '', sources: ['FOUND_ID'] },
+    { step: 'Обыскал без понятых', verdict: 'violation', basis: 'FOUND — обыск при понятых', fix: 'Пригласить двух понятых.', sources: ['FOUND_ID'] },
     // A violation the laws found say nothing of: not shown as one.
-    { step: 'Надел наручники', verdict: 'violation', basis: 'УК ст. 999 — выдуманная статья', fix: 'Не надевать.' },
+    { step: 'Надел наручники', verdict: 'violation', basis: 'УК ст. 999 — выдуманная статья', fix: 'Не надевать.', sources: ['S99'] },
   ],
   missed: [
-    { what: 'Не разъяснил права', basis: 'FOUND — разъяснить права' },
-    { what: 'Не дал позвонить маме', basis: 'нигде не сказано' },
+    { what: 'Не разъяснил права', basis: 'FOUND — разъяснить права', sources: ['FOUND_ID'] },
+    { what: 'Не дал позвонить маме', basis: 'нигде не сказано', sources: [] },
   ],
   summary: 'Обыск — главная ошибка.',
 };
@@ -75,7 +79,10 @@ describe('the review of a detention (issue #4)', () => {
     // The AI was given the server's articles and told to be fair; the review counts as one question, with thinking.
     const review = bodies.find((b) => b.counts !== false)!;
     expect(review.system).toContain('Верно сделанное так и отмечай');
-    expect(review.messages?.at(-1)?.content).toContain('Найденные в законах сервера источники');
+    expect(review.messages?.at(-1)?.content).toContain('НАЙДЕННЫЕ ИСТОЧНИКИ');
+    // Laws only, and the officer's story fenced as data.
+    expect(review.messages?.at(-1)?.content).not.toMatch(/\[R\d+\]/);
+    expect(review.messages?.at(-1)?.content).toContain('<<<');
     expect(review.think).toBe(true);
   });
 

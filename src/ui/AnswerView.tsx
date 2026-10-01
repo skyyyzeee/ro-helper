@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { articleText, articleTitle, formatPunishment, formatRubles, leadPart, type DetentionResult, type SearchHit, type Stage } from '../core';
-import { STATUS_LABELS, type Analysis, type CheckedNorm, type Status } from '../protocol';
+import { SOURCE_TYPE_LABELS, STATUS_LABELS, type Analysis, type CheckedNorm, type Claim, type Source, type SourceType, type Status } from '../protocol';
 import { shortLabel } from './AiView';
 import { answerText } from './ai';
 import { CheckIcon, ExternalIcon, PinIcon, PlusIcon, WarnIcon } from './icons';
@@ -41,9 +41,9 @@ export function cardText(analysis: Analysis): string {
       return part?.punishment ? `${label} — ${formatPunishment(part.punishment)}` : `${label} «${articleTitle(hit!.article)}»`;
     }),
     calculation && calculationLine(calculation.result) && `Итог: ${calculationLine(calculation.result)}`,
-    answer.procedure[0] && `Что делать: ${answer.procedure[0]}`,
+    answer.procedure[0] && `Что делать: ${answer.procedure[0].text}`,
     validation.needsReview ? '⚠ Часть ответа не подтвердилась — проверьте статьи' : '',
-    validation.status === 'not-found' ? 'В законах сервера подтверждения не найдено' : '',
+    validation.status === 'not-found' ? 'В доступной нормативной базе это не найдено' : '',
   ]
     .filter(Boolean)
     .join('\n');
@@ -58,6 +58,28 @@ function StatusBadge({ status, review }: { status: Status; review: boolean }) {
       </span>
       {review && <span className="status status--review">Требует проверки</span>}
     </div>
+  );
+}
+
+/** The kind of a norm, in the colours the app gives its documents' badges. */
+const TYPE_BADGE: Record<SourceType, string> = { law: 'codes', charter: 'charters', server_rule: 'rules', other: 'fz' };
+
+export function SourceTypeBadge({ type }: { type: SourceType }) {
+  return <span className={`badge badge--${TYPE_BADGE[type]}`}>{SOURCE_TYPE_LABELS[type]}</span>;
+}
+
+/** A statement of the answer and, after it, the sources it stands on — each opens its article. */
+function ClaimLine({ claim, sources, onOpen }: { claim: Claim; sources: Map<string, Source>; onOpen: (hit: SearchHit) => void }) {
+  const cited = claim.sources.flatMap((id) => sources.get(id) ?? []);
+  return (
+    <>
+      {claim.text}
+      {cited.map(({ id, hit }) => (
+        <button key={id} type="button" className="ai__cite claim__cite" title="Открыть" onClick={() => onOpen(hit)}>
+          {shortLabel(hit)}
+        </button>
+      ))}
+    </>
   );
 }
 
@@ -87,7 +109,7 @@ function SourceCard({
   onLink: (url: string) => void;
   chargeable: boolean;
 }) {
-  const { norm, hit, issues } = checked;
+  const { norm, hit, issues, type } = checked;
   if (!hit) {
     return (
       <li className="source source--bad">
@@ -113,6 +135,7 @@ function SourceCard({
           {hit.part?.number ? ` ч. ${hit.part.number}` : ''}
         </button>
         <span className="source__name">{articleTitle(hit.article)}</span>
+        {type && <SourceTypeBadge type={type} />}
         {norm.fit === 'partial' && <span className="status status--likely">если подтвердится</span>}
         {norm.stage !== 'done' && <span className="status">{STAGE_LABELS[norm.stage]}</span>}
       </div>
@@ -188,7 +211,15 @@ export function AnswerView({
       setCopied(what);
       setTimeout(() => setCopied(null), 1500);
     });
+  // Saved before the classifier: a reply to what was no question of the laws.
   if (answer.reply) return <p className="ai__line">{answer.reply}</p>;
+  const byId = new Map(analysis.sources.map((source) => [source.id, source]));
+  // A law and a rule of the server are told apart: when the answer has both, each under its own heading.
+  const lawSide = validation.norms.filter((n) => n.type !== 'server_rule');
+  const ruleSide = validation.norms.filter((n) => n.type === 'server_rule');
+  const groups: [string, CheckedNorm[]][] = lawSide.length && ruleSide.length
+    ? [['По закону', lawSide], ['По правилам сервера', ruleSide]]
+    : [[ruleSide.length ? 'Применимые правила сервера' : 'Применимые нормы', validation.norms]];
   const chargeHits = (calculation?.charges ?? []).map((c) => ({ article: c.article, document: c.document, part: c.part, stage: c.stage }));
 
   return (
@@ -201,16 +232,22 @@ export function AnswerView({
         </div>
       )}
 
+      {analysis.notes?.map((note) => (
+        <p key={note} className="set__hint">
+          {note}
+        </p>
+      ))}
+
       {answer.situation && (
         <Block title="Ситуация">
           <p className="ai__line">{answer.situation}</p>
         </Block>
       )}
 
-      {validation.norms.length > 0 && (
-        <Block title="Применимые нормы">
+      {groups.map(([title, norms]) => norms.length > 0 && (
+        <Block key={title} title={title}>
           <ul className="sources">
-            {validation.norms.map((checked, i) => (
+            {norms.map((checked, i) => (
               <SourceCard
                 key={`${checked.norm.source}-${i}`}
                 checked={checked}
@@ -223,17 +260,23 @@ export function AnswerView({
             ))}
           </ul>
         </Block>
-      )}
+      ))}
 
       {answer.violation && (
         <Block title="Нарушение">
-          <p className="ai__line">{answer.violation}</p>
+          <p className="ai__line">
+            <ClaimLine claim={answer.violation} sources={byId} onOpen={onOpen} />
+          </p>
         </Block>
       )}
 
       {(answer.punishment || calculation) && (
         <Block title="Наказание">
-          {answer.punishment && <p className="ai__line">{answer.punishment}</p>}
+          {answer.punishment && (
+            <p className="ai__line">
+              <ClaimLine claim={answer.punishment} sources={byId} onOpen={onOpen} />
+            </p>
+          )}
           {calculation && (
             <div className="answer__calc">
               <span className="demand__label">Калькулятор:</span> <b>{calculationLine(calculation.result) || '—'}</b>
@@ -255,7 +298,9 @@ export function AnswerView({
         <Block title="Процедура">
           <ol className="answer__list">
             {answer.procedure.map((step) => (
-              <li key={step}>{step}</li>
+              <li key={step.text}>
+                <ClaimLine claim={step} sources={byId} onOpen={onOpen} />
+              </li>
             ))}
           </ol>
         </Block>
@@ -292,15 +337,15 @@ export function AnswerView({
       )}
 
       {validation.status === 'not-found' && (
-        <p className="set__hint">В доступной базе законов подтверждения не найдено. Попробуйте поиск по законам — другими словами или по номеру статьи.</p>
+        <p className="set__hint">В доступной нормативной базе это не найдено. Попробуйте поиск — другими словами или по номеру статьи.</p>
       )}
 
       {analysis.sources.length > 0 && (
         <details className="ai__sources">
-          <summary>Статьи, которые видел ИИ: {analysis.sources.length}</summary>
+          <summary>Источники, которые видел ИИ: {analysis.sources.length}</summary>
           <div className="ai__chips">
-            {analysis.sources.map(({ id, hit }) => (
-              <button key={id} type="button" className="ai__chip" title={hit.article.title || hit.document.title} onClick={() => onOpen(hit)}>
+            {analysis.sources.map(({ id, type, hit }) => (
+              <button key={id} type="button" className="ai__chip" title={`${SOURCE_TYPE_LABELS[type]} · ${hit.article.title || hit.document.title}`} onClick={() => onOpen(hit)}>
                 {shortLabel(hit)}
               </button>
             ))}

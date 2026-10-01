@@ -4800,3 +4800,9 @@ select option {
   font-size: 12px;
   color: var(--text-muted);
 }
+
+/* After a statement of the answer: the sources it stands on. */
+.claim__cite {
+  margin-left: 6px;
+  font-size: 12px;
+}

@@ -199,6 +199,12 @@ export function DocumentView({
               {editing ? 'Готово' : 'Исправить'}
             </button>
           </div>
+          {result.issues.length > 0 && (
+            <div className="warn" role="alert">
+              <WarnIcon />
+              <span>Не подтвердилось по законам сервера: {result.issues.join(' · ')}. Исправьте эти места перед отправкой.</span>
+            </div>
+          )}
           {/\{[^}]+\}/.test(result.text) && (
             <p className="set__hint">Места в фигурных скобках ИИ не знал — заполните их сами («Исправить») перед отправкой.</p>
           )}

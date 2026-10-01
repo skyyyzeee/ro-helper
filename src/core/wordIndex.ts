@@ -154,3 +154,19 @@ export function matchWord(index: WordIndex, word: string, typing: boolean): Word
   }
   return { stems: matched, phrases: index.synonyms.get(own) ?? [] };
 }
+
+/**
+ * The words of a text the pack has never heard of: none of its documents holds them, by stem, and they are no
+ * synonym. A question made only of such words is about something else — or about nothing.
+ */
+export function unknownWords(pack: ServerPack, text: string): { known: number; unknown: string[] } {
+  const index = wordIndex(pack);
+  const unknown: string[] = [];
+  let known = 0;
+  for (const word of words(text)) {
+    const stem = cachedStem(word);
+    if (index.postings.has(stem) || index.synonyms.has(stem)) known += 1;
+    else unknown.push(word);
+  }
+  return { known, unknown };
+}

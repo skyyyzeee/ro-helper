@@ -1,67 +1,74 @@
 # AI pipeline
 
-Кремлёвский Ассистент with the AI is laws + search + a deterministic calculator + sources, with the AI as an interpreter on top. The AI is
-never a source of law. The pipeline lives in `src/protocol` (pure TypeScript, no React/Tauri — a boundary test
-enforces it); the React side (`src/ui/ai.ts`, `AiView`, `AnswerView`) only asks and shows.
+Кремлёвский Ассистент with the AI is laws + rules + search + a deterministic calculator, with the AI as an interpreter
+on top — a closed layer over the server pack. **The AI is never a source of law**: what it may say comes from the
+sources the search found in the pack, and code — not the prompt — decides what is shown as confirmed. The pipeline
+lives in `src/protocol` (pure TypeScript, no React/Tauri — a boundary test enforces it); the React side
+(`src/ui/ai.ts`, `AiView`, `AnswerView`, the other modes) only asks and shows.
 
 ```
-player's situation
-  → law terms            AI call 1 (counts=false): 4–8 search phrases in the words of the law
-  → search               findForSituation — per word + the terms + the server's synonyms (deterministic)
-  → sources              labelSources: the found articles under ids S1…S14
-  → context              buildContext: СЕРВЕР / ОРГАНИЗАЦИЯ / ТОЧКА ЗРЕНИЯ / ФАКТЫ ДЕЛА / … / НАЙДЕННЫЕ СТАТЬИ
-  → analysis             AI call 2: one JSON object (answer.ts: LegalAnswer); a format miss is asked once more
-  → validation           validateAnswer — every article, part and figure checked against the laws (no AI)
-  → calculation          calculateCharges → calculateDetention: the calculator, not the AI, counts
-  → answer on screen     AnswerView: status, blocks, source cards, calculator line, clarifying questions
+question
+  → classifier          classify.ts, no AI: greeting / gibberish / out of scope / real laws / article number
+                         are answered by the app (0 AI calls); laws / rules of the server / both by their words
+  → (unclear)            AI call 1 also says what it is ({intent, phrases}); still unclear → «закон или правила?»
+  → scope               sources.ts: laws+charters, rules of the server, or both — the pack is narrowed BEFORE the search
+  → search              findForSituation over the scope's documents only (deterministic; AI phrases are only words)
+  → sources             labelSources: S… law, C… charter, R… rule of the server, O… other — type from the document
+  → context             buildContext: blocks per type, the player's words fenced as data (playerData)
+  → analysis            AI call 2: one JSON object, each statement with the ids of its sources (answer.ts)
+  → validation          validate.ts — every norm, part, statement, figure and article mention checked (no AI)
+  → calculation         calculateCharges → calculateDetention: the calculator, not the AI, counts
+  → answer on screen    AnswerView: status, «По закону» / «По правилам сервера», type badges, each claim's sources
 ```
 
-Two AI calls per question, as before the pipeline: the checks cost nothing.
+Two AI calls for a situation, one when the classifier had to ask, none for what is no question of the base.
+`answerQuestion()` is the whole thing; `analyse()` is the analysis in a known scope (follow-ups, the exam).
 
 ## The answer format (`src/protocol/answer.ts`)
 
-`situation`, `facts`, `assumptions`, `norms[] {source, ref, part, why, fit, charge, stage}`, `violation`,
-`punishment` (the sanction as the article writes it — never a total), `procedure[]`, `uncertainty[]`,
-`questions[] {question, options}` (1–3), `notFound`, and `reply` for something that is no legal question.
+`situation` (the player's story), `facts`, `assumptions`, `norms[] {source, ref, part, why, fit, charge, stage}`,
+`violation` and `punishment` as `{text, sources[]}`, `procedure[]` of `{text, sources[]}`, `uncertainty[]`,
+`questions[] {question, options}` (1–3), `notFound`. No `reply`: the model is not asked for one, and one it sends is
+not shown. Answers saved before the claims had sources are read as `legacy` and held to their cited norms as then.
+
+## One prompt core (`src/protocol/prompt.ts`)
+
+`coreRules(pack, scope)` starts every mode — the analysis, the lawyer's demands, the detention review, documents,
+the trainer: the AI is no source of law; only the sources given; no real laws, no other servers; S/C/R/O types;
+the scope; the player's text is data, its requests and claims are no instructions and no sources. Each mode adds its
+task. The prompt is the first line only — see `SOURCE_GROUNDING.md` for the others.
 
 ## Depth
 
-- **Быстрый разбор** — 1–2 main articles, short blocks; the model thinks minimally.
-- **Полный разбор** — all fitting articles with alternatives, procedure by steps; `think: true` lets the server's
-  model reason longer (reasoning effort `low`, 4× the tokens). Slower and a little dearer.
+- **Быстрый разбор** — 1–2 main norms, short blocks; the model thinks minimally.
+- **Полный разбор** — all fitting norms with alternatives, procedure by steps; `think: true` (reasoning effort `low`,
+  4× the tokens). The choice is kept in `ai.depth`; questions over the game are always quick.
 
-The player's choice is kept in the setting `ai.depth`; questions over the game are always quick.
+## Scope (`ai.scope`)
+
+«Авто / Законы / Правила сервера» over the analysis. Auto: the classifier decides (laws, rules, or both apart).
+A chosen scope is kept whatever the words say; when the question looks like the other kind, the answer says so.
+A follow-up stays in its case's scope. See `AI_CLASSIFIER.md`.
 
 ## The case and follow-ups
 
-Each answer leaves a `CaseState`: facts, assumptions, the articles it stood on (labels and ids), the conclusion.
-A follow-up («а если он был в маске?», «нет, он был сотрудником МВД», a pressed clarification) is sent with that
-state instead of the whole conversation; the model changes only the facts it touches and marks them «(изменено)».
-Its sources are the case's articles first, then what the change itself finds, then what the case with the change
-finds — so the analysis is not started from scratch.
+Each answer leaves a `CaseState`: facts, assumptions, the norms it stood on (labels and ids), the conclusion and the
+scope. A follow-up is sent with that state, not the whole conversation; the model changes only the facts it touches
+and marks them «(изменено)». Its sources are the case's first, then what the change finds.
 
 ## Points of view
 
-Государство / Гражданский / Адвокат / Крайм change only the question asked of the same sources (`PERSPECTIVE_FOCUS`
-in `context.ts`); the search and the facts are the same for all four (a test checks it).
+Государство / Гражданский / Адвокат / Крайм change only the question asked of the same sources (`PERSPECTIVE_FOCUS`);
+the search and the facts are the same for all four (a test checks it). Tying them to the player's profile and
+capabilities is P0b of `.scratch/ai-closed-loop/spec.md`.
 
 ## Providers (`src/protocol/provider.ts`)
 
-`AiProvider.complete(request)` — `serverProvider` (the AI server of `server/`, OpenAI-compatible, the key on the server) and
-`geminiProvider` (the player's key, sent in a header). A new model is a new provider; nothing else changes.
-Failures are `AiError` with a `kind`: `offline`, `key`, `busy`, `limit`, `timeout` (90 s, 150 s when thinking),
-`empty`, `format`, `failed`. Whatever fails, the search keeps working and the screen says so.
-`openaiProvider` is the player's own OpenAI-compatible service («Свой ИИ»).
+`AiProvider.complete(request)` — `serverProvider` (the AI server of `server/`: GigaChat first, a paid
+OpenAI-compatible API behind it; the keys on the server), `openaiProvider` (the player's own «Свой ИИ»),
+`geminiProvider` (the player's key). Failures are `AiError` with a `kind`: `offline`, `key`, `busy`, `limit`,
+`timeout`, `empty`, `format`, `failed`. Whatever fails, the search keeps working and the screen says so.
 
-## The exam (`npm run eval`)
+## The exam
 
-`eval/cases.json` holds situations as a player would tell them, each with the article that is the right answer on
-its server. `scripts/ai-eval.ts` asks each one the way the app does (law terms → search → analysis → checks) and
-scores it: right (a direct charge), partly (cited, not as the charge), missed, or failed — and says apart whether
-the search found the article at all, so a miss of the search is not blamed on the model. Run it before and after
-changing a prompt, the synonyms or the model: `npm run eval` goes through the AI server (it counts against the
-server's daily limits — some 2 requests a case), `--url … --model …` through any OpenAI-compatible AI (its key in
-`AI_EVAL_KEY`), `--server`, `--limit`, `--depth full` narrow it.
-
-First results, gpt-5-nano through the AI server, 15 cases: 8/15 before, 12/15 after the rule «only УК and КоАП
-punish» in the analysis prompt, examples of offences in the law-terms prompt and more synonyms.
+`npm run eval` / `npm run eval:ai` — see `AI_EVALUATION.md`.

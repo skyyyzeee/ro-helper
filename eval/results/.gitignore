@@ -1,0 +1,3 @@
+# Runs of npm run eval: kept on the computer that ran them, not in the repository.
+*
+!.gitignore

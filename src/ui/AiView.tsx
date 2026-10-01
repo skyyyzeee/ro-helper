@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { articleLabel, type SearchHit, type Stage } from '../core';
+import { articleLabel, articleTitle, type SearchHit, type Stage } from '../core';
 import { STATUS_LABELS } from '../protocol';
 import { PERSPECTIVES, type AiChat } from './ai';
 import { AnswerView } from './AnswerView';
@@ -115,6 +115,19 @@ export function AiView({
         )}
       </div>
       <AiTabs tab="chat" onTab={onTab} />
+      <div className="ai__depth" role="radiogroup" aria-label="Где искать ответ">
+        {(
+          [
+            ['auto', 'Авто', 'Ассистент сам определит: закон или правила сервера'],
+            ['law', 'Законы', 'Только законы, кодексы и уставы сервера'],
+            ['server_rule', 'Правила сервера', 'Только правила проекта и сервера'],
+          ] as const
+        ).map(([id, label, title]) => (
+          <button key={id} type="button" role="radio" aria-checked={chat.choice === id} title={title} className={chat.choice === id ? 'chip-btn chip-btn--on' : 'chip-btn'} onClick={() => chat.setChoice(id)}>
+            {label}
+          </button>
+        ))}
+      </div>
       <div className="ai__depth" role="radiogroup" aria-label="Глубина разбора">
         {(
           [
@@ -168,8 +181,9 @@ export function AiView({
       {chat.messages.length === 0 && (
         <div className="ai__intro">
           <p className="set__hint">
-            Опишите ситуацию своими словами в поле сверху и нажмите <b>Enter</b>. ИИ найдёт статьи в законах сервера и объяснит,
-            что к чему. Он опирается только на найденные статьи — по ссылке каждую можно открыть и проверить.
+            Опишите ситуацию своими словами в поле сверху и нажмите <b>Enter</b>. Ассистент найдёт нормы в законах и правилах
+            вашего сервера, а ИИ объяснит, что к чему. Он опирается только на найденное в базе — каждую норму можно открыть и
+            проверить; чего в базе нет, того он не придумает.
           </p>
           <div className="ai__examples" aria-label="Примеры вопросов">
             <span className="set__label">Попробуйте:</span>
@@ -227,12 +241,39 @@ export function AiView({
                   onClarify={(text) => void chat.send(text)}
                 />
               ) : (
-                <p className="ai__line">{message.text}</p>
+                <>
+                  <p className="ai__line">{message.text}</p>
+                  {/* The app's own answer: what the search found for an article number, or «закон или правила?». */}
+                  {message.system?.hits && message.system.hits.length > 0 && (
+                    <div className="ai__chips">
+                      {message.system.hits.map((hit) => (
+                        <button key={hit.article.id} type="button" className="ai__chip" onClick={() => onOpen(hit)}>
+                          {shortLabel(hit)} {articleTitle(hit.article)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {message.system?.options && message.system.question && (
+                    <div className="ai__chips">
+                      {message.system.options.map((option) => (
+                        <button
+                          key={option.choice}
+                          type="button"
+                          className="ai__chip"
+                          disabled={chat.busy}
+                          onClick={() => void chat.send(message.system!.question!, undefined, { choice: option.choice })}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           ),
         )}
-        {last?.role === 'ai' && !last.pending && !last.failed && lastQuestion && (
+        {last?.role === 'ai' && !last.pending && !last.failed && !last.system && lastQuestion && (
           <div className="ai__sides" aria-label="Разобрать с другой стороны">
             <span className="set__label">С точки зрения:</span>
             {PERSPECTIVES.map((side) => (

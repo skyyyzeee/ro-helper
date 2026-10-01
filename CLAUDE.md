@@ -103,17 +103,26 @@ the bot, README and PRIVACY; «хелпер» in players' texts became «асс�
 
 - «ИИ» in the side column (Ctrl+7) and in the settings: situation analysis, documents, the exam trainer, the review of a detention, the lawyer's
   demands, voice (🎤 and push-to-talk over the game, Alt+W), the history of analyses.
-- `src/protocol` — the pipeline, pure TypeScript like `src/core` (its own boundary test). **The AI is never a source
-  of law**: it gets only the articles the search found, under ids, answers in JSON, and `validate.ts` checks every
-  article, part and figure against the pack without the AI; the calculator, not the AI, counts punishments. Keep it so.
-  `docs/ARCHITECTURE.md`, `docs/AI_PIPELINE.md`, `docs/SOURCE_GROUNDING.md`.
+- `src/protocol` — the pipeline, pure TypeScript like `src/core` (its own boundary test). **The AI is a closed layer
+  over the server pack, never a source of law**, and that is held by code, not by the prompt: the classifier
+  (`classify.ts`) answers what is no question of the base with no AI call; the scope (`sources.ts`) narrows the pack
+  to laws, rules of the server or both *before* the search; every source has a type from its document (S law, C
+  charter, R rule, O other); the answer is JSON where every statement names its sources; `validate.ts`/`check.ts`
+  hold each norm and statement to its own sources (part, type, figures, articles mentioned) without the AI; the
+  calculator, not the AI, counts punishments. Every mode starts from `coreRules()` and gets the player's words fenced
+  as data. Keep it so. `docs/AI_PIPELINE.md`, `docs/SOURCE_GROUNDING.md`, `docs/AI_CLASSIFIER.md`,
+  `docs/AI_EVALUATION.md`; the plan and what is left (capabilities, one workspace, feedback): `.scratch/ai-closed-loop/spec.md`.
+- Changing a prompt, the classifier, the synonyms, the schema, the validator or the model: run the exam before and
+  after (`npm run eval`, `npm run eval:ai` for the traps; `--save-baseline` / the comparison) — the target is
+  `CONFIRMED_HALLUCINATION_RATE` 0 and no hard gate failed.
 - The AI server: `server/` (Node, no dependencies: GigaChat first when its key is set, an OpenAI-compatible paid API — ProxyAPI — for what it declines; `npm run test:server`), run and paid for by
   AidenArokij at `AI_SERVER` in `src/ui/about.ts`. **No AI key ever goes into the app** — it lives only in the
   server's `.env`, typed in with `server/set-key.sh`. The server takes text only; speech is recognised on the
   player's computer (Vosk, `src/ui/localSpeech.ts`) and never sent. Whatever the AI sends or keeps must be in
   `PRIVACY.md` — change both together. The optional «Свой ключ Gemini» is the player's own key, local.
-- Tests talk to a fake AI (`src/test/fakeAi.ts`); the one that matters most: an answer citing an article the laws do
-  not have does not pass the checks.
+- Tests talk to a fake AI (`src/test/fakeAi.ts`); the ones that matter most are the hard gates in
+  `src/protocol/grounding.test.ts` and `grade.test.ts`: a misbehaving model (a made-up article, figure or source, a law
+  and a rule mixed, an obeyed injection, the player's «статья 777») never comes out «Подтверждено».
 
 ## Getting forum text
 

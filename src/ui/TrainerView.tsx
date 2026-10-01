@@ -122,7 +122,12 @@ export function TrainerView({
                     {graded.verdict === 'wrong' ? <CloseIcon size={15} /> : <CheckIcon size={15} />} {VERDICTS[graded.verdict].title}.
                   </b>{' '}
                   {graded.feedback}
-                  {question.model && <p className="quiz__model">Полный ответ: {question.model}</p>}
+                  {graded.unverified && <p className="quiz__model">В отзыве есть то, чего нет в тексте статьи, — сверьтесь со статьёй.</p>}
+                  {question.model ? (
+                    <p className="quiz__model">Полный ответ: {question.model}</p>
+                  ) : (
+                    <p className="quiz__model">Полный ответ — в тексте статьи:</p>
+                  )}
                   <button type="button" className="ai__cite" onClick={() => onOpen(question.hit)}>
                     {shortLabel(question.hit)}
                     {question.hit.article.title ? ` «${question.hit.article.title}»` : ''}

@@ -36,7 +36,7 @@ describe('the analysis on screen', () => {
     const reply = screen.getByRole('log');
     expect(within(reply).getByText('Требует проверки')).toBeInTheDocument();
     expect(within(reply).queryByText('Подтверждено')).not.toBeInTheDocument();
-    expect(within(reply).getByText(/УК ст\. 999: такой статьи нет в законах сервера/)).toBeInTheDocument();
+    expect(within(reply).getByText(/УК ст\. 999: такой нормы нет в базе сервера/)).toBeInTheDocument();
     // Nothing unconfirmed reaches the calculator.
     expect(within(reply).queryByText('Калькулятор:')).not.toBeInTheDocument();
   });

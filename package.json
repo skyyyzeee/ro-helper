@@ -13,6 +13,7 @@
     "import": "tsx src/importer/cli.ts",
     "tauri": "tauri",
     "eval": "tsx scripts/ai-eval.ts",
+    "eval:ai": "tsx scripts/ai-eval.ts --group traps",
     "test:server": "node --test server/server.test.mjs"
   },
   "dependencies": {

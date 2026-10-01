@@ -1,8 +1,10 @@
 // The exam trainer: questions on the laws of the player's organisation, as in a faction's attestation. The app
 // picks a real article of the server's laws; the AI only turns it into a question and checks the answer against
-// that article's text — so a question never rests on a law the server does not have.
+// that article's text — so a question never rests on a law the server does not have. What the AI writes is checked
+// against that text too: a reference answer with an article or a figure the article lacks is not shown.
 import { useCallback, useEffect, useState } from 'react';
 import { articleText, sourceLabel, type LawDocument, type SearchHit, type ServerPack } from '../core';
+import { coreRules, playerData, sourceTypeOf, textIssues } from '../protocol';
 import type { PlatformAdapter } from '../platform/types';
 import { AiError, ask, connect } from './ai';
 
@@ -23,6 +25,8 @@ export interface TrainerQuestion {
 export interface Graded {
   verdict: Verdict;
   feedback: string;
+  /** The feedback names an article or a figure the article does not have: to be checked against its text. */
+  unverified?: boolean;
 }
 
 export type Phase = 'idle' | 'asking' | 'answering' | 'grading' | 'graded' | 'done';
@@ -45,11 +49,14 @@ export interface Trainer {
   next: () => Promise<void>;
 }
 
+/** The core every AI mode starts with, in the scope of the article's own kind. */
+const core = (pack: ServerPack, hit: SearchHit) => coreRules(pack, sourceTypeOf(hit.document) === 'server_rule' ? 'server_rule' : 'law');
+
 const QUESTION_PROMPT =
-  'Ты экзаменатор фракции на игровом RP-сервере Russia Online. По статье ниже составь ОДИН вопрос, какой задают на аттестации: о сути статьи, её условиях или о том, что должен сделать сотрудник. Не спрашивай номер статьи. Опирайся только на текст статьи. Ответь JSON: {"question": "вопрос", "answer": "полный правильный ответ в 1–3 предложениях по тексту статьи"}.';
+  'ЗАДАЧА: ты экзаменатор фракции. По статье ниже составь ОДИН вопрос, какой задают на аттестации: о сути статьи, её условиях или о том, что должен сделать сотрудник. Не спрашивай номер статьи. Опирайся только на текст статьи. Ответь JSON: {"question": "вопрос", "answer": "полный правильный ответ в 1–3 предложениях по тексту статьи"}.';
 
 const GRADE_PROMPT =
-  'Ты экзаменатор фракции на игровом RP-сервере Russia Online. Сравни ответ игрока с текстом статьи и эталонным ответом. Засчитывай ответ по смыслу, своими словами — это нормально. Ответь JSON: {"verdict": "right" | "partly" | "wrong", "feedback": "1–2 предложения: что верно и что упущено, по тексту статьи"}. Обращайся к игроку на «вы».';
+  'ЗАДАЧА: ты экзаменатор фракции. Сравни ответ игрока с текстом статьи и эталонным ответом. Засчитывай ответ по смыслу, своими словами — это нормально. Ответь JSON: {"verdict": "right" | "partly" | "wrong", "feedback": "1–2 предложения: что верно и что упущено, по тексту статьи"}. Обращайся к игроку на «вы».';
 
 /** Documents to ask about when nothing is chosen: the organisation's own, else the penal code. */
 export function defaultDocuments(pack: ServerPack, organisation?: string[]): string[] {
@@ -103,7 +110,7 @@ export function useTrainer(platform: PlatformAdapter, pack: ServerPack, organisa
         const made = parse<{ question?: string; answer?: string }>(
           await ask(
             await key(),
-            QUESTION_PROMPT,
+            `${core(pack, hit)}\n\n${QUESTION_PROMPT}`,
             [{ role: 'user', parts: [{ text: `### ${sourceLabel(hit)} — ${hit.document.title}\n${articleText(hit.article)}` }] }],
             true,
             // The trainer's calls are small: they do not take from the day's questions.
@@ -112,7 +119,9 @@ export function useTrainer(platform: PlatformAdapter, pack: ServerPack, organisa
         );
         if (!made.question) throw new AiError('ИИ не придумал вопрос — попробуйте ещё раз.');
         setAsked(new Set([...before, hit.article.id]));
-        setQuestion({ hit, question: made.question, model: made.answer ?? '' });
+        // A reference answer with an article or a figure the article lacks is no reference: the article's text is.
+        const model = made.answer ?? '';
+        setQuestion({ hit, question: made.question, model: textIssues(model, [hit], { figures: true }).length ? '' : model });
         setNumber(count);
         setPhase('answering');
       } catch (e) {
@@ -139,13 +148,13 @@ export function useTrainer(platform: PlatformAdapter, pack: ServerPack, organisa
         const result = parse<{ verdict?: string; feedback?: string }>(
           await ask(
             await key(),
-            GRADE_PROMPT,
+            `${core(pack, question.hit)}\n\n${GRADE_PROMPT}`,
             [
               {
                 role: 'user',
                 parts: [
                   {
-                    text: `Статья: ### ${sourceLabel(question.hit)}\n${articleText(question.hit.article)}\n\nВопрос: ${question.question}\nЭталонный ответ: ${question.model}\nОтвет игрока: ${given}`,
+                    text: `Статья: ${sourceLabel(question.hit)}\n${articleText(question.hit.article)}\n\nВопрос: ${question.question}\nЭталонный ответ: ${question.model || 'по тексту статьи'}\n\nОтвет игрока.\n${playerData(given)}`,
                   },
                 ],
               },
@@ -155,7 +164,10 @@ export function useTrainer(platform: PlatformAdapter, pack: ServerPack, organisa
           ),
         );
         const verdict: Verdict = result.verdict === 'right' || result.verdict === 'partly' ? result.verdict : 'wrong';
-        setGraded({ verdict, feedback: result.feedback ?? '' });
+        const feedback = result.feedback ?? '';
+        // The player's own figures may be quoted back; any other must stand in the article.
+        const unverified = textIssues(feedback, [question.hit], { figures: true, allowed: given }).length > 0;
+        setGraded({ verdict, feedback, ...(unverified ? { unverified } : {}) });
         setScore((s) => s + (verdict === 'right' ? 1 : verdict === 'partly' ? 0.5 : 0));
         setPhase('graded');
       } catch (e) {
@@ -163,7 +175,7 @@ export function useTrainer(platform: PlatformAdapter, pack: ServerPack, organisa
         setPhase('answering');
       }
     },
-    [question, phase, key],
+    [question, phase, key, pack],
   );
 
   const next = useCallback(async () => {
