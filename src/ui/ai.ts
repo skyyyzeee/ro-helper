@@ -25,6 +25,7 @@ import {
   type Turn,
 } from '../protocol';
 import type { SearchHit } from '../core';
+import { aiProfileOf, type AiProfile } from '../account/capabilities';
 import type { PlatformAdapter } from '../platform/types';
 import { AI_SERVER } from './about';
 import { recognize } from './localSpeech';
@@ -43,6 +44,17 @@ export const PERSPECTIVES: { id: Perspective; label: string }[] = [
   { id: 'lawyer', label: 'Адвокат' },
   { id: 'crime', label: 'Крайм' },
 ];
+
+/**
+ * The sides a case may be seen from, by the player's profile: their own first, then the defence and the citizen's
+ * rights — an officer's powers are for the state, the crime's view for the crime.
+ */
+const PROFILE_PERSPECTIVES: Record<AiProfile, Perspective[]> = {
+  citizen: ['citizen', 'lawyer'],
+  state: ['state', 'lawyer', 'citizen'],
+  crime: ['crime', 'lawyer', 'citizen'],
+};
+export const perspectivesFor = (organization?: Organization): Perspective[] => PROFILE_PERSPECTIVES[aiProfileOf(organization)];
 
 /** A message to the AI: text, or a file sent along with it — a voice recording. */
 export type GeminiTurn = Turn;
@@ -152,6 +164,8 @@ export interface AiChat {
   setChoice: (choice: ScopeChoice) => void;
   /** The case so far: its facts, assumptions and articles; null before the first answer. */
   current: CaseState | null;
+  /** The sides the player's profile may see a case from. */
+  perspectives: Perspective[];
   /** Asks; resolves with the answer, or a failed one saying why — or nothing while another question is on its way. */
   send: (text: string, perspective?: Perspective, options?: SendOptions) => Promise<AiMessage | undefined>;
   /** A new conversation; the one on show stays in the history. */
@@ -244,9 +258,11 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
   }, [messages, platform, storeKey]);
 
   const send = useCallback(
-    async (text: string, perspective?: Perspective, options: SendOptions = {}): Promise<AiMessage | undefined> => {
+    async (text: string, wanted?: Perspective, options: SendOptions = {}): Promise<AiMessage | undefined> => {
       const question = text.trim();
       if (!question || busy) return undefined;
+      // A side the profile may not take is not taken: the case is seen as it is.
+      const perspective = wanted && perspectivesFor(organization).includes(wanted) ? wanted : undefined;
       const asked: AiMessage = { id: nextId.current++, role: 'user', text: question, perspective };
       const answerId = nextId.current++;
       // The case the last answer left: a follow-up changes it rather than telling the story again.
@@ -328,7 +344,7 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
     setMessages((list) => [...list, { id: nextId.current++, role: 'ai', text, failed: true }]);
   }, []);
 
-  return { messages, busy, depth, setDepth, choice, setChoice, current: caseOf(messages) ?? null, send, clear, note, history, open, forget };
+  return { messages, busy, depth, setDepth, choice, setChoice, current: caseOf(messages) ?? null, perspectives: perspectivesFor(organization), send, clear, note, history, open, forget };
 }
 
 /** The analysis as plain lines: for the card over the game, copying, and the saved history. */

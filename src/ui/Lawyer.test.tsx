@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { cleanup, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../test/renderApp';
 import { AI_SERVER_SETTING } from './ai';
@@ -38,7 +38,7 @@ describe('the lawyer\'s demands', () => {
 
   it('weighs each demand without taking the officer\'s side, and gives a reply to copy', async () => {
     const bodies = fakeServer();
-    const { platform, user } = await renderApp({ settings: SERVER });
+    const { platform, user } = await renderApp({ settings: SERVER, profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
     await user.click(screen.getByRole('radio', { name: 'Требования адвоката' }));
     const view = screen.getByRole('region', { name: 'Требования адвоката' });
@@ -80,7 +80,7 @@ describe('the lawyer\'s demands', () => {
         return new Response(JSON.stringify({ text }), { status: 200 });
       }),
     );
-    await renderApp({ settings: SERVER }).then(async ({ user }) => {
+    await renderApp({ settings: SERVER, profile: { organization: 'mvd' } }).then(async ({ user }) => {
       await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
       await user.click(screen.getByRole('radio', { name: 'Требования адвоката' }));
       await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'свидание наедине{Enter}');
@@ -101,11 +101,26 @@ describe('the lawyer\'s demands', () => {
 
   it('offers an example to try the first time', async () => {
     fakeServer();
-    const { user } = await renderApp({ settings: SERVER });
+    const { user } = await renderApp({ settings: SERVER, profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
     await user.click(screen.getByRole('radio', { name: 'Требования адвоката' }));
     const view = screen.getByRole('region', { name: 'Требования адвоката' });
     await user.click(within(within(view).getByLabelText('Пример')).getByRole('button'));
     expect(await within(view).findAllByRole('listitem')).toHaveLength(2);
+  });
+});
+
+describe('who may check an officer\'s actions', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('shows the checks to the state\'s services only — a citizen or the crime gets the analysis, the documents, the trainer', async () => {
+    fakeServer();
+    for (const organization of ['none', 'opg']) {
+      const { user } = await renderApp({ settings: SERVER, profile: { organization } });
+      await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
+      const tabs = screen.getByRole('radiogroup', { name: 'Что сделать ИИ' });
+      expect(within(tabs).getAllByRole('radio').map((tab) => tab.textContent)).toEqual(['Разбор ситуации', 'Составить документ', 'Тренажёр']);
+      cleanup();
+    }
   });
 });

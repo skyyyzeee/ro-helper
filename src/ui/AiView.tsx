@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { createContext, useContext, useEffect, useRef } from 'react';
+import type { Capability } from '../account/capabilities';
 import { articleLabel, articleTitle, type SearchHit, type Stage } from '../core';
 import { STATUS_LABELS } from '../protocol';
 import { PERSPECTIVES, type AiChat } from './ai';
@@ -31,8 +32,16 @@ export const EXAMPLES = [
 /** What the AI does for the player: analyses a situation, or writes a document about it. */
 export type AiTab = 'chat' | 'document' | 'lawyer' | 'detention' | 'trainer';
 
-/** The two things the AI does, as the heading of its screen. */
+/** What the AI may do for the player (`aiCapabilitiesOf`); none given — everything, as in the tests of one mode. */
+export const AiAccess = createContext<ReadonlySet<Capability> | null>(null);
+
+/** The modes that check an officer's actions: for the state's services (`ai.check`). */
+export const CHECK_TABS: ReadonlySet<AiTab> = new Set(['lawyer', 'detention']);
+
+/** The things the AI does for this player, as the heading of its screen. */
 export function AiTabs({ tab, onTab }: { tab: AiTab; onTab: (tab: AiTab) => void }) {
+  const can = useContext(AiAccess);
+  const shown = (id: AiTab) => !CHECK_TABS.has(id) || !can || can.has('ai.check');
   return (
     <div className="ai__tabs tabs" role="radiogroup" aria-label="Что сделать ИИ">
       {(
@@ -43,7 +52,9 @@ export function AiTabs({ tab, onTab }: { tab: AiTab; onTab: (tab: AiTab) => void
           ['detention', 'Разбор задержания'],
           ['trainer', 'Тренажёр'],
         ] as const
-      ).map(([id, label]) => (
+      )
+        .filter(([id]) => shown(id))
+        .map(([id, label]) => (
         <button key={id} type="button" role="radio" aria-checked={tab === id} className={tab === id ? 'tabs__btn tabs__btn--on' : 'tabs__btn'} onClick={() => onTab(id)}>
           {label}
         </button>
@@ -276,7 +287,7 @@ export function AiView({
         {last?.role === 'ai' && !last.pending && !last.failed && !last.system && lastQuestion && (
           <div className="ai__sides" aria-label="Разобрать с другой стороны">
             <span className="set__label">С точки зрения:</span>
-            {PERSPECTIVES.map((side) => (
+            {PERSPECTIVES.filter((side) => chat.perspectives.includes(side.id)).map((side) => (
               <button key={side.id} type="button" className="ai__chip" disabled={chat.busy} onClick={() => void chat.send(lastQuestion, side.id)}>
                 {side.label}
               </button>
