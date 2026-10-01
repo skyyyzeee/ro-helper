@@ -28,7 +28,7 @@ import { CalculatorPanel, type ChargeFields, type ChargePatch, type CopyState } 
 import { ChangeDiff, ChangesView, type ChangeRef } from './ChangesView';
 import { DocumentsMenu } from './DocumentsMenu';
 import { transcribe, useAiChat } from './ai';
-import { AiAccess, AiView, CHECK_TABS, type AiTab } from './AiView';
+import { AiAccess, AiView, TAB_NEEDS, type AiTab } from './AiView';
 import { useRoles } from './roles';
 import { cardText } from './AnswerView';
 import { DocumentView } from './DocumentView';
@@ -202,17 +202,17 @@ export function Overlay({
   const chat = useAiChat(platform, pack, organization);
   // The AI screen has two tabs: analysing a situation, and writing a document about it.
   const [aiTab, setAiTab] = useState<AiTab>('chat');
-  const writer = useDocumentWriter(platform, pack, boostDocuments);
-  const trainer = useTrainer(platform, pack, boostDocuments);
   // What the AI may do for this player: by the organisation in their profile (the checks of an officer's actions
   // are the state's), the inner workings for the admin.
   const { mine } = useRoles();
   const aiCan = useMemo(() => aiCapabilitiesOf({ admin: !!mine?.admin, organization }), [mine?.admin, organization]);
+  const writer = useDocumentWriter(platform, pack, boostDocuments, aiCan.has('ai.official_documents'));
+  const trainer = useTrainer(platform, pack, boostDocuments, aiCan.has('ai.practice'));
   const lawyer = useLawyerCheck(platform, pack, boostDocuments, aiCan.has('ai.check'));
   const detention = useDetentionReview(platform, pack, boostDocuments, aiCan.has('ai.check'));
-  // The organisation changed to one without the checks while one was open: back to the analysis.
+  // The organisation changed to one without the mode on show: back to the analysis.
   useEffect(() => {
-    if (CHECK_TABS.has(aiTab) && !aiCan.has('ai.check')) setAiTab('chat');
+    if (!aiCan.has(TAB_NEEDS[aiTab])) setAiTab('chat');
   }, [aiTab, aiCan]);
   /** The field is the AI's, not the search's: an article opened from the answer gives it back to the search. */
   const aiMode = aiOpen && !open;

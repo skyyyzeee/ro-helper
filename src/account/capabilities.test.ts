@@ -46,16 +46,16 @@ describe('what a player may do (roadmap 1А)', () => {
 describe('what the AI may do for a player (P0b)', () => {
   const OPG: Organization = { id: 'opg', name: 'ОПГ', kind: 'crime', documents: [] };
   const ai = (organization?: Organization, admin = false) => [...aiCapabilitiesOf({ admin, organization })].sort();
-  const BASE = ['ai.analysis', 'ai.documents', 'ai.practice', 'ai.server_rules'];
+  const BASE = ['ai.analysis', 'ai.documents', 'ai.server_rules'];
 
   it('takes the profile from the organisation: no faction is a citizen', () => {
     expect([aiProfileOf(MVD), aiProfileOf(OPG), aiProfileOf(NONE), aiProfileOf(undefined)]).toEqual(['state', 'crime', 'citizen', 'citizen']);
   });
 
-  it('gives everyone the analysis, the rules, the trainer and the documents; the checks of an officer to the state', () => {
+  it("gives everyone the analysis, the rules and a citizen's documents; the service's tools to the state", () => {
     expect(ai(NONE)).toEqual(BASE);
     expect(ai(OPG)).toEqual(BASE);
-    expect(ai(MVD)).toEqual([...BASE, 'ai.check'].sort());
+    expect(ai(MVD)).toEqual([...BASE, 'ai.check', 'ai.official_documents', 'ai.practice'].sort());
   });
 
   it('shows the inner workings to the admin only', () => {

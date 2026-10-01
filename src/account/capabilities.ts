@@ -23,10 +23,12 @@ export type Capability =
   | 'ai.analysis'
   /** The AI's analysis in the rules of the server. */
   | 'ai.server_rules'
-  /** The trainer. */
+  /** The trainer: learning the laws by heart is the service's — the state's. */
   | 'ai.practice'
-  /** Writing a document with the AI. */
+  /** Writing a citizen's document with the AI: a statement, a complaint, a lawsuit. */
   | 'ai.documents'
+  /** Writing an officer's: a report, a detention record — the state's. */
+  | 'ai.official_documents'
   /** Checking an officer's actions — the lawyer's demands, the detention review: the state's services. */
   | 'ai.check'
   /** The AI's inner workings on screen: the admin. */
@@ -74,8 +76,9 @@ export const aiProfileOf = (organization?: Organization): AiProfile => (isFactio
  * the AI works without an account. To move to confirmed membership, this is the one place to change.
  */
 export function aiCapabilitiesOf({ admin, organization }: Pick<CapabilityInput, 'admin' | 'organization'>): ReadonlySet<Capability> {
-  const can = new Set<Capability>(['ai.analysis', 'ai.server_rules', 'ai.practice', 'ai.documents']);
-  if (aiProfileOf(organization) === 'state') can.add('ai.check');
+  const can = new Set<Capability>(['ai.analysis', 'ai.server_rules', 'ai.documents']);
+  // The service's tools: checking an officer's actions, the trainer, an officer's documents.
+  if (aiProfileOf(organization) === 'state') for (const service of ['ai.check', 'ai.practice', 'ai.official_documents'] as const) can.add(service);
   if (admin) can.add('ai.debug');
   return can;
 }

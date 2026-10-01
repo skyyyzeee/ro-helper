@@ -5,9 +5,9 @@ profile (`aiProfileOf` in `src/account/capabilities.ts`):
 
 | Profile | Organisation | AI capabilities |
 |---|---|---|
-| Гражданский | none («Без организации») | `ai.analysis`, `ai.server_rules`, `ai.practice`, `ai.documents` |
+| Гражданский | none («Без организации») | `ai.analysis`, `ai.server_rules`, `ai.documents` (заявление, жалоба, иск) |
 | Крайм | `kind: 'crime'` | the same |
-| Государство | `kind: 'state'` (МВД, ФСБ, суд, адвокатура…) | the same + `ai.check` |
+| Государство | `kind: 'state'` (МВД, ФСБ, суд, адвокатура…) | the same + the service's tools: `ai.check`, `ai.practice`, `ai.official_documents` |
 | — | the admin, any profile | + `ai.debug` |
 
 `aiCapabilitiesOf({ admin, organization })` gives the set; the overlay hands it to the AI screens (`AiAccess` in
@@ -21,7 +21,9 @@ profile (`aiProfileOf` in `src/account/capabilities.ts`):
 - The side a case is seen from (`perspectivesFor` in `src/ui/ai.ts`) follows the profile: a citizen — citizen,
   lawyer; the state — state, lawyer, citizen; the crime — crime, lawyer, citizen. A side the profile may not take
   is not taken, even when asked for in code.
-- `ai.analysis`, `ai.server_rules`, `ai.practice`, `ai.documents` are everyone's today; they are named so the
+- `ai.practice` — the trainer: learning the laws by heart is the service's job; hidden and refused otherwise.
+- `ai.official_documents` — an officer's documents (рапорт, протокол задержания); the others see a citizen's only.
+- `ai.analysis`, `ai.server_rules`, `ai.documents` are everyone's; they are named so the
   interface asks for them, and a change of who gets them is one place.
 - `ai.debug` — reserved for the debug view (P2).
 

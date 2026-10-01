@@ -27,7 +27,7 @@ describe('writing a document with the AI', () => {
 
   it('writes the chosen document from the situation, by the author, with the articles to open, and copies it', async () => {
     const bodies = fakeGemini();
-    const { platform, user } = await renderApp({ settings: GEMINI });
+    const { platform, user } = await renderApp({ settings: GEMINI, profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
     await user.click(screen.getByRole('radio', { name: 'Составить документ' }));
     const view = screen.getByRole('region', { name: 'Составить документ' });
@@ -53,7 +53,7 @@ describe('writing a document with the AI', () => {
 
   it('lets the text be corrected before copying', async () => {
     fakeGemini();
-    const { platform, user } = await renderApp({ settings: GEMINI });
+    const { platform, user } = await renderApp({ settings: GEMINI, profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
     await user.click(screen.getByRole('radio', { name: 'Составить документ' }));
     const view = screen.getByRole('region', { name: 'Составить документ' });
@@ -71,7 +71,7 @@ describe('writing a document with the AI', () => {
   });
 
   it('asks for the key before anything else', async () => {
-    const { user } = await renderApp({ settings: { [AI_PROVIDER_SETTING]: 'gemini' } });
+    const { user } = await renderApp({ settings: { [AI_PROVIDER_SETTING]: 'gemini' }, profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
     await user.click(screen.getByRole('radio', { name: 'Составить документ' }));
     await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'что-то случилось{Enter}');
@@ -91,7 +91,7 @@ describe('a document is checked against the laws it was given', () => {
         return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] }), { status: 200 });
       }),
     );
-    const { user } = await renderApp({ settings: GEMINI });
+    const { user } = await renderApp({ settings: GEMINI, profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
     await user.click(screen.getByRole('radio', { name: 'Составить документ' }));
     await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'у прохожего украли телефон{Enter}');

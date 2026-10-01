@@ -110,16 +110,19 @@ describe('the lawyer\'s demands', () => {
   });
 });
 
-describe('who may check an officer\'s actions', () => {
+describe('the service\'s tools are the state\'s', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('shows the checks to the state\'s services only — a citizen or the crime gets the analysis, the documents, the trainer', async () => {
+  it('a citizen or the crime gets the analysis and a citizen\'s documents — no checks of an officer, no trainer, no report', async () => {
     fakeServer();
     for (const organization of ['none', 'opg']) {
       const { user } = await renderApp({ settings: SERVER, profile: { organization } });
       await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
       const tabs = screen.getByRole('radiogroup', { name: 'Что сделать ИИ' });
-      expect(within(tabs).getAllByRole('radio').map((tab) => tab.textContent)).toEqual(['Разбор ситуации', 'Составить документ', 'Тренажёр']);
+      expect(within(tabs).getAllByRole('radio').map((tab) => tab.textContent)).toEqual(['Разбор ситуации', 'Составить документ']);
+      await user.click(within(tabs).getByRole('radio', { name: 'Составить документ' }));
+      const kinds = screen.getByRole('radiogroup', { name: 'Какой документ' });
+      expect(within(kinds).getAllByRole('radio').map((kind) => kind.textContent)).toEqual(['Заявление', 'Жалоба', 'Иск']);
       cleanup();
     }
   });

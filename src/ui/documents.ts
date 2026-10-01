@@ -9,6 +9,9 @@ import { SOURCES, ask, connect, lawTerms } from './ai';
 
 export type DocumentKind = 'report' | 'detention' | 'statement' | 'complaint' | 'lawsuit';
 
+/** An officer's documents: written by the state's services only (`ai.official_documents`). */
+export const OFFICIAL_DOCUMENTS: ReadonlySet<DocumentKind> = new Set(['report', 'detention']);
+
 export const DOCUMENT_KINDS: { id: DocumentKind; label: string; who: string; form: string }[] = [
   {
     id: 'report',
@@ -101,8 +104,11 @@ export interface DocumentWriter {
   reset: () => void;
 }
 
-export function useDocumentWriter(platform: PlatformAdapter, pack: ServerPack, boostDocuments?: string[]): DocumentWriter {
-  const [kind, setKind] = useState<DocumentKind>('report');
+/** `official`: the player may write an officer's documents; otherwise only a citizen's are offered and written. */
+export function useDocumentWriter(platform: PlatformAdapter, pack: ServerPack, boostDocuments?: string[], official = true): DocumentWriter {
+  const [chosen, setKind] = useState<DocumentKind>(official ? 'report' : 'statement');
+  // An officer's document left chosen when the profile lost it: a citizen's statement instead.
+  const kind = !official && OFFICIAL_DOCUMENTS.has(chosen) ? 'statement' : chosen;
   const [author, setAuthor] = useState<DocumentAuthor>(EMPTY_AUTHOR);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<WrittenDocument | null>(null);

@@ -76,7 +76,8 @@ export function pickArticle(documents: LawDocument[], asked: Set<string>, random
 
 const parse = <T,>(text: string): T => JSON.parse(text.replace(/^```(?:json)?\s*|```\s*$/g, '')) as T;
 
-export function useTrainer(platform: PlatformAdapter, pack: ServerPack, organisation?: string[]): Trainer {
+/** `allowed`: the player may train (`ai.practice`, the state's services); otherwise no round starts. */
+export function useTrainer(platform: PlatformAdapter, pack: ServerPack, organisation?: string[], allowed = true): Trainer {
   const [documents, setDocuments] = useState<string[]>(() => defaultDocuments(pack, organisation));
   const [phase, setPhase] = useState<Phase>('idle');
   const [number, setNumber] = useState(0);
@@ -133,9 +134,10 @@ export function useTrainer(platform: PlatformAdapter, pack: ServerPack, organisa
   );
 
   const start = useCallback(async () => {
+    if (!allowed) return;
     setScore(0);
     await ask1(1, new Set());
-  }, [ask1]);
+  }, [ask1, allowed]);
 
   const reply = useCallback(
     async (text: string) => {

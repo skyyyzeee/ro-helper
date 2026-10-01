@@ -35,13 +35,19 @@ export type AiTab = 'chat' | 'document' | 'lawyer' | 'detention' | 'trainer';
 /** What the AI may do for the player (`aiCapabilitiesOf`); none given — everything, as in the tests of one mode. */
 export const AiAccess = createContext<ReadonlySet<Capability> | null>(null);
 
-/** The modes that check an officer's actions: for the state's services (`ai.check`). */
-export const CHECK_TABS: ReadonlySet<AiTab> = new Set(['lawyer', 'detention']);
+/** What each mode needs: checking an officer and the trainer are the state's services'. */
+export const TAB_NEEDS: Record<AiTab, Capability> = {
+  chat: 'ai.analysis',
+  document: 'ai.documents',
+  lawyer: 'ai.check',
+  detention: 'ai.check',
+  trainer: 'ai.practice',
+};
 
 /** The things the AI does for this player, as the heading of its screen. */
 export function AiTabs({ tab, onTab }: { tab: AiTab; onTab: (tab: AiTab) => void }) {
   const can = useContext(AiAccess);
-  const shown = (id: AiTab) => !CHECK_TABS.has(id) || !can || can.has('ai.check');
+  const shown = (id: AiTab) => !can || can.has(TAB_NEEDS[id]);
   return (
     <div className="ai__tabs tabs" role="radiogroup" aria-label="Что сделать ИИ">
       {(

@@ -1,8 +1,8 @@
-import { useState, type ReactNode } from 'react';
+import { useContext, useState, type ReactNode } from 'react';
 import type { SearchHit } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
-import { AiTabs, citedIn, shortLabel, type AiTab } from './AiView';
-import { DOCUMENT_EXAMPLES, DOCUMENT_KINDS, type DocumentAuthor, type DocumentWriter } from './documents';
+import { AiAccess, AiTabs, citedIn, shortLabel, type AiTab } from './AiView';
+import { DOCUMENT_EXAMPLES, DOCUMENT_KINDS, OFFICIAL_DOCUMENTS, type DocumentAuthor, type DocumentWriter } from './documents';
 import { BackIcon, CheckIcon, WarnIcon } from './icons';
 
 /** The written document, line by line: a line citing a found article opens it; {gaps} stand out to be filled in. */
@@ -93,6 +93,9 @@ export function DocumentView({
   const [copied, setCopied] = useState(false);
   const result = writer.result;
   const kind = DOCUMENT_KINDS.find((k) => k.id === writer.kind)!;
+  // An officer's documents for the state's services; a citizen's for everyone.
+  const can = useContext(AiAccess);
+  const kinds = DOCUMENT_KINDS.filter((k) => !OFFICIAL_DOCUMENTS.has(k.id) || !can || can.has('ai.official_documents'));
 
   return (
     <section className="art ai doc" aria-label="Составить документ">
@@ -111,7 +114,7 @@ export function DocumentView({
       <AiTabs tab="document" onTab={onTab} />
 
       <div className="ai__chips" role="radiogroup" aria-label="Какой документ">
-        {DOCUMENT_KINDS.map((k) => (
+        {kinds.map((k) => (
           <button
             key={k.id}
             type="button"
