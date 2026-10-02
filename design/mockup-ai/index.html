@@ -33,15 +33,8 @@
   --likely-bg: oklch(0.85 0.12 90 / 0.16);
   --badge-codes-text: oklch(0.87 0.07 245);
   --badge-codes-bg: oklch(0.78 0.1 245 / 0.22);
-  --badge-charters-text: oklch(0.87 0.07 150);
-  --badge-charters-bg: oklch(0.78 0.1 150 / 0.22);
-  --badge-fz-text: oklch(0.87 0.07 195);
-  --badge-fz-bg: oklch(0.78 0.1 195 / 0.22);
-  --badge-rules-text: rgba(255, 255, 255, 0.88);
-  --badge-rules-bg: rgba(255, 255, 255, 0.13);
   --glass-bg: rgb(15 15 18 / 0.62);
   --radius-panel: 22px;
-  --radius-field: 16px;
   --radius-card: 14px;
   --radius-control: 12px;
 }
@@ -89,43 +82,55 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .rail .icon-btn[aria-current='true'] { background: var(--accent-soft); color: var(--accent-text); }
 .rail .icon-btn svg { width: 20px; height: 20px; }
 .main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
-.head { display: flex; align-items: center; gap: 8px; padding: 14px 16px 10px; }
-.brand { font-weight: 700; font-size: 15px; }
-.org { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: 12.5px; font-weight: 600; color: var(--accent-text); }
 
-/* The field: the search's, given to the AI. */
-.field { margin: 2px 16px 10px; display: flex; align-items: center; gap: 10px; padding: 11px 12px 11px 14px; border-radius: var(--radius-field); background: var(--surface); border: 1px solid var(--accent); color: var(--text-faint); font-size: 14.5px; }
-.field svg { width: 18px; height: 18px; flex: none; }
-.field .ph { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.field .typed { color: var(--text); }
-.scope { display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 99px; background: var(--surface-active); color: var(--text-muted); font-size: 12px; font-weight: 600; white-space: nowrap; }
-.scope svg { width: 12px; height: 12px; }
-.kbd { font-size: 11px; padding: 2px 6px; border-radius: 6px; background: var(--surface-active); color: var(--text-muted); }
-
-/* One row under the field: the state's tabs, the history on the right. */
-.tabsrow { display: flex; align-items: center; gap: 8px; margin: 0 16px 10px; }
-.tabs { display: inline-flex; padding: 3px; gap: 2px; border-radius: var(--radius-control); background: var(--surface); }
+/* The chat's head: the section, the state's tabs, a new chat and the history. */
+.head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 12px 18px; border-bottom: 1px solid var(--line); }
+.title { display: flex; flex-direction: column; line-height: 1.25; }
+.title b { font-size: 15px; }
+.title span { font-size: 11.5px; color: var(--text-faint); }
+.tabs { display: inline-flex; padding: 3px; gap: 2px; border-radius: var(--radius-control); background: var(--surface); margin-left: 8px; }
 .tabs button { padding: 6px 14px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--text-muted); }
 .tabs button[aria-pressed='true'] { background: var(--surface-active); color: var(--text); }
-.ghost { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
+.ghost { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 10px; font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
 .ghost:hover { background: var(--surface-hover); color: var(--text); }
 .ghost svg { width: 15px; height: 15px; }
 
-.body { flex: 1; overflow: auto; padding: 0 16px 14px; display: flex; flex-direction: column; gap: 12px; }
-.foot { padding: 10px 16px; font-size: 11.5px; color: var(--text-faint); border-top: 1px solid var(--line); display: flex; gap: 14px; }
-.foot b { color: var(--text-muted); font-weight: 600; }
+/* The thread. */
+.thread { flex: 1; overflow: auto; padding: 18px 18px 8px; display: flex; flex-direction: column; gap: 14px; }
+.msg { display: flex; gap: 10px; align-items: flex-start; }
+.ava { width: 30px; height: 30px; flex: none; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-text); }
+.ava svg { width: 17px; height: 17px; }
+.msg > .card, .msg > .stack { flex: 1; min-width: 0; }
+.stack { display: flex; flex-direction: column; gap: 8px; }
+.q { align-self: flex-end; max-width: 80%; padding: 10px 14px; border-radius: var(--radius-card) var(--radius-card) 4px var(--radius-card); background: var(--accent); color: var(--on-accent); text-shadow: none; font-size: 14.5px; line-height: 1.5; }
+.day { align-self: center; font-size: 11.5px; color: var(--text-faint); }
 
-.intro { font-size: 13.5px; line-height: 1.55; color: var(--text-muted); margin: 2px 0 0; }
-.h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); margin: 6px 2px 0; font-weight: 600; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { font-size: 12.5px; font-weight: 500; padding: 6px 11px; border-radius: 99px; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.85); }
-.chip--example { font-style: italic; text-align: left; border-radius: 12px; padding: 7px 12px; }
-.chip--on { background: var(--accent); color: var(--on-accent); text-shadow: none; }
+/* The composer at the bottom. */
+.composer { margin: 6px 18px 16px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); padding: 12px 10px 10px 16px; display: flex; flex-direction: column; gap: 10px; }
+.composer--on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.composer .ph { color: var(--text-faint); font-size: 14.5px; min-height: 22px; }
+.composer .row { display: flex; align-items: center; gap: 6px; }
+.composer .icon-btn { width: 34px; height: 34px; border-radius: 10px; }
+.scope { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 99px; background: var(--surface-active); color: var(--text-muted); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.scope svg { width: 12px; height: 12px; }
+.send { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); }
+.send svg { width: 17px; height: 17px; }
+.under { margin: -8px 18px 12px; font-size: 11px; color: var(--text-faint); text-align: center; }
+
+/* The empty chat. */
+.hero { margin: auto 0; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 10px 0; }
+.hero .ava { width: 54px; height: 54px; border-radius: 17px; }
+.hero .ava svg { width: 27px; height: 27px; }
+.hero h2 { margin: 6px 0 0; font-size: 22px; }
+.hero p { margin: 0; max-width: 440px; color: var(--text-muted); font-size: 13.5px; line-height: 1.55; }
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; max-width: 560px; margin-top: 10px; }
+.ex { text-align: left; padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; line-height: 1.45; color: rgba(255,255,255,0.88); }
+.ex:hover { background: var(--surface-hover); border-color: var(--accent-soft); }
 .hint { font-size: 12px; color: var(--text-faint); line-height: 1.5; }
 .hint b { color: var(--text-muted); }
 
-.q { align-self: flex-end; max-width: 86%; padding: 10px 14px; border-radius: var(--radius-card) var(--radius-card) 4px var(--radius-card); background: var(--accent); color: var(--on-accent); text-shadow: none; font-size: 14.5px; line-height: 1.5; }
-.card { padding: 14px 16px; border-radius: var(--radius-card); background: var(--surface); display: flex; flex-direction: column; gap: 10px; }
+/* An answer. */
+.card { padding: 14px 16px; border-radius: 4px var(--radius-card) var(--radius-card) var(--radius-card); background: var(--surface); display: flex; flex-direction: column; gap: 10px; }
 .card p { margin: 0; font-size: 14.5px; line-height: 1.55; }
 .status { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; }
 .st-ok { color: var(--ok-text); background: var(--ok-bg); }
@@ -135,20 +140,16 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .group { font-size: 12px; font-weight: 700; color: var(--accent-text); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
 .norm { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: rgba(0, 0, 0, 0.18); border: 1px solid var(--line); }
 .norm .what { flex: 1; display: flex; flex-direction: column; gap: 3px; font-size: 13.5px; line-height: 1.45; }
-.norm .what b { font-weight: 700; }
 .norm .why { color: var(--text-muted); font-size: 12.5px; }
 .badge { flex: none; font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 6px; margin-top: 1px; }
 .b-codes { color: var(--badge-codes-text); background: var(--badge-codes-bg); }
-.b-charter { color: var(--badge-charters-text); background: var(--badge-charters-bg); }
-.b-fz { color: var(--badge-fz-text); background: var(--badge-fz-bg); }
-.b-rules { color: var(--badge-rules-text); background: var(--badge-rules-bg); }
 .calc { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--penalty-bg); color: var(--penalty-text); font-size: 13.5px; font-weight: 600; }
 .calc svg { width: 17px; height: 17px; flex: none; }
 .calc small { margin-left: auto; color: var(--text-faint); font-weight: 500; font-size: 11.5px; }
 .cite { text-decoration: underline; text-decoration-color: oklch(0.78 0.1 245 / 0.55); text-underline-offset: 3px; }
 .steps { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.55; }
 .steps li { margin: 2px 0; }
-.actions { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 4px; border-top: 1px solid var(--line); }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 10px; font-size: 13px; font-weight: 600; background: var(--surface-active); }
 .btn:hover { background: rgba(255, 255, 255, 0.18); }
 .btn svg { width: 15px; height: 15px; }
@@ -157,9 +158,12 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .more { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 12px; background: rgba(0, 0, 0, 0.16); }
 .more h4 { margin: 0; font-size: 12.5px; color: var(--text-muted); font-weight: 700; }
 .more ul { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.5; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12.5px; font-weight: 500; padding: 6px 11px; border-radius: 99px; background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.85); }
+.chip--on { background: var(--accent); color: var(--on-accent); text-shadow: none; }
 
 /* The document sheet. */
-.sheet { padding: 18px 20px; border-radius: var(--radius-card); background: rgba(255, 255, 255, 0.92); color: #15171c; text-shadow: none; font-size: 13.5px; line-height: 1.6; }
+.sheet { padding: 18px 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.92); color: #15171c; text-shadow: none; font-size: 13.5px; line-height: 1.6; }
 .sheet .t { text-align: center; font-weight: 700; letter-spacing: 0.06em; margin: 10px 0; }
 .sheet .r { text-align: right; }
 .gap { background: oklch(0.9 0.1 90 / 0.6); border-radius: 4px; padding: 0 4px; }
@@ -175,10 +179,11 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .progress .tr { flex: 1; height: 6px; border-radius: 4px; background: var(--surface-active); overflow: hidden; }
 .progress .tr i { display: block; height: 100%; width: 30%; background: var(--accent); }
 
-/* The history: a drawer over the AI screen. */
+/* The history: a drawer over the chat. */
 .drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 300px; background: rgb(20 21 26 / 0.97); border-left: 1px solid var(--line); box-shadow: -20px 0 60px rgba(0, 0, 0, 0.45); display: flex; flex-direction: column; z-index: 3; }
 .drawer .dh { display: flex; align-items: center; padding: 14px 14px 8px; font-weight: 700; font-size: 14.5px; }
 .drawer .dsearch { margin: 0 14px 8px; padding: 8px 10px; border-radius: 10px; background: var(--surface); font-size: 13px; color: var(--text-faint); }
+.drawer h5 { margin: 10px 14px 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); }
 .conv { padding: 9px 14px; display: flex; flex-direction: column; gap: 3px; font-size: 13px; border-radius: 10px; margin: 0 6px; }
 .conv:hover, .conv--on { background: var(--surface-hover); }
 .conv span { color: var(--text-faint); font-size: 11.5px; }
@@ -192,7 +197,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
     <button data-v="citizen">Гражданский</button><button data-v="state">Государство · МВД</button><button data-v="crime">Крайм · ОПГ</button>
   </span></span>
   <span><label>Экран</label><span class="seg" data-key="screen">
-    <button data-v="start">Начало</button><button data-v="answer">Ответ</button><button data-v="more">Подробнее</button><button data-v="document">Документ</button><button data-v="check" data-state>Проверка</button><button data-v="practice" data-state>Практика</button><button data-v="history">История</button>
+    <button data-v="start">Новый чат</button><button data-v="answer">Переписка</button><button data-v="more">Подробнее</button><button data-v="document">Документ</button><button data-v="check" data-state>Проверка</button><button data-v="practice" data-state>Практика</button><button data-v="history">История</button>
   </span></span>
 </div>
 <div class="stage" id="stage"></div>
@@ -211,15 +216,16 @@ const I = {
   close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
   clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>',
   copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>',
   pen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
-  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>',
+  send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
 };
 
 const PROFILES = {
   citizen: { org: 'Без организации', hue: 245, label: 'Гражданский', side: 'как гражданин',
-    examples: ['У меня украли телефон из кармана — что будет вору?', 'Сотрудник остановил без причины и требует документы — я обязан?', 'Меня задержали — сколько меня могут держать?', 'Меня оскорбили в чате — это нарушение?'],
+    examples: ['У меня украли телефон из кармана — что будет вору?', 'Сотрудник остановил без причины и требует документы — я обязан?', 'Меня задержали — сколько могут держать?', 'Меня оскорбили в чате — это нарушение?'],
     docs: ['Заявление', 'Жалоба', 'Иск'], doc: 'Заявление',
     question: 'У меня у метро незаметно вытащили телефон из кармана',
     steps: ['Подать <span class="cite">заявление</span> в полицию: где, когда, приметы — кнопка ниже составит его по этому разбору.', 'Сохранить доказательства: время, место, свидетели.'],
@@ -239,30 +245,35 @@ const PROFILES = {
 };
 
 const state = { profile: 'citizen', screen: 'answer' };
-try { Object.assign(state, JSON.parse(localStorage.getItem('mock-ai') || '{}')); } catch {}
+try { Object.assign(state, JSON.parse(localStorage.getItem('mock-ai-chat') || '{}')); } catch {}
 
 const P = () => PROFILES[state.profile];
 const isState = () => state.profile === 'state';
+const ava = () => `<span class="ava">${I.wand}</span>`;
+const bot = (inner) => `<div class="msg">${ava()}${inner}</div>`;
 
-function field(text, placeholder) {
-  return `<div class="field">${I.wand}<span class="ph ${text ? 'typed' : ''}">${text || placeholder}</span>
-    <span class="scope" title="Где искать ответ">Законы и правила ${I.chev}</span>${I.mic}<span class="kbd">Enter</span></div>`;
-}
-
-function tabsRow(current) {
+/** The head: the section's name, the state's tabs, a new chat, the history. */
+function head(current) {
   const tabs = isState()
     ? `<span class="tabs">${[['analysis', 'Разбор'], ['check', 'Проверка'], ['practice', 'Практика']].map(([id, n]) => `<button aria-pressed="${current === id}" data-go="${id === 'analysis' ? 'start' : id}">${n}</button>`).join('')}</span>`
     : '';
-  return `<div class="tabsrow">${tabs}<span class="sp"></span>
-    ${current === 'analysis' ? `<button class="ghost" data-go="start">Новый разбор</button>` : ''}
-    <button class="ghost" data-go="history">${I.clock}История</button></div>`;
+  return `<div class="head"><span class="title"><b>ИИ-помощник</b><span>Тверской · ${P().org}</span></span>${tabs}<span class="sp"></span>
+    <button class="ghost" data-go="start">${I.plus}Новый чат</button>
+    <button class="ghost" data-go="history">${I.clock}История</button>
+    <button class="icon-btn" title="Закрыть">${I.close}</button></div>`;
+}
+
+/** The composer at the bottom, as in a messenger. */
+function composer(placeholder, on = false) {
+  return `<div class="composer ${on ? 'composer--on' : ''}"><span class="ph">${placeholder}</span>
+    <div class="row"><span class="scope" title="Где искать ответ">Законы и правила ${I.chev}</span><span class="sp"></span>
+    <button class="icon-btn" title="Голосом · Alt+W">${I.mic}</button><button class="send" title="Отправить · Enter">${I.send}</button></div></div>
+    <div class="under">ИИ отвечает только по базе сервера — каждую норму можно открыть и проверить</div>`;
 }
 
 function answerCard(expanded) {
   const p = P();
-  return `
-    <div class="q">${p.question}</div>
-    <div class="card">
+  return bot(`<div class="card">
       <div style="display:flex;align-items:center;gap:8px"><span class="status st-ok">✓ Подтверждено</span><span class="side">разбор ${p.side}</span></div>
       <p>Тайное хищение чужого имущества — <b>кража</b>.</p>
       <div class="group">По закону</div>
@@ -276,8 +287,7 @@ function answerCard(expanded) {
         <button class="btn btn--accent" data-go="document">${I.pen}${p.action}</button>
         <button class="btn btn--plain">${I.copy}Копировать</button>
       </div>
-    </div>
-    <div class="hint">Уточните в поле: <b>«а если он был в маске?»</b> — разбор пересчитается на тех же статьях.</div>`;
+    </div>`);
 }
 
 function more() {
@@ -291,23 +301,34 @@ function more() {
   </div>`;
 }
 
+function conversation(expanded) {
+  const p = P();
+  return `<div class="day">Сегодня, 21:40</div>
+    <div class="q">${p.question}</div>
+    ${answerCard(expanded)}
+    ${expanded ? '' : `<div class="q">А если телефон стоил 20 000?</div>
+    ${bot(`<div class="card"><div style="display:flex;align-items:center;gap:8px"><span class="status st-ok">✓ Подтверждено</span><span class="side">поправка: стоимость</span></div>
+      <p>Статья та же, меняется часть: кража на сумму свыше 15 000 ₽.</p>
+      <div class="norm"><span class="badge b-codes">УК</span><div class="what"><b><span class="cite">ст. 65 ч. 2</span> · Кража в значительном размере</b></div></div>
+      <div class="calc">${I.calc}Штраф до 90 000 ₽ или лишение свободы до 40 мес.<small>посчитал калькулятор</small></div></div>`)}`}`;
+}
+
 function start() {
   const p = P();
-  return `${tabsRow('analysis')}
-    <div class="body">
-      <p class="intro">Опишите ситуацию своими словами — ассистент найдёт нормы в законах и правилах вашего сервера и объяснит, что к чему. Опирается только на найденное в базе: каждую норму можно открыть.</p>
-      <div class="h3">Например</div>
-      <div class="chips">${p.examples.map((e) => `<button class="chip chip--example">${e}</button>`).join('')}</div>
-      <div class="hint" style="margin-top:auto">Профиль: <b>${p.label}</b> — по организации в профиле. ${isState() ? 'Вам доступны Проверка действий сотрудника и Практика.' : 'Проверка действий сотрудника и Практика — для государственных организаций.'}</div>
+  return `<div class="hero">${ava()}<h2>Что случилось?</h2>
+      <p>Опишите ситуацию своими словами — найду нормы в законах и правилах сервера и объясню, что к чему.</p>
+      <div class="cards">${p.examples.map((e) => `<button class="ex" data-go="answer">${e}</button>`).join('')}</div>
+      <div class="hint" style="margin-top:8px">Профиль: <b>${p.label}</b> — по организации в профиле. ${isState() ? 'Вам доступны Проверка и Практика.' : 'Проверка и Практика — для государственных организаций.'}</div>
     </div>`;
 }
 
 function documentScreen() {
   const p = P();
   const official = p.doc === 'Рапорт';
-  return `${tabsRow('analysis')}
-    <div class="body">
-      <div style="display:flex;align-items:center;gap:8px"><button class="ghost" data-go="answer">${I.back}К разбору</button><span class="side">по разбору «Кража телефона у метро»</span></div>
+  return `<div class="q">${p.question}</div>
+    ${bot(`<div class="card" style="padding:10px 14px"><p style="font-size:13.5px;color:var(--text-muted)">Разбор: <b style="color:var(--text)">кража, УК ст. 65 ч. 1</b> · <span class="cite" data-go="answer">показать</span></p></div>`)}
+    <div class="q">${p.action}</div>
+    ${bot(`<div class="stack">
       <div class="chips">${p.docs.map((d) => `<button class="chip ${d === p.doc ? 'chip--on' : ''}">${d}</button>`).join('')}</div>
       <div class="sheet">
         ${official
@@ -317,42 +338,37 @@ function documentScreen() {
              Прошу привлечь к ответственности неизвестное лицо, которое <span class="gap">дата</span> около <span class="gap">время</span> у станции метро тайно похитило мой мобильный телефон из кармана. Считаю, что в его действиях есть признаки кражи (<span class="cite">ч. 1 ст. 65 УК</span>).`}
         <div class="r" style="margin-top:12px"><span class="gap">дата</span> · <span class="gap">подпись</span></div>
       </div>
-      <div class="hint">Факты и статьи взяты из разбора — заново описывать не нужно. Жёлтым — что заполнить; ссылки открывают статью.</div>
-      <div style="display:flex;gap:6px"><button class="btn btn--accent">${I.copy}Копировать</button><button class="btn">${I.pen}Изменить</button></div>
-    </div>`;
+      <div class="hint">Факты и статьи взяты из разбора. Жёлтым — что заполнить; напишите в поле, что изменить.</div>
+      <div style="display:flex;gap:6px"><button class="btn btn--accent">${I.copy}Копировать</button><button class="btn">${I.pen}Изменить вручную</button></div>
+    </div>`)}`;
 }
 
 function check() {
-  return `${tabsRow('check')}
-    <div class="body">
-      <div class="chips"><button class="chip chip--on">Требования адвоката</button><button class="chip">Ход задержания</button></div>
-      <div class="q">Адвокат требует свидание с задержанным наедине и отпустить его через 30 минут</div>
+  return `${bot(`<div class="card" style="padding:10px 14px"><p style="font-size:13.5px">Что проверить?</p><div class="chips"><button class="chip chip--on">Требования адвоката</button><button class="chip">Ход задержания</button></div></div>`)}
+    <div class="q">Адвокат требует свидание с задержанным наедине и отпустить его через 30 минут</div>
+    ${bot(`<div class="stack">
       <div class="item"><div class="top"><span class="status st-ok">Законно</span>Свидание наедине</div>Нужно выполнить: предоставить свидание до допроса.<div class="basis">Основание: <span class="cite">УПК ст. 46 ч. 4</span></div></div>
       <div class="item"><div class="top"><span class="status st-warn">Можно отказать</span>Отпустить через 30 минут</div>Срок задержания не истёк — продолжить задержание в пределах срока.<div class="basis">Основание: <span class="cite">УПК ст. 94</span></div></div>
       <div class="item"><div class="top"><span class="status st-likely">Не нашлось</span>«Снять наручники»</div>В законах сервера нормы об этом не нашлось — решайте по уставу.</div>
       <div class="card"><p><b>Ответ адвокату:</b> свидание наедине предоставлю; отпустить сейчас не могу — срок задержания не истёк.</p><div class="actions"><button class="btn">${I.copy}Скопировать ответ</button></div></div>
-    </div>`;
+    </div>`)}`;
 }
 
 function practice() {
-  return `${tabsRow('practice')}
-    <div class="body">
-      <div class="progress">Вопрос 3 из 10<span class="tr"><i></i></span>2 верно</div>
-      <div class="chips"><span class="side" style="align-self:center">Вопросы по:</span><button class="chip chip--on">Устав МВД</button><button class="chip chip--on">УК</button><button class="chip">УПК</button><button class="chip">КоАП</button></div>
-      <div class="card"><span class="side">Вопрос по УК ст. 104</span><p style="font-size:16px;font-weight:600">Что считается оскорблением представителя власти и какое за него наказание?</p></div>
-      <div class="q">Публичное оскорбление сотрудника при исполнении, до 30 месяцев</div>
-      <div class="card"><span class="status st-likely">Почти верно</span><p>Не сказали про штраф: санкция — штраф до 40 000 ₽ <b>или</b> лишение свободы до 30 мес.</p><div class="norm"><span class="badge b-codes">УК</span><div class="what"><b><span class="cite">ст. 104 ч. 1</span> · Оскорбление представителя власти</b></div></div>
-        <div class="actions"><button class="btn btn--accent">Следующий вопрос</button></div></div>
-    </div>`;
+  return `<div class="progress">Вопрос 3 из 10<span class="tr"><i></i></span>2 верно</div>
+    ${bot(`<div class="card"><span class="side">Вопрос по УК ст. 104</span><p style="font-size:16px;font-weight:600">Что считается оскорблением представителя власти и какое за него наказание?</p></div>`)}
+    <div class="q">Публичное оскорбление сотрудника при исполнении, до 30 месяцев</div>
+    ${bot(`<div class="card"><span class="status st-likely">Почти верно</span><p>Не сказали про штраф: санкция — штраф до 40 000 ₽ <b>или</b> лишение свободы до 30 мес.</p><div class="norm"><span class="badge b-codes">УК</span><div class="what"><b><span class="cite">ст. 104 ч. 1</span> · Оскорбление представителя власти</b></div></div>
+      <div class="actions"><button class="btn btn--accent">Следующий вопрос</button><span class="side" style="align-self:center;margin-left:auto">Вопросы по: Устав МВД, УК ▾</span></div></div>`)}`;
 }
 
 function history() {
-  return `<div class="drawer"><div class="dh">История разборов<span class="sp"></span><button class="icon-btn" data-go="answer">${I.close}</button></div>
+  return `<div class="drawer"><div class="dh">История<span class="sp"></span><button class="icon-btn" data-go="answer">${I.close}</button></div>
     <div class="dsearch">Поиск по истории</div>
-    <div class="h3" style="margin:6px 14px 4px">Сегодня</div>
+    <h5>Сегодня</h5>
     <div class="conv conv--on">${P().question}<span>УК ст. 65 · 21:40</span></div>
     <div class="conv">Обматерил сотрудника при исполнении<span>УК ст. 104 · 19:12</span></div>
-    <div class="h3" style="margin:10px 14px 4px">Вчера</div>
+    <h5>Вчера</h5>
     <div class="conv">Проехал на красный и уехал от патруля<span>КоАП 13.1, 8.11 · 23:05</span></div>
     <div class="conv">Ник Вася Пупкин — это nonRP?<span>Правила 2.9 · 18:30</span></div>
     <div class="conv">Двое отобрали сумку у прохожего<span>УК ст. 66 · 14:02</span></div>
@@ -361,22 +377,21 @@ function history() {
 
 function screen() {
   const s = state.screen;
-  if (s === 'start') return { field: field('', 'Опишите ситуацию своими словами…'), body: start() };
-  if (s === 'document') return { field: field('', 'Что добавить в документ…'), body: documentScreen() };
-  if (s === 'check') return { field: field('', 'Что требует адвокат — или как прошло задержание…'), body: check() };
-  if (s === 'practice') return { field: field('', 'Ваш ответ…'), body: practice() };
-  const body = `${tabsRow('analysis')}<div class="body">${answerCard(s === 'more')}</div>`;
-  return { field: field('', 'Уточните: «а если…»'), body, drawer: s === 'history' ? history() : '' };
+  if (s === 'start') return { tab: 'analysis', thread: start(), composer: composer('Опишите ситуацию своими словами…', true) };
+  if (s === 'document') return { tab: 'analysis', thread: documentScreen(), composer: composer('Что изменить в документе…') };
+  if (s === 'check') return { tab: 'check', thread: check(), composer: composer('Что требует адвокат…') };
+  if (s === 'practice') return { tab: 'practice', thread: practice(), composer: composer('Ваш ответ…', true) };
+  return { tab: 'analysis', thread: conversation(s === 'more'), composer: composer('Уточните: «а если…»'), drawer: s === 'history' ? history() : '' };
 }
 
 const NOTES = {
-  start: ['Начало', 'Один экран вместо пяти вкладок. У гражданского и крайма вкладок нет совсем — только разбор.', 'Переключатель «Быстрый / Полный» убран: ответ всегда короткий, полный — по «Подробнее».', '«Где искать» — компактный выбор в поле («Законы и правила ▾»), а не отдельная строка.', 'Внизу — какой профиль и почему (организация в профиле).'],
-  answer: ['Ответ', 'Статус сверху — из проверок, не со слов ИИ.', 'Нормы с бейджем документа, «По закону» / «По правилам сервера» раздельно; наказание считает калькулятор.', 'Точка зрения берётся из профиля («разбор как гражданин») — четырёх кнопок больше нет.', 'Документ — действие над разбором: «Составить заявление» (гражданин), «Составить рапорт» (сотрудник).'],
-  more: ['Подробнее', 'Вместо «Полного разбора»: факты, допущения, другие подходящие нормы и все источники раскрываются под тем же ответом.'],
-  document: ['Документ', 'Открывается из разбора: факты и статьи уже подставлены.', 'Виды по профилю: сотруднику — рапорт, протокол задержания и документы гражданина; остальным — заявление, жалоба, иск.', 'Жёлтым — что заполнить; ссылки открывают статью.'],
-  check: ['Проверка (только Государство)', 'Бывшие «Требования адвоката» и «Разбор задержания» — одна вкладка, выбор вверху.', 'Каждый пункт: вердикт, что делать, основание; без основания — «Не нашлось», без вердикта.'],
-  practice: ['Практика (только Государство)', 'Бывший «Тренажёр»: вопросы по документам своей организации, ответ — в том же поле.', 'Оценка сверяется со статьёй; эталон без источника не показывается.'],
-  history: ['История', 'Боковая панель внутри ИИ; пункт «История» из левой колонки убирается.', 'Каждая запись — вопрос и найденные статьи; открытый разговор перепроверяется по базе.'],
+  start: ['Новый чат', 'Раздел ИИ — чат, как в мессенджере: сообщения посередине, поле ввода закреплено внизу. Поиск по законам сверху здесь не показывается — он в разделе «Поиск».', 'Пустой чат: приветствие и 4 примера под профиль — клик отправляет пример.', 'Убраны: «Быстрый / Полный», 4 кнопки точки зрения, отдельная строка «Авто / Законы / Правила» — выбор «где искать» стал кнопкой в поле.'],
+  answer: ['Переписка', 'Вопрос справа, ответ ИИ слева со значком. Уточнение («а если стоил 20 000?») — просто следующее сообщение, разбор пересчитывается на тех же статьях.', 'Статус ответа — из проверок, не со слов ИИ; наказание считает калькулятор.', 'Под ответом: «Подробнее», документ одной кнопкой, «Копировать».'],
+  more: ['Подробнее', 'Вместо «Полного разбора»: факты, допущения, другие подходящие нормы и все источники раскрываются внутри того же ответа.'],
+  document: ['Документ', 'Не отдельная вкладка, а продолжение переписки: «Составить заявление» под ответом — и документ появляется в чате, уже с фактами и статьями.', 'Что изменить — пишется в поле внизу, как обычное сообщение.', 'Виды по профилю: сотруднику — рапорт и протокол задержания плюс документы гражданина; остальным — заявление, жалоба, иск.'],
+  check: ['Проверка (только Государство)', 'Бывшие «Требования адвоката» и «Разбор задержания» — тот же чат: ИИ спрашивает, что проверить, ответ — сообщением.', 'Каждый пункт: вердикт, что делать, основание; без основания — «Не нашлось».'],
+  practice: ['Практика (только Государство)', 'Бывший «Тренажёр» в виде чата: ИИ задаёт вопрос, вы отвечаете в поле внизу, оценка — следующим сообщением со статьёй.'],
+  history: ['История', 'Боковая панель поверх чата; пункт «История» из левой колонки убирается. Открытый разговор перепроверяется по базе.'],
 };
 
 function render() {
@@ -386,30 +401,28 @@ function render() {
     b.setAttribute('aria-pressed', String(state[seg.dataset.key] === b.dataset.v));
     if (b.hasAttribute('data-state')) b.disabled = !isState();
   }
-  try { localStorage.setItem('mock-ai', JSON.stringify(state)); } catch {}
-  const { field, body, drawer = '' } = screen();
-  const p = P();
+  try { localStorage.setItem('mock-ai-chat', JSON.stringify(state)); } catch {}
+  const { tab, thread, composer: bottom, drawer = '' } = screen();
   const n = NOTES[state.screen];
   document.getElementById('stage').innerHTML = `
     <div class="panel">
       <nav class="rail">
         <span class="srvbig"><svg viewBox="0 0 18 18" style="color:rgb(72,184,94)" fill="currentColor"><path d="${TVERSKOI}"/></svg></span>
-        ${[['search', 'Поиск'], ['doc', 'Документы'], ['calc', 'Калькулятор'], ['pin', 'Закреплённое'], ['wand', 'ИИ'], ['memo', 'Памятки']].map(([k, t]) => `<button class="icon-btn" title="${t}" aria-current="${k === 'wand'}">${I[k]}</button>`).join('')}
+        ${[['search', 'Поиск'], ['doc', 'Документы'], ['calc', 'Калькулятор'], ['pin', 'Закреплённое'], ['wand', 'ИИ-помощник'], ['memo', 'Памятки']].map(([k, t]) => `<button class="icon-btn" title="${t}" aria-current="${k === 'wand'}">${I[k]}</button>`).join('')}
         <span class="sp"></span>
         <button class="icon-btn" title="Настройки">${I.gear}</button>
         <button class="icon-btn" title="Профиль">${I.user}</button>
       </nav>
       <div class="main ${drawer ? 'dim' : ''}">
-        <div class="head"><span class="brand">Тверской</span><span class="org">${p.org}</span><span class="sp"></span><button class="icon-btn">${I.close}</button></div>
-        ${field}
-        ${body}
-        <div class="foot"><span><b>Enter</b> спросить ИИ</span><span><b>Alt+W</b> голосом</span><span>клик по статье — открыть</span><span><b>Esc</b> к поиску</span></div>
+        ${head(tab)}
+        <div class="thread">${thread}</div>
+        ${bottom}
       </div>
       ${drawer}
     </div>
     <aside class="note"><h2>${n[0]}</h2><ul>${n.slice(1).map((x) => `<li>${x}</li>`).join('')}</ul>
-      <ul class="was"><li>Сейчас: 5 вкладок (Разбор, Документ, Требования адвоката, Разбор задержания, Тренажёр), «Авто / Законы / Правила», «Быстрый / Полный», 4 кнопки точки зрения, отдельный пункт «История».</li>
-      <li>Будет: гражданскому и крайму — один экран; сотруднику — Разбор · Проверка · Практика.</li></ul></aside>`;
+      <ul class="was"><li>Сейчас: поле вопроса сверху (общее с поиском), 5 вкладок, «Авто / Законы / Правила», «Быстрый / Полный», 4 кнопки точки зрения, отдельный пункт «История».</li>
+      <li>Будет: чат с полем внизу; гражданскому и крайму — один чат, сотруднику — Разбор · Проверка · Практика.</li></ul></aside>`;
 }
 
 document.addEventListener('click', (e) => {
