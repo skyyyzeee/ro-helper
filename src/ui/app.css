@@ -4887,3 +4887,17 @@ select option {
 .debug dt { color: var(--text-faint); }
 .debug dd { margin: 0; color: rgba(255, 255, 255, 0.82); overflow-wrap: anywhere; }
 .debug__list { margin: 0; padding-left: 16px; }
+
+/* P3: the head of the AI stays in sight while the conversation scrolls under it. */
+.ai > .ai__head {
+  position: sticky; top: 0; z-index: 3; margin: -4px -12px 0; padding: 6px 12px 8px;
+  background: rgb(17 17 21 / 0.97);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.ai > .ai__head:not(:has(> *:not(.sp))) { display: none; }
+/* A narrow window: the examples one under another, the scope choice shorter, the field keeps its room. */
+@media (max-width: 560px) {
+  .ai__intro .ai__examples { grid-template-columns: 1fr; }
+  .search__scope { max-width: 110px; }
+  .search--composer .kbd { display: none; }
+}
