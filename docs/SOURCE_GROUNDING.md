@@ -45,6 +45,11 @@ The other modes share `check.ts`: a lawyer's demand or a step of a detention sta
 it is shown as «не нашлось», with nothing to do or refuse on it); a document or the trainer's reference answer may
 name only the articles it was given.
 
+«Проверить мой ответ» (`answerCheck.ts`, roadmap 6Б): the player's answer is split into points by the AI; a point's
+verdict (matches / contradicts) stands only on sources it names that were given, with no article or figure they lack —
+otherwise it is «не подтверждено». The answer as a whole (right / partly / wrong / not confirmed) is the app's word,
+from the points: the AI cannot call an answer right on its own.
+
 ## Prompt injection
 
 The player's words are fenced as data (`playerData`); a text that closes the fence stays inside it. But the defence

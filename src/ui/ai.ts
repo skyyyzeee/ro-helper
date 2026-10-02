@@ -21,6 +21,9 @@ import {
   type LegalAnswer,
   type Perspective,
   type QueryAlias,
+  type AnswerCheck,
+  type AnswerVerdict,
+  checkMyAnswer,
   type ScopeChoice,
   type SystemReason,
   type Turn,
@@ -154,6 +157,10 @@ export interface AiMessage {
    * search found), or «закон или правила?» (with the choices and the question to ask again).
    */
   system?: { reason: SystemReason; hits?: SearchHit[]; options?: { label: string; choice: ScopeChoice }[]; question?: string };
+  /** «Проверить мой ответ»: the player's answer weighed against the base, point by point. */
+  answerCheck?: AnswerCheck;
+  /** Said over the player's message: «Мой ответ». */
+  tag?: string;
   /** What the classifier took the question for, and why — for the admin's debug view; not kept in the history. */
   classification?: { type: string; why: string };
 }
@@ -191,6 +198,9 @@ export interface AiChat {
   open: (id: string) => void;
   /** Forgets one conversation, or all of them without an id. */
   forget: (id?: string) => void;
+  /** The next message is the player's answer to check (roadmap 6Б), not a question. */
+  answering: boolean;
+  setAnswering: (on: boolean) => void;
   /** The case on show. */
   caseId: string;
   /** What of the case on show reads differently in the laws now; null when nothing, or not known. */
@@ -255,6 +265,7 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
   const storeKey = historyKey(pack.server.id);
   const [history, setHistory] = useState<StoredConversation[]>([]);
   const conversation = useRef(newConversationId());
+  const [answering, setAnswering] = useState(false);
   const [changes, setChanges] = useState<{ changed: string[]; gone: string[] } | null>(null);
   /** Only what the player asked is saved: opening an old conversation does not make it the newest. */
   const changed = useRef(false);
@@ -300,7 +311,8 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
       if (!question || busy) return undefined;
       // A side the profile may not take is not taken: the case is seen as it is.
       const perspective = wanted && perspectivesFor(organization).includes(wanted) ? wanted : undefined;
-      const asked: AiMessage = { id: nextId.current++, role: 'user', text: question, perspective };
+      const mine = answering && !options.brief;
+      const asked: AiMessage = { id: nextId.current++, role: 'user', text: question, perspective, ...(mine ? { tag: 'Мой ответ' } : {}) };
       const answerId = nextId.current++;
       // The case the last answer left: a follow-up changes it rather than telling the story again.
       const previous = caseOf(current.current);
@@ -314,6 +326,12 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
       };
       try {
         const connection = await connect(platform);
+        if (mine) {
+          setAnswering(false);
+          const lastQuestion = [...current.current].reverse().find((m) => m.role === 'user')?.text ?? '';
+          const check = await checkMyAnswer({ provider: serviceFor(connection), pack, organization, situation: lastQuestion, answer: question, previous });
+          return finish({ text: answerCheckText(check), answerCheck: check });
+        }
         const side = PERSPECTIVES.find((p) => p.id === perspective)?.label;
         const outcome = await answerQuestion({
           aliases: () => (aliases.current ??= loadAliases(platform)),
@@ -343,7 +361,7 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
         setBusy(false);
       }
     },
-    [busy, platform, pack, organization, depth, choice],
+    [busy, platform, pack, organization, depth, choice, answering],
   );
 
   const clear = useCallback(() => {
@@ -441,6 +459,8 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
     history,
     open,
     forget,
+    answering,
+    setAnswering,
     caseId: conversation.current,
     changes,
     recheck,
@@ -449,6 +469,20 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
     archive,
     duplicate,
   };
+}
+
+export const ANSWER_VERDICTS: Record<AnswerVerdict, string> = { right: 'Верно', partly: 'Частично верно', wrong: 'Неверно', unconfirmed: 'Не подтверждено базой' };
+export const POINT_VERDICTS: Record<AnswerCheck['points'][number]['verdict'], string> = { matches: 'Соответствует', contradicts: 'Не соответствует', unconfirmed: 'Не подтверждено' };
+
+/** A check of the player's answer as plain lines: for the saved case and copying. */
+export function answerCheckText(check: AnswerCheck): string {
+  return [
+    `Проверка ответа: ${ANSWER_VERDICTS[check.verdict]}`,
+    ...check.points.map((p) => `— ${p.point}: ${POINT_VERDICTS[p.verdict].toLowerCase()}${p.why ? `. ${p.why}` : ''}${p.fix ? ` Изменить: ${p.fix}` : ''}`),
+    check.fix && `Что изменить: ${check.fix}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 /** The analysis as plain lines: for the card over the game, copying, and the saved history. */

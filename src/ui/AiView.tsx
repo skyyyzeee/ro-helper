@@ -4,6 +4,7 @@ import { articleLabel, articleTitle, type SearchHit, type Stage } from '../core'
 import { STATUS_LABELS, diffCases, type Analysis } from '../protocol';
 import { PERSPECTIVES, type AiChat, type Perspective } from './ai';
 import { AnswerView, calculationLine } from './AnswerView';
+import { AnswerCheckView } from './AnswerCheckView';
 import { CaseChange } from './CaseChange';
 import type { Vote } from './feedback';
 import { DebugView } from './DebugView';
@@ -255,6 +256,7 @@ export function AiView({
         {chat.messages.map((message, index) =>
           message.role === 'user' ? (
             <div key={message.id} className="ai__question">
+              {message.tag && <span className="ai__side">{message.tag}</span>}
               {message.perspective && <span className="ai__side">{PERSPECTIVES.find((p) => p.id === message.perspective)?.label}</span>}
               {message.text}
             </div>
@@ -276,7 +278,9 @@ export function AiView({
             </div>
           ) : (
             <div key={message.id} className="ai__reply">
-              {message.analysis ? (
+              {message.answerCheck ? (
+                <AnswerCheckView check={message.answerCheck} onOpen={onOpen} />
+              ) : message.analysis ? (
                 <>
                   {changeAt(index) && <CaseChange diff={changeAt(index)!} />}
                   <AnswerView
@@ -333,6 +337,9 @@ export function AiView({
             <button type="button" className="ai__chip ai__chip--more" disabled={chat.busy} onClick={() => void chat.send('Разбери подробнее', undefined, { depth: 'full' })}>
               Подробнее
             </button>
+            <button type="button" className="ai__chip ai__chip--more" aria-pressed={chat.answering} disabled={chat.busy} onClick={() => chat.setAnswering(!chat.answering)}>
+              Проверить мой ответ
+            </button>
             {canWrite && (
               <button type="button" className="ai__chip ai__chip--more" disabled={chat.busy} onClick={() => onDocument([lastQuestion, ...(chat.current?.facts ?? [])].join('. '))}>
                 Составить документ
@@ -384,6 +391,14 @@ export function AiView({
           </details>
         )}
   
+        {chat.answering && (
+          <p className="set__hint check__ask" role="status">
+            Напишите в поле внизу, что бы вы сделали в этой ситуации и почему, — проверю по базе сервера.{' '}
+            <button className="link" type="button" onClick={() => chat.setAnswering(false)}>
+              Отмена
+            </button>
+          </p>
+        )}
         <div ref={endRef} />
       </div>
     </section>
