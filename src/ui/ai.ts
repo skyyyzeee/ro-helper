@@ -1,7 +1,7 @@
 // The AI in the app: which service to ask (from the settings), the conversation with its history, and speech.
 // The legal pipeline itself — context, answer format, checks, calculator — is the protocol core (src/protocol).
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Organization, ServerPack } from '../core';
+import { articleLabel, changedSince, snapshotOf, type Organization, type PackSnapshot, type ServerPack } from '../core';
 import {
   AiError,
   answerQuestion,
@@ -191,6 +191,16 @@ export interface AiChat {
   open: (id: string) => void;
   /** Forgets one conversation, or all of them without an id. */
   forget: (id?: string) => void;
+  /** The case on show. */
+  caseId: string;
+  /** What of the case on show reads differently in the laws now; null when nothing, or not known. */
+  changes: { changed: string[]; gone: string[] } | null;
+  /** Checks the case on show against the laws of the day. */
+  recheck: () => Promise<void>;
+  rename: (id: string, title: string) => void;
+  pin: (id: string, pinned: boolean) => void;
+  archive: (id: string, archived: boolean) => void;
+  duplicate: (id: string) => void;
 }
 
 export const DEPTH_SETTING = 'ai.depth';
@@ -245,6 +255,7 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
   const storeKey = historyKey(pack.server.id);
   const [history, setHistory] = useState<StoredConversation[]>([]);
   const conversation = useRef(newConversationId());
+  const [changes, setChanges] = useState<{ changed: string[]; gone: string[] } | null>(null);
   /** Only what the player asked is saved: opening an old conversation does not make it the newest. */
   const changed = useRef(false);
   useEffect(() => {
@@ -260,18 +271,28 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
     if (!changed.current || !messages.length || messages.some((m) => m.pending)) return;
     changed.current = false;
     const first = messages.find((m) => m.role === 'user');
-    const saved: StoredConversation = {
-      id: conversation.current,
-      updated: new Date().toISOString(),
-      title: (first?.text ?? '').slice(0, 120),
-      messages: messages.map(storeMessage),
-    };
+    const stored = messages.map(storeMessage);
+    const now = new Date().toISOString();
     setHistory((list) => {
-      const next = [saved, ...list.filter((c) => c.id !== saved.id)].slice(0, HISTORY_LIMIT);
+      const before = list.find((c) => c.id === conversation.current);
+      const snapshot = grownSnapshot(pack, before?.snapshot, caseArticles(stored));
+      const saved: StoredConversation = {
+        ...before,
+        id: conversation.current,
+        version: 2,
+        created: before?.created ?? now,
+        updated: now,
+        title: before?.named ? before.title : (first?.text ?? '').slice(0, 120),
+        messages: stored,
+        // Asked in again, it is not in the archive any more.
+        archived: false,
+        ...(snapshot ? { snapshot } : {}),
+      };
+      const next = keptCases([saved, ...list.filter((c) => c.id !== saved.id)]);
       void platform.writeSetting(storeKey, next);
       return next;
     });
-  }, [messages, platform, storeKey]);
+  }, [messages, platform, storeKey, pack]);
 
   const send = useCallback(
     async (text: string, wanted?: Perspective, options: SendOptions = {}): Promise<AiMessage | undefined> => {
@@ -328,6 +349,7 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
   const clear = useCallback(() => {
     conversation.current = newConversationId();
     setMessages([]);
+    setChanges(null);
   }, []);
 
   /** An earlier conversation back on screen, to read or to go on with. */
@@ -337,9 +359,52 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
       if (!saved) return;
       conversation.current = saved.id;
       setMessages(saved.messages.map((m) => ({ ...restoreMessage(pack, m), id: nextId.current++ })));
+      setChanges(caseChanges(pack, saved));
     },
     [history, pack],
   );
+
+  /** Changes one case and keeps the list. */
+  const change = useCallback(
+    (id: string, patch: (saved: StoredConversation) => StoredConversation | null) => {
+      setHistory((list) => {
+        const next = keptCases(list.flatMap((c) => (c.id === id ? (patch(c) ?? []) : [c])));
+        void platform.writeSetting(storeKey, next);
+        return next;
+      });
+    },
+    [platform, storeKey],
+  );
+  const rename = useCallback((id: string, title: string) => change(id, (c) => (title.trim() ? { ...c, title: title.trim().slice(0, 120), named: true } : c)), [change]);
+  const pin = useCallback((id: string, pinned: boolean) => change(id, (c) => ({ ...c, pinned })), [change]);
+  const archive = useCallback((id: string, archived: boolean) => change(id, (c) => ({ ...c, archived, ...(archived ? { pinned: false } : {}) })), [change]);
+  /** A copy beside it, to try another turn of the same case. */
+  const duplicate = useCallback(
+    (id: string) => {
+      setHistory((list) => {
+        const saved = list.find((c) => c.id === id);
+        if (!saved) return list;
+        const now = new Date().toISOString();
+        const copy: StoredConversation = { ...saved, id: newConversationId(), title: `${saved.title} (копия)`.slice(0, 120), named: true, pinned: false, archived: false, created: now, updated: now };
+        const next = keptCases([copy, ...list]);
+        void platform.writeSetting(storeKey, next);
+        return next;
+      });
+    },
+    [platform, storeKey],
+  );
+
+  /**
+   * The case on show, checked against the laws of the day: asked again with what changed — the articles found now —
+   * and, once answered, marked as checked by them.
+   */
+  const recheck = useCallback(async () => {
+    const id = conversation.current;
+    const done = await send('Проверь это дело по текущей базе: статьи могли измениться с тех пор.');
+    if (!done?.analysis) return;
+    setChanges(null);
+    change(id, (c) => (c.snapshot ? { ...c, checked: snapshotOf(pack, Object.keys(c.snapshot.articles)) } : c));
+  }, [send, change, pack]);
 
   const forget = useCallback(
     (id?: string) => {
@@ -361,7 +426,29 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
     setMessages((list) => [...list, { id: nextId.current++, role: 'ai', text, failed: true }]);
   }, []);
 
-  return { messages, busy, depth, setDepth, choice, setChoice, current: caseOf(messages) ?? null, perspectives: perspectivesFor(organization), send, clear, note, history, open, forget };
+  return {
+    messages,
+    busy,
+    depth,
+    setDepth,
+    choice,
+    setChoice,
+    current: caseOf(messages) ?? null,
+    perspectives: perspectivesFor(organization),
+    send,
+    clear,
+    note,
+    history,
+    open,
+    forget,
+    caseId: conversation.current,
+    changes,
+    recheck,
+    rename,
+    pin,
+    archive,
+    duplicate,
+  };
 }
 
 /** The analysis as plain lines: for the card over the game, copying, and the saved history. */
@@ -397,14 +484,86 @@ interface StoredMessage {
   case?: CaseState;
 }
 
+/**
+ * A case (ADR 0003): a saved conversation with its name, pin, archive and the laws it was worked out by. One
+ * record, one store — a conversation from before reads as a case whose laws of then are not known.
+ */
 export interface StoredConversation {
   id: string;
   /** When it was last asked in (ISO). */
   updated: string;
-  /** Its first question. */
+  /** Its first question, or the name the player gave it. */
   title: string;
   messages: StoredMessage[];
+  /** The record's format: 2 — a case. A conversation saved before has none. */
+  version?: 2;
+  /** When it was started (ISO). */
+  created?: string;
+  /** The player named it: the first question no longer names it. */
+  named?: boolean;
+  pinned?: boolean;
+  archived?: boolean;
+  /** The laws it was worked out by: each of its articles as it read when it entered the case. */
+  snapshot?: PackSnapshot;
+  /** Its last check against the laws of the day: those articles as they read then. */
+  checked?: PackSnapshot;
 }
+
+/** The articles a case stands on: every norm that passed, in any of its answers. */
+const caseArticles = (messages: StoredMessage[]) => [...new Set(messages.flatMap((m) => m.case?.articles ?? []))];
+
+/** The snapshot grown by the articles new to the case, each as it reads now; those already in keep their print. */
+function grownSnapshot(pack: ServerPack, snapshot: PackSnapshot | undefined, ids: string[]): PackSnapshot | undefined {
+  const fresh = ids.filter((id) => !snapshot?.articles[id]);
+  if (!fresh.length) return snapshot;
+  const now = snapshotOf(pack, fresh);
+  return snapshot ? { ...snapshot, articles: { ...snapshot.articles, ...now.articles } } : now;
+}
+
+/**
+ * A case as plain text, to paste in Discord or a document (ADR 0003, «скопировать как текст»): its name, the laws it
+ * was worked out by, each question and answer, and where it stands — its facts and articles.
+ */
+export function caseText(saved: StoredConversation, serverName: string): string {
+  const date = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('ru-RU') : '');
+  const head = [
+    `Дело: ${saved.title || 'без названия'}`,
+    [serverName, saved.snapshot ? `база ${saved.snapshot.label}` : '', saved.created ? `создано ${date(saved.created)}` : `обновлено ${date(saved.updated)}`]
+      .filter(Boolean)
+      .join(' · '),
+  ];
+  const turns = saved.messages.flatMap((m) => {
+    if (m.role === 'user') return [`\nВопрос: ${m.text}`];
+    if (m.failed) return [];
+    return [m.answer ? answerText(readAnswer(m.answer as unknown as Record<string, unknown>)) : m.text];
+  });
+  // Where the case stands: the facts and articles of its last answer.
+  const last = [...saved.messages].reverse().find((m) => m.case)?.case;
+  const where = last ? ['', last.facts.length ? `Факты: ${last.facts.join('; ')}` : '', last.norms.length ? `Статьи: ${last.norms.join(', ')}` : ''] : [];
+  return [...head, ...turns, ...where.filter((line, i) => i === 0 || line)].join('\n').trim();
+}
+
+/** What of a case's articles reads differently in the laws now, since it was made or last checked. */
+export function caseChanges(pack: ServerPack, saved: StoredConversation): { changed: string[]; gone: string[] } | null {
+  const by = saved.checked ?? saved.snapshot;
+  if (!by) return null;
+  const { changed, gone } = changedSince(pack, by);
+  // Named as the player knows them: «УК ст. 65»; one the laws no longer have, by its id in the pack.
+  const label = (id: string) => {
+    for (const document of pack.documents) {
+      const article = document.articles.find((a) => a.id === id);
+      if (article) return `${document.short} ${articleLabel(article, undefined, document.unit)}`;
+    }
+    return id;
+  };
+  return changed.length || gone.length ? { changed: changed.map(label), gone: gone.map(label) } : null;
+}
+
+/** The cases kept: every pinned one, and the newest of the rest. */
+const keptCases = (list: StoredConversation[]) => {
+  let rest = 0;
+  return list.filter((c) => c.pinned || ++rest <= HISTORY_LIMIT);
+};
 
 const newConversationId = () => `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 

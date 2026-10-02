@@ -27,7 +27,7 @@ import { ArticleView } from './ArticleView';
 import { CalculatorPanel, type ChargeFields, type ChargePatch, type CopyState } from './CalculatorPanel';
 import { ChangeDiff, ChangesView, type ChangeRef } from './ChangesView';
 import { DocumentsMenu } from './DocumentsMenu';
-import { transcribe, useAiChat } from './ai';
+import { caseText, transcribe, useAiChat } from './ai';
 import { sendMark } from './feedback';
 import type { ScopeChoice } from '../protocol';
 import { AiAccess, AiView, TAB_NEEDS, type AiTab } from './AiView';
@@ -41,7 +41,7 @@ import { DetentionView } from './DetentionView';
 import { useDetentionReview } from './detention';
 import { useTrainer } from './trainer';
 import { useDocumentWriter } from './documents';
-import { HistoryView } from './HistoryView';
+import { CasesView } from './CasesView';
 import { BackIcon, CalculatorIcon, ChevronDownIcon, CloseIcon, DocumentsIcon, NewsIcon, MemoIcon, MicIcon, OrganizationIcon, PinIcon, ProfileIcon, SearchIcon, ServerIcon, SettingsIcon, SparkIcon } from './icons';
 import { SideRail } from './SideRail';
 import { canRecord, startRecording, type Recording } from './voice';
@@ -1646,10 +1646,11 @@ export function Overlay({
 
       {aiMode && historyOpen && (
         <>
-          <button className="ai__scrim" type="button" aria-label="Закрыть историю" tabIndex={-1} onClick={() => setHistoryOpen(false)} />
+          <button className="ai__scrim" type="button" aria-label="Закрыть дела" tabIndex={-1} onClick={() => setHistoryOpen(false)} />
           <div className="ai__drawer">
-            <HistoryView
-              history={chat.history}
+            <CasesView
+              cases={chat.history}
+              current={chat.caseId}
               serverName={pack.server.name}
               onClose={() => {
                 setHistoryOpen(false);
@@ -1662,6 +1663,14 @@ export function Overlay({
                 searchRef.current?.focus();
               }}
               onForget={chat.forget}
+              onRename={chat.rename}
+              onPin={chat.pin}
+              onArchive={chat.archive}
+              onDuplicate={chat.duplicate}
+              onCopy={async (id) => {
+                const saved = chat.history.find((c) => c.id === id);
+                if (saved) await platform.writeClipboard(caseText(saved, pack.server.name));
+              }}
             />
           </div>
         </>
