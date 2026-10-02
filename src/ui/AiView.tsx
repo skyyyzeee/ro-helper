@@ -91,9 +91,9 @@ export function AiHead({
       )}
       <span className="sp" />
       {onHistory && (
-        <button className="ai__new" type="button" aria-label="История ИИ-разборов" title="Прошлые разборы на этом сервере" onClick={onHistory}>
+        <button className="ai__new" type="button" aria-label="Дела" title="Ваши разборы на этом сервере" onClick={onHistory}>
           <HistoryIcon />
-          <span>История</span>
+          <span>Дела</span>
         </button>
       )}
       {reset && (
@@ -227,6 +227,19 @@ export function AiView({
             </button>
             .
           </p>
+        </div>
+      )}
+
+      {chat.changes && chat.messages.length > 0 && (
+        <div className="warn case__changed" role="status">
+          <WarnIcon />
+          <span>
+            <b>Изменилось после создания дела:</b> {[...chat.changes.changed, ...chat.changes.gone.map((label) => `${label} (удалена)`)].join(', ')}.
+            Ответы ниже уже сверены с текущей базой.{' '}
+            <button className="link" type="button" disabled={chat.busy} onClick={() => void chat.recheck()}>
+              Проверить по текущей базе
+            </button>
+          </span>
         </div>
       )}
 
