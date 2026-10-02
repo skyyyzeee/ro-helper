@@ -31,8 +31,8 @@ const search = () => screen.getByRole('searchbox', { name: 'Поиск по за
 async function openTrainer() {
   const app = await renderApp({ settings: GEMINI, profile: { organization: 'mvd' } });
   await app.user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-  await app.user.click(screen.getByRole('radio', { name: 'Тренажёр' }));
-  return { ...app, view: screen.getByRole('region', { name: 'Тренажёр' }) };
+  await app.user.click(screen.getByRole('radio', { name: 'Практика' }));
+  return { ...app, view: screen.getByRole('region', { name: 'Практика' }) };
 }
 
 describe('the exam trainer', () => {
@@ -79,8 +79,8 @@ describe('the exam trainer', () => {
   it('asks for the key before the first question', async () => {
     const { user } = await renderApp({ settings: { [AI_PROVIDER_SETTING]: 'gemini' }, profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-    await user.click(screen.getByRole('radio', { name: 'Тренажёр' }));
-    await user.click(within(screen.getByRole('region', { name: 'Тренажёр' })).getByRole('button', { name: 'Начать' }));
+    await user.click(screen.getByRole('radio', { name: 'Практика' }));
+    await user.click(within(screen.getByRole('region', { name: 'Практика' })).getByRole('button', { name: 'Начать' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Сначала вставьте ключ Gemini');
   });
 });

@@ -56,6 +56,7 @@ describe('the history of AI analyses', () => {
       ],
     };
     const { platform, user } = await renderApp({ settings: { [historyKey('tverskoi')]: [conversation, { ...conversation, id: 'c2', title: 'второй' }] } });
+    await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
     await user.click(screen.getByRole('button', { name: 'История ИИ-разборов' }));
     const history = screen.getByRole('region', { name: 'История ИИ-разборов' });
     await user.click(within(history).getByRole('button', { name: 'Удалить разбор «второй»' }));

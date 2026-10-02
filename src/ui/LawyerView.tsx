@@ -43,12 +43,24 @@ export function LawyerView({
 
   return (
     <section className="art ai lawyer" aria-label="Требования адвоката">
-      <AiHead tab="lawyer" onTab={onTab} reset={result ? { label: 'Новые требования', disabled: lawyer.busy, onClick: lawyer.reset } : undefined} />
+      <AiHead tab="lawyer" onTab={onTab} reset={result ? { label: 'Новая проверка', disabled: lawyer.busy, onClick: lawyer.reset } : undefined} />
+      <div className="ai__chips" role="radiogroup" aria-label="Что проверить">
+        {(
+          [
+            ['lawyer', 'Требования адвоката'],
+            ['detention', 'Ход задержания'],
+          ] as const
+        ).map(([id, label]) => (
+          <button key={id} type="button" role="radio" aria-checked={id === 'lawyer'} className={id === 'lawyer' ? 'ai__chip ai__chip--on' : 'ai__chip'} onClick={() => id !== 'lawyer' && onTab(id)}>
+            {label}
+          </button>
+        ))}
+      </div>
 
       {!result && !lawyer.busy && !lawyer.error && (
         <>
           <p className="set__hint">
-            Перескажите в поле сверху (или голосом 🎤), что требует адвокат, и нажмите <b>Enter</b>. ИИ проверит каждое требование по
+            Перескажите в поле внизу (или голосом 🎤), что требует адвокат, и нажмите <b>Enter</b>. ИИ проверит каждое требование по
             законам сервера: законно ли оно, на чём основано, что вы обязаны сделать и на каком основании можете отказать, — и
             предложит, как ответить. Он не подыгрывает ни вам, ни адвокату: если адвокат прав, так и скажет.
           </p>

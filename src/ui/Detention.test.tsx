@@ -42,7 +42,8 @@ const REVIEW = {
 async function openDetention() {
   const app = await renderApp({ settings: SERVER, profile: { organization: 'mvd' } });
   await app.user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-  await app.user.click(screen.getByRole('radio', { name: 'Разбор задержания' }));
+  await app.user.click(screen.getByRole('radio', { name: 'Проверка' }));
+  await app.user.click(screen.getByRole('radio', { name: 'Ход задержания' }));
   return { ...app, view: screen.getByRole('region', { name: 'Разбор задержания' }) };
 }
 

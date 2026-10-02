@@ -40,7 +40,7 @@ describe('the lawyer\'s demands', () => {
     const bodies = fakeServer();
     const { platform, user } = await renderApp({ settings: SERVER, profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-    await user.click(screen.getByRole('radio', { name: 'Требования адвоката' }));
+    await user.click(screen.getByRole('radio', { name: 'Проверка' }));
     const view = screen.getByRole('region', { name: 'Требования адвоката' });
     await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'свидание наедине и отпустить через 30 минут{Enter}');
 
@@ -82,7 +82,7 @@ describe('the lawyer\'s demands', () => {
     );
     await renderApp({ settings: SERVER, profile: { organization: 'mvd' } }).then(async ({ user }) => {
       await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-      await user.click(screen.getByRole('radio', { name: 'Требования адвоката' }));
+      await user.click(screen.getByRole('radio', { name: 'Проверка' }));
       await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'свидание наедине{Enter}');
     });
     const view = screen.getByRole('region', { name: 'Требования адвоката' });
@@ -103,7 +103,7 @@ describe('the lawyer\'s demands', () => {
     fakeServer();
     const { user } = await renderApp({ settings: SERVER, profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-    await user.click(screen.getByRole('radio', { name: 'Требования адвоката' }));
+    await user.click(screen.getByRole('radio', { name: 'Проверка' }));
     const view = screen.getByRole('region', { name: 'Требования адвоката' });
     await user.click(within(within(view).getByLabelText('Пример')).getByRole('button'));
     expect(await within(view).findAllByRole('listitem')).toHaveLength(2);
@@ -118,9 +118,9 @@ describe('the service\'s tools are the state\'s', () => {
     for (const organization of ['none', 'opg']) {
       const { user } = await renderApp({ settings: SERVER, profile: { organization } });
       await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-      const tabs = screen.getByRole('radiogroup', { name: 'Что сделать ИИ' });
-      expect(within(tabs).getAllByRole('radio').map((tab) => tab.textContent)).toEqual(['Разбор ситуации', 'Составить документ']);
-      await user.click(within(tabs).getByRole('radio', { name: 'Составить документ' }));
+      // One mode, so no tabs at all; a document is written from the chat.
+      expect(screen.queryByRole('radiogroup', { name: 'Что сделать ИИ' })).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Составить документ' }));
       const kinds = screen.getByRole('radiogroup', { name: 'Какой документ' });
       expect(within(kinds).getAllByRole('radio').map((kind) => kind.textContent)).toEqual(['Заявление', 'Жалоба', 'Иск']);
       cleanup();

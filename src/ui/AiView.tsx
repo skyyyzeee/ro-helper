@@ -4,7 +4,7 @@ import { articleLabel, articleTitle, type SearchHit, type Stage } from '../core'
 import { STATUS_LABELS } from '../protocol';
 import { PERSPECTIVES, type AiChat, type Perspective } from './ai';
 import { AnswerView } from './AnswerView';
-import { PlusIcon, SparkIcon, WarnIcon } from './icons';
+import { BackIcon, HistoryIcon, PlusIcon, SparkIcon, WarnIcon } from './icons';
 
 /** «УК ст. 65» — how an answer names an article, without its title. */
 export const shortLabel = (hit: SearchHit) => `${hit.document.short} ${articleLabel(hit.article, undefined, hit.document.unit)}`;
@@ -61,11 +61,38 @@ export const TAB_NEEDS: Record<AiTab, Capability> = {
  * The head of every AI screen: its modes on the left, «start again» on the right — one row, so the thread below
  * has the room. Leaving the AI is the side column or Esc.
  */
-export function AiHead({ tab, onTab, reset }: { tab: AiTab; onTab: (tab: AiTab) => void; reset?: { label: string; disabled?: boolean; onClick: () => void } }) {
+export function AiHead({
+  tab,
+  onTab,
+  reset,
+  back,
+  onHistory,
+}: {
+  tab: AiTab;
+  onTab: (tab: AiTab) => void;
+  reset?: { label: string; disabled?: boolean; onClick: () => void };
+  /** Instead of the modes: the way back to the conversation this screen came from (the document). */
+  back?: { label: string; onClick: () => void };
+  /** The earlier conversations, in a panel over the chat. */
+  onHistory?: () => void;
+}) {
   return (
     <div className="ai__head">
-      <AiTabs tab={tab} onTab={onTab} />
+      {back ? (
+        <button className="ai__back" type="button" onClick={back.onClick}>
+          <BackIcon />
+          <span>{back.label}</span>
+        </button>
+      ) : (
+        <AiTabs tab={tab} onTab={onTab} />
+      )}
       <span className="sp" />
+      {onHistory && (
+        <button className="ai__new" type="button" aria-label="История ИИ-разборов" title="Прошлые разборы на этом сервере" onClick={onHistory}>
+          <HistoryIcon />
+          <span>История</span>
+        </button>
+      )}
       {reset && (
         <button className="ai__new" type="button" disabled={reset.disabled} onClick={reset.onClick}>
           <PlusIcon />
@@ -76,24 +103,25 @@ export function AiHead({ tab, onTab, reset }: { tab: AiTab; onTab: (tab: AiTab) 
   );
 }
 
-/** The things the AI does for this player, as the heading of its screen. */
+/**
+ * The modes of the AI for this player: the analysis; the checks of an officer's actions and the practice for the
+ * state's services. A citizen or the crime has the analysis only — no tabs at all. The document is no mode: it is
+ * written from an answer.
+ */
+const MODES: { id: AiTab; label: string; on: AiTab[] }[] = [
+  { id: 'chat', label: 'Разбор', on: ['chat', 'document'] },
+  { id: 'lawyer', label: 'Проверка', on: ['lawyer', 'detention'] },
+  { id: 'trainer', label: 'Практика', on: ['trainer'] },
+];
+
 export function AiTabs({ tab, onTab }: { tab: AiTab; onTab: (tab: AiTab) => void }) {
   const can = useContext(AiAccess);
-  const shown = (id: AiTab) => !can || can.has(TAB_NEEDS[id]);
+  const modes = MODES.filter(({ id }) => !can || can.has(TAB_NEEDS[id]));
+  if (modes.length < 2) return null;
   return (
     <div className="ai__tabs tabs" role="radiogroup" aria-label="Что сделать ИИ">
-      {(
-        [
-          ['chat', 'Разбор ситуации'],
-          ['document', 'Составить документ'],
-          ['lawyer', 'Требования адвоката'],
-          ['detention', 'Разбор задержания'],
-          ['trainer', 'Тренажёр'],
-        ] as const
-      )
-        .filter(([id]) => shown(id))
-        .map(([id, label]) => (
-        <button key={id} type="button" role="radio" aria-checked={tab === id} className={tab === id ? 'tabs__btn tabs__btn--on' : 'tabs__btn'} onClick={() => onTab(id)}>
+      {modes.map(({ id, label, on }) => (
+        <button key={id} type="button" role="radio" aria-checked={on.includes(tab)} className={on.includes(tab) ? 'tabs__btn tabs__btn--on' : 'tabs__btn'} onClick={() => !on.includes(tab) && onTab(id)}>
           {label}
         </button>
       ))}
@@ -112,6 +140,8 @@ export function AiView({
   onPinArticle,
   onCopy,
   onDraft,
+  onDocument,
+  onHistory,
   onLink,
 }: {
   chat: AiChat;
@@ -123,6 +153,10 @@ export function AiView({
   onCopy: (text: string) => Promise<void>;
   /** Puts a text into the question field, to finish and send: a correction of a fact. */
   onDraft: (text: string) => void;
+  /** Writes a document from the case: the situation goes to the document's field. */
+  onDocument: (situation: string) => void;
+  /** Shows the earlier conversations. */
+  onHistory: () => void;
   /** Opens a page in the browser: a law's forum thread. */
   onLink: (url: string) => void;
   /** Back to the search: offered when the AI cannot answer. */
@@ -141,6 +175,8 @@ export function AiView({
     if (chat.messages.length) void endRef.current?.scrollIntoView?.({ block: 'end' });
   }, [chat.messages.length, last?.pending]);
   const lastQuestion = [...chat.messages].reverse().find((m) => m.role === 'user')?.text;
+  const can = useContext(AiAccess);
+  const canWrite = !can || can.has('ai.documents');
   // The history of decisions: what each question led to, and how firm it was.
   const decisions = chat.messages.flatMap((m, i) => {
     const asked = chat.messages[i - 1];
@@ -151,7 +187,7 @@ export function AiView({
 
   return (
     <section className="art ai" aria-label="ИИ-разбор">
-      <AiHead tab="chat" onTab={onTab} reset={chat.messages.length > 0 ? { label: 'Новый чат', disabled: chat.busy, onClick: chat.clear } : undefined} />
+      <AiHead tab="chat" onTab={onTab} onHistory={onHistory} reset={chat.messages.length > 0 ? { label: 'Новый чат', disabled: chat.busy, onClick: chat.clear } : undefined} />
 
       {chat.messages.length === 0 && (
         <div className="ai__intro">
@@ -170,6 +206,12 @@ export function AiView({
               </button>
             ))}
           </div>
+          {canWrite && (
+            <button className="ai__new" type="button" onClick={() => onDocument('')}>
+              <PlusIcon />
+              <span>Составить документ</span>
+            </button>
+          )}
           <p className="set__hint">
             Бесплатно, с дневным лимитом вопросов. Откуда берутся ответы — в{' '}
             <button className="link" type="button" onClick={onSettings}>
@@ -255,6 +297,11 @@ export function AiView({
             <button type="button" className="ai__chip ai__chip--more" disabled={chat.busy} onClick={() => void chat.send('Разбери подробнее', undefined, { depth: 'full' })}>
               Подробнее
             </button>
+            {canWrite && (
+              <button type="button" className="ai__chip ai__chip--more" disabled={chat.busy} onClick={() => onDocument([lastQuestion, ...(chat.current?.facts ?? [])].join('. '))}>
+                Составить документ
+              </button>
+            )}
             <span className="set__label">С точки зрения:</span>
             {PERSPECTIVES.filter((side) => chat.perspectives.includes(side.id)).map((side) => (
               <button key={side.id} type="button" className="ai__chip" disabled={chat.busy} onClick={() => void chat.send(lastQuestion, side.id)}>

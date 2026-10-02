@@ -41,7 +41,7 @@ import { useDetentionReview } from './detention';
 import { useTrainer } from './trainer';
 import { useDocumentWriter } from './documents';
 import { HistoryView } from './HistoryView';
-import { BackIcon, CalculatorIcon, ChevronDownIcon, CloseIcon, DocumentsIcon, NewsIcon, HistoryIcon, MemoIcon, MicIcon, OrganizationIcon, PinIcon, ProfileIcon, SearchIcon, ServerIcon, SettingsIcon, SparkIcon } from './icons';
+import { BackIcon, CalculatorIcon, ChevronDownIcon, CloseIcon, DocumentsIcon, NewsIcon, MemoIcon, MicIcon, OrganizationIcon, PinIcon, ProfileIcon, SearchIcon, ServerIcon, SettingsIcon, SparkIcon } from './icons';
 import { SideRail } from './SideRail';
 import { canRecord, startRecording, type Recording } from './voice';
 import { DEFAULT_OPACITY, DEFAULT_QUICK_HOTKEY, DEFAULT_VOICE_HOTKEY, OPACITY_KEY, QUICK_HOTKEY_KEY, VOICE_HOTKEY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
@@ -916,7 +916,7 @@ export function Overlay({
     if (!inner) searchRef.current?.focus();
   }, [inner]);
 
-  const onList = !whatsNew && !settingsOpen && !memosOpen && !switchOpen && !organizationOpen && !serverOpen && !notesFor && !privacyOpen && !diff && !open && !changesView && !aiOpen && !historyOpen;
+  const onList = !whatsNew && !settingsOpen && !memosOpen && !switchOpen && !organizationOpen && !serverOpen && !notesFor && !privacyOpen && !diff && !open && !changesView && !aiOpen;
   const wasOnList = useRef(onList);
   useLayoutEffect(() => {
     const content = contentRef.current;
@@ -1098,7 +1098,7 @@ export function Overlay({
             <ServerIcon id={pack.server.id} size={24} />
           </button>
         }
-        current={settingsOpen ? 'settings' : memosOpen ? 'memos' : menuOpen ? 'documents' : switchOpen ? undefined : historyOpen ? 'history' : aiOpen ? 'ai' : 'search'}
+        current={settingsOpen ? 'settings' : memosOpen ? 'memos' : menuOpen ? 'documents' : switchOpen ? undefined : aiOpen ? 'ai' : 'search'}
         items={[
           { id: 'search', label: 'Поиск', icon: <SearchIcon />, shortcut: 1, onSelect: () => openSection('search') },
           {
@@ -1126,18 +1126,7 @@ export function Overlay({
             ariaLabel: 'ИИ-разбор ситуации',
             icon: <SparkIcon />,
             shortcut: 7,
-            onSelect: () => (aiOpen && !historyOpen ? openSection('search') : openAi()),
-          },
-          {
-            id: 'history',
-            label: 'История',
-            ariaLabel: 'История ИИ-разборов',
-            icon: <HistoryIcon />,
-            onSelect: () => {
-              const show = !historyOpen;
-              openSection('search');
-              setHistoryOpen(show);
-            },
+            onSelect: () => (aiOpen ? openSection('search') : openAi()),
           },
           {
             id: 'memos',
@@ -1417,23 +1406,6 @@ export function Overlay({
             pinned={pinnedArticle}
             onPin={() => togglePin(articlePinCard(open, rules))}
           />
-        ) : historyOpen ? (
-          <HistoryView
-            history={chat.history}
-            serverName={pack.server.name}
-            backLabel={aiOpen ? 'ИИ-разбор' : 'Поиск'}
-            onBack={() => {
-              setHistoryOpen(false);
-              searchRef.current?.focus();
-            }}
-            onOpen={(id) => {
-              chat.open(id);
-              setHistoryOpen(false);
-              setAiOpen(true);
-              searchRef.current?.focus();
-            }}
-            onForget={chat.forget}
-          />
         ) : aiOpen && aiTab === 'lawyer' ? (
           <LawyerView
             lawyer={lawyer}
@@ -1486,6 +1458,12 @@ export function Overlay({
             onCopy={(text) => platform.writeClipboard(text)}
             onDraft={(text) => {
               setAiDraft(text);
+              searchRef.current?.focus();
+            }}
+            onHistory={() => setHistoryOpen((shown) => !shown)}
+            onDocument={(situation) => {
+              setAiTab('document');
+              setAiDraft(situation);
               searchRef.current?.focus();
             }}
             onLink={(url) => void platform.openExternal(url)}
@@ -1663,6 +1641,29 @@ export function Overlay({
           </>
         )}
       </div>
+
+      {aiMode && historyOpen && (
+        <>
+          <button className="ai__scrim" type="button" aria-label="Закрыть историю" tabIndex={-1} onClick={() => setHistoryOpen(false)} />
+          <div className="ai__drawer">
+            <HistoryView
+              history={chat.history}
+              serverName={pack.server.name}
+              onClose={() => {
+                setHistoryOpen(false);
+                searchRef.current?.focus();
+              }}
+              onOpen={(id) => {
+                chat.open(id);
+                setHistoryOpen(false);
+                setAiTab('chat');
+                searchRef.current?.focus();
+              }}
+              onForget={chat.forget}
+            />
+          </div>
+        </>
+      )}
 
       {!inner && aiMode && searchField}
 
