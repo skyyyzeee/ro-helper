@@ -520,6 +520,29 @@ function grownSnapshot(pack: ServerPack, snapshot: PackSnapshot | undefined, ids
   return snapshot ? { ...snapshot, articles: { ...snapshot.articles, ...now.articles } } : now;
 }
 
+/**
+ * A case as plain text, to paste in Discord or a document (ADR 0003, «скопировать как текст»): its name, the laws it
+ * was worked out by, each question and answer, and where it stands — its facts and articles.
+ */
+export function caseText(saved: StoredConversation, serverName: string): string {
+  const date = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('ru-RU') : '');
+  const head = [
+    `Дело: ${saved.title || 'без названия'}`,
+    [serverName, saved.snapshot ? `база ${saved.snapshot.label}` : '', saved.created ? `создано ${date(saved.created)}` : `обновлено ${date(saved.updated)}`]
+      .filter(Boolean)
+      .join(' · '),
+  ];
+  const turns = saved.messages.flatMap((m) => {
+    if (m.role === 'user') return [`\nВопрос: ${m.text}`];
+    if (m.failed) return [];
+    return [m.answer ? answerText(readAnswer(m.answer as unknown as Record<string, unknown>)) : m.text];
+  });
+  // Where the case stands: the facts and articles of its last answer.
+  const last = [...saved.messages].reverse().find((m) => m.case)?.case;
+  const where = last ? ['', last.facts.length ? `Факты: ${last.facts.join('; ')}` : '', last.norms.length ? `Статьи: ${last.norms.join(', ')}` : ''] : [];
+  return [...head, ...turns, ...where.filter((line, i) => i === 0 || line)].join('\n').trim();
+}
+
 /** What of a case's articles reads differently in the laws now, since it was made or last checked. */
 export function caseChanges(pack: ServerPack, saved: StoredConversation): { changed: string[]; gone: string[] } | null {
   const by = saved.checked ?? saved.snapshot;

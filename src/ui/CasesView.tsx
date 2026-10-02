@@ -36,11 +36,14 @@ export interface CaseActions {
   onPin: (id: string, pinned: boolean) => void;
   onArchive: (id: string, archived: boolean) => void;
   onDuplicate: (id: string) => void;
+  /** Copies the case as plain text. */
+  onCopy: (id: string) => Promise<void>;
 }
 
 function CaseRow({ saved, current, actions }: { saved: StoredConversation; current: boolean; actions: CaseActions }) {
   const [renaming, setRenaming] = useState(false);
   const [title, setTitle] = useState(saved.title);
+  const [copied, setCopied] = useState(false);
   if (renaming) {
     return (
       <li className="history__item">
@@ -91,6 +94,9 @@ function CaseRow({ saved, current, actions }: { saved: StoredConversation; curre
         <div className="case__menu">
           <button type="button" onClick={() => setRenaming(true)}>
             Переименовать
+          </button>
+          <button type="button" onClick={() => void actions.onCopy(saved.id).then(() => setCopied(true))}>
+            {copied ? 'Скопировано' : 'Скопировать как текст'}
           </button>
           <button type="button" onClick={() => actions.onDuplicate(saved.id)}>
             Дублировать

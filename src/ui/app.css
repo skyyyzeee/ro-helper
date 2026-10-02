@@ -4928,3 +4928,10 @@ select option {
 .case__rename .presets__input { flex: 1; min-width: 0; }
 .case__archive { margin-top: 8px; align-self: flex-start; }
 .case__changed .link { margin-left: 2px; }
+
+/* «Было → стало» over an answer that changed the case. */
+.change { padding: 10px 12px; border-radius: 12px; background: oklch(0.78 0.1 var(--accent-hue) / 0.12); border: 1px solid oklch(0.78 0.1 var(--accent-hue) / 0.3); font-size: 13.5px; line-height: 1.5; }
+.change__head { display: block; color: var(--accent-text); margin-bottom: 4px; }
+.change__list { margin: 0; padding-left: 4px; list-style: none; }
+.change__was { color: var(--text-muted); text-decoration-color: oklch(0.8 0.12 25 / 0.8); }
+.change__now { color: var(--text); font-weight: 600; }

@@ -1,9 +1,10 @@
 import { createContext, useContext, useEffect, useRef } from 'react';
 import type { Capability } from '../account/capabilities';
 import { articleLabel, articleTitle, type SearchHit, type Stage } from '../core';
-import { STATUS_LABELS } from '../protocol';
+import { STATUS_LABELS, diffCases, type Analysis } from '../protocol';
 import { PERSPECTIVES, type AiChat, type Perspective } from './ai';
-import { AnswerView } from './AnswerView';
+import { AnswerView, calculationLine } from './AnswerView';
+import { CaseChange } from './CaseChange';
 import type { Vote } from './feedback';
 import { DebugView } from './DebugView';
 import { MarkBar } from './MarkBar';
@@ -183,6 +184,13 @@ export function AiView({
     else void topRef.current?.scrollIntoView?.({ block: 'start' });
   }, [chat.messages.length, last?.pending]);
   const lastQuestion = [...chat.messages].reverse().find((m) => m.role === 'user')?.text;
+  // «Было → стало»: each answer of the case against the one before it, by the app.
+  const view = (analysis: Analysis) => ({ case: analysis.case, ...(analysis.calculation ? { punishment: calculationLine(analysis.calculation.result) } : {}) });
+  const changeAt = (index: number) => {
+    const now = chat.messages[index].analysis;
+    const before = chat.messages.slice(0, index).reverse().find((m) => m.analysis)?.analysis;
+    return now && before ? diffCases(view(before), view(now)) : null;
+  };
   const can = useContext(AiAccess);
   const canWrite = !can || can.has('ai.documents');
   // The history of decisions: what each question led to, and how firm it was.
@@ -270,6 +278,7 @@ export function AiView({
             <div key={message.id} className="ai__reply">
               {message.analysis ? (
                 <>
+                  {changeAt(index) && <CaseChange diff={changeAt(index)!} />}
                   <AnswerView
                     analysis={message.analysis}
                     busy={chat.busy}

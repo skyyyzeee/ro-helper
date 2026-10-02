@@ -69,6 +69,30 @@ describe('cases: the analyses kept (ADR 0003)', () => {
     expect(checked.checked!.articles[id]).not.toBe('00000000');
   });
 
+  it('a corrected fact: the case is analysed again, and «было → стало» says what changed — by the app', async () => {
+    // The AI's answers: the case, then the same case with the fact corrected.
+    const first = fakeGeminiFetch({ facts: ['украл телефон у прохожего', 'он не сотрудник'] });
+    const second = fakeGeminiFetch({ facts: ['украл телефон у прохожего', 'он сотрудник МВД (изменено)'] });
+    let analyses = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit) => {
+        const isAnswer = String(init.body).includes('Ответь ТОЛЬКО JSON-объектом');
+        if (isAnswer) analyses += 1;
+        return (isAnswer && analyses > 1 ? second : first)(url, init);
+      }),
+    );
+    const { user } = await asked();
+    await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'у меня украли телефон{Enter}');
+    await screen.findByText(/Это кража/);
+    expect(screen.queryByRole('note', { name: 'Было → стало' })).not.toBeInTheDocument();
+
+    await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'Поправка: он сотрудник МВД{Enter}');
+    const change = await screen.findByRole('note', { name: 'Было → стало' });
+    expect(change).toHaveTextContent('Изменён факт — связанные выводы пересчитаны');
+    expect(change).toHaveTextContent('он не сотрудник → он сотрудник МВД');
+  });
+
   it('offers questions to try the first time, asked with a press', async () => {
     await asked();
     const examples = screen.getByLabelText('Примеры вопросов');
@@ -118,6 +142,14 @@ describe('cases: named, pinned, archived, copied, found', () => {
 
     await menu(user, 'Угон у банка', 'Дублировать');
     expect(saved(platform).map((c) => c.title)).toEqual(['Угон у банка (копия)', 'старый вопрос', 'Угон у банка']);
+  });
+
+  it('copies a case as text: its name, the questions and answers, where it stands', async () => {
+    const { platform, user } = await asked(two);
+    await user.click(screen.getByRole('button', { name: 'Дела' }));
+    await menu(user, 'старый вопрос', 'Скопировать как текст');
+    expect(platform.state.clipboard).toMatch(/^Дело: старый вопрос\nТверской · обновлено /);
+    expect(platform.state.clipboard).toContain('Вопрос: старый вопрос про кражу\nстарый ответ');
   });
 
   it('finds a case by the words of its name or of what was asked in it', async () => {

@@ -27,7 +27,7 @@ import { ArticleView } from './ArticleView';
 import { CalculatorPanel, type ChargeFields, type ChargePatch, type CopyState } from './CalculatorPanel';
 import { ChangeDiff, ChangesView, type ChangeRef } from './ChangesView';
 import { DocumentsMenu } from './DocumentsMenu';
-import { transcribe, useAiChat } from './ai';
+import { caseText, transcribe, useAiChat } from './ai';
 import { sendMark } from './feedback';
 import type { ScopeChoice } from '../protocol';
 import { AiAccess, AiView, TAB_NEEDS, type AiTab } from './AiView';
@@ -1667,6 +1667,10 @@ export function Overlay({
               onPin={chat.pin}
               onArchive={chat.archive}
               onDuplicate={chat.duplicate}
+              onCopy={async (id) => {
+                const saved = chat.history.find((c) => c.id === id);
+                if (saved) await platform.writeClipboard(caseText(saved, pack.server.name));
+              }}
             />
           </div>
         </>
