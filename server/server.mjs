@@ -6,7 +6,7 @@
 // not answer. It keeps the spending in check: a few questions a day per computer and per address, and a daily
 // budget in rubles for everyone together.
 // Plain Node (18+ — Ubuntu 24.04 ships 18: no global `crypto`, import what is used), no packages: `node server.mjs`, behind Caddy for HTTPS (see README.md).
-import { randomUUID } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import { appendFileSync, readFileSync, writeFileSync, renameSync, existsSync, statSync } from 'node:fs';
 
@@ -41,6 +41,8 @@ const CONFIG = {
   feedbackPerDevice: num('FEEDBACK_PER_DEVICE', 30),
   /** Past this size the file takes no more until the admins have read and moved it. */
   feedbackMaxBytes: num('FEEDBACK_MAX_MB', 50) * 1024 * 1024,
+  /** The admins' token for reading the marks from the app (bash set-key.sh admin); none — no reading. */
+  adminToken: env('ADMIN_TOKEN', '').trim(),
   /**
    * GigaChat, asked first when its authorization key is set (base64 of «Client ID:Client Secret», from the
    * project's page at developers.sber.ru). Its servers are signed by the Russian root certificate: the service
@@ -317,6 +319,33 @@ function keepMark(device, mark) {
   dirty = true;
 }
 
+/** Whether the request carries the admins' token; compared in constant time. */
+function isAdmin(request) {
+  if (CONFIG.adminToken.length < 16) return false;
+  const given = Buffer.from(String(request.headers.authorization ?? '').replace(/^Bearer\s+/i, ''));
+  const token = Buffer.from(CONFIG.adminToken);
+  return given.length === token.length && timingSafeEqual(given, token);
+}
+
+/** The latest marks, newest first: all, the 👎 only, or those with a correction. */
+function latestMarks(filter, limit) {
+  if (!existsSync(CONFIG.feedbackFile)) return [];
+  const marks = [];
+  for (const line of readFileSync(CONFIG.feedbackFile, 'utf8').split('\n').reverse()) {
+    if (marks.length >= limit) break;
+    if (!line.trim()) continue;
+    try {
+      const mark = JSON.parse(line);
+      if (filter === 'down' && mark.vote !== 'down') continue;
+      if (filter === 'fixed' && !mark.correction) continue;
+      marks.push(mark);
+    } catch {
+      // A broken line is skipped.
+    }
+  }
+  return marks;
+}
+
 // ——— HTTP ———
 
 /** A question with a dozen articles is some 60 KB. Text only: no speech is taken — it is recognised on the players' computers. */
@@ -348,13 +377,20 @@ const server = createServer(async (request, response) => {
     response.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, GET',
-      'Access-Control-Allow-Headers': 'Content-Type, X-Device',
+      'Access-Control-Allow-Headers': 'Content-Type, X-Device, Authorization',
     });
     return response.end();
   }
   if (request.method === 'GET' && request.url === '/v1/status') {
     rollDay();
     return send(response, 200, { ok: true, open: state.spent < CONFIG.budgetPerDay, answered: state.answered, spent: Math.round(state.spent * 100) / 100, marks: state.marks ?? 0 });
+  }
+  if (request.method === 'GET' && request.url.startsWith('/v1/feedback')) {
+    if (!isAdmin(request)) return send(response, 403, { error: 'Нужен ключ администратора.' });
+    const params = new URL(request.url, 'http://local').searchParams;
+    const filter = ['down', 'fixed'].includes(params.get('filter')) ? params.get('filter') : 'all';
+    const count = Math.min(Math.max(Number(params.get('limit')) || 100, 1), 500);
+    return send(response, 200, { marks: latestMarks(filter, count), today: state.marks ?? 0 });
   }
   const limit = LIMITS[request.url];
   if (request.method !== 'POST' || !limit) return send(response, 404, { error: 'Нет такого адреса' });

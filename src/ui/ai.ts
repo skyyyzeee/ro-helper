@@ -152,6 +152,8 @@ export interface AiMessage {
    * search found), or «закон или правила?» (with the choices and the question to ask again).
    */
   system?: { reason: SystemReason; hits?: SearchHit[]; options?: { label: string; choice: ScopeChoice }[]; question?: string };
+  /** What the classifier took the question for, and why — for the admin's debug view; not kept in the history. */
+  classification?: { type: string; why: string };
 }
 
 export interface SendOptions {
@@ -308,7 +310,7 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
             },
           });
         }
-        return finish({ text: answerText(outcome.analysis.answer), analysis: outcome.analysis, perspective });
+        return finish({ text: answerText(outcome.analysis.answer), analysis: outcome.analysis, perspective, classification: { type: outcome.classification.type, why: outcome.classification.why } });
       } catch (error) {
         return finish({ failed: true, text: error instanceof Error ? error.message : String(error) });
       } finally {

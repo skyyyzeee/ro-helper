@@ -4879,3 +4879,11 @@ select option {
 .mark__text:focus { border-color: var(--accent); }
 .mark__row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .mark__note { font-size: 11.5px; color: var(--text-faint); }
+
+/* The admin's debug view under an answer. */
+.ai__debug { font-size: 12.5px; color: var(--text-muted); border-top: 1px dashed var(--line); padding-top: 8px; }
+.ai__debug summary { cursor: pointer; font-weight: 600; }
+.debug { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 8px 0 0; }
+.debug dt { color: var(--text-faint); }
+.debug dd { margin: 0; color: rgba(255, 255, 255, 0.82); overflow-wrap: anywhere; }
+.debug__list { margin: 0; padding-left: 16px; }

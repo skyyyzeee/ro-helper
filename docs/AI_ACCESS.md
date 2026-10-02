@@ -25,7 +25,7 @@ profile (`aiProfileOf` in `src/account/capabilities.ts`):
 - `ai.official_documents` — an officer's documents (рапорт, протокол задержания); the others see a citizen's only.
 - `ai.analysis`, `ai.server_rules`, `ai.documents` are everyone's; they are named so the
   interface asks for them, and a change of who gets them is one place.
-- `ai.debug` — reserved for the debug view (P2).
+- `ai.debug` — the admin's «Как ИИ пришёл к ответу» under each analysis (`DebugView.tsx`, docs/AI_FEEDBACK.md).
 
 ## Trust
 

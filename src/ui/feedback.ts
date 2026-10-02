@@ -55,3 +55,37 @@ export async function sendMark(platform: PlatformAdapter, mark: Mark): Promise<v
     clearTimeout(timer);
   }
 }
+
+// ——— The admins' reading ———
+
+/** The admins' key for reading the marks: on this computer only, never synced. */
+export const ADMIN_TOKEN_SETTING = 'ai.admin-token';
+
+export type MarkFilter = 'all' | 'down' | 'fixed';
+
+/** A mark as the server keeps it. */
+export interface KeptMark {
+  at: string;
+  server: string;
+  app: string;
+  vote: Vote;
+  question: string;
+  scope: string;
+  status: string;
+  norms: string[];
+  correction?: string;
+}
+
+/** The latest marks, newest first, read with the admins' key. */
+export async function readMarks(platform: PlatformAdapter, token: string, filter: MarkFilter): Promise<{ marks: KeptMark[]; today: number }> {
+  let response: Response;
+  try {
+    response = await fetch(`${await aiServerOf(platform)}/v1/feedback?filter=${filter}&limit=200`, { headers: { Authorization: `Bearer ${token}` } });
+  } catch {
+    throw new Error('Нет связи с сервером ИИ.');
+  }
+  if (response.status === 403) throw new Error('Сервер не принял ключ администратора — проверьте его или нажмите «Сменить ключ».');
+  if (!response.ok) throw new Error(`Сервер ИИ не отдал отзывы (код ${response.status}).`);
+  const body = (await response.json()) as { marks?: KeptMark[]; today?: number };
+  return { marks: body.marks ?? [], today: body.today ?? 0 };
+}

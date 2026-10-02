@@ -84,7 +84,7 @@ async function aiServer(env) {
     return { status: response.status, body: await response.json() };
   };
   const marks = () => readFileSync(join(dir, 'feedback.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
-  return { ask, status, mark, marks, stop: () => child.kill() };
+  return { ask, status, mark, marks, base: `http://127.0.0.1:${port}`, stop: () => child.kill() };
 }
 
 const gigaEnv = (giga) => ({ GIGACHAT_AUTH_KEY: 'Basic Z2lnYTprZXk=\n', GIGACHAT_OAUTH_URL: `${giga.url}/oauth`, GIGACHAT_API_URL: giga.url });
@@ -173,6 +173,39 @@ test('keeps a mark of an answer with no id, only its own fields cut to length; a
     assert.equal((await ai.mark({ vote: 'meh', question: 'x' }, { device: 'device-0003' })).status, 400);
     assert.equal((await ai.mark({ vote: 'up', question: '' }, { device: 'device-0003' })).status, 400);
     assert.equal((await ai.status()).marks, 3);
+  } finally {
+    ai.stop();
+    giga.server.close();
+  }
+});
+
+test('the admins read the marks with their token only — newest first, the 👎 or the corrections alone', async () => {
+  const giga = await fakeGigachat();
+  const token = 'a'.repeat(40);
+  const ai = await aiServer({ ...gigaEnv(giga), ADMIN_TOKEN: token });
+  const read = (query, auth) => fetch(`${ai.base}/v1/feedback${query}`, { headers: auth ? { Authorization: `Bearer ${auth}` } : {} });
+  try {
+    await ai.mark({ vote: 'up', question: 'первый' });
+    await ai.mark({ vote: 'down', question: 'второй' });
+    await ai.mark({ vote: 'down', question: 'третий', correction: 'это ст. 66' });
+    assert.equal((await read('')).status, 403);
+    assert.equal((await read('', 'b'.repeat(40))).status, 403);
+    const all = await (await read('', token)).json();
+    assert.deepEqual(all.marks.map((m) => m.question), ['третий', 'второй', 'первый']);
+    assert.equal(all.today, 3);
+    assert.deepEqual((await (await read('?filter=down', token)).json()).marks.map((m) => m.question), ['третий', 'второй']);
+    assert.deepEqual((await (await read('?filter=fixed&limit=5', token)).json()).marks.map((m) => m.correction), ['это ст. 66']);
+  } finally {
+    ai.stop();
+    giga.server.close();
+  }
+});
+
+test('with no admins\' token set, the marks are not read at all', async () => {
+  const giga = await fakeGigachat();
+  const ai = await aiServer(gigaEnv(giga));
+  try {
+    assert.equal((await fetch(`${ai.base}/v1/feedback`, { headers: { Authorization: 'Bearer ' } })).status, 403);
   } finally {
     ai.stop();
     giga.server.close();

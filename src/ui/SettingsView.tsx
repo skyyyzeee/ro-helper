@@ -4,6 +4,7 @@ import { usePlatform } from '../platform/PlatformContext';
 import { USAGE_SHARE_KEY } from '../account/usage';
 import { AccountCard, AccountSection } from './ProfileView';
 import { AdminSection } from './AdminView';
+import { AiMarksAdmin } from './AiMarksAdmin';
 import { FaqSection } from './Faq';
 import { useCapabilities } from './roles';
 import { ACCENT_HUES, THEMES, organizationHue, type AppearanceControl } from './appearance';
@@ -988,6 +989,9 @@ export function SettingsView({
         <div className="settings__part" id={sectionId('admin')}>
           <Block title="Администратор">
             <AdminSection />
+          </Block>
+          <Block title="Отзывы об ИИ">
+            <AiMarksAdmin />
           </Block>
         </div>
       )}

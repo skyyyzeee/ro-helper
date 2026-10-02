@@ -5,6 +5,7 @@ import { STATUS_LABELS } from '../protocol';
 import { PERSPECTIVES, type AiChat, type Perspective } from './ai';
 import { AnswerView } from './AnswerView';
 import type { Vote } from './feedback';
+import { DebugView } from './DebugView';
 import { MarkBar } from './MarkBar';
 import { BackIcon, HistoryIcon, PlusIcon, SparkIcon, WarnIcon } from './icons';
 
@@ -268,6 +269,7 @@ export function AiView({
                   {chat.messages[index - 1]?.role === 'user' && (
                     <MarkBar send={(vote, correction) => onMark(chat.messages[index - 1].text, message.analysis!, vote, correction)} />
                   )}
+                  {can?.has('ai.debug') && <DebugView analysis={message.analysis} classification={message.classification} />}
                 </>
               ) : (
                 <>
