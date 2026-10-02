@@ -6,6 +6,7 @@
 // reaches the AI only if the search found it in the base.
 import { findForSituation, searchArticles, sourceLabel, type Charge, type DetentionResult, type Organization, type SearchHit, type ServerPack } from '../core';
 import { AnswerFormatError, parseAnswer, type LegalAnswer } from './answer';
+import { aliasScope, matchAliases, type QueryAlias } from './aliases';
 import { AI_INTENTS, classify, type Classification, type QuestionType } from './classify';
 import { buildContext, type CaseState, type Perspective } from './context';
 import { analysisPrompt, type Depth } from './prompt';
@@ -218,6 +219,11 @@ const RULES_HINT = 'Разбор сделан по законам сервера
 export interface QuestionInput extends Omit<AnalyseInput, 'scope' | 'terms'> {
   /** What the player chose over the AI: auto, the laws or the rules of the server. */
   choice?: ScopeChoice;
+  /**
+   * The players' expressions the admins approved: they help the search and the classifier, with no AI. Given as a
+   * loader, it is asked only for a question that goes on to the search — the app's own answers need nothing.
+   */
+  aliases?: readonly QueryAlias[] | (() => Promise<readonly QueryAlias[]>);
 }
 
 /**
@@ -255,13 +261,22 @@ export async function answerQuestion(input: QuestionInput): Promise<Outcome> {
     return system('article_lookup', classification, { hits });
   }
 
+  // An approved expression of the players: its normal form is the search phrases — no AI call for them — and its
+  // scope settles what the words could not.
+  const aliases = typeof input.aliases === 'function' ? await input.aliases().catch(() => []) : input.aliases;
+  const matched = matchAliases(message, aliases);
+  const known = aliasScope(matched);
+  if (matched.length && classification.type === 'unclear' && choice === 'auto' && known) {
+    classification = { type: known === 'law' ? 'legal' : 'server_rule', scope: known, why: `словарь игроков: «${matched[0].phrase}»` };
+  }
+
   // Not told by the words: the AI's first call says what it is, and gives the search phrases at the same time.
-  let terms: string[] | undefined;
+  let terms: string[] | undefined = matched.length ? matched.map((alias) => alias.normalized) : undefined;
   let aiCalls = 0;
   if (classification.type === 'unclear') {
     aiCalls += 1;
     const asked = await searchTerms(provider, message, 'law', true);
-    terms = asked.phrases;
+    terms = [...(terms ?? []), ...asked.phrases];
     const intent = asked.intent;
     if (intent === 'out_of_scope') return system('out_of_scope', { type: 'out_of_scope', why: 'так решил ИИ' }, {}, aiCalls);
     if (intent === 'nonsense') return system('nonsense', { type: 'nonsense', why: 'так решил ИИ' }, {}, aiCalls);
@@ -280,8 +295,10 @@ export async function answerQuestion(input: QuestionInput): Promise<Outcome> {
   }
 
   const scope = classification.scope ?? 'law';
-  // The classifier's phrases were asked in the words of the laws: kept for an analysis in the laws.
-  const analysis = await analyse({ ...input, scope, ...(terms && scope === 'law' ? { terms } : {}) });
+  // The classifier's phrases were asked in the words of the laws: kept for an analysis in the laws. The players'
+  // expressions are kept in any scope: they were approved for it.
+  const keep = matched.length > 0 || scope === 'law';
+  const analysis = await analyse({ ...input, scope, ...(terms && keep ? { terms } : {}) });
   analysis.aiCalls = (analysis.aiCalls ?? 0) + aiCalls;
   if (classification.mismatch) analysis.notes = [classification.why === 'слова не подсказали — так решил ИИ' ? RULES_HINT : MISMATCH_NOTE[classification.mismatch]];
   return { kind: 'analysis', analysis, classification };

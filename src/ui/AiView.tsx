@@ -162,7 +162,7 @@ export function AiView({
   /** Shows the earlier conversations. */
   onHistory: () => void;
   /** Sends the player's mark of an answer to the question before it. */
-  onMark: (question: string, analysis: NonNullable<AiChat['messages'][number]['analysis']>, vote: Vote, correction?: string) => Promise<void>;
+  onMark: (question: string, analysis: NonNullable<AiChat['messages'][number]['analysis']>, vote: Vote, correction?: string, type?: string) => Promise<void>;
   /** Opens a page in the browser: a law's forum thread. */
   onLink: (url: string) => void;
   /** Back to the search: offered when the AI cannot answer. */
@@ -269,7 +269,7 @@ export function AiView({
                     onClarify={(text) => void chat.send(text)}
                   />
                   {chat.messages[index - 1]?.role === 'user' && (
-                    <MarkBar send={(vote, correction) => onMark(chat.messages[index - 1].text, message.analysis!, vote, correction)} />
+                    <MarkBar send={(vote, correction) => onMark(chat.messages[index - 1].text, message.analysis!, vote, correction, message.classification?.type)} />
                   )}
                   {can?.has('ai.debug') && <DebugView analysis={message.analysis} classification={message.classification} />}
                 </>
