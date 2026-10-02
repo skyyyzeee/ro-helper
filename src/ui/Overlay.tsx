@@ -28,6 +28,7 @@ import { CalculatorPanel, type ChargeFields, type ChargePatch, type CopyState } 
 import { ChangeDiff, ChangesView, type ChangeRef } from './ChangesView';
 import { DocumentsMenu } from './DocumentsMenu';
 import { transcribe, useAiChat } from './ai';
+import { sendMark } from './feedback';
 import type { ScopeChoice } from '../protocol';
 import { AiAccess, AiView, TAB_NEEDS, type AiTab } from './AiView';
 import { useRoles } from './roles';
@@ -1461,6 +1462,7 @@ export function Overlay({
               searchRef.current?.focus();
             }}
             onHistory={() => setHistoryOpen((shown) => !shown)}
+            onMark={(question, analysis, vote, correction) => sendMark(platform, { question, analysis, vote, correction, server: pack.server.id })}
             onDocument={(situation) => {
               setAiTab('document');
               setAiDraft(situation);

@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -56,8 +56,9 @@ async function fakePaid() {
 /** The AI server itself, on a free port, with these settings. */
 async function aiServer(env) {
   const port = 20000 + Math.floor(Math.random() * 20000);
+  const dir = mkdtempSync(join(tmpdir(), 'ai-'));
   const child = spawn(process.execPath, [join(import.meta.dirname, 'server.mjs')], {
-    env: { ...process.env, PORT: String(port), STATE_FILE: join(mkdtempSync(join(tmpdir(), 'ai-')), 'state.json'), ...env },
+    env: { ...process.env, PORT: String(port), STATE_FILE: join(dir, 'state.json'), FEEDBACK_FILE: join(dir, 'feedback.jsonl'), ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   await new Promise((resolve, reject) => {
@@ -74,7 +75,16 @@ async function aiServer(env) {
     return { status: response.status, body: await response.json() };
   };
   const status = async () => (await fetch(`http://127.0.0.1:${port}/v1/status`)).json();
-  return { ask, status, stop: () => child.kill() };
+  const mark = async (body, { device = 'device-0001' } = {}) => {
+    const response = await fetch(`http://127.0.0.1:${port}/v1/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Device': device },
+      body: JSON.stringify(body),
+    });
+    return { status: response.status, body: await response.json() };
+  };
+  const marks = () => readFileSync(join(dir, 'feedback.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  return { ask, status, mark, marks, stop: () => child.kill() };
 }
 
 const gigaEnv = (giga) => ({ GIGACHAT_AUTH_KEY: 'Basic Z2lnYTprZXk=\n', GIGACHAT_OAUTH_URL: `${giga.url}/oauth`, GIGACHAT_API_URL: giga.url });
@@ -138,6 +148,31 @@ test('with GigaChat only, a declined question is told as the AI not answering', 
     const refused = await ai.ask('травка');
     assert.equal(refused.status, 502);
     assert.match(refused.body.error, /не отвечает/);
+  } finally {
+    ai.stop();
+    giga.server.close();
+  }
+});
+
+test('keeps a mark of an answer with no id, only its own fields cut to length; a few a day per computer', async () => {
+  const giga = await fakeGigachat();
+  const ai = await aiServer({ ...gigaEnv(giga), FEEDBACK_PER_DEVICE: '2' });
+  try {
+    const down = { vote: 'down', question: 'украли   телефон', server: 'tverskoi', app: '2.10.0', scope: 'law', status: 'confirmed', norms: ['УК ст. 65'], correction: 'это ст. 66', device: 'device-0001', nick: 'skyze' };
+    assert.equal((await ai.mark(down)).status, 200);
+    assert.equal((await ai.mark({ vote: 'up', question: 'обматерил полицейского', correction: 'не нужен' })).status, 200);
+    const [first, second] = ai.marks();
+    assert.deepEqual(Object.keys(first).sort(), ['app', 'at', 'correction', 'norms', 'question', 'scope', 'server', 'status', 'vote']);
+    assert.equal(first.question, 'украли телефон');
+    assert.equal(first.correction, 'это ст. 66');
+    assert.equal(second.correction, undefined);
+    // No id of the player or the computer is kept, whatever the request carried.
+    assert.doesNotMatch(JSON.stringify(ai.marks()), /device-0001|skyze/);
+    assert.equal((await ai.mark({ vote: 'up', question: 'третий' })).status, 429);
+    assert.equal((await ai.mark({ vote: 'up', question: 'с другого' }, { device: 'device-0002' })).status, 200);
+    assert.equal((await ai.mark({ vote: 'meh', question: 'x' }, { device: 'device-0003' })).status, 400);
+    assert.equal((await ai.mark({ vote: 'up', question: '' }, { device: 'device-0003' })).status, 400);
+    assert.equal((await ai.status()).marks, 3);
   } finally {
     ai.stop();
     giga.server.close();

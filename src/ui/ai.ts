@@ -84,9 +84,22 @@ export type AiConnection =
   | ({ provider: 'custom' } & CustomAi)
   | { provider: 'gemini'; key: string };
 
+/** The AI server's address: the built-in one, or another tried out in the settings. */
+export const aiServerOf = async (platform: PlatformAdapter): Promise<string> => ((await platform.readSetting<string>(AI_SERVER_SETTING))?.trim() || AI_SERVER).replace(/\/$/, '');
+
+/** This computer's random id for the AI server's daily limits, made on first need. */
+export async function deviceOf(platform: PlatformAdapter): Promise<string> {
+  let device = await platform.readSetting<string>(DEVICE_SETTING);
+  if (!device) {
+    device = `d${crypto.randomUUID().replace(/-/g, '')}`;
+    await platform.writeSetting(DEVICE_SETTING, device);
+  }
+  return device;
+}
+
 /** How to reach the AI now, from the settings; a missing key or address is said at once. */
 export async function connect(platform: PlatformAdapter): Promise<AiConnection> {
-  const server = ((await platform.readSetting<string>(AI_SERVER_SETTING))?.trim() || AI_SERVER).replace(/\/$/, '');
+  const server = await aiServerOf(platform);
   const chosen = await platform.readSetting<AiProvider>(AI_PROVIDER_SETTING);
   if (chosen === 'custom') {
     const custom = await platform.readSetting<Partial<CustomAi>>(AI_CUSTOM_SETTING);
@@ -102,12 +115,7 @@ export async function connect(platform: PlatformAdapter): Promise<AiConnection> 
     if (!key) throw new AiError(NO_KEY, 'key');
     return { provider, key };
   }
-  let device = await platform.readSetting<string>(DEVICE_SETTING);
-  if (!device) {
-    device = `d${crypto.randomUUID().replace(/-/g, '')}`;
-    await platform.writeSetting(DEVICE_SETTING, device);
-  }
-  return { provider: 'server', server, device };
+  return { provider: 'server', server, device: await deviceOf(platform) };
 }
 
 /** The service behind a connection. */

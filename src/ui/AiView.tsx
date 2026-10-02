@@ -4,6 +4,8 @@ import { articleLabel, articleTitle, type SearchHit, type Stage } from '../core'
 import { STATUS_LABELS } from '../protocol';
 import { PERSPECTIVES, type AiChat, type Perspective } from './ai';
 import { AnswerView } from './AnswerView';
+import type { Vote } from './feedback';
+import { MarkBar } from './MarkBar';
 import { BackIcon, HistoryIcon, PlusIcon, SparkIcon, WarnIcon } from './icons';
 
 /** «УК ст. 65» — how an answer names an article, without its title. */
@@ -142,6 +144,7 @@ export function AiView({
   onDraft,
   onDocument,
   onHistory,
+  onMark,
   onLink,
 }: {
   chat: AiChat;
@@ -157,6 +160,8 @@ export function AiView({
   onDocument: (situation: string) => void;
   /** Shows the earlier conversations. */
   onHistory: () => void;
+  /** Sends the player's mark of an answer to the question before it. */
+  onMark: (question: string, analysis: NonNullable<AiChat['messages'][number]['analysis']>, vote: Vote, correction?: string) => Promise<void>;
   /** Opens a page in the browser: a law's forum thread. */
   onLink: (url: string) => void;
   /** Back to the search: offered when the AI cannot answer. */
@@ -223,7 +228,7 @@ export function AiView({
       )}
 
       <div className="ai__messages" role="log" aria-live="polite">
-        {chat.messages.map((message) =>
+        {chat.messages.map((message, index) =>
           message.role === 'user' ? (
             <div key={message.id} className="ai__question">
               {message.perspective && <span className="ai__side">{PERSPECTIVES.find((p) => p.id === message.perspective)?.label}</span>}
@@ -248,17 +253,22 @@ export function AiView({
           ) : (
             <div key={message.id} className="ai__reply">
               {message.analysis ? (
-                <AnswerView
-                  analysis={message.analysis}
-                  busy={chat.busy}
-                  calculable={calculable}
-                  onOpen={onOpen}
-                  onCharge={onCharge}
-                  onPinArticle={onPinArticle}
-                  onCopy={onCopy}
-                  onLink={onLink}
-                  onClarify={(text) => void chat.send(text)}
-                />
+                <>
+                  <AnswerView
+                    analysis={message.analysis}
+                    busy={chat.busy}
+                    calculable={calculable}
+                    onOpen={onOpen}
+                    onCharge={onCharge}
+                    onPinArticle={onPinArticle}
+                    onCopy={onCopy}
+                    onLink={onLink}
+                    onClarify={(text) => void chat.send(text)}
+                  />
+                  {chat.messages[index - 1]?.role === 'user' && (
+                    <MarkBar send={(vote, correction) => onMark(chat.messages[index - 1].text, message.analysis!, vote, correction)} />
+                  )}
+                </>
               ) : (
                 <>
                   <p className="ai__line">{message.text}</p>
