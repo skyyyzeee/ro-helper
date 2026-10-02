@@ -8,7 +8,7 @@
 // Plain Node (18+ — Ubuntu 24.04 ships 18: no global `crypto`, import what is used), no packages: `node server.mjs`, behind Caddy for HTTPS (see README.md).
 import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
-import { readFileSync, writeFileSync, renameSync, existsSync } from 'node:fs';
+import { appendFileSync, readFileSync, writeFileSync, renameSync, existsSync, statSync } from 'node:fs';
 
 const env = (name, fallback) => process.env[name] ?? fallback;
 const num = (name, fallback) => Number(env(name, fallback));
@@ -33,6 +33,14 @@ const CONFIG = {
   requestsPerIp: num('REQUESTS_PER_IP', 80),
   maxOutputTokens: num('MAX_OUTPUT_TOKENS', 900),
   stateFile: env('STATE_FILE', './state.json'),
+  /**
+   * The players' marks of the answers (👍, 👎, «Исправить»), one JSON line each, with no id of the player or the
+   * computer: what was asked, what the app answered, the mark. For the admins to read and improve the search.
+   */
+  feedbackFile: env('FEEDBACK_FILE', './feedback.jsonl'),
+  feedbackPerDevice: num('FEEDBACK_PER_DEVICE', 30),
+  /** Past this size the file takes no more until the admins have read and moved it. */
+  feedbackMaxBytes: num('FEEDBACK_MAX_MB', 50) * 1024 * 1024,
   /**
    * GigaChat, asked first when its authorization key is set (base64 of «Client ID:Client Secret», from the
    * project's page at developers.sber.ru). Its servers are signed by the Russian root certificate: the service
@@ -59,8 +67,8 @@ const today = () => new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 1
 
 // ——— What was spent today, kept on disk so a restart does not reset the limits ———
 
-/** A fresh day: nothing spent, nothing asked; `answered` — who answered, and why the paid API had to. */
-const freshDay = () => ({ day: today(), spent: 0, devices: {}, ips: {}, answered: { gigachat: 0, paid: 0, why: {} } });
+/** A fresh day: nothing spent, nothing asked; `answered` — who answered, and why the paid API had to; `marks` — marks taken. */
+const freshDay = () => ({ day: today(), spent: 0, devices: {}, ips: {}, answered: { gigachat: 0, paid: 0, why: {} }, marks: 0 });
 let state = freshDay();
 if (existsSync(CONFIG.stateFile)) {
   try {
@@ -265,10 +273,54 @@ async function chat(request) {
   return answer;
 }
 
+// ——— The players' marks ———
+
+const clip = (value, max) => (typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, max) : '');
+
+/**
+ * A mark as it is kept: only these fields, each cut to its length — nothing else the request may carry, and no id.
+ * Null when it is no mark at all.
+ */
+function markOf(input) {
+  const vote = input?.vote === 'up' || input?.vote === 'down' ? input.vote : null;
+  const question = clip(input?.question, 600);
+  if (!vote || !question) return null;
+  const correction = vote === 'down' ? clip(input?.correction, 1000) : '';
+  return {
+    // To the minute: when, not who.
+    at: new Date().toISOString().slice(0, 16),
+    server: clip(input?.server, 40),
+    app: clip(input?.app, 20),
+    vote,
+    question,
+    scope: clip(input?.scope, 20),
+    status: clip(input?.status, 20),
+    norms: (Array.isArray(input?.norms) ? input.norms : []).map((n) => clip(n, 80)).filter(Boolean).slice(0, 10),
+    ...(correction ? { correction } : {}),
+  };
+}
+
+/** Why this mark may not be kept today, or nothing when it may. */
+function markRefusal(device) {
+  rollDay();
+  const used = state.devices[device]?.marks ?? 0;
+  if (used >= CONFIG.feedbackPerDevice) return 'На сегодня отзывов достаточно — спасибо! Завтра можно снова.';
+  if (existsSync(CONFIG.feedbackFile) && statSync(CONFIG.feedbackFile).size >= CONFIG.feedbackMaxBytes) return 'Отзывы сейчас не принимаются — попробуйте позже.';
+  return null;
+}
+
+function keepMark(device, mark) {
+  appendFileSync(CONFIG.feedbackFile, `${JSON.stringify(mark)}\n`, { mode: 0o600 });
+  const used = (state.devices[device] ??= { questions: 0 });
+  used.marks = (used.marks ?? 0) + 1;
+  state.marks = (state.marks ?? 0) + 1;
+  dirty = true;
+}
+
 // ——— HTTP ———
 
 /** A question with a dozen articles is some 60 KB. Text only: no speech is taken — it is recognised on the players' computers. */
-const LIMITS = { '/v1/chat': 200_000 };
+const LIMITS = { '/v1/chat': 200_000, '/v1/feedback': 8_000 };
 
 function readBody(request, limit) {
   return new Promise((resolve, reject) => {
@@ -302,7 +354,7 @@ const server = createServer(async (request, response) => {
   }
   if (request.method === 'GET' && request.url === '/v1/status') {
     rollDay();
-    return send(response, 200, { ok: true, open: state.spent < CONFIG.budgetPerDay, answered: state.answered, spent: Math.round(state.spent * 100) / 100 });
+    return send(response, 200, { ok: true, open: state.spent < CONFIG.budgetPerDay, answered: state.answered, spent: Math.round(state.spent * 100) / 100, marks: state.marks ?? 0 });
   }
   const limit = LIMITS[request.url];
   if (request.method !== 'POST' || !limit) return send(response, 404, { error: 'Нет такого адреса' });
@@ -317,6 +369,20 @@ const server = createServer(async (request, response) => {
     input = JSON.parse(await readBody(request, limit));
   } catch {
     return send(response, 413, { error: 'Слишком большой запрос.' });
+  }
+
+  if (request.url === '/v1/feedback') {
+    const mark = markOf(input);
+    if (!mark) return send(response, 400, { error: 'Пустой отзыв.' });
+    const why = markRefusal(device);
+    if (why) return send(response, 429, { error: why });
+    try {
+      keepMark(device, mark);
+      return send(response, 200, { ok: true });
+    } catch (error) {
+      console.error(new Date().toISOString(), 'feedback:', error);
+      return send(response, 500, { error: 'Не удалось сохранить отзыв — попробуйте позже.' });
+    }
   }
 
   try {
