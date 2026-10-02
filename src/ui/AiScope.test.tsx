@@ -44,9 +44,10 @@ describe('the AI as a closed layer over the base', () => {
 
   it('keeps the choice of laws or rules, and gives the AI only that kind of source', async () => {
     const { ask, user, platform, bodies } = await openAi();
-    const choices = screen.getByRole('radiogroup', { name: 'Где искать ответ' });
-    expect(within(choices).getByRole('radio', { name: 'Авто' })).toHaveAttribute('aria-checked', 'true');
-    await user.click(within(choices).getByRole('radio', { name: 'Правила сервера' }));
+    // A small choice inside the field at the bottom, «Законы и правила» first.
+    const choice = screen.getByRole('combobox', { name: 'Где искать ответ' });
+    expect(choice).toHaveValue('auto');
+    await user.selectOptions(choice, 'Только правила сервера');
     expect(platform.settings.get(SCOPE_SETTING)).toBe('server_rule');
 
     await ask('оскорбил родных игрока в голосовом чате');

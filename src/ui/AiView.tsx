@@ -2,9 +2,9 @@ import { createContext, useContext, useEffect, useRef } from 'react';
 import type { Capability } from '../account/capabilities';
 import { articleLabel, articleTitle, type SearchHit, type Stage } from '../core';
 import { STATUS_LABELS } from '../protocol';
-import { PERSPECTIVES, type AiChat } from './ai';
+import { PERSPECTIVES, type AiChat, type Perspective } from './ai';
 import { AnswerView } from './AnswerView';
-import { BackIcon, WarnIcon } from './icons';
+import { PlusIcon, SparkIcon, WarnIcon } from './icons';
 
 /** «УК ст. 65» — how an answer names an article, without its title. */
 export const shortLabel = (hit: SearchHit) => `${hit.document.short} ${articleLabel(hit.article, undefined, hit.document.unit)}`;
@@ -20,14 +20,27 @@ export function citedIn(line: string, sources: SearchHit[]): SearchHit | undefin
 }
 
 /** Questions to try the AI with the first time: situations players meet, on laws every server has. */
-export const EXAMPLES = [
-  'Человек в маске с электродубинкой стоит у здания МВД — что ему грозит?',
-  'Сотрудник остановил меня без причины и требует показать документы — я обязан?',
-  'Какое наказание за кражу телефона у прохожего?',
-  'Задержанный просит адвоката — сотрудник обязан дать ему позвонить?',
-  'Водитель проехал на красный и уехал от полиции — какие статьи?',
-  'Игрок продаёт игровую валюту за реальные деньги в чате — что за это будет?',
-];
+export const EXAMPLES: Record<Perspective, string[]> = {
+  citizen: [
+    'У меня украли телефон из кармана — что будет вору?',
+    'Сотрудник остановил меня без причины и требует показать документы — я обязан?',
+    'Меня задержали — сколько могут держать и что я могу требовать?',
+    'Игрок продаёт игровую валюту за реальные деньги в чате — что за это будет?',
+  ],
+  state: [
+    'Человек в маске с электродубинкой стоит у здания МВД — что ему грозит?',
+    'Задержанный просит адвоката — сотрудник обязан дать ему позвонить?',
+    'Водитель проехал на красный и уехал от полиции — какие статьи?',
+    'Задержанный предложил 50 000, чтобы его отпустили',
+  ],
+  crime: [
+    'Нас взяли с оружием в машине — что светит?',
+    'Сколько могут держать без адвоката?',
+    'Что можно требовать при задержании?',
+    'За ограбление магазина что будет по закону и по правилам сервера?',
+  ],
+  lawyer: [],
+};
 
 /** What the AI does for the player: analyses a situation, or writes a document about it. */
 export type AiTab = 'chat' | 'document' | 'lawyer' | 'detention' | 'trainer';
@@ -43,6 +56,25 @@ export const TAB_NEEDS: Record<AiTab, Capability> = {
   detention: 'ai.check',
   trainer: 'ai.practice',
 };
+
+/**
+ * The head of every AI screen: its modes on the left, «start again» on the right — one row, so the thread below
+ * has the room. Leaving the AI is the side column or Esc.
+ */
+export function AiHead({ tab, onTab, reset }: { tab: AiTab; onTab: (tab: AiTab) => void; reset?: { label: string; disabled?: boolean; onClick: () => void } }) {
+  return (
+    <div className="ai__head">
+      <AiTabs tab={tab} onTab={onTab} />
+      <span className="sp" />
+      {reset && (
+        <button className="ai__new" type="button" disabled={reset.disabled} onClick={reset.onClick}>
+          <PlusIcon />
+          <span>{reset.label}</span>
+        </button>
+      )}
+    </div>
+  );
+}
 
 /** The things the AI does for this player, as the heading of its screen. */
 export function AiTabs({ tab, onTab }: { tab: AiTab; onTab: (tab: AiTab) => void }) {
@@ -71,7 +103,6 @@ export function AiTabs({ tab, onTab }: { tab: AiTab; onTab: (tab: AiTab) => void
 
 export function AiView({
   chat,
-  backLabel,
   onBack,
   onOpen,
   onSettings,
@@ -94,7 +125,7 @@ export function AiView({
   onDraft: (text: string) => void;
   /** Opens a page in the browser: a law's forum thread. */
   onLink: (url: string) => void;
-  backLabel: string;
+  /** Back to the search: offered when the AI cannot answer. */
   onBack: () => void;
   /** Opens a found article, as from the search. */
   onOpen: (hit: SearchHit) => void;
@@ -105,8 +136,9 @@ export function AiView({
   const endRef = useRef<HTMLDivElement>(null);
   const last = chat.messages.at(-1);
   // Braces: newer browsers return a promise from scrolling, and an effect may return only its clean-up.
+  // An empty chat stays at its top, with the modes in sight; a conversation follows its last message.
   useEffect(() => {
-    void endRef.current?.scrollIntoView?.({ block: 'end' });
+    if (chat.messages.length) void endRef.current?.scrollIntoView?.({ block: 'end' });
   }, [chat.messages.length, last?.pending]);
   const lastQuestion = [...chat.messages].reverse().find((m) => m.role === 'user')?.text;
   // The history of decisions: what each question led to, and how firm it was.
@@ -119,92 +151,20 @@ export function AiView({
 
   return (
     <section className="art ai" aria-label="ИИ-разбор">
-      <div className="ai__top">
-        <button className="back" type="button" onClick={onBack}>
-          <BackIcon />
-          <span>{backLabel}</span>
-        </button>
-        <span className="sp" />
-        {chat.messages.length > 0 && (
-          <button className="link-btn" type="button" disabled={chat.busy} onClick={chat.clear}>
-            Новый разбор
-          </button>
-        )}
-      </div>
-      <AiTabs tab="chat" onTab={onTab} />
-      <div className="ai__depth" role="radiogroup" aria-label="Где искать ответ">
-        {(
-          [
-            ['auto', 'Авто', 'Ассистент сам определит: закон или правила сервера'],
-            ['law', 'Законы', 'Только законы, кодексы и уставы сервера'],
-            ['server_rule', 'Правила сервера', 'Только правила проекта и сервера'],
-          ] as const
-        ).map(([id, label, title]) => (
-          <button key={id} type="button" role="radio" aria-checked={chat.choice === id} title={title} className={chat.choice === id ? 'chip-btn chip-btn--on' : 'chip-btn'} onClick={() => chat.setChoice(id)}>
-            {label}
-          </button>
-        ))}
-      </div>
-      <div className="ai__depth" role="radiogroup" aria-label="Глубина разбора">
-        {(
-          [
-            ['quick', 'Быстрый разбор', 'Статья → нарушение → наказание → источник'],
-            ['full', 'Полный разбор', 'Факты → нормы → альтернативы → процедура → расчёт; дольше'],
-          ] as const
-        ).map(([id, label, title]) => (
-          <button key={id} type="button" role="radio" aria-checked={chat.depth === id} title={title} className={chat.depth === id ? 'chip-btn chip-btn--on' : 'chip-btn'} onClick={() => chat.setDepth(id)}>
-            {label}
-          </button>
-        ))}
-      </div>
-      {chat.current && chat.current.facts.length > 0 && (
-        <details className="ai__facts">
-          <summary>Факты дела: {chat.current.facts.length}</summary>
-          <ul className="answer__list">
-            {chat.current.facts.map((fact) => (
-              <li key={fact} className={/\(изменено\)\s*$/.test(fact) ? 'fact fact--changed' : 'fact'}>
-                {fact}{' '}
-                <button
-                  className="link"
-                  type="button"
-                  aria-label={`Исправить факт: ${fact}`}
-                  disabled={chat.busy}
-                  onClick={() => onDraft(`Поправка: не «${fact.replace(/\s*\(изменено\)\s*$/, '')}», а `)}
-                >
-                  исправить
-                </button>
-              </li>
-            ))}
-          </ul>
-          {chat.current.norms.length > 0 && <p className="set__hint">Статьи: {chat.current.norms.join(', ')}</p>}
-          {decisions.length > 1 && (
-            <>
-              <div className="answer__title">История решений</div>
-              <ol className="answer__list">
-                {decisions.map((d) => (
-                  <li key={d.id}>
-                    <span className="decision__question">{d.question}</span> → {d.conclusion || '—'}{' '}
-                    <span className={`status status--${d.status}`}>{STATUS_LABELS[d.status]}</span>
-                    {d.review && <span className="status status--review">Требует проверки</span>}
-                  </li>
-                ))}
-              </ol>
-            </>
-          )}
-          <p className="set__hint">Исправьте факт или спросите «а если…» в поле сверху — ИИ пересмотрит только то, что изменилось.</p>
-        </details>
-      )}
+      <AiHead tab="chat" onTab={onTab} reset={chat.messages.length > 0 ? { label: 'Новый чат', disabled: chat.busy, onClick: chat.clear } : undefined} />
 
       {chat.messages.length === 0 && (
         <div className="ai__intro">
+          <span className="ai__hello-icon" aria-hidden="true">
+            <SparkIcon />
+          </span>
+          <h2 className="ai__hello">Что случилось?</h2>
           <p className="set__hint">
-            Опишите ситуацию своими словами в поле сверху и нажмите <b>Enter</b>. Ассистент найдёт нормы в законах и правилах
-            вашего сервера, а ИИ объяснит, что к чему. Он опирается только на найденное в базе — каждую норму можно открыть и
-            проверить; чего в базе нет, того он не придумает.
+            Опишите ситуацию своими словами в поле внизу — ассистент найдёт нормы в законах и правилах вашего сервера и объяснит,
+            что к чему. Отвечает только по базе: каждую норму можно открыть и проверить.
           </p>
           <div className="ai__examples" aria-label="Примеры вопросов">
-            <span className="set__label">Попробуйте:</span>
-            {EXAMPLES.map((example) => (
+            {EXAMPLES[chat.perspectives[0] ?? 'citizen'].map((example) => (
               <button key={example} type="button" className="ai__example" disabled={chat.busy} onClick={() => void chat.send(example)}>
                 {example}
               </button>
@@ -292,6 +252,9 @@ export function AiView({
         )}
         {last?.role === 'ai' && !last.pending && !last.failed && !last.system && lastQuestion && (
           <div className="ai__sides" aria-label="Разобрать с другой стороны">
+            <button type="button" className="ai__chip ai__chip--more" disabled={chat.busy} onClick={() => void chat.send('Разбери подробнее', undefined, { depth: 'full' })}>
+              Подробнее
+            </button>
             <span className="set__label">С точки зрения:</span>
             {PERSPECTIVES.filter((side) => chat.perspectives.includes(side.id)).map((side) => (
               <button key={side.id} type="button" className="ai__chip" disabled={chat.busy} onClick={() => void chat.send(lastQuestion, side.id)}>
@@ -300,6 +263,44 @@ export function AiView({
             ))}
           </div>
         )}
+        {chat.current && chat.current.facts.length > 0 && (
+          <details className="ai__facts">
+            <summary>Факты дела: {chat.current.facts.length}</summary>
+            <ul className="answer__list">
+              {chat.current.facts.map((fact) => (
+                <li key={fact} className={/\(изменено\)\s*$/.test(fact) ? 'fact fact--changed' : 'fact'}>
+                  {fact}{' '}
+                  <button
+                    className="link"
+                    type="button"
+                    aria-label={`Исправить факт: ${fact}`}
+                    disabled={chat.busy}
+                    onClick={() => onDraft(`Поправка: не «${fact.replace(/\s*\(изменено\)\s*$/, '')}», а `)}
+                  >
+                    исправить
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {chat.current.norms.length > 0 && <p className="set__hint">Статьи: {chat.current.norms.join(', ')}</p>}
+            {decisions.length > 1 && (
+              <>
+                <div className="answer__title">История решений</div>
+                <ol className="answer__list">
+                  {decisions.map((d) => (
+                    <li key={d.id}>
+                      <span className="decision__question">{d.question}</span> → {d.conclusion || '—'}{' '}
+                      <span className={`status status--${d.status}`}>{STATUS_LABELS[d.status]}</span>
+                      {d.review && <span className="status status--review">Требует проверки</span>}
+                    </li>
+                  ))}
+                </ol>
+              </>
+            )}
+            <p className="set__hint">Исправьте факт или спросите «а если…» в поле внизу — ИИ пересмотрит только то, что изменилось.</p>
+          </details>
+        )}
+  
         <div ref={endRef} />
       </div>
     </section>

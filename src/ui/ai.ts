@@ -151,6 +151,8 @@ export interface SendOptions {
   brief?: boolean;
   /** The laws or the rules for this one question (an answer to «закон или правила?»), whatever the switch says. */
   choice?: ScopeChoice;
+  /** The depth of this one answer: «Подробнее» asks the full analysis of the same case. */
+  depth?: Depth;
 }
 
 export interface AiChat {
@@ -285,7 +287,7 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
           message: perspective && previous ? `Разбери это же дело с точки зрения: ${side}.` : question,
           previous,
           perspective,
-          depth: options.brief ? 'quick' : depth,
+          depth: options.brief ? 'quick' : (options.depth ?? depth),
           choice: options.choice ?? choice,
         });
         if (outcome.kind === 'system') {

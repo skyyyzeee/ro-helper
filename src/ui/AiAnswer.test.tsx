@@ -87,12 +87,12 @@ describe('the analysis on screen', () => {
     expect(platform.state.clipboard).toBe('ст. 65 ч. 1 УК');
   });
 
-  it('sends the full analysis with more thinking when it is chosen', async () => {
-    vi.stubGlobal('fetch', vi.fn(fakeGeminiFetch()));
-    const { platform, user } = await renderApp({ settings: GEMINI });
-    await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-    await user.click(screen.getByRole('radio', { name: 'Полный разбор' }));
-    expect(platform.settings.get('ai.depth')).toBe('full');
+  it('answers short, and gives the full analysis of the same case on «Подробнее»', async () => {
+    const { user, bodies } = await ask('у меня украли телефон');
+    expect(bodies.at(-1)).toContain('РЕЖИМ — БЫСТРЫЙ РАЗБОР');
+    await user.click(screen.getByRole('button', { name: 'Подробнее' }));
+    expect((await screen.findAllByText('Разбери подробнее')).length).toBeGreaterThan(0);
+    await vi.waitFor(() => expect(bodies.at(-1)).toContain('РЕЖИМ — ПОЛНЫЙ РАЗБОР'));
   });
 
   it('when the AI fails, says search still works', async () => {

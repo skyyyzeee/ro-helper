@@ -25,7 +25,7 @@ describe('the history of AI analyses', () => {
     expect(saved[0].messages.map((m) => m.role)).toEqual(['user', 'ai']);
 
     // A new conversation, then the old one back from the history.
-    await user.click(screen.getByRole('button', { name: 'Новый разбор' }));
+    await user.click(screen.getByRole('button', { name: 'Новый чат' }));
     expect(screen.queryByText(/Это кража/)).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'История ИИ-разборов' }));
     const history = screen.getByRole('region', { name: 'История ИИ-разборов' });
@@ -40,7 +40,7 @@ describe('the history of AI analyses', () => {
     const { user } = await renderApp({ settings: GEMINI });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
     const examples = screen.getByLabelText('Примеры вопросов');
-    await user.click(within(examples).getByRole('button', { name: /Какое наказание за кражу телефона/ }));
+    await user.click(within(examples).getByRole('button', { name: /У меня украли телефон из кармана/ }));
     expect(await screen.findByText(/Это кража/)).toBeInTheDocument();
     expect(screen.queryByLabelText('Примеры вопросов')).not.toBeInTheDocument();
   });

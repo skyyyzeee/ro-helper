@@ -28,6 +28,7 @@ import { CalculatorPanel, type ChargeFields, type ChargePatch, type CopyState } 
 import { ChangeDiff, ChangesView, type ChangeRef } from './ChangesView';
 import { DocumentsMenu } from './DocumentsMenu';
 import { transcribe, useAiChat } from './ai';
+import type { ScopeChoice } from '../protocol';
 import { AiAccess, AiView, TAB_NEEDS, type AiTab } from './AiView';
 import { useRoles } from './roles';
 import { cardText } from './AnswerView';
@@ -975,6 +976,88 @@ export function Overlay({
     void platform.writeSetting(OPACITY_KEY, clamped);
   };
 
+  /** The field: the search's on top; in the AI section it is the chat's composer at the bottom. */
+  const searchField = (
+    <div className={aiMode ? 'search search--ai search--composer' : 'search'}>
+      {aiMode ? <SparkIcon /> : <SearchIcon />}
+      {scope && !aiMode && (
+        <button className="scope" type="button" aria-label={`Искать во всех документах, а не только в ${scope.short}`} title="Искать во всех документах" onClick={clearScope}>
+          <span>{scope.short}</span>
+          <CloseIcon size={12} />
+        </button>
+      )}
+      <input
+        ref={searchRef}
+        className="search__input"
+        type="search"
+        aria-label="Поиск по законам"
+        placeholder={
+          aiMode
+            ? aiTab === 'document'
+              ? 'Опишите, что произошло: кто, где, что сделал…'
+              : aiTab === 'trainer'
+                ? 'Ваш ответ своими словами…'
+                : aiTab === 'lawyer'
+                  ? 'Что требует адвокат: свидание, копию протокола…'
+                  : aiTab === 'detention'
+                    ? 'Что вы делали при задержании, по порядку…'
+                  : chat.messages.length
+                    ? 'Уточните или опишите новую ситуацию…'
+                    : 'Опишите ситуацию своими словами…'
+            : scope
+              ? `Поиск: ${scope.title}`
+              : 'Номер или слова: 65, коап 8.6, кража'
+        }
+        autoComplete="off"
+        spellCheck={aiMode}
+        value={aiMode ? aiDraft : query}
+        onChange={(e) => {
+          if (aiMode) {
+            setAiDraft(e.target.value);
+            setSettingsOpen(false);
+            setPrivacyOpen(false);
+            return;
+          }
+          if (!query.trim() && e.target.value.trim()) count({ kind: 'search' });
+          setQuery(e.target.value);
+          setAiOpen(false);
+          setOpen(null);
+          setDiff(null);
+          setPrivacyOpen(false);
+          setNotesOpen(false);
+          setOrganizationOpen(false);
+          setServerOpen(false);
+          setSettingsOpen(false);
+          setWhatsNew(null);
+          setChangesView(null);
+          setSelected(0);
+        }}
+        onKeyDown={onSearchKey}
+      />
+      {canRecord() && (
+        <button
+          type="button"
+          className={voice === 'idle' ? 'mic' : `mic mic--${voice}`}
+          aria-label={voice === 'recording' ? 'Остановить запись и спросить ИИ' : 'Спросить ИИ голосом'}
+          aria-pressed={voice === 'recording'}
+          title={voice === 'recording' ? 'Говорите… нажмите ещё раз, чтобы спросить' : voice === 'transcribing' ? 'Разбираю, что вы сказали…' : 'Спросить голосом'}
+          disabled={voice === 'transcribing'}
+          onClick={() => void toggleVoice()}
+        >
+          <MicIcon />
+        </button>
+      )}
+      {aiMode && aiTab === 'chat' && (
+        <select className="search__scope" aria-label="Где искать ответ" title="Где искать ответ" value={chat.choice} onChange={(e) => chat.setChoice(e.target.value as ScopeChoice)}>
+          <option value="auto">Законы и правила</option>
+          <option value="law">Только законы</option>
+          <option value="server_rule">Только правила сервера</option>
+        </select>
+      )}
+      <span className="kbd">{aiMode ? 'Enter' : 'Esc'}</span>
+    </div>
+  );
+
   return (
     <AiAccess.Provider value={aiCan}>
     {/* In the browser there is no second window: the stand-in game scene shows the cards itself. */}
@@ -1158,79 +1241,7 @@ export function Overlay({
         }}
       />
 
-      {!inner && (
-      <div className={aiMode ? 'search search--ai' : 'search'}>
-        {aiMode ? <SparkIcon /> : <SearchIcon />}
-        {scope && !aiMode && (
-          <button className="scope" type="button" aria-label={`Искать во всех документах, а не только в ${scope.short}`} title="Искать во всех документах" onClick={clearScope}>
-            <span>{scope.short}</span>
-            <CloseIcon size={12} />
-          </button>
-        )}
-        <input
-          ref={searchRef}
-          className="search__input"
-          type="search"
-          aria-label="Поиск по законам"
-          placeholder={
-            aiMode
-              ? aiTab === 'document'
-                ? 'Опишите, что произошло: кто, где, что сделал…'
-                : aiTab === 'trainer'
-                  ? 'Ваш ответ своими словами…'
-                  : aiTab === 'lawyer'
-                    ? 'Что требует адвокат: свидание, копию протокола…'
-                    : aiTab === 'detention'
-                      ? 'Что вы делали при задержании, по порядку…'
-                    : chat.messages.length
-                      ? 'Уточните или опишите новую ситуацию…'
-                      : 'Опишите ситуацию своими словами…'
-              : scope
-                ? `Поиск: ${scope.title}`
-                : 'Номер или слова: 65, коап 8.6, кража'
-          }
-          autoComplete="off"
-          spellCheck={aiMode}
-          value={aiMode ? aiDraft : query}
-          onChange={(e) => {
-            if (aiMode) {
-              setAiDraft(e.target.value);
-              setSettingsOpen(false);
-              setPrivacyOpen(false);
-              return;
-            }
-            if (!query.trim() && e.target.value.trim()) count({ kind: 'search' });
-            setQuery(e.target.value);
-            setAiOpen(false);
-            setOpen(null);
-            setDiff(null);
-            setPrivacyOpen(false);
-            setNotesOpen(false);
-            setOrganizationOpen(false);
-            setServerOpen(false);
-            setSettingsOpen(false);
-            setWhatsNew(null);
-            setChangesView(null);
-            setSelected(0);
-          }}
-          onKeyDown={onSearchKey}
-        />
-        {canRecord() && (
-          <button
-            type="button"
-            className={voice === 'idle' ? 'mic' : `mic mic--${voice}`}
-            aria-label={voice === 'recording' ? 'Остановить запись и спросить ИИ' : 'Спросить ИИ голосом'}
-            aria-pressed={voice === 'recording'}
-            title={voice === 'recording' ? 'Говорите… нажмите ещё раз, чтобы спросить' : voice === 'transcribing' ? 'Разбираю, что вы сказали…' : 'Спросить голосом'}
-            disabled={voice === 'transcribing'}
-            onClick={() => void toggleVoice()}
-          >
-            <MicIcon />
-          </button>
-        )}
-        <span className="kbd">{aiMode ? 'Enter' : 'Esc'}</span>
-      </div>
-      )}
+      {!inner && !aiMode && searchField}
 
       <div
         ref={contentRef}
@@ -1426,11 +1437,6 @@ export function Overlay({
         ) : aiOpen && aiTab === 'lawyer' ? (
           <LawyerView
             lawyer={lawyer}
-            backLabel={query ? 'Результаты' : scope ? 'Оглавление' : 'Поиск'}
-            onBack={() => {
-              setAiOpen(false);
-              searchRef.current?.focus();
-            }}
             onOpen={openHit}
             onTab={(tab) => {
               setAiTab(tab);
@@ -1440,11 +1446,6 @@ export function Overlay({
         ) : aiOpen && aiTab === 'detention' ? (
           <DetentionView
             detention={detention}
-            backLabel={query ? 'Результаты' : scope ? 'Оглавление' : 'Поиск'}
-            onBack={() => {
-              setAiOpen(false);
-              searchRef.current?.focus();
-            }}
             onOpen={openHit}
             onTab={(tab) => {
               setAiTab(tab);
@@ -1455,11 +1456,6 @@ export function Overlay({
           <TrainerView
             trainer={trainer}
             pack={pack}
-            backLabel={query ? 'Результаты' : scope ? 'Оглавление' : 'Поиск'}
-            onBack={() => {
-              setAiOpen(false);
-              searchRef.current?.focus();
-            }}
             onOpen={openHit}
             onTab={(tab) => {
               setAiTab(tab);
@@ -1469,11 +1465,6 @@ export function Overlay({
         ) : aiOpen && aiTab === 'document' ? (
           <DocumentView
             writer={writer}
-            backLabel={query ? 'Результаты' : scope ? 'Оглавление' : 'Поиск'}
-            onBack={() => {
-              setAiOpen(false);
-              searchRef.current?.focus();
-            }}
             onOpen={openHit}
             onTab={(tab) => {
               setAiTab(tab);
@@ -1483,7 +1474,6 @@ export function Overlay({
         ) : aiOpen ? (
           <AiView
             chat={chat}
-            backLabel={query ? 'Результаты' : scope ? 'Оглавление' : 'Поиск'}
             onBack={() => {
               setAiOpen(false);
               searchRef.current?.focus();
@@ -1673,6 +1663,8 @@ export function Overlay({
           </>
         )}
       </div>
+
+      {!inner && aiMode && searchField}
 
       <div className="overlay__foot">
         {aiMode ? (

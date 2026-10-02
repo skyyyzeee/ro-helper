@@ -4806,3 +4806,36 @@ select option {
   margin-left: 6px;
   font-size: 12px;
 }
+
+/* The AI section as a chat: one head row on top, the thread in the middle, the field at the bottom. */
+.ai__head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.ai__head .ai__tabs { margin: 0; }
+.ai__new {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  padding: 7px 12px 7px 9px; border-radius: 10px;
+  font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.75);
+  background: rgb(255 255 255 / calc(0.07 * var(--tint-scale)));
+}
+.ai__new:hover:not(:disabled) { color: var(--text); background: rgb(255 255 255 / calc(0.13 * var(--tint-scale))); }
+.ai__new:disabled { opacity: 0.5; cursor: default; }
+.search--composer { margin: 4px 16px 14px; height: 54px; border-radius: 18px; flex: none; }
+.search--composer .search__input { font-size: 15.5px; font-weight: 450; }
+.search__scope {
+  flex: none; max-width: 160px; padding: 5px 8px; border: 0; border-radius: 99px; outline: 0;
+  font: inherit; font-size: 12.5px; font-weight: 600; color: rgba(255, 255, 255, 0.75);
+  background: rgb(255 255 255 / calc(0.1 * var(--tint-scale))); cursor: pointer;
+}
+.search__scope option { background: #1b1d23; color: #fff; }
+.ai__chip--more { color: var(--accent-text); }
+.ai__intro { align-items: center; text-align: center; padding: 18px 8px 8px; }
+.ai__hello-icon {
+  width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center;
+  background: oklch(0.78 0.1 var(--accent-hue) / 0.18); color: var(--accent-text);
+}
+.ai__hello { margin: 0; font-size: 22px; font-weight: 700; }
+.ai__intro .set__hint { max-width: 460px; }
+.ai__intro .ai__examples { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; max-width: 600px; margin: 6px 0 2px; }
+.ai__intro .ai__example {
+  font-style: normal; text-align: left; padding: 12px 14px; border-radius: var(--radius-card); line-height: 1.45;
+  background: var(--surface); border: 1px solid var(--line);
+}
