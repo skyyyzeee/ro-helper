@@ -29,7 +29,7 @@ import {
   type Turn,
 } from '../protocol';
 import type { SearchHit } from '../core';
-import { aiProfileOf, type AiProfile } from '../account/capabilities';
+import { aiCapabilitiesOf, aiProfileOf, type AiProfile } from '../account/capabilities';
 import type { PlatformAdapter } from '../platform/types';
 import { loadAliases } from './feedback';
 import { AI_SERVER } from './about';
@@ -198,6 +198,8 @@ export interface AiChat {
   open: (id: string) => void;
   /** Forgets one conversation, or all of them without an id. */
   forget: (id?: string) => void;
+  /** The analyses kept as cases (`ai.cases`, the forces of the state); otherwise a plain history. */
+  cases: boolean;
   /** The next message is the player's answer to check (roadmap 6Б), not a question. */
   answering: boolean;
   setAnswering: (on: boolean) => void;
@@ -265,6 +267,8 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
   const storeKey = historyKey(pack.server.id);
   const [history, setHistory] = useState<StoredConversation[]>([]);
   const conversation = useRef(newConversationId());
+  // Cases are the forces' (`ai.cases`): the others keep a plain history — no names, pins, archive, laws of then.
+  const cases = aiCapabilitiesOf({ admin: false, organization }).has('ai.cases');
   const [answering, setAnswering] = useState(false);
   const [changes, setChanges] = useState<{ changed: string[]; gone: string[] } | null>(null);
   /** Only what the player asked is saved: opening an old conversation does not make it the newest. */
@@ -377,14 +381,15 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
       if (!saved) return;
       conversation.current = saved.id;
       setMessages(saved.messages.map((m) => ({ ...restoreMessage(pack, m), id: nextId.current++ })));
-      setChanges(caseChanges(pack, saved));
+      setChanges(cases ? caseChanges(pack, saved) : null);
     },
-    [history, pack],
+    [history, pack, cases],
   );
 
   /** Changes one case and keeps the list. */
   const change = useCallback(
     (id: string, patch: (saved: StoredConversation) => StoredConversation | null) => {
+      // Deleting is everyone's; the rest of a case's actions are the forces'.
       setHistory((list) => {
         const next = keptCases(list.flatMap((c) => (c.id === id ? (patch(c) ?? []) : [c])));
         void platform.writeSetting(storeKey, next);
@@ -393,12 +398,13 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
     },
     [platform, storeKey],
   );
-  const rename = useCallback((id: string, title: string) => change(id, (c) => (title.trim() ? { ...c, title: title.trim().slice(0, 120), named: true } : c)), [change]);
-  const pin = useCallback((id: string, pinned: boolean) => change(id, (c) => ({ ...c, pinned })), [change]);
-  const archive = useCallback((id: string, archived: boolean) => change(id, (c) => ({ ...c, archived, ...(archived ? { pinned: false } : {}) })), [change]);
+  const rename = useCallback((id: string, title: string) => cases && change(id, (c) => (title.trim() ? { ...c, title: title.trim().slice(0, 120), named: true } : c)), [change, cases]);
+  const pin = useCallback((id: string, pinned: boolean) => cases && change(id, (c) => ({ ...c, pinned })), [change, cases]);
+  const archive = useCallback((id: string, archived: boolean) => cases && change(id, (c) => ({ ...c, archived, ...(archived ? { pinned: false } : {}) })), [change, cases]);
   /** A copy beside it, to try another turn of the same case. */
   const duplicate = useCallback(
     (id: string) => {
+      if (!cases) return;
       setHistory((list) => {
         const saved = list.find((c) => c.id === id);
         if (!saved) return list;
@@ -409,7 +415,7 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
         return next;
       });
     },
-    [platform, storeKey],
+    [platform, storeKey, cases],
   );
 
   /**
@@ -417,12 +423,13 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
    * and, once answered, marked as checked by them.
    */
   const recheck = useCallback(async () => {
+    if (!cases) return;
     const id = conversation.current;
     const done = await send('Проверь это дело по текущей базе: статьи могли измениться с тех пор.');
     if (!done?.analysis) return;
     setChanges(null);
     change(id, (c) => (c.snapshot ? { ...c, checked: snapshotOf(pack, Object.keys(c.snapshot.articles)) } : c));
-  }, [send, change, pack]);
+  }, [send, change, pack, cases]);
 
   const forget = useCallback(
     (id?: string) => {
@@ -459,6 +466,7 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
     history,
     open,
     forget,
+    cases,
     answering,
     setAnswering,
     caseId: conversation.current,

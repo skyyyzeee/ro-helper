@@ -1648,11 +1648,12 @@ export function Overlay({
 
       {aiMode && historyOpen && (
         <>
-          <button className="ai__scrim" type="button" aria-label="Закрыть дела" tabIndex={-1} onClick={() => setHistoryOpen(false)} />
+          <button className="ai__scrim" type="button" aria-label={chat.cases ? 'Закрыть дела' : 'Закрыть историю'} tabIndex={-1} onClick={() => setHistoryOpen(false)} />
           <div className="ai__drawer">
             <CasesView
               cases={chat.history}
               current={chat.caseId}
+              full={chat.cases}
               serverName={pack.server.name}
               onClose={() => {
                 setHistoryOpen(false);

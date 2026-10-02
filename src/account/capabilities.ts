@@ -29,6 +29,8 @@ export type Capability =
   | 'ai.documents'
   /** Writing an officer's: a report, a detention record — the state's. */
   | 'ai.official_documents'
+  /** Cases (ADR 0003): named, pinned, archived, the laws of then, «было → стало», copied — the forces of the state. */
+  | 'ai.cases'
   /** Checking an officer's actions — the lawyer's demands, the detention review: the state's services. */
   | 'ai.check'
   /** The AI's inner workings on screen: the admin. */
@@ -79,6 +81,7 @@ export function aiCapabilitiesOf({ admin, organization }: Pick<CapabilityInput, 
   const can = new Set<Capability>(['ai.analysis', 'ai.server_rules', 'ai.documents']);
   // The service's tools: checking an officer's actions, the trainer, an officer's documents.
   if (aiProfileOf(organization) === 'state') for (const service of ['ai.check', 'ai.practice', 'ai.official_documents'] as const) can.add(service);
+  if (organization?.force) can.add('ai.cases');
   if (admin) can.add('ai.debug');
   return can;
 }

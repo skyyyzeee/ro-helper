@@ -81,6 +81,8 @@ export function AiHead({
   /** The earlier conversations, in a panel over the chat. */
   onHistory?: () => void;
 }) {
+  // «Дела» for the forces of the state, a plain «История» for the others.
+  const history = useContext(AiAccess)?.has('ai.cases') === false ? 'История' : 'Дела';
   return (
     <div className="ai__head">
       {back ? (
@@ -93,9 +95,9 @@ export function AiHead({
       )}
       <span className="sp" />
       {onHistory && (
-        <button className="ai__new" type="button" aria-label="Дела" title="Ваши разборы на этом сервере" onClick={onHistory}>
+        <button className="ai__new" type="button" aria-label={history} title="Ваши разборы на этом сервере" onClick={onHistory}>
           <HistoryIcon />
-          <span>Дела</span>
+          <span>{history}</span>
         </button>
       )}
       {reset && (
@@ -282,7 +284,7 @@ export function AiView({
                 <AnswerCheckView check={message.answerCheck} onOpen={onOpen} />
               ) : message.analysis ? (
                 <>
-                  {changeAt(index) && <CaseChange diff={changeAt(index)!} />}
+                  {chat.cases && changeAt(index) && <CaseChange diff={changeAt(index)!} />}
                   <AnswerView
                     analysis={message.analysis}
                     busy={chat.busy}

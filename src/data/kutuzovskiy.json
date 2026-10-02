@@ -84,6 +84,7 @@
       "id": "mvd",
       "name": "МВД",
       "kind": "state",
+      "force": true,
       "documents": [
         "fz-police",
         "upk",
@@ -96,6 +97,7 @@
       "id": "gibdd",
       "name": "ГИБДД",
       "kind": "state",
+      "force": true,
       "documents": [
         "pdd",
         "koap",
@@ -107,6 +109,7 @@
       "id": "fsb",
       "name": "ФСБ",
       "kind": "state",
+      "force": true,
       "documents": [
         "fz-fsb",
         "fz-secrets",
@@ -118,6 +121,7 @@
       "id": "fso",
       "name": "ФСО",
       "kind": "state",
+      "force": true,
       "documents": [
         "fz-fso",
         "fz-territory",
@@ -128,6 +132,7 @@
       "id": "army",
       "name": "Армия",
       "kind": "state",
+      "force": true,
       "documents": [
         "fz-army",
         "fz-weapons",
@@ -140,6 +145,7 @@
       "id": "sk",
       "name": "Следственный комитет",
       "kind": "state",
+      "force": true,
       "documents": [
         "fz-sk",
         "upk",
@@ -152,6 +158,7 @@
       "id": "prosecutor",
       "name": "Прокуратура",
       "kind": "state",
+      "force": true,
       "documents": [
         "fz-prosecutor",
         "upk"
@@ -170,6 +177,7 @@
       "id": "government",
       "name": "Правительство",
       "kind": "state",
+      "force": true,
       "documents": [
         "fkz-gov",
         "fkz-ministries",
@@ -119727,5 +119735,5 @@
       "опьянения"
     ]
   },
-  "built": "2026-10-01T16:43:07.466Z"
+  "built": "2026-10-02T18:39:30.693Z"
 }
