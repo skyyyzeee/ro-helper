@@ -1488,6 +1488,11 @@ export function Overlay({
               setAiDraft(text);
               searchRef.current?.focus();
             }}
+            onDocument={(situation) => {
+              setAiTab('document');
+              setAiDraft(situation);
+              searchRef.current?.focus();
+            }}
             onLink={(url) => void platform.openExternal(url)}
             onTab={(tab) => {
               setAiTab(tab);

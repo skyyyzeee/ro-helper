@@ -60,12 +60,24 @@ export function DetentionView({
 
   return (
     <section className="art ai lawyer" aria-label="Разбор задержания">
-      <AiHead tab="detention" onTab={onTab} reset={result ? { label: 'Новый разбор', disabled: detention.busy, onClick: detention.reset } : undefined} />
+      <AiHead tab="detention" onTab={onTab} reset={result ? { label: 'Новая проверка', disabled: detention.busy, onClick: detention.reset } : undefined} />
+      <div className="ai__chips" role="radiogroup" aria-label="Что проверить">
+        {(
+          [
+            ['lawyer', 'Требования адвоката'],
+            ['detention', 'Ход задержания'],
+          ] as const
+        ).map(([id, label]) => (
+          <button key={id} type="button" role="radio" aria-checked={id === 'detention'} className={id === 'detention' ? 'ai__chip ai__chip--on' : 'ai__chip'} onClick={() => id !== 'detention' && onTab(id)}>
+            {label}
+          </button>
+        ))}
+      </div>
 
       {!result && !detention.busy && !detention.error && (
         <>
           <p className="set__hint">
-            После задержания расскажите в поле сверху (или голосом 🎤), что вы делали и в каком порядке, и нажмите <b>Enter</b>. ИИ
+            После задержания расскажите в поле внизу (или голосом 🎤), что вы делали и в каком порядке, и нажмите <b>Enter</b>. ИИ
             проверит каждый шаг по законам сервера: что сделано по закону, где нарушение и как надо было, — и что вы пропустили. Это
             самопроверка: ничего не записывается, разбор видите только вы.
           </p>

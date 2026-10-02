@@ -95,6 +95,15 @@ describe('the analysis on screen', () => {
     await vi.waitFor(() => expect(bodies.at(-1)).toContain('РЕЖИМ — ПОЛНЫЙ РАЗБОР'));
   });
 
+  it('writes a document from the answer: the case goes to the document\'s field, and back to the conversation', async () => {
+    const { user } = await ask('у меня украли телефон');
+    await user.click(screen.getByRole('button', { name: 'Составить документ' }));
+    expect(screen.getByRole('region', { name: 'Составить документ' })).toBeInTheDocument();
+    expect((screen.getByRole('searchbox', { name: 'Поиск по законам' }) as HTMLInputElement).value).toMatch(/^у меня украли телефон/);
+    await user.click(screen.getByRole('button', { name: 'К разбору' }));
+    expect(screen.getByText('Применимые нормы')).toBeInTheDocument();
+  });
+
   it('when the AI fails, says search still works', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))));
     const { user } = await renderApp({ settings: GEMINI });

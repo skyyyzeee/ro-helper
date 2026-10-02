@@ -95,7 +95,7 @@ export function DocumentView({
 
   return (
     <section className="art ai doc" aria-label="Составить документ">
-      <AiHead tab="document" onTab={onTab} reset={result ? { label: 'Новый документ', disabled: writer.busy, onClick: writer.reset } : undefined} />
+      <AiHead tab="document" onTab={onTab} back={{ label: 'К разбору', onClick: () => onTab('chat') }} reset={result ? { label: 'Новый документ', disabled: writer.busy, onClick: writer.reset } : undefined} />
 
       <div className="ai__chips" role="radiogroup" aria-label="Какой документ">
         {kinds.map((k) => (
@@ -117,7 +117,7 @@ export function DocumentView({
       {!result && !writer.busy && !writer.error && (
         <>
           <p className="set__hint">
-            Опишите в поле сверху, что произошло, и нажмите <b>Enter</b> — ИИ составит {kind.label.toLowerCase()} со ссылками на статьи
+            Опишите в поле внизу, что произошло, и нажмите <b>Enter</b> — ИИ составит {kind.label.toLowerCase()} со ссылками на статьи
             законов сервера.
           </p>
           <div className="ai__examples" aria-label="Пример">

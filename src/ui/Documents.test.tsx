@@ -29,7 +29,7 @@ describe('writing a document with the AI', () => {
     const bodies = fakeGemini();
     const { platform, user } = await renderApp({ settings: GEMINI, profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-    await user.click(screen.getByRole('radio', { name: 'Составить документ' }));
+    await user.click(screen.getByRole('button', { name: 'Составить документ' }));
     const view = screen.getByRole('region', { name: 'Составить документ' });
     expect(within(view).getByRole('radio', { name: 'Рапорт' })).toHaveAttribute('aria-checked', 'true');
 
@@ -55,7 +55,7 @@ describe('writing a document with the AI', () => {
     fakeGemini();
     const { platform, user } = await renderApp({ settings: GEMINI, profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-    await user.click(screen.getByRole('radio', { name: 'Составить документ' }));
+    await user.click(screen.getByRole('button', { name: 'Составить документ' }));
     const view = screen.getByRole('region', { name: 'Составить документ' });
     await user.click(within(view).getByRole('radio', { name: 'Жалоба' }));
     await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'сотрудник обыскал без причины{Enter}');
@@ -73,7 +73,7 @@ describe('writing a document with the AI', () => {
   it('asks for the key before anything else', async () => {
     const { user } = await renderApp({ settings: { [AI_PROVIDER_SETTING]: 'gemini' }, profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-    await user.click(screen.getByRole('radio', { name: 'Составить документ' }));
+    await user.click(screen.getByRole('button', { name: 'Составить документ' }));
     await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'что-то случилось{Enter}');
     expect(await screen.findByRole('alert')).toHaveTextContent('Сначала вставьте ключ Gemini');
   });
@@ -93,7 +93,7 @@ describe('a document is checked against the laws it was given', () => {
     );
     const { user } = await renderApp({ settings: GEMINI, profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-    await user.click(screen.getByRole('radio', { name: 'Составить документ' }));
+    await user.click(screen.getByRole('button', { name: 'Составить документ' }));
     await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'у прохожего украли телефон{Enter}');
     const view = screen.getByRole('region', { name: 'Составить документ' });
     expect(await within(view).findByRole('alert')).toHaveTextContent(/Упомянута статья 777, которой нет среди найденных источников/);

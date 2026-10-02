@@ -29,7 +29,7 @@ export function TrainerView({
   const choosing = phase === 'idle' || phase === 'done';
 
   return (
-    <section className="art ai quiz" aria-label="Тренажёр">
+    <section className="art ai quiz" aria-label="Практика">
       <AiHead tab="trainer" onTab={onTab} />
 
       {choosing && (
@@ -45,7 +45,7 @@ export function TrainerView({
             </div>
           )}
           <p className="set__hint">
-            {ROUND} вопросов по статьям законов сервера — как на аттестации. Отвечайте своими словами в поле сверху (или голосом 🎤) —
+            {ROUND} вопросов по статьям законов сервера — как на аттестации. Отвечайте своими словами в поле внизу (или голосом 🎤) —
             ИИ сверит ответ с текстом статьи и покажет, что упущено.
           </p>
           <label className="set__row quiz__docs">
@@ -99,7 +99,7 @@ export function TrainerView({
             <>
               <div className="quiz__question">{question.question}</div>
               {trainer.answer && <div className="ai__question quiz__answer">{trainer.answer}</div>}
-              {phase === 'answering' && !trainer.answer && <p className="set__hint">Напишите ответ в поле сверху и нажмите Enter.</p>}
+              {phase === 'answering' && !trainer.answer && <p className="set__hint">Напишите ответ в поле внизу и нажмите Enter.</p>}
               {phase === 'grading' && (
                 <div className="ai__pending" role="status">
                   <span className="ai__dots" aria-hidden="true" />
