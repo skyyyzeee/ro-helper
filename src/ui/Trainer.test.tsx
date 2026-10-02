@@ -38,6 +38,28 @@ async function openTrainer() {
 describe('the exam trainer', () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it('picks the document to be asked about from the assistant’s own list, by mouse or keys', async () => {
+    const { user, view } = await openTrainer();
+    const choice = within(view).getByRole('combobox', { name: 'Документ для вопросов' });
+    expect(choice).toHaveTextContent('законы вашей организации');
+    expect(within(view).queryByRole('listbox')).not.toBeInTheDocument();
+
+    await user.click(choice);
+    const list = within(view).getByRole('listbox', { name: 'Документ для вопросов' });
+    expect(within(list).getAllByRole('option').length).toBe(TVERSKOI_PACK.documents.length + 1);
+    await user.click(within(list).getByRole('option', { name: /^УК\s*Уголовный кодекс$/ }));
+    expect(within(view).queryByRole('listbox')).not.toBeInTheDocument();
+    expect(choice).toHaveTextContent('УК — Уголовный кодекс');
+
+    // By keys: the list opens on the chosen one, ↓ and Enter take the next; Esc closes only the list.
+    choice.focus();
+    await user.keyboard('{ArrowDown}{ArrowDown}{Enter}');
+    expect(choice).toHaveTextContent('КоАП');
+    await user.keyboard('{ArrowDown}{Escape}');
+    expect(within(view).queryByRole('listbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Практика' })).toBeInTheDocument();
+  });
+
   it('asks about a real article, checks the answer against it, counts the score and goes on', async () => {
     const bodies = fakeExaminer('partly');
     const { user, view } = await openTrainer();

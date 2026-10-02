@@ -1,4 +1,5 @@
 import type { SearchHit, ServerPack } from '../core';
+import { Dropdown } from './Dropdown';
 import { AiHead, shortLabel, type AiTab } from './AiView';
 import { CheckIcon, CloseIcon, WarnIcon } from './icons';
 import { ROUND, type Trainer, type Verdict } from './trainer';
@@ -48,22 +49,19 @@ export function TrainerView({
             {ROUND} вопросов по статьям законов сервера — как на аттестации. Отвечайте своими словами в поле внизу (или голосом 🎤) —
             ИИ сверит ответ с текстом статьи и покажет, что упущено.
           </p>
-          <label className="set__row quiz__docs">
+          <div className="set__row quiz__docs">
             <span className="set__label">Вопросы по</span>
-            <select
+            <Dropdown
               className="quiz__select"
-              aria-label="Документ для вопросов"
+              label="Документ для вопросов"
               value={trainer.documents.length === 1 ? trainer.documents[0] : 'many'}
-              onChange={(e) => e.target.value !== 'many' && trainer.setDocuments([e.target.value])}
-            >
-              {trainer.documents.length > 1 && <option value="many">{chosen.map((d) => d.short).join(', ')} — законы вашей организации</option>}
-              {pack.documents.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.short} — {d.title}
-                </option>
-              ))}
-            </select>
-          </label>
+              onChange={(value) => value !== 'many' && trainer.setDocuments([value])}
+              options={[
+                ...(trainer.documents.length > 1 ? [{ value: 'many', lead: chosen.map((d) => d.short).join(', '), label: 'законы вашей организации' }] : []),
+                ...pack.documents.map((d) => ({ value: d.id, lead: d.short, label: d.title })),
+              ]}
+            />
+          </div>
           <button className="btn btn--primary quiz__start" type="button" onClick={() => void trainer.start()}>
             {phase === 'done' ? 'Пройти ещё раз' : 'Начать'}
           </button>
