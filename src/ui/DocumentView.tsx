@@ -1,9 +1,9 @@
 import { useContext, useState, type ReactNode } from 'react';
 import type { SearchHit } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
-import { AiAccess, AiTabs, citedIn, shortLabel, type AiTab } from './AiView';
+import { AiAccess, AiHead, citedIn, shortLabel, type AiTab } from './AiView';
 import { DOCUMENT_EXAMPLES, DOCUMENT_KINDS, OFFICIAL_DOCUMENTS, type DocumentAuthor, type DocumentWriter } from './documents';
-import { BackIcon, CheckIcon, WarnIcon } from './icons';
+import { CheckIcon, WarnIcon } from './icons';
 
 /** The written document, line by line: a line citing a found article opens it; {gaps} stand out to be filled in. */
 function Preview({ text, sources, onOpen }: { text: string; sources: SearchHit[]; onOpen: (hit: SearchHit) => void }) {
@@ -77,14 +77,10 @@ function AuthorForm({ author, onSave }: { author: DocumentAuthor; onSave: (autho
 /** «Составить документ»: the kind, who writes, then the situation in the search field — and the text to copy. */
 export function DocumentView({
   writer,
-  backLabel,
-  onBack,
   onOpen,
   onTab,
 }: {
   writer: DocumentWriter;
-  backLabel: string;
-  onBack: () => void;
   onOpen: (hit: SearchHit) => void;
   onTab: (tab: AiTab) => void;
 }) {
@@ -99,19 +95,7 @@ export function DocumentView({
 
   return (
     <section className="art ai doc" aria-label="Составить документ">
-      <div className="ai__top">
-        <button className="back" type="button" onClick={onBack}>
-          <BackIcon />
-          <span>{backLabel}</span>
-        </button>
-        <span className="sp" />
-        {result && (
-          <button className="link-btn" type="button" disabled={writer.busy} onClick={writer.reset}>
-            Новый документ
-          </button>
-        )}
-      </div>
-      <AiTabs tab="document" onTab={onTab} />
+      <AiHead tab="document" onTab={onTab} reset={result ? { label: 'Новый документ', disabled: writer.busy, onClick: writer.reset } : undefined} />
 
       <div className="ai__chips" role="radiogroup" aria-label="Какой документ">
         {kinds.map((k) => (

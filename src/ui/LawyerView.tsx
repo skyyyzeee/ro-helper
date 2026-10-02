@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import type { SearchHit } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
-import { AiTabs, citedIn, type AiTab } from './AiView';
-import { BackIcon, CheckIcon, WarnIcon } from './icons';
+import { AiHead, citedIn, type AiTab } from './AiView';
+import { CheckIcon, WarnIcon } from './icons';
 import type { LawyerCheck, Verdict } from './lawyer';
 
 const VERDICTS: Record<Verdict, { title: string; className: string }> = {
@@ -30,14 +30,10 @@ function Cited({ text, sources, onOpen }: { text: string; sources: SearchHit[]; 
  */
 export function LawyerView({
   lawyer,
-  backLabel,
-  onBack,
   onOpen,
   onTab,
 }: {
   lawyer: LawyerCheck;
-  backLabel: string;
-  onBack: () => void;
   onOpen: (hit: SearchHit) => void;
   onTab: (tab: AiTab) => void;
 }) {
@@ -47,19 +43,7 @@ export function LawyerView({
 
   return (
     <section className="art ai lawyer" aria-label="Требования адвоката">
-      <div className="ai__top">
-        <button className="back" type="button" onClick={onBack}>
-          <BackIcon />
-          <span>{backLabel}</span>
-        </button>
-        <span className="sp" />
-        {result && (
-          <button className="link-btn" type="button" disabled={lawyer.busy} onClick={lawyer.reset}>
-            Новые требования
-          </button>
-        )}
-      </div>
-      <AiTabs tab="lawyer" onTab={onTab} />
+      <AiHead tab="lawyer" onTab={onTab} reset={result ? { label: 'Новые требования', disabled: lawyer.busy, onClick: lawyer.reset } : undefined} />
 
       {!result && !lawyer.busy && !lawyer.error && (
         <>

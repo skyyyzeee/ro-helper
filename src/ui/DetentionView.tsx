@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import type { SearchHit } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
-import { AiTabs, citedIn, type AiTab } from './AiView';
+import { AiHead, citedIn, type AiTab } from './AiView';
 import type { DetentionCheck, DetentionReview, StepVerdict } from './detention';
-import { BackIcon, CheckIcon, WarnIcon } from './icons';
+import { CheckIcon, WarnIcon } from './icons';
 
 const VERDICTS: Record<StepVerdict, { title: string; className: string }> = {
   ok: { title: 'По закону', className: 'demand--lawful' },
@@ -45,14 +45,10 @@ export function reviewText(review: DetentionReview): string {
  */
 export function DetentionView({
   detention,
-  backLabel,
-  onBack,
   onOpen,
   onTab,
 }: {
   detention: DetentionCheck;
-  backLabel: string;
-  onBack: () => void;
   onOpen: (hit: SearchHit) => void;
   onTab: (tab: AiTab) => void;
 }) {
@@ -64,19 +60,7 @@ export function DetentionView({
 
   return (
     <section className="art ai lawyer" aria-label="Разбор задержания">
-      <div className="ai__top">
-        <button className="back" type="button" onClick={onBack}>
-          <BackIcon />
-          <span>{backLabel}</span>
-        </button>
-        <span className="sp" />
-        {result && (
-          <button className="link-btn" type="button" disabled={detention.busy} onClick={detention.reset}>
-            Новый разбор
-          </button>
-        )}
-      </div>
-      <AiTabs tab="detention" onTab={onTab} />
+      <AiHead tab="detention" onTab={onTab} reset={result ? { label: 'Новый разбор', disabled: detention.busy, onClick: detention.reset } : undefined} />
 
       {!result && !detention.busy && !detention.error && (
         <>

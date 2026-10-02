@@ -1,6 +1,6 @@
 import type { SearchHit, ServerPack } from '../core';
-import { AiTabs, shortLabel, type AiTab } from './AiView';
-import { BackIcon, CheckIcon, CloseIcon, WarnIcon } from './icons';
+import { AiHead, shortLabel, type AiTab } from './AiView';
+import { CheckIcon, CloseIcon, WarnIcon } from './icons';
 import { ROUND, type Trainer, type Verdict } from './trainer';
 
 const VERDICTS: Record<Verdict, { title: string; className: string }> = {
@@ -16,15 +16,11 @@ const scoreText = (score: number, of: number) => `${String(score).replace('.', '
 export function TrainerView({
   trainer,
   pack,
-  backLabel,
-  onBack,
   onOpen,
   onTab,
 }: {
   trainer: Trainer;
   pack: ServerPack;
-  backLabel: string;
-  onBack: () => void;
   onOpen: (hit: SearchHit) => void;
   onTab: (tab: AiTab) => void;
 }) {
@@ -34,13 +30,7 @@ export function TrainerView({
 
   return (
     <section className="art ai quiz" aria-label="Тренажёр">
-      <div className="ai__top">
-        <button className="back" type="button" onClick={onBack}>
-          <BackIcon />
-          <span>{backLabel}</span>
-        </button>
-      </div>
-      <AiTabs tab="trainer" onTab={onTab} />
+      <AiHead tab="trainer" onTab={onTab} />
 
       {choosing && (
         <>
