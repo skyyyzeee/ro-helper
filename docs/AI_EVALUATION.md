@@ -53,3 +53,8 @@ The hard gates also run **without a live model** on every pull request: `src/pro
 - gpt-5-nano via the AI server, 15 base cases: 8/15 → 12/15 after the prompt rules and synonyms (PR #14).
 - GigaChat-2, 45 cases: 37/45; fresh 23/30 (PR #14). Sber's filter refuses some topics (drugs near a school) — the
   AI server then asks the paid API (PR #15).
+
+## Approved examples
+
+`npm run eval -- --approved` (with `AI_ADMIN_TOKEN`) adds the players' questions the admins approved with their right
+articles (category `APPROVED`) and asks every question with the approved dictionary — see `docs/AI_DATASET.md`.

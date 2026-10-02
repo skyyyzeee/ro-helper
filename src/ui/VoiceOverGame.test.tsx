@@ -121,9 +121,11 @@ describe('a question over the game', () => {
     const calls: string[] = [];
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string, init: RequestInit) => {
+      vi.fn(async (url: string, init?: RequestInit) => {
         calls.push(url);
-        const body = JSON.parse(String(init.body)) as { system: string; messages: { content: string }[] };
+        // The players' dictionary: a plain download, nothing of the player in it.
+        if (url.endsWith('/v1/aliases')) return new Response(JSON.stringify({ aliases: [] }), { status: 200 });
+        const body = JSON.parse(String(init?.body)) as { system: string; messages: { content: string }[] };
         const text = isAnalysis(body.system) ? analysisOf(body.messages.at(-1)!.content) : '["кража"]';
         return new Response(JSON.stringify({ text }), { status: 200 });
       }),
@@ -137,7 +139,7 @@ describe('a question over the game', () => {
     await vi.waitFor(() => expect(pinnedCards(platform).find((card) => card.kind === 'ai')?.heading).toBe('Какое наказание за кражу'));
     // No paid speech service: the recording never left the computer.
     expect(calls.some((url) => url.includes('/v1/transcribe'))).toBe(false);
-    expect(calls.every((url) => url.endsWith('/v1/chat'))).toBe(true);
+    expect(calls.every((url) => url.endsWith('/v1/chat') || url.endsWith('/v1/aliases'))).toBe(true);
   });
 
   it('is turned off, or given another key, in the settings', async () => {

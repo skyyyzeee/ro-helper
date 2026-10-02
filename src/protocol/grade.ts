@@ -21,7 +21,9 @@ export type Category =
   | 'FALSE_CLAIM'
   | 'PROMPT_INJECTION'
   | 'FOLLOW_UP'
-  | 'ROLE_RESTRICTED';
+  | 'ROLE_RESTRICTED'
+  /** A player's question the admins approved with its right articles (docs/AI_DATASET.md). */
+  | 'APPROVED';
 
 export interface EvalCase {
   server: string;

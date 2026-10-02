@@ -10,6 +10,7 @@ const asAdmin = { account: SKYZE, server: (server: { admins: Set<string> }) => s
 const GEMINI = { [AI_PROVIDER_SETTING]: 'gemini', [AI_KEY_SETTING]: 'test-key' };
 
 const MARK: KeptMark = {
+  id: 'm-1',
   at: '2026-10-02T21:40',
   server: 'tverskoi',
   app: '2.10.0',
@@ -25,11 +26,11 @@ describe('the admins read the players\' marks', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('with the AI server\'s admins\' key, kept on this computer: the corrections first', async () => {
-    const asked: { url: string; auth?: string }[] = [];
+    const asked: { url: string; auth?: string; body?: string }[] = [];
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string, init?: RequestInit) => {
-        asked.push({ url: String(url), auth: (init?.headers as Record<string, string> | undefined)?.Authorization });
+        asked.push({ url: String(url), auth: (init?.headers as Record<string, string> | undefined)?.Authorization, body: init?.body ? String(init.body) : undefined });
         return new Response(JSON.stringify({ marks: [MARK], today: 4 }), { status: 200 });
       }),
     );
@@ -45,10 +46,22 @@ describe('the admins read the players\' marks', () => {
     const list = await screen.findByRole('list', { name: 'Отзывы об ИИ' });
     expect(list).toHaveTextContent('вытащил телефон из кармана');
     expect(list).toHaveTextContent('«это кража, ст. 65»');
-    expect(screen.getByText('Сегодня: 4')).toBeInTheDocument();
+    expect(screen.getByText('Сегодня отзывов: 4')).toBeInTheDocument();
     const read = asked.find((a) => a.url.includes('/v1/feedback'))!;
-    expect(read.url).toContain('filter=fixed');
+    expect(read.url).toContain('filter=raw');
     expect(read.auth).toBe('Bearer secret-admin-key');
+
+    // Approved with its normal form: a line of the players' dictionary and an example for the exam.
+    await user.click(within(list).getByRole('button', { name: 'Утвердить' }));
+    const form = screen.getByRole('form', { name: 'Утвердить отзыв' });
+    await user.clear(within(form).getByLabelText('Выражение игрока'));
+    await user.type(within(form).getByLabelText('Выражение игрока'), 'вытащил из кармана');
+    await user.type(within(form).getByLabelText('Нормальная форма (слова закона)'), 'кража');
+    await user.type(within(form).getByLabelText('Правильные статьи'), 'УК 65');
+    await user.click(within(form).getByRole('button', { name: 'Утвердить' }));
+    await vi.waitFor(() => expect(asked.some((a) => a.url.endsWith('/v1/feedback/review'))).toBe(true));
+    const sent = JSON.parse(asked.find((a) => a.url.endsWith('/v1/feedback/review'))!.body!);
+    expect(sent).toEqual({ id: 'm-1', status: 'approved', phrase: 'вытащил из кармана', normalized: 'кража', scope: 'law', expected: ['УК 65'] });
   });
 });
 

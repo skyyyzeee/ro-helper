@@ -9,6 +9,7 @@ import { classify } from './classify';
 import { buildContext } from './context';
 import { answerQuestion } from './pipeline';
 import type { AiProvider, AiRequest } from './provider';
+import { aliasScope, matchAliases } from './aliases';
 import { labelSources, packInScope, type Source } from './sources';
 import { figures, validateAnswer } from './validate';
 
@@ -232,5 +233,28 @@ describe('prompt injection: the player\'s text is data', () => {
     expect(disguised.analysis.answer.reply).toBeUndefined();
     expect(disguised.analysis.validation.status).not.toBe('confirmed');
     expect(disguised.analysis.validation.needsReview).toBe(true);
+  });
+});
+
+describe('the players\' expressions the admins approved', () => {
+  const ALIASES = [
+    { phrase: 'чела приняли', normalized: 'задержание', scope: 'law' as const, intent: 'detention' },
+    { phrase: 'выгнали из фамы', normalized: 'исключение из организации', scope: 'server_rule' as const },
+  ];
+
+  it('are matched as whole words, and agree on a scope or say none', () => {
+    expect(matchAliases('Чела приняли у отдела, что будет?', ALIASES).map((a) => a.phrase)).toEqual(['чела приняли']);
+    expect(matchAliases('челаприняли', ALIASES)).toEqual([]);
+    expect(aliasScope(ALIASES)).toBeUndefined();
+    expect(aliasScope([ALIASES[1]])).toBe('server_rule');
+  });
+
+  it('settle what the words could not, and give the search its phrases — with no AI call for them', async () => {
+    const { provider, requests } = fakeAi(() => good({ norms: [], notFound: true }));
+    const outcome = await answerQuestion({ provider, pack, message: 'меня выгнали из фамы, это честно?', depth: 'quick', aliases: ALIASES });
+    expect(outcome.classification).toMatchObject({ type: 'server_rule', scope: 'server_rule', why: 'словарь игроков: «выгнали из фамы»' });
+    expect(outcome.kind === 'analysis' && outcome.analysis.terms).toEqual(['исключение из организации']);
+    // The analysis only: the phrases came from the dictionary.
+    expect(requests).toHaveLength(1);
   });
 });

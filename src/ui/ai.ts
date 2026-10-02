@@ -20,6 +20,7 @@ import {
   type Depth,
   type LegalAnswer,
   type Perspective,
+  type QueryAlias,
   type ScopeChoice,
   type SystemReason,
   type Turn,
@@ -27,6 +28,7 @@ import {
 import type { SearchHit } from '../core';
 import { aiProfileOf, type AiProfile } from '../account/capabilities';
 import type { PlatformAdapter } from '../platform/types';
+import { loadAliases } from './feedback';
 import { AI_SERVER } from './about';
 import { recognize } from './localSpeech';
 import { wavBase64, type RecordedAudio } from './voice';
@@ -202,6 +204,8 @@ const caseOf = (messages: AiMessage[]): CaseState | undefined =>
 /** The conversation with the AI, kept while the overlay lives: going to an article and back keeps it. */
 export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organization?: Organization): AiChat {
   const [messages, setMessages] = useState<AiMessage[]>([]);
+  // The players' expressions the admins approved (docs/AI_DATASET.md): read once, before the first question.
+  const aliases = useRef<Promise<QueryAlias[]> | null>(null);
   const [busy, setBusy] = useState(false);
   const [depth, setDepthState] = useState<Depth>('quick');
   const [choice, setChoiceState] = useState<ScopeChoice>('auto');
@@ -291,6 +295,7 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
         const connection = await connect(platform);
         const side = PERSPECTIVES.find((p) => p.id === perspective)?.label;
         const outcome = await answerQuestion({
+          aliases: () => (aliases.current ??= loadAliases(platform)),
           provider: serviceFor(connection),
           pack,
           organization,

@@ -58,7 +58,7 @@ async function aiServer(env) {
   const port = 20000 + Math.floor(Math.random() * 20000);
   const dir = mkdtempSync(join(tmpdir(), 'ai-'));
   const child = spawn(process.execPath, [join(import.meta.dirname, 'server.mjs')], {
-    env: { ...process.env, PORT: String(port), STATE_FILE: join(dir, 'state.json'), FEEDBACK_FILE: join(dir, 'feedback.jsonl'), ...env },
+    env: { ...process.env, PORT: String(port), STATE_FILE: join(dir, 'state.json'), FEEDBACK_FILE: join(dir, 'feedback.jsonl'), REVIEWS_FILE: join(dir, 'reviews.json'), ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   await new Promise((resolve, reject) => {
@@ -162,7 +162,7 @@ test('keeps a mark of an answer with no id, only its own fields cut to length; a
     assert.equal((await ai.mark(down)).status, 200);
     assert.equal((await ai.mark({ vote: 'up', question: 'обматерил полицейского', correction: 'не нужен' })).status, 200);
     const [first, second] = ai.marks();
-    assert.deepEqual(Object.keys(first).sort(), ['app', 'at', 'correction', 'norms', 'question', 'scope', 'server', 'status', 'vote']);
+    assert.deepEqual(Object.keys(first).sort(), ['app', 'at', 'correction', 'id', 'norms', 'question', 'scope', 'server', 'status', 'type', 'vote']);
     assert.equal(first.question, 'украли телефон');
     assert.equal(first.correction, 'это ст. 66');
     assert.equal(second.correction, undefined);
@@ -206,6 +206,36 @@ test('with no admins\' token set, the marks are not read at all', async () => {
   const ai = await aiServer(gigaEnv(giga));
   try {
     assert.equal((await fetch(`${ai.base}/v1/feedback`, { headers: { Authorization: 'Bearer ' } })).status, 403);
+  } finally {
+    ai.stop();
+    giga.server.close();
+  }
+});
+
+test('the admins review a mark: approved with its normal form, it joins the dictionary every app reads', async () => {
+  const giga = await fakeGigachat();
+  const token = 'c'.repeat(40);
+  const ai = await aiServer({ ...gigaEnv(giga), ADMIN_TOKEN: token });
+  const admin = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const review = (body, headers = admin) => fetch(`${ai.base}/v1/feedback/review`, { method: 'POST', headers, body: JSON.stringify(body) });
+  const get = async (path, headers = {}) => (await fetch(`${ai.base}${path}`, { headers })).json();
+  try {
+    await ai.mark({ vote: 'down', question: 'чела приняли у отдела, что ему будет', correction: 'это задержание' });
+    await ai.mark({ vote: 'up', question: 'обматерил полицейского' }, { device: 'device-0002' });
+    // Newest first.
+    const [plain, fixed] = (await get('/v1/feedback', admin)).marks;
+    assert.equal((await review({ id: fixed.id, status: 'approved' }, { 'Content-Type': 'application/json' })).status, 403);
+    assert.equal((await review({ id: fixed.id, status: 'maybe' })).status, 400);
+
+    const ok = await review({ id: fixed.id, status: 'approved', phrase: 'Чела приняли', normalized: 'задержание', scope: 'law', intent: 'detention', expected: ['УПК 94'] });
+    assert.equal(ok.status, 200);
+    await review({ id: plain.id, status: 'rejected' });
+
+    assert.deepEqual((await get('/v1/aliases')).aliases, [{ phrase: 'чела приняли', normalized: 'задержание', scope: 'law', intent: 'detention' }]);
+    assert.deepEqual((await get('/v1/feedback?filter=approved', admin)).marks.map((m) => m.review.status), ['approved']);
+    assert.deepEqual((await get('/v1/feedback?filter=raw', admin)).marks, []);
+    assert.deepEqual((await get('/v1/examples', admin)).examples.map((e) => [e.question, e.expected]), [['чела приняли у отдела, что ему будет', ['УПК 94']]]);
+    assert.equal((await fetch(`${ai.base}/v1/examples`)).status, 403);
   } finally {
     ai.stop();
     giga.server.close();

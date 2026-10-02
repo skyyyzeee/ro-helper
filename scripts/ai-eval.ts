@@ -10,10 +10,12 @@
 //                                                    and NODE_EXTRA_CA_CERTS=<the Russian root certificate>;
 //                                                    `--gigachat --models` lists the models the key may use
 //   --depth full                                   — the full analysis instead of the quick one
+//   --approved                                     — also the players' questions the admins approved, and the players'
+//                                                    dictionary, from the AI server; the admins' key in AI_ADMIN_TOKEN
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ServerPack } from '../src/core';
-import { AiError, answerQuestion, gradeCase, openaiProvider, serverProvider, type AiProvider, type Category, type Depth, type EvalCase, type Grade } from '../src/protocol';
+import { AiError, answerQuestion, gradeCase, openaiProvider, serverProvider, type AiProvider, type Category, type Depth, type EvalCase, type Grade, type QueryAlias } from '../src/protocol';
 
 // about.ts reads the version Vite puts in at build time; outside Vite it is set here, before about.ts is loaded.
 (globalThis as { __APP_VERSION__?: string }).__APP_VERSION__ = 'eval';
@@ -104,7 +106,29 @@ const provider: AiProvider = {
 const via = giga ? `GigaChat · ${model ?? 'GigaChat-2'}` : url ? `${url} · ${model}` : `сервер ИИ ${AI_SERVER}`;
 const depth = (arg('depth') ?? 'quick') as Depth;
 
-const { cases: all } = JSON.parse(readFileSync(join(root, 'eval', 'cases.json'), 'utf8')) as { cases: EvalCase[] };
+const { cases: written } = JSON.parse(readFileSync(join(root, 'eval', 'cases.json'), 'utf8')) as { cases: EvalCase[] };
+
+/**
+ * The players' questions the admins approved with their right articles, and the approved dictionary, from the AI
+ * server: the exam then checks that what was fixed once stays fixed.
+ */
+async function approved(): Promise<{ cases: EvalCase[]; aliases: QueryAlias[] }> {
+  const token = process.env.AI_ADMIN_TOKEN?.trim();
+  if (!token) throw new Error('Для --approved нужен ключ администратора в AI_ADMIN_TOKEN.');
+  const server = (arg('ai-server') ?? AI_SERVER).replace(/\/$/, '');
+  const examples = (await (await fetch(`${server}/v1/examples`, { headers: { Authorization: `Bearer ${token}` } })).json()) as {
+    examples?: { server: string; question: string; expected: string[]; scope?: 'law' | 'server_rule' }[];
+    error?: string;
+  };
+  if (!examples.examples) throw new Error(examples.error ?? 'Сервер ИИ не отдал примеры.');
+  const aliases = ((await (await fetch(`${server}/v1/aliases`)).json()) as { aliases?: QueryAlias[] }).aliases ?? [];
+  return {
+    cases: examples.examples.map((e) => ({ server: e.server, situation: e.question, expect: e.expected, category: 'APPROVED', group: 'approved' })),
+    aliases,
+  };
+}
+const fromServer = args.includes('--approved') ? await approved() : { cases: [], aliases: [] };
+const all = [...written, ...fromServer.cases];
 const only = arg('server');
 const group = arg('group');
 const category = arg('category');
@@ -142,7 +166,7 @@ for (const c of cases) {
   const row: Row = { number: c.number, category: categoryOf, grade: null };
   said.length = 0;
   try {
-    const base = { provider, pack: pack(c.server), depth, choice: c.choice ?? 'auto' } as const;
+    const base = { provider, pack: pack(c.server), depth, choice: c.choice ?? 'auto', aliases: fromServer.aliases } as const;
     let outcome = await answerQuestion({ ...base, message: c.situation });
     // A follow-up goes on from the case the first answer left; the calls of both are counted.
     if (c.followUp && outcome.kind === 'analysis') {

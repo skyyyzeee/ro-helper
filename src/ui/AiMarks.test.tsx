@@ -48,7 +48,7 @@ describe('marking an answer', () => {
     expect(await screen.findByText(/Спасибо — разберёмся/)).toBeInTheDocument();
     expect(marks[0].body).toMatchObject({ vote: 'down', correction: 'это грабёж, ст. 66' });
     // The computer's id goes in the header for the daily limit only, never in the mark itself.
-    expect(Object.keys(marks[0].body).sort()).toEqual(['app', 'correction', 'norms', 'question', 'scope', 'server', 'status', 'vote']);
+    expect(Object.keys(marks[0].body).sort()).toEqual(['app', 'correction', 'norms', 'question', 'scope', 'server', 'status', 'type', 'vote']);
   });
 
   it('says why when the server would not take it, and lets the player try again', async () => {

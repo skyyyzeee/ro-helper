@@ -1462,7 +1462,7 @@ export function Overlay({
               searchRef.current?.focus();
             }}
             onHistory={() => setHistoryOpen((shown) => !shown)}
-            onMark={(question, analysis, vote, correction) => sendMark(platform, { question, analysis, vote, correction, server: pack.server.id })}
+            onMark={(question, analysis, vote, correction, type) => sendMark(platform, { question, analysis, vote, correction, type, server: pack.server.id })}
             onDocument={(situation) => {
               setAiTab('document');
               setAiDraft(situation);

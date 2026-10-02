@@ -41,6 +41,8 @@ const CONFIG = {
   feedbackPerDevice: num('FEEDBACK_PER_DEVICE', 30),
   /** Past this size the file takes no more until the admins have read and moved it. */
   feedbackMaxBytes: num('FEEDBACK_MAX_MB', 50) * 1024 * 1024,
+  /** The admins' reviews of the marks: approved, rejected, to check again — with the normal form they gave. */
+  reviewsFile: env('REVIEWS_FILE', './reviews.json'),
   /** The admins' token for reading the marks from the app (bash set-key.sh admin); none — no reading. */
   adminToken: env('ADMIN_TOKEN', '').trim(),
   /**
@@ -289,12 +291,15 @@ function markOf(input) {
   if (!vote || !question) return null;
   const correction = vote === 'down' ? clip(input?.correction, 1000) : '';
   return {
+    // A random id, for the admins' review: nothing to tie it to anyone.
+    id: randomUUID(),
     // To the minute: when, not who.
     at: new Date().toISOString().slice(0, 16),
     server: clip(input?.server, 40),
     app: clip(input?.app, 20),
     vote,
     question,
+    type: clip(input?.type, 20),
     scope: clip(input?.scope, 20),
     status: clip(input?.status, 20),
     norms: (Array.isArray(input?.norms) ? input.norms : []).map((n) => clip(n, 80)).filter(Boolean).slice(0, 10),
@@ -319,6 +324,51 @@ function keepMark(device, mark) {
   dirty = true;
 }
 
+// ——— The admins' reviews: raw → approved / rejected / to check again ———
+
+const REVIEW = new Set(['approved', 'rejected', 'recheck']);
+const SCOPES = new Set(['law', 'server_rule']);
+
+let reviews = {};
+if (existsSync(CONFIG.reviewsFile)) {
+  try {
+    reviews = JSON.parse(readFileSync(CONFIG.reviewsFile, 'utf8'));
+  } catch {
+    console.error(new Date().toISOString(), 'reviews: the file is broken — starting with none, the file is kept');
+  }
+}
+function saveReviews() {
+  writeFileSync(`${CONFIG.reviewsFile}.part`, JSON.stringify(reviews), { mode: 0o600 });
+  renameSync(`${CONFIG.reviewsFile}.part`, CONFIG.reviewsFile);
+}
+
+/**
+ * The admins' word on a mark: its status and, when they give it, the normal form — the players' expression and
+ * the same in the words of the base, the scope, what is asked, the right articles. Null when it is none.
+ */
+function reviewOf(input) {
+  const id = clip(input?.id, 40);
+  if (!id || !REVIEW.has(input?.status)) return null;
+  const phrase = clip(input?.phrase, 80).toLowerCase();
+  const normalized = clip(input?.normalized, 120);
+  return {
+    id,
+    status: input.status,
+    at: new Date().toISOString().slice(0, 16),
+    ...(phrase && normalized ? { phrase, normalized } : {}),
+    ...(SCOPES.has(input?.scope) ? { scope: input.scope } : {}),
+    ...(clip(input?.intent, 30) ? { intent: clip(input.intent, 30) } : {}),
+    ...(Array.isArray(input?.expected) ? { expected: input.expected.map((e) => clip(e, 40)).filter(Boolean).slice(0, 5) } : {}),
+  };
+}
+
+/** The approved expressions of the players, for every app: no question, no mark — the phrase and its normal form. */
+function approvedAliases() {
+  return Object.values(reviews)
+    .filter((r) => r.status === 'approved' && r.phrase && r.normalized)
+    .map(({ phrase, normalized, scope, intent }) => ({ phrase, normalized, ...(scope ? { scope } : {}), ...(intent ? { intent } : {}) }));
+}
+
 /** Whether the request carries the admins' token; compared in constant time. */
 function isAdmin(request) {
   if (CONFIG.adminToken.length < 16) return false;
@@ -327,7 +377,7 @@ function isAdmin(request) {
   return given.length === token.length && timingSafeEqual(given, token);
 }
 
-/** The latest marks, newest first: all, the 👎 only, or those with a correction. */
+/** The latest marks, newest first, each with the admins' review: by vote, correction or review status. */
 function latestMarks(filter, limit) {
   if (!existsSync(CONFIG.feedbackFile)) return [];
   const marks = [];
@@ -336,9 +386,12 @@ function latestMarks(filter, limit) {
     if (!line.trim()) continue;
     try {
       const mark = JSON.parse(line);
+      const review = mark.id ? reviews[mark.id] : undefined;
+      const status = review?.status ?? 'raw';
       if (filter === 'down' && mark.vote !== 'down') continue;
       if (filter === 'fixed' && !mark.correction) continue;
-      marks.push(mark);
+      if (['raw', 'approved', 'rejected', 'recheck'].includes(filter) && status !== filter) continue;
+      marks.push(review ? { ...mark, review } : mark);
     } catch {
       // A broken line is skipped.
     }
@@ -388,9 +441,34 @@ const server = createServer(async (request, response) => {
   if (request.method === 'GET' && request.url.startsWith('/v1/feedback')) {
     if (!isAdmin(request)) return send(response, 403, { error: 'Нужен ключ администратора.' });
     const params = new URL(request.url, 'http://local').searchParams;
-    const filter = ['down', 'fixed'].includes(params.get('filter')) ? params.get('filter') : 'all';
+    const filter = ['down', 'fixed', 'raw', 'approved', 'rejected', 'recheck'].includes(params.get('filter')) ? params.get('filter') : 'all';
     const count = Math.min(Math.max(Number(params.get('limit')) || 100, 1), 500);
     return send(response, 200, { marks: latestMarks(filter, count), today: state.marks ?? 0 });
+  }
+  if (request.method === 'GET' && request.url === '/v1/aliases') {
+    response.setHeader('Cache-Control', 'public, max-age=3600');
+    return send(response, 200, { aliases: approvedAliases() });
+  }
+  if (request.method === 'GET' && request.url === '/v1/examples') {
+    if (!isAdmin(request)) return send(response, 403, { error: 'Нужен ключ администратора.' });
+    // The approved marks with their right articles: cases for the exam (scripts/eval-approved.ts).
+    const marks = latestMarks('approved', 5000).filter((m) => m.review?.expected?.length);
+    return send(response, 200, {
+      examples: marks.map((m) => ({ id: m.id, server: m.server, question: m.question, expected: m.review.expected, ...(m.review.scope ? { scope: m.review.scope } : {}), ...(m.review.intent ? { intent: m.review.intent } : {}) })),
+    });
+  }
+  if (request.method === 'POST' && request.url === '/v1/feedback/review') {
+    if (!isAdmin(request)) return send(response, 403, { error: 'Нужен ключ администратора.' });
+    let review;
+    try {
+      review = reviewOf(JSON.parse(await readBody(request, 4000)));
+    } catch {
+      return send(response, 413, { error: 'Слишком большой запрос.' });
+    }
+    if (!review) return send(response, 400, { error: 'Нет отзыва или статуса.' });
+    reviews[review.id] = review;
+    saveReviews();
+    return send(response, 200, { ok: true, review });
   }
   const limit = LIMITS[request.url];
   if (request.method !== 'POST' || !limit) return send(response, 404, { error: 'Нет такого адреса' });

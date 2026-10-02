@@ -1,6 +1,7 @@
 // Protocol core: the legal AI pipeline over the law core — classifier, scope, context, answer format, checks, providers.
 // Pure TypeScript like the law core: no React, Tauri or UI (a boundary test enforces it).
 export { AnswerFormatError, parseAnswer, readAnswer, type AnswerNorm, type Claim, type Clarification, type LegalAnswer, type Stage } from './answer';
+export { aliasScope, matchAliases, type QueryAlias } from './aliases';
 export { ANSWERED_BY_APP, classify, type Classification, type QuestionType } from './classify';
 export { groundItems, idsOf, strayArticles, strayFigures, textIssues, type GroundedItem } from './check';
 export { confirmedHallucinations, gradeCase, refOf, type Category, type EvalCase, type Grade } from './grade';
