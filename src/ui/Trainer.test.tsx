@@ -29,7 +29,7 @@ function fakeExaminer(verdict: 'right' | 'partly' | 'wrong') {
 const search = () => screen.getByRole('searchbox', { name: 'Поиск по законам' });
 
 async function openTrainer() {
-  const app = await renderApp({ settings: GEMINI });
+  const app = await renderApp({ settings: GEMINI, profile: { organization: 'mvd' } });
   await app.user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
   await app.user.click(screen.getByRole('radio', { name: 'Тренажёр' }));
   return { ...app, view: screen.getByRole('region', { name: 'Тренажёр' }) };
@@ -44,7 +44,7 @@ describe('the exam trainer', () => {
     await user.click(within(view).getByRole('button', { name: 'Начать' }));
     expect(await within(view).findByText('Что считается кражей?')).toBeInTheDocument();
     // The question was made from an article of the server's laws, given whole to the AI.
-    expect(bodies[0]).toMatch(/### УК ст\. /);
+    expect(bodies[0]).toMatch(/### \S+ (ст|п)\. /);
 
     await user.type(search(), 'когда берут чужое{Enter}');
     expect(await within(view).findByText('Почти верно.')).toBeInTheDocument();
@@ -77,7 +77,7 @@ describe('the exam trainer', () => {
   });
 
   it('asks for the key before the first question', async () => {
-    const { user } = await renderApp({ settings: { [AI_PROVIDER_SETTING]: 'gemini' } });
+    const { user } = await renderApp({ settings: { [AI_PROVIDER_SETTING]: 'gemini' }, profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
     await user.click(screen.getByRole('radio', { name: 'Тренажёр' }));
     await user.click(within(screen.getByRole('region', { name: 'Тренажёр' })).getByRole('button', { name: 'Начать' }));

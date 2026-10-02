@@ -2,7 +2,7 @@
 // shown, of this server, with the part it names, of a type the question's scope allows; every statement about the
 // norms must name its own sources, and every figure in it must stand in those very sources; an article the answer
 // mentions must be among them. What does not pass marks the answer as one to check — it is never shown as confirmed.
-import { articleText, calculateDetention, leadPart, type Charge, type DetentionResult, type SearchHit, type ServerPack } from '../core';
+import { articleLabel, articleText, calculateDetention, leadPart, type Charge, type DetentionResult, type SearchHit, type ServerPack } from '../core';
 import type { AnswerNorm, Claim, LegalAnswer } from './answer';
 import { SOURCE_TYPE_LABELS, inScope, type Scope, type Source, type SourceType } from './sources';
 
@@ -85,7 +85,11 @@ function checkNorm(pack: ServerPack, sources: Map<string, Source>, norm: AnswerN
   const issues: string[] = [];
   const named = parseRef(norm.ref);
   if (named && (named.number !== article.number || !(document.short.toLowerCase() === named.short || document.aliases.includes(named.short)))) {
-    issues.push(`${norm.ref}: ИИ указал не тот номер — источник ${norm.source} это ${document.short} ${article.number}`);
+    // The label names another article of the server: which of the two the AI meant cannot be told — it is to
+    // check. A label naming none is the AI's slip in writing it («86 УК ст. 2», «R5 ст. 5.3»): the source it gave
+    // is the norm, shown under the source's own label.
+    if (articleExists(pack, norm.ref)) issues.push(`${norm.ref}: ИИ указал не тот номер — источник ${norm.source} это ${document.short} ${article.number}`);
+    else norm = { ...norm, ref: `${document.short} ${articleLabel(article, undefined, document.unit)}` };
   }
   if (scope && !inScope(source.type, scope)) {
     issues.push(`${norm.ref || norm.source}: это ${SOURCE_TYPE_LABELS[source.type].toLowerCase()}, а вопрос — о другом`);

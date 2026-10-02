@@ -27,7 +27,7 @@ with both kinds shows «По закону» and «По правилам серв
 |---|---|
 | The norm exists | its id was not given and its label names no article of this server |
 | It was among the sources | the label names a real article the AI was not shown |
-| The label matches the source | the id is S3 but the label names another document or number |
+| The label matches the source | the id is S3 but the label names another article of the server (a label naming none — «86 УК ст. 2» — is a slip: the norm is the source, shown under its own label) |
 | The part exists | the article has numbered parts and none has that number |
 | The type fits the scope | a rule of the server in an answer about the laws, or a law in one about the rules |
 | A statement has a source | the violation, the punishment or a step of the procedure names no source |
@@ -35,6 +35,8 @@ with both kinds shows «По закону» and «По правилам серв
 | Not a law and a rule at once | one statement stands on a law (or charter) and a rule of the server together |
 | Its figures | a number in the statement is in none of *its own* sources (nor their stars) |
 | Articles mentioned | the situation, a reason or a statement names an article that is none of the sources («это же 777») |
+
+A few words that find nothing («чела приняли, что ему будет?») are asked about, not answered «не найдено».
 
 Any failure sets `needsReview`: «Требует проверки», never «Подтверждено», and a failed norm never reaches the
 calculator. The status comes from the checks — `notFound` is decided by them, not by the model's flag.

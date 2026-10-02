@@ -99,6 +99,13 @@ describe('hard gates: what the model makes up never comes out confirmed', () => 
   it('no found norm is «not found», whatever the model claims', () => {
     expect(validateAnswer(pack, sources, good({ norms: [], notFound: false }), 'law').status).toBe('not-found');
   });
+
+  it('a label the AI miswrote over a source it gave is the source, under its own label — one naming a real article is not', () => {
+    const slip = validateAnswer(pack, sources, good({ norms: [{ ...good().norms[0], ref: '65 УК ст. 1' }] }), 'law');
+    expect(slip).toMatchObject({ status: 'confirmed', needsReview: false });
+    expect(slip.norms[0].norm.ref).toBe('УК ст. 65');
+    expect(caught(good({ norms: [{ ...good().norms[0], ref: 'УК ст. 66' }] }))).toMatch(/не тот номер/);
+  });
 });
 
 /** A fake AI: the search phrases, then whatever answer the test gives — each request kept. */
@@ -150,6 +157,13 @@ describe('the classifier: what is no question of the base never reaches the AI',
     expect(provider.complete).toHaveBeenCalledTimes(1);
   });
 
+  it('asks what happened, not «не найдено», when a few words tell no situation and nothing is found', async () => {
+    const { provider } = fakeAi(() => good({ norms: [], violation: null, punishment: null }));
+    const outcome = await ask(provider, 'чела приняли, что ему будет?');
+    expect(outcome.kind === 'analysis' && outcome.analysis.validation.status).toBe('clarify');
+    expect(outcome.kind === 'analysis' && outcome.analysis.answer.questions[0].question).toMatch(/Опишите ситуацию подробнее/);
+  });
+
   it('stops at the AI\'s first call when it says the question is not about the game', async () => {
     const { provider } = fakeAi(() => good(), 'out_of_scope');
     expect(await ask(provider, 'сколько весит трактор если он танцует')).toMatchObject({ kind: 'system', reason: 'out_of_scope', aiCalls: 1 });
@@ -174,6 +188,16 @@ describe('the scope narrows the sources before the search: the AI never sees the
     expect(packInScope(pack, 'server_rule')).toBe(packInScope(pack, 'server_rule'));
     expect(packInScope(pack, 'server_rule').documents.every((d) => d.kind === 'rules')).toBe(true);
     expect(packInScope(pack, 'law').documents.some((d) => d.kind === 'rules')).toBe(false);
+  });
+
+  it('a situation with no word of the rules goes to the laws, even when the AI takes it for the rules', async () => {
+    const { provider, requests } = fakeAi(() => good(), 'server_rule');
+    const outcome = await ask(provider, 'игрок взял чужую вещь у прохожего и ушёл с ней');
+    expect(outcome.kind === 'analysis' && outcome.analysis.scope).toBe('law');
+    expect(outcome.kind === 'analysis' && outcome.analysis.sources.some((s) => s.type === 'server_rule')).toBe(false);
+    expect(outcome.kind === 'analysis' && outcome.analysis.notes?.[0]).toMatch(/выберите «Правила сервера»/);
+    // The first call's phrases, asked in the words of the laws, are used: two calls, not three.
+    expect(requests).toHaveLength(2);
   });
 
   it('says so when the question looks like the rules but the laws were chosen', async () => {

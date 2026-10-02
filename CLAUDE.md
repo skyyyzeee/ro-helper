@@ -111,7 +111,8 @@ the bot, README and PRIVACY; «хелпер» in players' texts became «асс�
   hold each norm and statement to its own sources (part, type, figures, articles mentioned) without the AI; the
   calculator, not the AI, counts punishments. Every mode starts from `coreRules()` and gets the player's words fenced
   as data. Keep it so. `docs/AI_PIPELINE.md`, `docs/SOURCE_GROUNDING.md`, `docs/AI_CLASSIFIER.md`,
-  `docs/AI_EVALUATION.md`; the plan and what is left (capabilities, one workspace, feedback): `.scratch/ai-closed-loop/spec.md`.
+  `docs/AI_EVALUATION.md`. Who may do what with the AI (profile from the organisation, `aiCapabilitiesOf`, the checks
+  for the state only): `docs/AI_ACCESS.md`. The plan and what is left (one workspace, feedback): `.scratch/ai-closed-loop/spec.md`.
 - Changing a prompt, the classifier, the synonyms, the schema, the validator or the model: run the exam before and
   after (`npm run eval`, `npm run eval:ai` for the traps; `--save-baseline` / the comparison) — the target is
   `CONFIRMED_HALLUCINATION_RATE` 0 and no hard gate failed.

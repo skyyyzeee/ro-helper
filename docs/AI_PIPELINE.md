@@ -10,7 +10,8 @@ lives in `src/protocol` (pure TypeScript, no React/Tauri — a boundary test enf
 question
   → classifier          classify.ts, no AI: greeting / gibberish / out of scope / real laws / article number
                          are answered by the app (0 AI calls); laws / rules of the server / both by their words
-  → (unclear)            AI call 1 also says what it is ({intent, phrases}); still unclear → «закон или правила?»
+  → (unclear)            AI call 1 also says what it is ({intent, phrases}); about the game → the laws, its phrases kept;
+                         still unclear → «закон или правила?»
   → scope               sources.ts: laws+charters, rules of the server, or both — the pack is narrowed BEFORE the search
   → search              findForSituation over the scope's documents only (deterministic; AI phrases are only words)
   → sources             labelSources: S… law, C… charter, R… rule of the server, O… other — type from the document

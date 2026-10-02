@@ -12,7 +12,7 @@ server's own vocabulary; no AI, no network. A question the base cannot answer ne
 | `legal` | words of the laws (статья, штраф, задержали, мент…), the server's synonyms («украл», «гнал»…), traffic words | analysis in the laws (+ charters) | 2 |
 | `server_rule` | words of the project's rules (по правилам, nonRP, DM, MG, бан, варн, деморган, капт…) | analysis in the rules of the server | 2 |
 | `mixed` | both kinds of words | analysis in both, told apart | 2 |
-| `unclear` | neither | the AI's first call says what it is (with the search phrases); still unclear → «Закон или правила сервера?» | 1 (+1) |
+| `unclear` | neither | the AI's first call says what it is (with the search phrases, in the words of the laws); a question about the game → the laws (the AI's «it is the rules» is only a hint beside the answer: with no word of the rules it was mostly a crime); still unclear → «Закон или правила сервера?» | 1 (+1) |
 
 The player's switch «Законы» / «Правила сервера» is the scope whatever the words say; when they look like the other
 kind, the answer carries a note («вопрос похож на правила сервера, а выбран режим «Законы»»). A follow-up stays in its

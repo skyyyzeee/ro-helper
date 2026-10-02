@@ -13,6 +13,11 @@ import { AiError, type AiProvider } from './provider';
 import { labelSources, packInScope, type Scope, type ScopeChoice, type Source } from './sources';
 import { calculateCharges, validateAnswer, type Validation } from './validate';
 
+/** A message this short that finds nothing tells no situation: the player is asked to describe it. */
+const VAGUE_WORDS = 6;
+const VAGUE_QUESTION = { question: 'Опишите ситуацию подробнее: кто, что сделал, где это было?', options: [] as string[] };
+const wordCount = (text: string) => (text.match(/[а-яёa-z0-9]+/gi) ?? []).length;
+
 /** Articles given to the AI for one question. */
 export const SOURCES = 14;
 
@@ -144,6 +149,14 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
   }
 
   const validation = validateAnswer(pack, sources, answer, scope);
+  // A label the AI miswrote over a source it gave is shown — and kept — under the source's own label.
+  answer.norms = validation.norms.map((n) => n.norm);
+  // Nothing found for a few words that tell no situation («чела приняли, что ему будет?»): not «не найдено» — the
+  // player is asked what happened.
+  if (!previous && validation.status === 'not-found' && wordCount(message) <= VAGUE_WORDS) {
+    validation.status = 'clarify';
+    if (!answer.questions.length) answer.questions = [VAGUE_QUESTION];
+  }
   const calculation = calculateCharges(pack, validation);
   const valid = validation.norms.filter((n) => n.hit && !n.issues.length);
   return {
@@ -197,6 +210,8 @@ const MISMATCH_NOTE: Record<Scope, string> = {
   mixed: '',
 };
 
+const RULES_HINT = 'Разбор сделан по законам сервера. Если вопрос о правилах сервера (nonRP, DM, наказания администрации) — выберите «Правила сервера».';
+
 export interface QuestionInput extends Omit<AnalyseInput, 'scope' | 'terms'> {
   /** What the player chose over the AI: auto, the laws or the rules of the server. */
   choice?: ScopeChoice;
@@ -242,14 +257,15 @@ export async function answerQuestion(input: QuestionInput): Promise<Outcome> {
   let aiCalls = 0;
   if (classification.type === 'unclear') {
     aiCalls += 1;
-    const asked = await searchTerms(provider, message, 'mixed', true);
+    const asked = await searchTerms(provider, message, 'law', true);
     terms = asked.phrases;
     const intent = asked.intent;
     if (intent === 'out_of_scope') return system('out_of_scope', { type: 'out_of_scope', why: 'так решил ИИ' }, {}, aiCalls);
     if (intent === 'nonsense') return system('nonsense', { type: 'nonsense', why: 'так решил ИИ' }, {}, aiCalls);
     if (intent === 'legal' || intent === 'server_rule' || intent === 'mixed') {
-      const scope: Scope = intent === 'legal' ? 'law' : intent;
-      classification = { type: intent, scope, why: 'слова не подсказали — так решил ИИ' };
+      // No word of the rules of the server in it: the laws answer. The AI's guess that it is about the rules is
+      // too often a crime it took for a game matter — said beside the answer instead, with the switch to the rules.
+      classification = { type: 'legal', scope: 'law', why: 'слова не подсказали — так решил ИИ', ...(intent !== 'legal' ? { mismatch: 'server_rule' as const } : {}) };
     } else {
       return system('clarify_scope', classification, {
         options: [
@@ -261,9 +277,9 @@ export async function answerQuestion(input: QuestionInput): Promise<Outcome> {
   }
 
   const scope = classification.scope ?? 'law';
-  // The classifier's phrases were asked over both kinds: in a narrower scope, ask again in its words.
-  const analysis = await analyse({ ...input, scope, ...(terms && scope === 'mixed' ? { terms } : {}) });
+  // The classifier's phrases were asked in the words of the laws: kept for an analysis in the laws.
+  const analysis = await analyse({ ...input, scope, ...(terms && scope === 'law' ? { terms } : {}) });
   analysis.aiCalls = (analysis.aiCalls ?? 0) + aiCalls;
-  if (classification.mismatch) analysis.notes = [MISMATCH_NOTE[classification.mismatch]];
+  if (classification.mismatch) analysis.notes = [classification.why === 'слова не подсказали — так решил ИИ' ? RULES_HINT : MISMATCH_NOTE[classification.mismatch]];
   return { kind: 'analysis', analysis, classification };
 }

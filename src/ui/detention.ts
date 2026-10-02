@@ -7,6 +7,7 @@ import { findForSituation, type SearchHit, type ServerPack } from '../core';
 import { coreRules, groundItems, idsOf, labelSources, packInScope, playerData, sourcesBlock, textIssues, type Source } from '../protocol';
 import type { PlatformAdapter } from '../platform/types';
 import { AiError, SOURCES, ask, connect, lawTerms } from './ai';
+import { NO_CHECK } from './lawyer';
 
 export type StepVerdict = 'ok' | 'violation' | 'unclear';
 
@@ -75,7 +76,8 @@ export interface DetentionCheck {
   reset: () => void;
 }
 
-export function useDetentionReview(platform: PlatformAdapter, pack: ServerPack, boostDocuments?: string[]): DetentionCheck {
+/** `allowed`: the player may check an officer's actions (`ai.check`); otherwise nothing is asked of the AI. */
+export function useDetentionReview(platform: PlatformAdapter, pack: ServerPack, boostDocuments?: string[], allowed = true): DetentionCheck {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<DetentionReview | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +86,10 @@ export function useDetentionReview(platform: PlatformAdapter, pack: ServerPack, 
     async (said: string) => {
       const text = said.trim();
       if (!text || busy) return;
+      if (!allowed) {
+        setError(NO_CHECK);
+        return;
+      }
       setBusy(true);
       setError(null);
       try {
@@ -128,7 +134,7 @@ export function useDetentionReview(platform: PlatformAdapter, pack: ServerPack, 
         setBusy(false);
       }
     },
-    [busy, platform, pack, boostDocuments],
+    [busy, platform, pack, boostDocuments, allowed],
   );
 
   const reset = useCallback(() => {

@@ -74,7 +74,11 @@ export interface LawyerCheck {
   reset: () => void;
 }
 
-export function useLawyerCheck(platform: PlatformAdapter, pack: ServerPack, boostDocuments?: string[]): LawyerCheck {
+/** Said instead of checking, to a player whose profile has no checks of an officer's actions (capability ai.check). */
+export const NO_CHECK = 'Проверка действий сотрудника — для государственных организаций. Выберите свою организацию в профиле.';
+
+/** `allowed`: the player may check an officer's actions (`ai.check`); otherwise nothing is asked of the AI. */
+export function useLawyerCheck(platform: PlatformAdapter, pack: ServerPack, boostDocuments?: string[], allowed = true): LawyerCheck {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<LawyerAnswer | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +87,10 @@ export function useLawyerCheck(platform: PlatformAdapter, pack: ServerPack, boos
     async (said: string) => {
       const text = said.trim();
       if (!text || busy) return;
+      if (!allowed) {
+        setError(NO_CHECK);
+        return;
+      }
       setBusy(true);
       setError(null);
       try {
@@ -135,7 +143,7 @@ export function useLawyerCheck(platform: PlatformAdapter, pack: ServerPack, boos
         setBusy(false);
       }
     },
-    [busy, platform, pack, boostDocuments],
+    [busy, platform, pack, boostDocuments, allowed],
   );
 
   const reset = useCallback(() => {
