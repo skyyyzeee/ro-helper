@@ -4845,3 +4845,15 @@ select option {
 }
 .ai__back:hover { color: var(--text); background: rgb(255 255 255 / calc(0.08 * var(--tint-scale))); }
 .ai__head:has(> .sp:first-child) { min-height: 0; }
+
+/* The history: a panel over the chat, from its right edge, under the window's head. */
+.ai__scrim { position: absolute; inset: 0; z-index: 4; background: rgba(0, 0, 0, 0.35); cursor: default; }
+.ai__drawer {
+  position: absolute; top: 0; right: 0; bottom: 0; z-index: 5; width: min(360px, 88%);
+  display: flex; flex-direction: column; overflow-y: auto; padding: 16px 14px;
+  background: rgb(20 21 26 / 0.97); border-left: 1px solid var(--line); box-shadow: -20px 0 60px rgba(0, 0, 0, 0.45);
+  animation: drawer-in 0.18s ease-out;
+}
+@keyframes drawer-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.history__head { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
+.history__heading { margin: 0; font-size: 17px; font-weight: 700; }

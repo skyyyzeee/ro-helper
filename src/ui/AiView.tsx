@@ -4,7 +4,7 @@ import { articleLabel, articleTitle, type SearchHit, type Stage } from '../core'
 import { STATUS_LABELS } from '../protocol';
 import { PERSPECTIVES, type AiChat, type Perspective } from './ai';
 import { AnswerView } from './AnswerView';
-import { BackIcon, PlusIcon, SparkIcon, WarnIcon } from './icons';
+import { BackIcon, HistoryIcon, PlusIcon, SparkIcon, WarnIcon } from './icons';
 
 /** «УК ст. 65» — how an answer names an article, without its title. */
 export const shortLabel = (hit: SearchHit) => `${hit.document.short} ${articleLabel(hit.article, undefined, hit.document.unit)}`;
@@ -66,12 +66,15 @@ export function AiHead({
   onTab,
   reset,
   back,
+  onHistory,
 }: {
   tab: AiTab;
   onTab: (tab: AiTab) => void;
   reset?: { label: string; disabled?: boolean; onClick: () => void };
   /** Instead of the modes: the way back to the conversation this screen came from (the document). */
   back?: { label: string; onClick: () => void };
+  /** The earlier conversations, in a panel over the chat. */
+  onHistory?: () => void;
 }) {
   return (
     <div className="ai__head">
@@ -84,6 +87,12 @@ export function AiHead({
         <AiTabs tab={tab} onTab={onTab} />
       )}
       <span className="sp" />
+      {onHistory && (
+        <button className="ai__new" type="button" aria-label="История ИИ-разборов" title="Прошлые разборы на этом сервере" onClick={onHistory}>
+          <HistoryIcon />
+          <span>История</span>
+        </button>
+      )}
       {reset && (
         <button className="ai__new" type="button" disabled={reset.disabled} onClick={reset.onClick}>
           <PlusIcon />
@@ -132,6 +141,7 @@ export function AiView({
   onCopy,
   onDraft,
   onDocument,
+  onHistory,
   onLink,
 }: {
   chat: AiChat;
@@ -145,6 +155,8 @@ export function AiView({
   onDraft: (text: string) => void;
   /** Writes a document from the case: the situation goes to the document's field. */
   onDocument: (situation: string) => void;
+  /** Shows the earlier conversations. */
+  onHistory: () => void;
   /** Opens a page in the browser: a law's forum thread. */
   onLink: (url: string) => void;
   /** Back to the search: offered when the AI cannot answer. */
@@ -175,7 +187,7 @@ export function AiView({
 
   return (
     <section className="art ai" aria-label="ИИ-разбор">
-      <AiHead tab="chat" onTab={onTab} reset={chat.messages.length > 0 ? { label: 'Новый чат', disabled: chat.busy, onClick: chat.clear } : undefined} />
+      <AiHead tab="chat" onTab={onTab} onHistory={onHistory} reset={chat.messages.length > 0 ? { label: 'Новый чат', disabled: chat.busy, onClick: chat.clear } : undefined} />
 
       {chat.messages.length === 0 && (
         <div className="ai__intro">

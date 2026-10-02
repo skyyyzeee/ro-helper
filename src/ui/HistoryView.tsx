@@ -1,5 +1,5 @@
 import type { StoredConversation } from './ai';
-import { BackIcon, CloseIcon } from './icons';
+import { CloseIcon } from './icons';
 
 /** «сегодня, 14:05», «вчера, 22:10», «25 сентября, 09:30». */
 function when(iso: string, now = new Date()): string {
@@ -22,37 +22,34 @@ function questions(conversation: StoredConversation): string {
   return `${n} вопросов`;
 }
 
-/** Earlier conversations with the AI on this server: open one to read it or go on, or forget it. */
+/** Earlier conversations with the AI on this server, in a panel over the chat: open one, or forget it. */
 export function HistoryView({
   history,
   serverName,
   onOpen,
   onForget,
-  onBack,
-  backLabel,
+  onClose,
 }: {
   history: StoredConversation[];
   serverName: string;
   onOpen: (id: string) => void;
   onForget: (id?: string) => void;
-  onBack: () => void;
-  backLabel: string;
+  onClose: () => void;
 }) {
   return (
-    <section className="art history" aria-label="История ИИ-разборов">
-      <div className="ai__top">
-        <button className="back" type="button" onClick={onBack}>
-          <BackIcon />
-          <span>{backLabel}</span>
-        </button>
+    <section className="history" aria-label="История ИИ-разборов">
+      <div className="history__head">
+        <h2 className="history__heading">История</h2>
         <span className="sp" />
         {history.length > 0 && (
           <button className="link-btn" type="button" onClick={() => onForget()}>
             Очистить историю
           </button>
         )}
+        <button className="x" type="button" aria-label="Закрыть историю" title="Закрыть" onClick={onClose}>
+          <CloseIcon size={16} />
+        </button>
       </div>
-      <h2 className="art__title">История ИИ-разборов</h2>
       {history.length === 0 ? (
         <div className="empty">Здесь появятся ваши вопросы ИИ на сервере {serverName}</div>
       ) : (
