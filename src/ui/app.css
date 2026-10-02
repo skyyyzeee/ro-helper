@@ -4935,3 +4935,14 @@ select option {
 .change__list { margin: 0; padding-left: 4px; list-style: none; }
 .change__was { color: var(--text-muted); text-decoration-color: oklch(0.8 0.12 25 / 0.8); }
 .change__now { color: var(--text); font-weight: 600; }
+
+/* «Проверить мой ответ»: the whole, then each point with its verdict, why, articles and what to change. */
+.check { display: flex; flex-direction: column; gap: 10px; }
+.check > .status { align-self: flex-start; }
+.check__points { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.check__point { padding: 10px 12px; border-radius: 12px; background: rgb(0 0 0 / 0.18); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 5px; font-size: 13.5px; }
+.check__top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.check__why, .check__fix { margin: 0; line-height: 1.45; }
+.check__why { color: var(--text-muted); }
+.check__fix { color: var(--accent-text); }
+.check__ask { margin: 0; }
