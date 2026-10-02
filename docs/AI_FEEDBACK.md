@@ -24,11 +24,22 @@ Described in `PRIVACY.md`.
 
 ## Reading them
 
+In the app: Настройки → Администратор → «Отзывы об ИИ» (`src/ui/AiMarksAdmin.tsx`) — the corrections, the 👎 or all, newest first.
+It reads `GET /v1/feedback?filter=fixed|down|all` with the admins' key: made on the server by
+`bash /opt/ro-helper/set-key.sh admin` (shown once; a new one replaces it), pasted in the app once and kept on that
+computer only (`ai.admin-token`, not synced). Without `ADMIN_TOKEN` on the server nothing is read.
+
 On the server: `tail -n 50 /opt/ro-helper/feedback.jsonl`, or the 👎 only:
 `grep '"vote":"down"' /opt/ro-helper/feedback.jsonl | tail -n 50`.
 
 Nothing changes by itself. A 👎 with a correction becomes a synonym (`data/<server>/synonyms.json`), a case of the
 exam (`eval/cases.json`) or a fix of the prompt — by hand, then the exam is run before and after
-(`docs/AI_EVALUATION.md`). An admin page to review them is the next step.
+(`docs/AI_EVALUATION.md`).
 
-Tests: `src/ui/AiMarks.test.tsx`, the mark test in `server/server.test.mjs`.
+## The debug view
+
+For the admin (`ai.debug`) each analysis has «Как ИИ пришёл к ответу» (`src/ui/DebugView.tsx`): what the question
+was taken for and why, the scope, the AI's search phrases, every source with its id and kind, what the checks found,
+the status and the number of AI calls.
+
+Tests: `src/ui/AiMarks.test.tsx`, `src/ui/AiAdmin.test.tsx`, the mark tests in `server/server.test.mjs`.

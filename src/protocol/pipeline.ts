@@ -110,6 +110,8 @@ export interface Analysis {
   notes?: string[];
   /** How many AI calls it took — the exam and the debug view count them. */
   aiCalls?: number;
+  /** The search phrases the AI gave, in the words of the base — for the debug view. */
+  terms?: string[];
 }
 
 /** The analysis of a situation in a scope: sources from the base, the AI's answer, the checks, the calculator. */
@@ -166,6 +168,7 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
     calculation,
     scope,
     aiCalls,
+    terms,
     case: {
       facts: answer.facts.length ? answer.facts : (previous?.facts ?? []),
       assumptions: answer.assumptions,

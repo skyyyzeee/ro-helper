@@ -5,6 +5,7 @@ import { STATUS_LABELS } from '../protocol';
 import { PERSPECTIVES, type AiChat, type Perspective } from './ai';
 import { AnswerView } from './AnswerView';
 import type { Vote } from './feedback';
+import { DebugView } from './DebugView';
 import { MarkBar } from './MarkBar';
 import { BackIcon, HistoryIcon, PlusIcon, SparkIcon, WarnIcon } from './icons';
 
@@ -173,11 +174,13 @@ export function AiView({
   onTab: (tab: AiTab) => void;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
+  const topRef = useRef<HTMLElement>(null);
   const last = chat.messages.at(-1);
   // Braces: newer browsers return a promise from scrolling, and an effect may return only its clean-up.
   // An empty chat stays at its top, with the modes in sight; a conversation follows its last message.
   useEffect(() => {
     if (chat.messages.length) void endRef.current?.scrollIntoView?.({ block: 'end' });
+    else void topRef.current?.scrollIntoView?.({ block: 'start' });
   }, [chat.messages.length, last?.pending]);
   const lastQuestion = [...chat.messages].reverse().find((m) => m.role === 'user')?.text;
   const can = useContext(AiAccess);
@@ -191,7 +194,7 @@ export function AiView({
   });
 
   return (
-    <section className="art ai" aria-label="ИИ-разбор">
+    <section ref={topRef} className="art ai" aria-label="ИИ-разбор">
       <AiHead tab="chat" onTab={onTab} onHistory={onHistory} reset={chat.messages.length > 0 ? { label: 'Новый чат', disabled: chat.busy, onClick: chat.clear } : undefined} />
 
       {chat.messages.length === 0 && (
@@ -268,6 +271,7 @@ export function AiView({
                   {chat.messages[index - 1]?.role === 'user' && (
                     <MarkBar send={(vote, correction) => onMark(chat.messages[index - 1].text, message.analysis!, vote, correction)} />
                   )}
+                  {can?.has('ai.debug') && <DebugView analysis={message.analysis} classification={message.classification} />}
                 </>
               ) : (
                 <>
