@@ -17,6 +17,7 @@ import {
   type Offender,
   type Stage,
 } from '../core';
+import { Dropdown } from './Dropdown';
 import { CloseIcon, PinIcon, WarnIcon } from './icons';
 import { JurisdictionPill, Stars } from './lawBits';
 
@@ -169,20 +170,19 @@ function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, fineInp
                   </button>
                 ))}
                 {byStars && partStars && (
-                  <label className="ci__level">
+                  <span className="ci__level">
                     розыск
-                    <select
-                      aria-label={`Уровень розыска для ${label}`}
-                      value={r.item.wantedLevel ?? partStars.max}
-                      onChange={(e) => onUpdate(r.item, { wantedLevel: Number(e.target.value) })}
-                    >
-                      {Array.from({ length: partStars.max - partStars.min + 1 }, (_, k) => partStars.min + k).map((level) => (
-                        <option key={level} value={level}>
-                          {'★'.repeat(level)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                    <Dropdown
+                      variant="pill"
+                      label={`Уровень розыска для ${label}`}
+                      value={String(r.item.wantedLevel ?? partStars.max)}
+                      onChange={(value) => onUpdate(r.item, { wantedLevel: Number(value) })}
+                      options={Array.from({ length: partStars.max - partStars.min + 1 }, (_, k) => partStars.min + k).map((level) => ({
+                        value: String(level),
+                        label: '★'.repeat(level),
+                      }))}
+                    />
+                  </span>
                 )}
                 <span className="sp" />
                 {r.item.part.jurisdiction && <JurisdictionPill jurisdiction={r.item.part.jurisdiction} />}

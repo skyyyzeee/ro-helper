@@ -1,6 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { CheckIcon, ChevronDownIcon } from './icons';
 
+/** The list is never taller than this; a row of it. */
+const MOST = 280;
+const ROW = 34;
+
 export interface DropdownOption {
   value: string;
   label: string;
@@ -10,13 +14,29 @@ export interface DropdownOption {
 
 /**
  * A choice of one from a list, drawn by the assistant itself: the system draws a select's list its own way —
- * grey, square, light — whatever the page asks for. ↑↓ walk the list, Enter picks, Esc closes it.
+ * grey, square, light — whatever the page asks for. ↑↓ walk the list, Enter picks, Esc closes it. As a field
+ * across its row, or — `pill` — small, as wide as its value, its list to the right. The list opens upwards
+ * where there is no room under the button: in the field at the bottom of the AI's chat.
  */
-export function Dropdown({ label, value, options, onChange, className }: { label: string; value: string; options: DropdownOption[]; onChange: (value: string) => void; className?: string }) {
+export function Dropdown({
+  label,
+  value,
+  options,
+  onChange,
+  className,
+  variant,
+}: {
+  label: string;
+  value: string;
+  options: DropdownOption[];
+  onChange: (value: string) => void;
+  className?: string;
+  variant?: 'pill';
+}) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
-  /** As tall as the room under the button allows: what does not fit is scrolled to, not cut off. */
-  const [room, setRoom] = useState<number>();
+  /** As tall as the room under the button allows — or over it: what does not fit is scrolled to, not cut off. */
+  const [place, setPlace] = useState<{ up: boolean; room: number }>();
   const root = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLUListElement>(null);
   const current = Math.max(options.findIndex((o) => o.value === value), 0);
@@ -35,9 +55,14 @@ export function Dropdown({ label, value, options, onChange, className }: { label
     // The nearest block that cuts off or scrolls what is in it: the list must end inside it.
     let frame: HTMLElement | null = root.current.parentElement;
     while (frame && getComputedStyle(frame).overflowY === 'visible') frame = frame.parentElement;
-    const bottom = frame ? frame.getBoundingClientRect().bottom : window.innerHeight;
-    setRoom(Math.max(120, Math.min(280, bottom - root.current.getBoundingClientRect().bottom - 14)));
-  }, [open]);
+    const around = frame ? frame.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+    const box = root.current.getBoundingClientRect();
+    const below = around.bottom - box.bottom - 14;
+    const above = box.top - around.top - 14;
+    const wanted = Math.min(MOST, options.length * ROW + 14);
+    const up = below < wanted && above > below;
+    setPlace({ up, room: Math.max(ROW * 2 + 14, Math.min(MOST, up ? above : below)) });
+  }, [open, options.length]);
 
   // A click anywhere else closes the list.
   useEffect(() => {
@@ -77,7 +102,7 @@ export function Dropdown({ label, value, options, onChange, className }: { label
 
   const chosen = options[current];
   return (
-    <div className={className ? `dd ${className}` : 'dd'} ref={root}>
+    <div className={['dd', variant && `dd--${variant}`, className].filter(Boolean).join(' ')} ref={root}>
       <button
         type="button"
         className={open ? 'dd__button dd__button--open' : 'dd__button'}
@@ -95,7 +120,7 @@ export function Dropdown({ label, value, options, onChange, className }: { label
         <ChevronDownIcon />
       </button>
       {open && (
-        <ul className="dd__list" role="listbox" aria-label={label} ref={list} style={room ? { maxHeight: room } : undefined}>
+        <ul className={place?.up ? 'dd__list dd__list--up' : 'dd__list'} role="listbox" aria-label={label} ref={list} style={place ? { maxHeight: place.room } : undefined}>
           {options.map((option, index) => (
             <li
               key={option.value}

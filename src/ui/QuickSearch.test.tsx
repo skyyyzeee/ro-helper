@@ -130,10 +130,19 @@ describe('the quick search', () => {
   });
 });
 
+/**
+ * The assistant, once it listens to the bar: its key is registered after its settings are read. A request sent
+ * before that would be lost in a test — the bar itself asks again whenever it is shown.
+ */
+async function openApp() {
+  const app = await renderApp();
+  await vi.waitFor(() => expect(app.platform.state.quickHotkey).toBe('Alt+S'), { timeout: 4000 });
+  return app;
+}
+
 describe('the overlay, for the quick search', () => {
   it('registers the quick search key, puts into the calculator what the bar sends — pinned over the game — and tells the bar', async () => {
-    const { platform } = await renderApp();
-    await vi.waitFor(() => expect(platform.state.quickHotkey).toBe('Alt+S'));
+    const { platform } = await openApp();
     act(() => platform.quickRequest({ kind: 'charge', key: 'uk-65#1' }));
     expect(await screen.findByRole('complementary', { name: 'Калькулятор' }, { timeout: 4000 })).toHaveTextContent('ст. 65 ч. 1');
     await vi.waitFor(() => expect(platform.state.pins.flatMap((group) => group.cards).map((card) => card.id)).toContain('calculator'));
@@ -141,7 +150,7 @@ describe('the overlay, for the quick search', () => {
   });
 
   it('empties the calculator when the bar or its card over the game asks, and the card goes (issue #23)', async () => {
-    const { platform } = await renderApp();
+    const { platform } = await openApp();
     const pinned = () => platform.state.pins.some((group) => group.cards.some((card) => card.id === 'calculator'));
     for (const clear of [() => platform.quickRequest({ kind: 'clear-charges' }), () => platform.clearCalculatorFromPin()]) {
       act(() => platform.quickRequest({ kind: 'charge', key: 'uk-65#1' }));
@@ -153,7 +162,7 @@ describe('the overlay, for the quick search', () => {
   });
 
   it('pins the calculator back where the player last left it (issue #22)', async () => {
-    const { platform } = await renderApp();
+    const { platform } = await openApp();
     const calculator = () => platform.state.pins.find((group) => group.cards.some((card) => card.id === 'calculator'));
     act(() => platform.quickRequest({ kind: 'charge', key: 'uk-65#1' }));
     await vi.waitFor(() => expect(calculator()).toBeDefined(), { timeout: 4000 });
@@ -168,7 +177,7 @@ describe('the overlay, for the quick search', () => {
   });
 
   it('keeps the recent articles the bar opened, and clears them when it asks', async () => {
-    const { platform } = await renderApp();
+    const { platform } = await openApp();
     act(() => platform.quickRequest({ kind: 'remember', key: 'uk-66#1' }));
     await vi.waitFor(() => expect(platform.state.quickState?.recent).toEqual(['uk-66#1']), { timeout: 4000 });
     expect(platform.settings.get('recent:tverskoi')).toEqual(['uk-66#1']);
@@ -181,7 +190,7 @@ describe('the overlay, for the quick search', () => {
       throw new Error('offline');
     });
     try {
-      const { platform } = await renderApp();
+      const { platform } = await openApp();
       act(() => platform.quickRequest({ kind: 'ask', question: 'украл телефон у прохожего' }));
       expect(await screen.findByRole('region', { name: 'ИИ-разбор' }, { timeout: 4000 })).toHaveTextContent('украл телефон у прохожего');
       expect(platform.calls.some((call) => call.method === 'showOverlay')).toBe(true);

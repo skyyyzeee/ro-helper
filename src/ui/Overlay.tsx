@@ -61,6 +61,7 @@ import { RECENT_LIMIT, entryPart, favoritesKey, hitKey, recentKey, useHitLookup,
 import { ServerChoice } from './ServerChoice';
 import { SettingsView, type SettingsSection } from './SettingsView';
 import { NoResults } from './NoResults';
+import { Dropdown } from './Dropdown';
 import { aiCapabilitiesOf, isFaction } from '../account/capabilities';
 import { useStats } from './stats';
 import { useAnnouncements } from './announcements';
@@ -1051,11 +1052,18 @@ export function Overlay({
         </button>
       )}
       {aiMode && aiTab === 'chat' && (
-        <select className="search__scope" aria-label="Где искать ответ" title="Где искать ответ" value={chat.choice} onChange={(e) => chat.setChoice(e.target.value as ScopeChoice)}>
-          <option value="auto">Законы и правила</option>
-          <option value="law">Только законы</option>
-          <option value="server_rule">Только правила сервера</option>
-        </select>
+        <Dropdown
+          variant="pill"
+          className="search__scope"
+          label="Где искать ответ"
+          value={chat.choice}
+          onChange={(value) => chat.setChoice(value as ScopeChoice)}
+          options={[
+            { value: 'auto', label: 'Законы и правила' },
+            { value: 'law', label: 'Только законы' },
+            { value: 'server_rule', label: 'Только правила сервера' },
+          ]}
+        />
       )}
       <span className="kbd">{aiMode ? 'Enter' : 'Esc'}</span>
     </div>

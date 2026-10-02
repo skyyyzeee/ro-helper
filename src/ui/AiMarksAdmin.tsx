@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { usePlatform } from '../platform/PlatformContext';
+import { Dropdown } from './Dropdown';
 import { ADMIN_TOKEN_SETTING, readMarks, reviewMark, type KeptMark, type MarkFilter, type Review, type ReviewStatus } from './feedback';
 
 const FILTERS: { id: MarkFilter; label: string }[] = [
@@ -48,14 +49,19 @@ function ApproveForm({ mark, onSave, onCancel }: { mark: KeptMark; onSave: (revi
         <span>Нормальная форма (слова закона)</span>
         <input className="presets__input" value={normalized} onChange={(e) => setNormalized(e.target.value)} placeholder="задержание" />
       </label>
-      <label className="review__field">
+      <div className="review__field">
         <span>Где искать</span>
-        <select className="presets__input" value={scope} onChange={(e) => setScope(e.target.value as typeof scope)}>
-          <option value="">не важно</option>
-          <option value="law">законы</option>
-          <option value="server_rule">правила сервера</option>
-        </select>
-      </label>
+        <Dropdown
+          label="Где искать"
+          value={scope}
+          onChange={(value) => setScope(value as typeof scope)}
+          options={[
+            { value: '', label: 'не важно' },
+            { value: 'law', label: 'законы' },
+            { value: 'server_rule', label: 'правила сервера' },
+          ]}
+        />
+      </div>
       <label className="review__field">
         <span>Что спрашивают</span>
         <input className="presets__input" value={intent} onChange={(e) => setIntent(e.target.value)} placeholder="наказание, задержание, права…" />

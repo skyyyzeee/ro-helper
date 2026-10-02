@@ -46,8 +46,10 @@ describe('the AI as a closed layer over the base', () => {
     const { ask, user, platform, bodies } = await openAi();
     // A small choice inside the field at the bottom, «Законы и правила» first.
     const choice = screen.getByRole('combobox', { name: 'Где искать ответ' });
-    expect(choice).toHaveValue('auto');
-    await user.selectOptions(choice, 'Только правила сервера');
+    expect(choice).toHaveTextContent('Законы и правила');
+    await user.click(choice);
+    await user.click(screen.getByRole('option', { name: 'Только правила сервера' }));
+    expect(choice).toHaveTextContent('Только правила сервера');
     expect(platform.settings.get(SCOPE_SETTING)).toBe('server_rule');
 
     await ask('оскорбил родных игрока в голосовом чате');
