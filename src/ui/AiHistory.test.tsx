@@ -9,8 +9,9 @@ const GEMINI = { [AI_PROVIDER_SETTING]: 'gemini', [AI_KEY_SETTING]: 'test-key' }
 const saved = (platform: { settings: Map<string, unknown> }) => platform.settings.get(historyKey('tverskoi')) as StoredConversation[];
 const cases = () => screen.getByRole('region', { name: 'Дела' });
 
-async function asked(settings: Record<string, unknown> = {}) {
-  const app = await renderApp({ settings: { ...GEMINI, ...settings } });
+/** Cases are the forces' (ADR 0003): the player is an officer of the МВД unless a test says otherwise. */
+async function asked(settings: Record<string, unknown> = {}, organization = 'mvd') {
+  const app = await renderApp({ settings: { ...GEMINI, ...settings }, profile: { organization } });
   await app.user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
   return app;
 }
@@ -94,9 +95,31 @@ describe('cases: the analyses kept (ADR 0003)', () => {
   });
 
   it('offers questions to try the first time, asked with a press', async () => {
-    await asked();
+    await asked({}, 'none');
     const examples = screen.getByLabelText('Примеры вопросов');
     await within(examples).findByRole('button', { name: /У меня украли телефон из кармана/ });
+  });
+});
+
+describe('a plain history for the others: no cases', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn(fakeGeminiFetch()));
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('a citizen keeps their analyses as a history to open or delete — no names, pins, archive, laws of then', async () => {
+    const { platform, user } = await asked({}, 'none');
+    await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'у меня украли телефон{Enter}');
+    await screen.findByText(/Это кража/);
+    await user.click(screen.getByRole('button', { name: 'Новый чат' }));
+    await user.click(screen.getByRole('button', { name: 'История' }));
+    const history = screen.getByRole('region', { name: 'История' });
+    expect(within(history).queryByRole('button', { name: /^Закрепить/ })).not.toBeInTheDocument();
+    expect(within(history).queryByLabelText(/^Действия с делом/)).not.toBeInTheDocument();
+    expect(within(history).queryByRole('searchbox', { name: 'Поиск по делам' })).not.toBeInTheDocument();
+    expect(within(history).getByRole('button', { name: /^у меня украли телефон/ })).not.toHaveTextContent('база');
+    await user.click(within(history).getByRole('button', { name: 'Удалить «у меня украли телефон»' }));
+    expect(saved(platform)).toEqual([]);
   });
 });
 

@@ -63,3 +63,14 @@ describe('what the AI may do for a player (P0b)', () => {
     expect(ai(MVD)).not.toContain('ai.debug');
   });
 });
+
+describe('cases are the forces\' (ADR 0003)', () => {
+  it('an organisation marked as a force keeps cases; another of the state, the crime or none do not', () => {
+    const police: Organization = { id: 'mvd', name: 'МВД', kind: 'state', force: true, documents: [] };
+    const hospital: Organization = { id: 'hospital', name: 'Больница', kind: 'state', documents: [] };
+    expect(aiCapabilitiesOf({ admin: false, organization: police }).has('ai.cases')).toBe(true);
+    for (const organization of [hospital, { id: 'opg', name: 'ОПГ', kind: 'crime' as const, documents: [] }, undefined]) {
+      expect(aiCapabilitiesOf({ admin: false, organization }).has('ai.cases')).toBe(false);
+    }
+  });
+});

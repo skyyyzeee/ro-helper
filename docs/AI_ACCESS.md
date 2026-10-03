@@ -23,6 +23,9 @@ profile (`aiProfileOf` in `src/account/capabilities.ts`):
   is not taken, even when asked for in code.
 - `ai.practice` — the trainer: learning the laws by heart is the service's job; hidden and refused otherwise.
 - `ai.official_documents` — an officer's documents (рапорт, протокол задержания); the others see a citizen's only.
+- `ai.cases` — «Дела» (ADR 0003): names, pins, archive, the laws of then, «было → стало», copy as text. Only the
+  forces of the state — organisations marked `"force": true` in `data/<server>/organizations.json` (МВД, ГИБДД, ФСБ,
+  ФСО, Армия, СК, Прокуратура, Правительство). The others keep a plain «История»: open or delete.
 - `ai.analysis`, `ai.server_rules`, `ai.documents` are everyone's; they are named so the
   interface asks for them, and a change of who gets them is one place.
 - `ai.debug` — the admin's «Как ИИ пришёл к ответу» under each analysis (`DebugView.tsx`, docs/AI_FEEDBACK.md).

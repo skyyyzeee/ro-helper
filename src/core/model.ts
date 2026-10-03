@@ -123,6 +123,9 @@ export interface Organization {
   name: string;
   /** Which group it is chosen from: a state service or a criminal one; «Без организации» is in neither. */
   kind?: 'state' | 'crime';
+  /** A force of the state — police, security, army, investigation, prosecution, the government with its guard: its
+   * officers keep their analyses as cases (ADR 0003). The others keep a plain history. */
+  force?: true;
   /** Documents that rank first for its members; ids of documents the pack may not have yet. */
   documents: string[];
 }

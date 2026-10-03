@@ -40,7 +40,7 @@ export interface CaseActions {
   onCopy: (id: string) => Promise<void>;
 }
 
-function CaseRow({ saved, current, actions }: { saved: StoredConversation; current: boolean; actions: CaseActions }) {
+function CaseRow({ saved, current, actions, full }: { saved: StoredConversation; current: boolean; actions: CaseActions; full: boolean }) {
   const [renaming, setRenaming] = useState(false);
   const [title, setTitle] = useState(saved.title);
   const [copied, setCopied] = useState(false);
@@ -72,10 +72,15 @@ function CaseRow({ saved, current, actions }: { saved: StoredConversation; curre
         <span className="history__title">{saved.title || 'Без вопроса'}</span>
         <span className="history__meta">
           {when(saved.updated)} · {questions(saved)}
-          {saved.snapshot ? ` · база ${saved.snapshot.label}` : ''}
+          {full && saved.snapshot ? ` · база ${saved.snapshot.label}` : ''}
         </span>
       </button>
-      {!saved.archived && (
+      {!full && (
+        <button type="button" className="x" aria-label={`Удалить «${saved.title}»`} title="Удалить из истории" onClick={() => actions.onForget(saved.id)}>
+          <CloseIcon size={14} />
+        </button>
+      )}
+      {full && !saved.archived && (
         <button
           type="button"
           className={saved.pinned ? 'x case__pin case__pin--on' : 'x case__pin'}
@@ -87,6 +92,7 @@ function CaseRow({ saved, current, actions }: { saved: StoredConversation; curre
           <PinIcon size={15} />
         </button>
       )}
+      {full && (
       <details className="case__more">
         <summary aria-label={`Действия с делом «${saved.title}»`} title="Ещё">
           ⋯
@@ -109,6 +115,7 @@ function CaseRow({ saved, current, actions }: { saved: StoredConversation; curre
           </button>
         </div>
       </details>
+      )}
     </li>
   );
 }
@@ -117,33 +124,47 @@ function CaseRow({ saved, current, actions }: { saved: StoredConversation; curre
  * The cases on this server (ADR 0003): what was analysed, kept on this computer — pinned on top, the archive apart,
  * found by words. Open one to read it or go on; rename, pin, copy, archive or delete it.
  */
-export function CasesView({ cases, current, serverName, onClose, ...actions }: { cases: StoredConversation[]; current: string; serverName: string; onClose: () => void } & CaseActions) {
+export function CasesView({
+  cases,
+  current,
+  serverName,
+  full,
+  onClose,
+  ...actions
+}: {
+  cases: StoredConversation[];
+  current: string;
+  serverName: string;
+  /** Cases (`ai.cases`, the forces of the state): pinned, archived, named, copied. Otherwise a plain history. */
+  full: boolean;
+  onClose: () => void;
+} & CaseActions) {
   const [query, setQuery] = useState('');
   const [showArchive, setShowArchive] = useState(false);
   const words = query.toLowerCase().replace(/ё/g, 'е').split(/\s+/).filter(Boolean);
   const found = useMemo(() => cases.filter((c) => matches(c, words)), [cases, words.join(' ')]); // eslint-disable-line react-hooks/exhaustive-deps
-  const pinned = found.filter((c) => c.pinned && !c.archived);
-  const open = found.filter((c) => !c.pinned && !c.archived);
-  const archived = found.filter((c) => c.archived);
+  const pinned = full ? found.filter((c) => c.pinned && !c.archived) : [];
+  const open = full ? found.filter((c) => !c.pinned && !c.archived) : found;
+  const archived = full ? found.filter((c) => c.archived) : [];
   const list = (items: StoredConversation[], label: string) => (
     <ul className="history__list" aria-label={label}>
       {items.map((saved) => (
-        <CaseRow key={saved.id} saved={saved} current={saved.id === current} actions={actions} />
+        <CaseRow key={saved.id} saved={saved} current={saved.id === current} actions={actions} full={full} />
       ))}
     </ul>
   );
 
   return (
-    <section className="history" aria-label="Дела">
+    <section className="history" aria-label={full ? 'Дела' : 'История'}>
       <div className="history__head">
-        <h2 className="history__heading">Дела</h2>
+        <h2 className="history__heading">{full ? 'Дела' : 'История'}</h2>
         <span className="sp" />
         {cases.length > 0 && (
           <button className="link-btn" type="button" onClick={() => actions.onForget()}>
             Удалить все
           </button>
         )}
-        <button className="x" type="button" aria-label="Закрыть дела" title="Закрыть" onClick={onClose}>
+        <button className="x" type="button" aria-label={full ? 'Закрыть дела' : 'Закрыть историю'} title="Закрыть" onClick={onClose}>
           <CloseIcon size={16} />
         </button>
       </div>
@@ -151,14 +172,14 @@ export function CasesView({ cases, current, serverName, onClose, ...actions }: {
         <div className="empty">Здесь появятся ваши разборы на сервере {serverName}</div>
       ) : (
         <>
-          <input className="presets__input case__search" type="search" aria-label="Поиск по делам" placeholder="Поиск по делам" value={query} onChange={(e) => setQuery(e.target.value)} />
+          {full && <input className="presets__input case__search" type="search" aria-label="Поиск по делам" placeholder="Поиск по делам" value={query} onChange={(e) => setQuery(e.target.value)} />}
           {pinned.length > 0 && (
             <>
               <h3 className="case__group">Закреплённые</h3>
               {list(pinned, 'Закреплённые дела')}
             </>
           )}
-          {open.length > 0 && list(open, 'Дела')}
+          {open.length > 0 && list(open, full ? 'Дела' : 'История')}
           {!found.length && <p className="set__hint">Ничего не нашлось.</p>}
           {archived.length > 0 && (
             <>
@@ -170,7 +191,9 @@ export function CasesView({ cases, current, serverName, onClose, ...actions }: {
           )}
         </>
       )}
-      <p className="set__hint">Дела хранятся только на этом компьютере: закреплённые — пока не удалите, остальные — последние 30 на каждом сервере.</p>
+      <p className="set__hint">
+        {full ? 'Дела хранятся только на этом компьютере: закреплённые — пока не удалите, остальные — последние 30 на каждом сервере.' : 'История хранится только на этом компьютере — последние 30 разборов на каждом сервере.'}
+      </p>
     </section>
   );
 }
