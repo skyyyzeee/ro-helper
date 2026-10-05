@@ -76,6 +76,39 @@ describe('memos (ticket 17)', () => {
     expect(await within(page).findByRole('article', { name: 'Памятка от Skyze' })).toHaveTextContent('Завтра в 18:00 общее построение.');
   });
 
+  it('lets the leader lay one out like a document, or paste one from Google Docs, and shows it laid out', async () => {
+    const { accounts, user } = await renderApp({ account: LEADER, profile: MVD, server: faction });
+    await user.click(within(rail()).getByRole('button', { name: 'Памятки' }));
+    const page = await screen.findByRole('group', { name: 'Памятки' });
+    const form = await within(page).findByRole('form', { name: 'Новая памятка' });
+    const field = within(form).getByRole('textbox', { name: 'Текст памятки' });
+    const bar = within(form).getByRole('toolbar', { name: 'Оформление памятки' });
+
+    await user.type(field, 'Рейд');
+    await user.click(within(bar).getByRole('button', { name: 'Заголовок' }));
+    expect(field).toHaveValue('# Рейд');
+    await user.type(field, '{End}{Enter}');
+    await user.click(within(bar).getByRole('button', { name: 'Жирный' }));
+    expect(field).toHaveValue('# Рейд\n**текст**');
+
+    const PASTED = '# Рейд\n{red}Сбор{/} в **20:00**\n- рация';
+    await user.clear(field);
+    await user.click(field);
+    await user.paste({
+      getData: (type: string) =>
+        type === 'text/html' ? '<b style="font-weight:normal"><h1>Рейд</h1><p><span style="color:#ff0000">Сбор</span> в <span style="font-weight:700">20:00</span></p><ul><li>рация</li></ul></b>' : 'Рейд Сбор в 20:00 рация',
+    } as unknown as DataTransfer);
+    expect(field).toHaveValue(PASTED);
+    const preview = within(form).getByRole('region', { name: 'Как увидят бойцы' });
+    expect(within(preview).getByRole('heading', { name: 'Рейд' })).toBeInTheDocument();
+    expect(within(preview).getByText('20:00').tagName).toBe('STRONG');
+
+    await user.click(within(form).getByRole('button', { name: 'Опубликовать' }));
+    expect(accounts.server.memos[0].text).toBe(PASTED);
+    const card = await within(page).findByRole('article', { name: 'Памятка от Skyze' });
+    expect(within(card).getByRole('listitem')).toHaveTextContent('рация');
+  });
+
   it('shows a player of the faction the latest one on the home screen, and tells a new one over the game', async () => {
     const { platform } = await renderApp({
       account: PLAYER,
