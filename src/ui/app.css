@@ -5081,3 +5081,154 @@ select option {
 .check__why { color: var(--text-muted); }
 .check__fix { color: var(--accent-text); }
 .check__ask { margin: 0; }
+
+/* «Отдел»: the topics of the law as tiles, the charter as cards. */
+.dept {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 12px;
+}
+
+.dept__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dept__head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dept__sub {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.dept__topics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.dept__topic {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dept__topic:hover,
+.dept__topic:focus-visible {
+  background: var(--surface-hover);
+}
+
+.dept__topic span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.dept__topic small {
+  font-size: 11px;
+  color: var(--accent-text);
+}
+
+.dept__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dept__card {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.dept__card h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.dept__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dept__body p,
+.dept__body ul {
+  margin: 0;
+}
+
+.dept__ranks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: rank;
+}
+
+.dept__ranks li {
+  counter-increment: rank;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 12px;
+}
+
+.dept__ranks li::before {
+  content: counter(rank);
+  margin-right: 5px;
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.dept__refs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.dept__stale {
+  font-size: 12px;
+  color: var(--warn-text);
+}
+
+.dept__note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+@media (max-width: 520px) {
+  .dept__card {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
