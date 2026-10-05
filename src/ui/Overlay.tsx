@@ -26,6 +26,7 @@ import type { AppearanceControl } from './appearance';
 import { ArticleView } from './ArticleView';
 import { CalculatorPanel, type ChargeFields, type ChargePatch, type CopyState } from './CalculatorPanel';
 import { ChangeDiff, ChangesView, type ChangeRef } from './ChangesView';
+import { DepartmentView } from './DepartmentView';
 import { DocumentsMenu } from './DocumentsMenu';
 import { memoPlain } from './memoText';
 import { caseText, transcribe, useAiChat } from './ai';
@@ -167,6 +168,8 @@ export function Overlay({
   const [settingsOpen, setSettingsOpen] = useState(false);
   /** The faction's memos (ticket 17): a page of their own, from the side column. */
   const [memosOpen, setMemosOpen] = useState(false);
+  /** «Отдел»: what the organisation does by the law, a topic of it open or the whole page. */
+  const [department, setDepartment] = useState<{ topic: string | null } | null>(null);
   const memos = useMemos();
   /** The part of the settings the side column asked for: the account from the profile, what is pinned from the pin. */
   const [settingsFocus, setSettingsFocus] = useState<{ section: SettingsSection; at: number }>();
@@ -828,6 +831,7 @@ export function Overlay({
     setSwitchOpen(false);
     setOpen(null);
     setMenuOpen(false);
+    setDepartment(null);
     setSettingsOpen(false);
     setChangesView(null);
     setDiff(null);
@@ -856,6 +860,8 @@ export function Overlay({
     else if (settingsOpen) setSettingsOpen(false);
     else if (memosOpen) setMemosOpen(false);
     else if (open) setOpen(null);
+    else if (department?.topic) setDepartment({ topic: null });
+    else if (department) setDepartment(null);
     else if (historyOpen) setHistoryOpen(false);
     else if (aiOpen) setAiOpen(false);
     else if (changesView) setChangesView(null);
@@ -895,7 +901,7 @@ export function Overlay({
   const contentRef = useRef<HTMLDivElement>(null);
   const listScroll = useRef(0);
   /** The side menu's sections: each closes what is on screen and opens its own. */
-  const openSection = (section: 'search' | 'documents' | 'switch' | 'pinned' | 'settings' | 'profile' | 'memos') => {
+  const openSection = (section: 'search' | 'documents' | 'switch' | 'pinned' | 'settings' | 'profile' | 'memos' | 'department') => {
     setWhatsNew(null);
     setOrganizationOpen(false);
     setServerOpen(false);
@@ -907,25 +913,32 @@ export function Overlay({
     setSwitchOpen(section === 'switch');
     setSettingsOpen(section === 'pinned' || section === 'settings' || section === 'profile');
     setMemosOpen(section === 'memos');
+    setDepartment(section === 'department' ? { topic: null } : null);
     // The profile is the account at the top of the settings; the pin, what is pinned in them.
     setSettingsFocus(section === 'profile' ? { section: 'account', at: Date.now() } : section === 'pinned' ? { section: 'pinned', at: Date.now() } : undefined);
     searchRef.current?.focus();
   };
 
   /** The settings are a page of their own (direction C): their name in the header, no search. */
-  const inner = settingsOpen ? 'Настройки' : memosOpen ? 'Памятки' : null;
+  const inner = settingsOpen ? 'Настройки' : memosOpen ? 'Памятки' : department && !open ? 'Отдел' : null;
   // Back from them the search is there again, with the focus.
   useEffect(() => {
     if (!inner) searchRef.current?.focus();
   }, [inner]);
 
-  const onList = !whatsNew && !settingsOpen && !memosOpen && !switchOpen && !organizationOpen && !serverOpen && !notesFor && !privacyOpen && !diff && !open && !changesView && !aiOpen;
+  const onList = !whatsNew && !settingsOpen && !memosOpen && !department && !switchOpen && !organizationOpen && !serverOpen && !notesFor && !privacyOpen && !diff && !open && !changesView && !aiOpen;
   const wasOnList = useRef(onList);
   useLayoutEffect(() => {
     const content = contentRef.current;
     if (content && onList !== wasOnList.current) content.scrollTop = onList ? listScroll.current : 0;
     wasOnList.current = onList;
   }, [onList]);
+
+  // The department's page, its topic and an article opened from them are screens of their own: each starts at its top.
+  useLayoutEffect(() => {
+    if (department && contentRef.current) contentRef.current.scrollTop = 0;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [department?.topic, open]);
 
   /** The article's part as a hit of its own, for the calculator. */
   const partHit = (hit: SearchHit, part?: Part): SearchHit => ({ article: hit.article, document: hit.document, part: part ?? entryPart(hit.article) });
@@ -1110,7 +1123,7 @@ export function Overlay({
             <ServerIcon id={pack.server.id} size={24} />
           </button>
         }
-        current={settingsOpen ? 'settings' : memosOpen ? 'memos' : menuOpen ? 'documents' : switchOpen ? undefined : aiOpen ? 'ai' : 'search'}
+        current={settingsOpen ? 'settings' : memosOpen ? 'memos' : department ? 'department' : menuOpen ? 'documents' : switchOpen ? undefined : aiOpen ? 'ai' : 'search'}
         items={[
           { id: 'search', label: 'Поиск', icon: <SearchIcon />, shortcut: 1, onSelect: () => openSection('search') },
           {
@@ -1139,6 +1152,14 @@ export function Overlay({
             icon: <SparkIcon />,
             shortcut: 7,
             onSelect: () => (aiOpen ? openSection('search') : openAi()),
+          },
+          {
+            id: 'department',
+            label: 'Отдел',
+            ariaLabel: 'Отдел: порядок действий по закону',
+            icon: <OrganizationIcon id={organization?.id ?? 'none'} size={20} />,
+            expanded: !!department,
+            onSelect: () => openSection(department ? 'search' : 'department'),
           },
           {
             id: 'memos',
@@ -1396,7 +1417,7 @@ export function Overlay({
             article={open.article}
             document={open.document}
             focusPart={open.part}
-            backLabel={aiOpen ? 'ИИ-разбор' : changesView ? 'Что изменилось' : home ? 'Избранное и недавние' : view === 'contents' ? 'Оглавление' : 'Результаты'}
+            backLabel={aiOpen ? 'ИИ-разбор' : department ? 'Отдел' : changesView ? 'Что изменилось' : home ? 'Избранное и недавние' : view === 'contents' ? 'Оглавление' : 'Результаты'}
             changed={(() => {
               const recentChange = changeOf(open);
               return recentChange && recentChange.change.kind === 'changed'
@@ -1417,6 +1438,25 @@ export function Overlay({
             onFavorite={() => toggleFavorite(open)}
             pinned={pinnedArticle}
             onPin={() => togglePin(articlePinCard(open, rules))}
+          />
+        ) : department ? (
+          <DepartmentView
+            pack={pack}
+            organization={organization}
+            topic={department.topic}
+            onTopic={(topic) => setDepartment({ topic })}
+            row={(hit) => (
+              <ResultRow
+                hit={hit}
+                selected={false}
+                changed={!!changeOf(hit)}
+                onOpen={() => openHit(hit)}
+                calculator={addable(hit) ? { added: inCalculator(hit), onToggle: () => toggleCharge(hit) } : undefined}
+              />
+            )}
+            onOrganization={() => setOrganizationOpen(true)}
+            onOpen={openHit}
+            onCopy={(text) => void platform.writeClipboard(text)}
           />
         ) : aiOpen && aiTab === 'lawyer' ? (
           <LawyerView
