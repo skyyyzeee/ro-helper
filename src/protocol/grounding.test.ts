@@ -129,6 +129,8 @@ describe('the classifier: what is no question of the base never reaches the AI',
     ['привет', 'greeting'],
     ['спасибо!', 'greeting'],
     ['ывапролдж ааааааа', 'nonsense'],
+    // Not one vowel: a slip of the keys, not a short name of the base (a 👎 of 2026-10-03).
+    ['двкр', 'nonsense'],
     ['какая завтра погода в Москве?', 'out_of_scope'],
     ['курс доллара сегодня', 'out_of_scope'],
     ['По реальному УК РФ это же кража?', 'out_of_scope'],
