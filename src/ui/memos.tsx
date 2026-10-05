@@ -6,6 +6,7 @@ import { usePlatform } from '../platform/PlatformContext';
 import { packFor } from '../data';
 import { factionName } from './AdminView';
 import { PROFILE_KEY, type Profile } from './profile';
+import { memoPlain } from './memoText';
 import { useRoles } from './roles';
 
 /** The memos already told over the game, by id: a memo is told once. */
@@ -77,10 +78,11 @@ export function MemosProvider({ children }: { children: ReactNode }) {
     const fresh = seen ? running.filter((memo) => !seen.includes(memo.id) && memo.authorId !== account.id) : [];
     if (fresh.length) {
       const newest = fresh[0];
+      const plain = memoPlain(newest.text);
       void platform.showToast({
         id: `memo-${newest.id}`,
         title: `Памятка лидера ${factionName(newest.server, newest.organization)}`,
-        text: newest.text.length > 160 ? `${newest.text.slice(0, 157)}…` : newest.text,
+        text: plain.length > 160 ? `${plain.slice(0, 157)}…` : plain,
       });
     }
     await platform.writeSetting(SEEN_KEY, [...new Set([...(seen ?? []), ...running.map((memo) => memo.id)])].slice(-200));

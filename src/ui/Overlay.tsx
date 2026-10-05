@@ -27,6 +27,7 @@ import { ArticleView } from './ArticleView';
 import { CalculatorPanel, type ChargeFields, type ChargePatch, type CopyState } from './CalculatorPanel';
 import { ChangeDiff, ChangesView, type ChangeRef } from './ChangesView';
 import { DocumentsMenu } from './DocumentsMenu';
+import { memoPlain } from './memoText';
 import { caseText, transcribe, useAiChat } from './ai';
 import { sendMark } from './feedback';
 import type { ScopeChoice } from '../protocol';
@@ -1507,7 +1508,7 @@ export function Overlay({
                 <b>
                   Памятка лидера {memos.place ? factionName(memos.place.server, memos.place.organization) : ''} · {memoDay(memos.active[0].createdAt)}
                 </b>
-                <span className="memo__text">{memos.active[0].text}</span>
+                <span className="memo__text">{memoPlain(memos.active[0].text)}</span>
               </button>
             )}
             {announcements.current && (

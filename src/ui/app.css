@@ -5081,3 +5081,177 @@ select option {
 .check__why { color: var(--text-muted); }
 .check__fix { color: var(--accent-text); }
 .check__ask { margin: 0; }
+
+/* A memo laid out (memoText.tsx): the leader's headings, lists, colours and tables. */
+.memo__rich {
+  overflow-wrap: anywhere;
+}
+
+.mt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mt__p {
+  margin: 0;
+}
+
+.mt__center {
+  text-align: center;
+}
+
+.mt__h1 {
+  margin: 2px 0 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mt__h2 {
+  margin: 2px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.mt__list {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.mt__hr {
+  width: 100%;
+  margin: 2px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.mt__table {
+  overflow-x: auto;
+}
+
+.mt__table table {
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.mt__table th,
+.mt__table td {
+  padding: 4px 8px;
+  border: 1px solid var(--glass-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.mt__table th {
+  font-weight: 600;
+  background: var(--surface);
+}
+
+.mt--red { color: oklch(0.75 0.17 25); }
+.mt--orange { color: oklch(0.8 0.15 60); }
+.mt--yellow { color: oklch(0.9 0.15 100); }
+.mt--green { color: oklch(0.8 0.15 150); }
+.mt--blue { color: oklch(0.76 0.12 245); }
+.mt--purple { color: oklch(0.75 0.14 310); }
+.mt-bg--red { background: oklch(0.75 0.17 25); }
+.mt-bg--orange { background: oklch(0.8 0.15 60); }
+.mt-bg--yellow { background: oklch(0.9 0.15 100); }
+.mt-bg--green { background: oklch(0.8 0.15 150); }
+.mt-bg--blue { background: oklch(0.76 0.12 245); }
+.mt-bg--purple { background: oklch(0.75 0.14 310); }
+
+.memo-ed {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.memo-ed__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+}
+
+.memo-ed__tool {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.memo-ed__tool:hover,
+.memo-ed__tool:focus-visible {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.memo-ed__b { font-weight: 800; }
+.memo-ed__i { font-style: italic; }
+.memo-ed__u { text-decoration: underline; }
+.memo-ed__s { text-decoration: line-through; }
+.memo-ed__color { text-decoration: underline 3px oklch(0.75 0.17 25); }
+
+.memo-ed__sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: var(--line);
+}
+
+.memo-ed__colors {
+  position: relative;
+  display: inline-flex;
+}
+
+.memo-ed__swatches {
+  position: absolute;
+  top: 32px;
+  left: 0;
+  z-index: 5;
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: var(--toast-bg);
+}
+
+.memo-ed__swatch {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.memo-ed__swatch:hover,
+.memo-ed__swatch:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+
+.memo-ed__foot {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.memo-ed__count--full {
+  color: var(--warn-text);
+}
+
+.memo-ed__cut {
+  margin: 0;
+  font-size: 12px;
+  color: var(--warn-text);
+}

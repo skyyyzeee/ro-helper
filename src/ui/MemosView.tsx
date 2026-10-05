@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { Memo } from '../account/roles';
 import { factionName, serverName } from './AdminView';
 import { formatDate } from './lawBits';
+import { MemoEditor } from './MemoEditor';
+import { MemoText } from './memoText';
 import { MEMO_DURATIONS, useMemos } from './memos';
 
 /** «сегодня», «вчера» or the date. */
@@ -25,7 +27,9 @@ function MemoCard({ memo, onRemove }: { memo: Memo; onRemove?: () => void }) {
           </button>
         )}
       </div>
-      <p className="memo__text">{memo.text}</p>
+      <div className="memo__rich">
+        <MemoText text={memo.text} />
+      </div>
     </article>
   );
 }
@@ -72,15 +76,7 @@ export function MemosView({ signedIn }: { signedIn: boolean }) {
             }).finally(() => setSending(false));
           }}
         >
-          <textarea
-            className="memos__input"
-            aria-label="Текст памятки"
-            placeholder="Например: с 20:00 рейд на склад в Южном порту. Сбор у ГУВД, форма — ОМОН."
-            maxLength={1000}
-            rows={3}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
+          <MemoEditor value={text} onChange={setText} placeholder="Например: с 20:00 рейд на склад в Южном порту. Сбор у ГУВД, форма — ОМОН." />
           <div className="set__row">
             <span className="set__label">Показывать</span>
             <div className="seg seg--sm" role="radiogroup" aria-label="Сколько показывать">
