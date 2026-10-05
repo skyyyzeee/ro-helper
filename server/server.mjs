@@ -29,8 +29,8 @@ const CONFIG = {
   /** Everyone together may spend this much a day; past it, the AI rests until midnight (Moscow). */
   budgetPerDay: num('BUDGET_RUB_PER_DAY', 20),
   /** Per computer and per address, a day. */
-  questionsPerDevice: num('QUESTIONS_PER_DEVICE', 20),
-  requestsPerIp: num('REQUESTS_PER_IP', 80),
+  questionsPerDevice: num('QUESTIONS_PER_DEVICE', 50),
+  requestsPerIp: num('REQUESTS_PER_IP', 200),
   maxOutputTokens: num('MAX_OUTPUT_TOKENS', 900),
   stateFile: env('STATE_FILE', './state.json'),
   /**
