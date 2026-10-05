@@ -72,11 +72,26 @@ function synonymWords(pack: ServerPack): RegExp | null {
 const synonymsCache = new WeakMap<ServerPack, RegExp | null>();
 
 /** Letters in the text: gibberish and keyboard mashing have few words of any language. */
-function looksLikeNonsense(text: string): boolean {
+function looksLikeNonsense(pack: ServerPack, text: string): boolean {
   const words = text.match(/[а-яa-z]{2,}/g) ?? [];
   if (!words.length) return !/\d/.test(text);
-  // A long run of consonants or one letter repeated: «ываываыва», «ааааа».
-  return words.every((w) => /(.)\1{3,}/.test(w) || /[бвгджзйклмнпрстфхцчшщ]{6,}/.test(w));
+  // A long run of consonants or one letter repeated: «ываываыва», «ааааа»; or not one vowel, «двкр», unless the
+  // word is a short name the base knows — «мвд», «дпс», a document's or an organisation's.
+  return words.every(
+    (w) => /(.)\1{3,}/.test(w) || /[бвгджзйклмнпрстфхцчшщ]{6,}/.test(w) || (!/[аеёиоуыэюяaeiouy]/.test(w) && !shortName(pack, w)),
+  );
+}
+
+const shortNamesCache = new WeakMap<ServerPack, Set<string>>();
+
+/** A word the law or the server names something by: «мвд», «пдд», «ук», a document's alias, an organisation. */
+function shortName(pack: ServerPack, word: string): boolean {
+  if (LAW_WORDS.test(word) || RULE_WORDS.test(word)) return true;
+  if (!shortNamesCache.has(pack)) {
+    const names = [...pack.documents.flatMap((d) => [d.short, ...d.aliases]), ...pack.organizations.map((o) => o.name)];
+    shortNamesCache.set(pack, new Set(names.flatMap((name) => name.toLowerCase().split(/[^а-яёa-z]+/)).filter(Boolean)));
+  }
+  return shortNamesCache.get(pack)!.has(word);
 }
 
 /**
@@ -85,7 +100,7 @@ function looksLikeNonsense(text: string): boolean {
  */
 export function classify(pack: ServerPack, raw: string, choice: ScopeChoice = 'auto'): Classification {
   const text = normal(raw);
-  if (!text || looksLikeNonsense(text)) return { type: 'nonsense', why: 'не похоже на вопрос' };
+  if (!text || looksLikeNonsense(pack, text)) return { type: 'nonsense', why: 'не похоже на вопрос' };
   if (GREETING.test(text)) return { type: 'greeting', why: 'приветствие или вопрос об ассистенте' };
   if (ARTICLE_LOOKUP.test(text)) return { type: 'article_lookup', why: 'номер статьи — ответит поиск' };
   for (const { re, why } of OUT_OF_SCOPE) if (re.test(text)) return { type: 'out_of_scope', why };
