@@ -42,7 +42,7 @@ import { useDetentionReview } from './detention';
 import { useTrainer } from './trainer';
 import { useDocumentWriter } from './documents';
 import { CasesView } from './CasesView';
-import { BackIcon, CalculatorIcon, ChevronDownIcon, CloseIcon, DocumentsIcon, NewsIcon, MemoIcon, MicIcon, OrganizationIcon, PinIcon, ProfileIcon, SearchIcon, ServerIcon, SettingsIcon, SparkIcon } from './icons';
+import { BackIcon, BookIcon, CalculatorIcon, ChevronDownIcon, CloseIcon, DocumentsIcon, NewsIcon, MemoIcon, MicIcon, OrganizationIcon, PinIcon, ProfileIcon, SearchIcon, ServerIcon, SettingsIcon, SparkIcon } from './icons';
 import { SideRail } from './SideRail';
 import { canRecord, startRecording, type Recording } from './voice';
 import { DEFAULT_OPACITY, DEFAULT_QUICK_HOTKEY, DEFAULT_VOICE_HOTKEY, OPACITY_KEY, QUICK_HOTKEY_KEY, VOICE_HOTKEY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
@@ -67,6 +67,7 @@ import { useStats } from './stats';
 import { useAnnouncements } from './announcements';
 import { useMemos } from './memos';
 import { MemosView, memoDay } from './MemosView';
+import { WikiView } from './WikiView';
 import { factionName } from './AdminView';
 import { Avatar } from './ProfileView';
 import { useAccount } from '../account/AccountContext';
@@ -166,6 +167,8 @@ export function Overlay({
   const [settingsOpen, setSettingsOpen] = useState(false);
   /** The faction's memos (ticket 17): a page of their own, from the side column. */
   const [memosOpen, setMemosOpen] = useState(false);
+  // The wiki of Russia Online: a page of its own, like the memos.
+  const [wikiOpen, setWikiOpen] = useState(false);
   const memos = useMemos();
   /** The part of the settings the side column asked for: the account from the profile, what is pinned from the pin. */
   const [settingsFocus, setSettingsFocus] = useState<{ section: SettingsSection; at: number }>();
@@ -731,7 +734,7 @@ export function Overlay({
       return;
     }
     // «Что изменилось» and «было → стало» are read with the mouse; the list keys would move a hidden selection.
-    if (whatsNew || settingsOpen || memosOpen || switchOpen || organizationOpen || serverOpen || notesFor || privacyOpen || diff || (changesView && !open)) return;
+    if (whatsNew || settingsOpen || memosOpen || wikiOpen || switchOpen || organizationOpen || serverOpen || notesFor || privacyOpen || diff || (changesView && !open)) return;
     if (open) {
       // Enter in an open article puts its part into the calculator, or takes it out.
       if (e.key === 'Enter' && addable(open)) {
@@ -854,6 +857,7 @@ export function Overlay({
     else if (changesView && settingsOpen) setChangesView(null);
     else if (settingsOpen) setSettingsOpen(false);
     else if (memosOpen) setMemosOpen(false);
+    else if (wikiOpen) setWikiOpen(false);
     else if (open) setOpen(null);
     else if (historyOpen) setHistoryOpen(false);
     else if (aiOpen) setAiOpen(false);
@@ -894,7 +898,7 @@ export function Overlay({
   const contentRef = useRef<HTMLDivElement>(null);
   const listScroll = useRef(0);
   /** The side menu's sections: each closes what is on screen and opens its own. */
-  const openSection = (section: 'search' | 'documents' | 'switch' | 'pinned' | 'settings' | 'profile' | 'memos') => {
+  const openSection = (section: 'search' | 'documents' | 'switch' | 'pinned' | 'settings' | 'profile' | 'memos' | 'wiki') => {
     setWhatsNew(null);
     setOrganizationOpen(false);
     setServerOpen(false);
@@ -906,19 +910,20 @@ export function Overlay({
     setSwitchOpen(section === 'switch');
     setSettingsOpen(section === 'pinned' || section === 'settings' || section === 'profile');
     setMemosOpen(section === 'memos');
+    setWikiOpen(section === 'wiki');
     // The profile is the account at the top of the settings; the pin, what is pinned in them.
     setSettingsFocus(section === 'profile' ? { section: 'account', at: Date.now() } : section === 'pinned' ? { section: 'pinned', at: Date.now() } : undefined);
     searchRef.current?.focus();
   };
 
   /** The settings are a page of their own (direction C): their name in the header, no search. */
-  const inner = settingsOpen ? 'Настройки' : memosOpen ? 'Памятки' : null;
+  const inner = settingsOpen ? 'Настройки' : memosOpen ? 'Памятки' : wikiOpen ? 'Вики' : null;
   // Back from them the search is there again, with the focus.
   useEffect(() => {
     if (!inner) searchRef.current?.focus();
   }, [inner]);
 
-  const onList = !whatsNew && !settingsOpen && !memosOpen && !switchOpen && !organizationOpen && !serverOpen && !notesFor && !privacyOpen && !diff && !open && !changesView && !aiOpen;
+  const onList = !whatsNew && !settingsOpen && !memosOpen && !wikiOpen && !switchOpen && !organizationOpen && !serverOpen && !notesFor && !privacyOpen && !diff && !open && !changesView && !aiOpen;
   const wasOnList = useRef(onList);
   useLayoutEffect(() => {
     const content = contentRef.current;
@@ -1109,7 +1114,7 @@ export function Overlay({
             <ServerIcon id={pack.server.id} size={24} />
           </button>
         }
-        current={settingsOpen ? 'settings' : memosOpen ? 'memos' : menuOpen ? 'documents' : switchOpen ? undefined : aiOpen ? 'ai' : 'search'}
+        current={settingsOpen ? 'settings' : memosOpen ? 'memos' : wikiOpen ? 'wiki' : menuOpen ? 'documents' : switchOpen ? undefined : aiOpen ? 'ai' : 'search'}
         items={[
           { id: 'search', label: 'Поиск', icon: <SearchIcon />, shortcut: 1, onSelect: () => openSection('search') },
           {
@@ -1138,6 +1143,14 @@ export function Overlay({
             icon: <SparkIcon />,
             shortcut: 7,
             onSelect: () => (aiOpen ? openSection('search') : openAi()),
+          },
+          {
+            id: 'wiki',
+            label: 'Вики',
+            ariaLabel: 'Вики Russia Online',
+            icon: <BookIcon />,
+            expanded: wikiOpen,
+            onSelect: () => openSection(wikiOpen ? 'search' : 'wiki'),
           },
           {
             id: 'memos',
@@ -1351,6 +1364,8 @@ export function Overlay({
                 : undefined
             }
           />
+        ) : wikiOpen ? (
+          <WikiView />
         ) : memosOpen ? (
           <div className="settings settings--single">
             <MemosView signedIn={!!account} />
