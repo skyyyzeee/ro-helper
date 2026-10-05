@@ -11,6 +11,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "import": "tsx src/importer/cli.ts",
+    "wiki:import": "tsx scripts/wiki-import.ts",
+    "wiki:build": "tsx scripts/wiki-build.ts",
     "tauri": "tauri",
     "eval": "tsx scripts/ai-eval.ts",
     "eval:ai": "tsx scripts/ai-eval.ts --group traps",

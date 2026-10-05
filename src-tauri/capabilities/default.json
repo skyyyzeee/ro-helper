@@ -28,6 +28,7 @@
       "identifier": "opener:allow-open-url",
       "allow": [
         { "url": "https://forum.russia.online/*" },
+        { "url": "https://wiki.russia.online/*" },
         { "url": "https://github.com/skyyyzeee/*" },
         { "url": "https://discord.gg/*" },
         { "url": "https://docs.github.com/*" },

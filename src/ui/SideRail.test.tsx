@@ -9,7 +9,7 @@ describe('the side column', () => {
     await renderApp();
     const buttons = within(rail()).getAllByRole('button');
     expect(buttons[0]).toHaveAccessibleName('Сменить сервер или организацию');
-    expect(buttons.slice(1).map((b) => b.getAttribute('aria-label'))).toEqual(['Поиск', 'Все документы', 'Калькулятор', 'Закреплённое', 'ИИ-разбор ситуации', 'Отдел: порядок действий по закону', 'Памятки', 'Настройки', 'Профиль']);
+    expect(buttons.slice(1).map((b) => b.getAttribute('aria-label'))).toEqual(['Поиск', 'Все документы', 'Калькулятор', 'Закреплённое', 'ИИ-разбор ситуации', 'Отдел: порядок действий по закону', 'Вики Russia Online', 'Памятки', 'Настройки', 'Профиль']);
     expect(within(rail()).getByRole('button', { name: 'Поиск' })).toHaveAttribute('aria-current', 'page');
   });
 
