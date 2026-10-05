@@ -1,8 +1,9 @@
 import { useRef, useState, type ClipboardEvent } from 'react';
+import { MEMO_TEXT_MAX } from '../account/roles';
 import { MEMO_COLORS, MEMO_COLOR_NAMES, MemoText, memoFromHtml, type MemoColor } from './memoText';
 
-/** As much as the memos table holds (supabase: memos.text, 1–1000 characters), markup included. */
-export const MEMO_MAX = 1000;
+/** As much as the memos table holds, markup included. */
+export const MEMO_MAX = MEMO_TEXT_MAX;
 
 type Change = (text: string, start: number, end: number) => { text: string; start: number; end: number };
 

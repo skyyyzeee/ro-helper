@@ -1,6 +1,6 @@
 import { createClient, type SupportedStorage, type User } from '@supabase/supabase-js';
 import type { PlatformAdapter } from '../platform/types';
-import type { LeaderRequest, PlayerRecord, RoleName, RolesApi } from './roles';
+import { MEMO_TEXT_MAX, type LeaderRequest, type PlayerRecord, type RoleName, type RolesApi } from './roles';
 import { ACCOUNT_KEY, SignInError, type Account, type Accounts, type Provider } from './types';
 
 /** The helper's Supabase project. The publishable key is meant for the app itself: the database's rules guard the data. */
@@ -246,7 +246,7 @@ export function createSupabaseAccounts(platform: PlatformAdapter, options: Supab
           organization: memo.organization,
           author: await me(),
           author_name: memo.authorName.slice(0, 80),
-          text: memo.text.trim().slice(0, 1000),
+          text: memo.text.trim().slice(0, MEMO_TEXT_MAX),
           until: memo.until,
         });
         fail(error);

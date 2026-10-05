@@ -32,6 +32,9 @@ export interface PlayerRecord extends PublicCard {
   roles: Role[];
 }
 
+/** As long as a memo may be, markup included: what the memos table holds (supabase: memos.text, 1–3000 characters). */
+export const MEMO_TEXT_MAX = 3000;
+
 /** A memo of a faction (ticket 17): written by its leader or a deputy, read by its players until it runs out. */
 export interface Memo {
   id: number;
