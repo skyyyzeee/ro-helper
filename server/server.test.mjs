@@ -58,7 +58,7 @@ async function aiServer(env) {
   const port = 20000 + Math.floor(Math.random() * 20000);
   const dir = mkdtempSync(join(tmpdir(), 'ai-'));
   const child = spawn(process.execPath, [join(import.meta.dirname, 'server.mjs')], {
-    env: { ...process.env, PORT: String(port), STATE_FILE: join(dir, 'state.json'), FEEDBACK_FILE: join(dir, 'feedback.jsonl'), REVIEWS_FILE: join(dir, 'reviews.json'), ...env },
+    env: { ...process.env, PORT: String(port), STATE_FILE: join(dir, 'state.json'), FEEDBACK_FILE: join(dir, 'feedback.jsonl'), REVIEWS_FILE: join(dir, 'reviews.json'), CACHE_FILE: join(dir, 'cache.json'), ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   await new Promise((resolve, reject) => {
@@ -66,11 +66,11 @@ async function aiServer(env) {
     child.on('exit', (code) => reject(new Error(`server exited ${code}`)));
   });
   let n = 0;
-  const ask = async (text, { device = 'device-0001' } = {}) => {
+  const ask = async (text, { device = 'device-0001', cache } = {}) => {
     const response = await fetch(`http://127.0.0.1:${port}/v1/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Device': device, 'X-Forwarded-For': `10.0.0.${++n % 250}` },
-      body: JSON.stringify({ system: 's', messages: [{ role: 'user', content: text }], json: true }),
+      body: JSON.stringify({ system: 's', messages: [{ role: 'user', content: text }], json: true, ...(cache ? { cache: true, question: cache } : {}) }),
     });
     return { status: response.status, body: await response.json() };
   };
@@ -99,7 +99,7 @@ test('GigaChat answers first; the paid API only what it declines — Sber’s fi
     assert.equal((await ai.ask('сломай формат')).body.text, '{"from": "paid"}');
     assert.equal((await ai.ask('лимит кончился')).body.text, '{"from": "paid"}');
     const { answered, spent } = await ai.status();
-    assert.deepEqual(answered, { gigachat: 1, paid: 3, why: { blacklist: 1, format: 1, http: 1 } });
+    assert.deepEqual(answered, { gigachat: 1, paid: 3, cached: 0, why: { blacklist: 1, format: 1, http: 1 } });
     // Only the paid answers cost anything; the key was taken once, «Basic » and the line break dropped.
     assert.ok(spent > 0);
     assert.equal(giga.seen.tokens, 1);
@@ -236,6 +236,49 @@ test('the admins review a mark: approved with its normal form, it joins the dict
     assert.deepEqual((await get('/v1/feedback?filter=raw', admin)).marks, []);
     assert.deepEqual((await get('/v1/examples', admin)).examples.map((e) => [e.question, e.expected]), [['чела приняли у отдела, что ему будет', ['УПК 94']]]);
     assert.equal((await fetch(`${ai.base}/v1/examples`)).status, 403);
+  } finally {
+    ai.stop();
+    giga.server.close();
+  }
+});
+
+test('a first question asked again is answered from the cache: no AI call, off anyone’s limit; a 👎 drops it', async () => {
+  const giga = await fakeGigachat();
+  const ai = await aiServer({ ...gigaEnv(giga), QUESTIONS_PER_DEVICE: '2' });
+  try {
+    const first = await ai.ask('украл телефон', { cache: 'Украл телефон?' });
+    assert.equal(first.body.text, '{"from": "gigachat"}');
+    assert.equal(first.body.cached, undefined);
+    // Another computer, the same question: the same answer, and the AI is not asked.
+    const again = await ai.ask('украл телефон', { cache: 'украл  телефон?', device: 'device-0002' });
+    assert.deepEqual(again.body, { text: '{"from": "gigachat"}', cached: true });
+    assert.equal(giga.seen.chats, 1);
+    // Off no one's limit: the first computer still has its second question.
+    assert.equal((await ai.ask('другое')).status, 200);
+    assert.equal((await ai.ask('украл телефон', { cache: 'Украл телефон?' })).body.cached, true);
+    // Not marked for the cache (a follow-up): asked of the AI, and nothing kept.
+    await ai.ask('украл телефон', { device: 'device-0003' });
+    assert.equal(giga.seen.chats, 3);
+    const { answered, cache } = await ai.status();
+    assert.equal(answered.cached, 2);
+    assert.equal(cache, 1);
+    // A 👎 to it: the next one goes to the AI again.
+    assert.equal((await ai.mark({ vote: 'down', question: 'Украл телефон?' })).status, 200);
+    assert.equal((await ai.ask('украл телефон', { cache: 'Украл телефон?', device: 'device-0004' })).body.cached, undefined);
+    assert.equal(giga.seen.chats, 4);
+  } finally {
+    ai.stop();
+    giga.server.close();
+  }
+});
+
+test('a broken JSON answer is not kept', async () => {
+  const giga = await fakeGigachat();
+  const ai = await aiServer({ ...gigaEnv(giga), AI_BASE_URL: 'http://127.0.0.1:9', AI_API_KEY: '' });
+  try {
+    await ai.ask('сломай формат', { cache: 'сломай' });
+    await ai.ask('сломай формат', { cache: 'сломай' });
+    assert.equal((await ai.status()).cache, 0);
   } finally {
     ai.stop();
     giga.server.close();

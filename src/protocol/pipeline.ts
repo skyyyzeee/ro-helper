@@ -46,9 +46,9 @@ export interface Terms {
  * The situation in the words of the base, for the search: phrases only — they are searched like the player's own
  * words and can bring up nothing the base does not have. Nothing when the AI could not say.
  */
-export async function searchTerms(provider: AiProvider, situation: string, scope: Scope = 'law', askIntent = false): Promise<Terms> {
+export async function searchTerms(provider: AiProvider, situation: string, scope: Scope = 'law', askIntent = false, cache?: string): Promise<Terms> {
   try {
-    const text = await provider.complete({ system: termsPrompt(scope, askIntent), turns: [{ role: 'user', parts: [{ text: situation }] }], json: true, counts: false });
+    const text = await provider.complete({ system: termsPrompt(scope, askIntent), turns: [{ role: 'user', parts: [{ text: situation }] }], json: true, counts: false, ...(cache ? { cache } : {}) });
     const parsed: unknown = JSON.parse(text.trim().replace(/^```(?:json)?\s*|```\s*$/g, ''));
     // A service in JSON-object mode (the AI server) cannot answer with a bare array: it wraps it, {"phrases": […]}.
     const object = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null;
@@ -127,12 +127,13 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
   let terms = input.terms;
   if (!terms) {
     aiCalls += 1;
-    terms = (await searchTerms(provider, searchText, scope)).phrases;
+    terms = (await searchTerms(provider, searchText, scope, false, previous ? undefined : message)).phrases;
   }
   const search = (text: string) => findForSituation(inScope, text, { boostDocuments: organization?.documents, lawTerms: terms, limit: SOURCES });
   const sources = labelSources(previous ? followUpHits(inScope, previous, search(message), search(searchText)) : search(message));
   const context = buildContext({ pack, organization, message, sources, perspective, previous });
-  const request = { system: analysisPrompt(pack, depth, scope), turns: [{ role: 'user' as const, parts: [{ text: context }] }], json: true, think: depth === 'full' };
+  // A first question may be answered again to anyone who asks it with the same laws (ADR 0007); a follow-up is its own case.
+  const request = { system: analysisPrompt(pack, depth, scope), turns: [{ role: 'user' as const, parts: [{ text: context }] }], json: true, think: depth === 'full', ...(previous ? {} : { cache: message }) };
 
   let answer: LegalAnswer;
   try {
@@ -284,7 +285,7 @@ export async function answerQuestion(input: QuestionInput): Promise<Outcome> {
   let aiCalls = 0;
   if (classification.type === 'unclear') {
     aiCalls += 1;
-    const asked = await searchTerms(provider, message, 'law', true);
+    const asked = await searchTerms(provider, message, 'law', true, previous ? undefined : message);
     terms = [...(terms ?? []), ...asked.phrases];
     const intent = asked.intent;
     if (intent === 'out_of_scope') return system('out_of_scope', { type: 'out_of_scope', why: 'так решил ИИ' }, {}, aiCalls);

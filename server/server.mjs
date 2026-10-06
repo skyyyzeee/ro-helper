@@ -6,7 +6,7 @@
 // not answer. It keeps the spending in check: a few questions a day per computer and per address, and a daily
 // budget in rubles for everyone together.
 // Plain Node (18+ — Ubuntu 24.04 ships 18: no global `crypto`, import what is used), no packages: `node server.mjs`, behind Caddy for HTTPS (see README.md).
-import { randomUUID, timingSafeEqual } from 'node:crypto';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import { appendFileSync, readFileSync, writeFileSync, renameSync, existsSync, statSync } from 'node:fs';
 
@@ -43,6 +43,14 @@ const CONFIG = {
   feedbackMaxBytes: num('FEEDBACK_MAX_MB', 50) * 1024 * 1024,
   /** The admins' reviews of the marks: approved, rejected, to check again — with the normal form they gave. */
   reviewsFile: env('REVIEWS_FILE', './reviews.json'),
+  /**
+   * Answers already given (ADR 0007): the same question with the same sources is answered again from here, with no
+   * AI call and nothing off the player's limit. Kept this many days (0 — no cache), at most so many, no id of
+   * anyone; a 👎 to an answer drops it.
+   */
+  cacheFile: env('CACHE_FILE', './cache.json'),
+  cacheDays: num('CACHE_DAYS', 7),
+  cacheMax: num('CACHE_MAX', 5000),
   /** The admins' token for reading the marks from the app (bash set-key.sh admin); none — no reading. */
   adminToken: env('ADMIN_TOKEN', '').trim(),
   /**
@@ -72,7 +80,7 @@ const today = () => new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 1
 // ——— What was spent today, kept on disk so a restart does not reset the limits ———
 
 /** A fresh day: nothing spent, nothing asked; `answered` — who answered, and why the paid API had to; `marks` — marks taken. */
-const freshDay = () => ({ day: today(), spent: 0, devices: {}, ips: {}, answered: { gigachat: 0, paid: 0, why: {} }, marks: 0 });
+const freshDay = () => ({ day: today(), spent: 0, devices: {}, ips: {}, answered: { gigachat: 0, paid: 0, cached: 0, why: {} }, marks: 0 });
 let state = freshDay();
 if (existsSync(CONFIG.stateFile)) {
   try {
@@ -277,6 +285,68 @@ async function chat(request) {
   return answer;
 }
 
+// ——— Answers already given (ADR 0007) ———
+
+/** A question as it is matched: the 👎 to an answer finds the answer by it. */
+const normalQuestion = (text) => (typeof text === 'string' ? text.replace(/\s+/g, ' ').trim().toLowerCase().replace(/ё/g, 'е').slice(0, 600) : '');
+
+/** The request as the AI gets it: the same key, the same answer. The laws' text is in it — new laws, a new key. */
+const cacheKey = ({ system, messages, json, think }) => createHash('sha256').update(JSON.stringify([system, messages, json, think])).digest('hex');
+
+/** key → { text, at, question }, oldest first. */
+const cache = new Map();
+if (existsSync(CONFIG.cacheFile)) {
+  try {
+    for (const [key, entry] of JSON.parse(readFileSync(CONFIG.cacheFile, 'utf8'))) cache.set(key, entry);
+  } catch {
+    // A broken file: the cache starts over.
+  }
+}
+let cacheDirty = false;
+setInterval(() => {
+  if (!cacheDirty) return;
+  cacheDirty = false;
+  writeFileSync(`${CONFIG.cacheFile}.part`, JSON.stringify([...cache]), { mode: 0o600 });
+  renameSync(`${CONFIG.cacheFile}.part`, CONFIG.cacheFile);
+}, 15000).unref();
+
+function cached(key) {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.at > CONFIG.cacheDays * 86_400_000) {
+    cache.delete(key);
+    cacheDirty = true;
+    return null;
+  }
+  return entry;
+}
+
+function rememberAnswer(key, text, question) {
+  if (CONFIG.cacheDays <= 0 || !question) return;
+  cache.delete(key);
+  cache.set(key, { text, at: Date.now(), question });
+  while (cache.size > CONFIG.cacheMax) cache.delete(cache.keys().next().value);
+  cacheDirty = true;
+}
+
+/** A 👎: every answer kept for that question is dropped — the next one is asked of the AI again. */
+function forgetAnswers(question) {
+  const q = normalQuestion(question);
+  for (const [key, entry] of cache) if (entry.question === q) cache.delete(key);
+  cacheDirty = true;
+}
+
+/** An answer worth keeping: a JSON answer that is JSON at all — a broken one would only be retried again and again. */
+function keepable(text, json) {
+  if (!json) return true;
+  try {
+    JSON.parse(text.trim().replace(/^```(?:json)?\s*|```\s*$/g, ''));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ——— The players' marks ———
 
 const clip = (value, max) => (typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, max) : '');
@@ -436,7 +506,7 @@ const server = createServer(async (request, response) => {
   }
   if (request.method === 'GET' && request.url === '/v1/status') {
     rollDay();
-    return send(response, 200, { ok: true, open: state.spent < CONFIG.budgetPerDay, answered: state.answered, spent: Math.round(state.spent * 100) / 100, marks: state.marks ?? 0 });
+    return send(response, 200, { ok: true, open: state.spent < CONFIG.budgetPerDay, answered: state.answered, spent: Math.round(state.spent * 100) / 100, marks: state.marks ?? 0, cache: cache.size });
   }
   if (request.method === 'GET' && request.url.startsWith('/v1/feedback')) {
     if (!isAdmin(request)) return send(response, 403, { error: 'Нужен ключ администратора.' });
@@ -492,6 +562,7 @@ const server = createServer(async (request, response) => {
     if (why) return send(response, 429, { error: why });
     try {
       keepMark(device, mark);
+      if (mark.vote === 'down') forgetAnswers(mark.question);
       return send(response, 200, { ok: true });
     } catch (error) {
       console.error(new Date().toISOString(), 'feedback:', error);
@@ -502,14 +573,29 @@ const server = createServer(async (request, response) => {
   try {
     // Every step of one question — the law terms, then the answer — is one call; only the answer counts as a question.
     const kind = input.counts === false ? 'step' : 'question';
-    const why = refusal(device, ip, kind);
-    if (why) return send(response, 429, { error: why });
     const messages = Array.isArray(input.messages)
       ? input.messages.filter((m) => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string').slice(-14)
       : [];
     if (!messages.length || typeof input.system !== 'string') return send(response, 400, { error: 'Пустой вопрос.' });
-    const { text, rubles } = await chat({ system: input.system.slice(0, 8000), messages, json: !!input.json, think: input.think === true });
+    const request = { system: input.system.slice(0, 8000), messages, json: !!input.json, think: input.think === true };
+    // A question the app says may be answered again (a first question, not a follow-up): from the cache when it was
+    // asked before — free, and off no one's limit; only the address's limit stands, against a flood.
+    const question = input.cache === true ? normalQuestion(input.question) : '';
+    const key = question ? cacheKey(request) : '';
+    const hit = key ? cached(key) : null;
+    if (hit) {
+      rollDay();
+      if ((state.ips[ip] ?? 0) >= CONFIG.requestsPerIp) return send(response, 429, { error: 'Слишком много вопросов с вашего адреса за сегодня. Попробуйте завтра.' });
+      state.ips[ip] = (state.ips[ip] ?? 0) + 1;
+      state.answered.cached = (state.answered.cached ?? 0) + 1;
+      dirty = true;
+      return send(response, 200, { text: hit.text, cached: true });
+    }
+    const why = refusal(device, ip, kind);
+    if (why) return send(response, 429, { error: why });
+    const { text, rubles } = await chat(request);
     count(device, ip, kind, rubles);
+    if (key && keepable(text, request.json)) rememberAnswer(key, text, question);
     return send(response, 200, { text });
   } catch (error) {
     if (!(error instanceof UpstreamError)) console.error(new Date().toISOString(), error);
