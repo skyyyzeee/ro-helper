@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef } from 'react';
 import type { Capability } from '../account/capabilities';
-import { articleLabel, articleTitle, type SearchHit, type Stage } from '../core';
+import { articleLabel, articleTitle, formatPunishment, type SearchHit, type Stage } from '../core';
 import { STATUS_LABELS, diffCases, type Analysis } from '../protocol';
 import { PERSPECTIVES, type AiChat, type Perspective } from './ai';
 import { AnswerView, calculationLine } from './AnswerView';
@@ -305,7 +305,16 @@ export function AiView({
                 <>
                   <p className="ai__line">{message.text}</p>
                   {/* The app's own answer: what the search found for an article number, or «закон или правила?». */}
-                  {message.system?.hits && message.system.hits.length > 0 && (
+                  {message.system?.reason === 'punishment' && message.system.hits ? (
+                    <Punishments
+                      hits={message.system.hits}
+                      calculable={calculable}
+                      onOpen={onOpen}
+                      onCharge={onCharge}
+                      onAi={message.system.question ? () => void chat.send(message.system!.question!, undefined, { direct: false }) : undefined}
+                      busy={chat.busy}
+                    />
+                  ) : message.system?.hits && message.system.hits.length > 0 && (
                     <div className="ai__chips">
                       {message.system.hits.map((hit) => (
                         <button key={hit.article.id} type="button" className="ai__chip" onClick={() => onOpen(hit)}>
@@ -404,5 +413,48 @@ export function AiView({
         <div ref={endRef} />
       </div>
     </section>
+  );
+}
+
+/** The parts of an article that carry a punishment, each with its own: «ч. 2 — …» when there are several. */
+function punishmentLines(hit: SearchHit): string[] {
+  const parts = hit.article.parts.filter((part) => part.punishment);
+  if (parts.length === 1) return [formatPunishment(parts[0].punishment!)];
+  const shown = parts.slice(0, 4).map((part) => `${part.number ? `ч. ${part.number}` : 'Часть'} — ${formatPunishment(part.punishment!)}`);
+  return parts.length > shown.length ? [...shown, `и ещё ${parts.length - shown.length}`] : shown;
+}
+
+/**
+ * «Что будет за кражу?», answered by the base alone: the articles that name the deed and what each is punished
+ * with, to open or put into the calculator; and the AI, when the circumstances matter.
+ */
+function Punishments({ hits, calculable, onOpen, onCharge, onAi, busy }: { hits: SearchHit[]; calculable: string[]; onOpen: (hit: SearchHit) => void; onCharge: (hits: SearchHit[]) => void; onAi?: () => void; busy: boolean }) {
+  return (
+    <div className="ai__direct">
+      {hits.map((hit) => (
+        <div key={hit.article.id} className="ai__direct-row">
+          <button type="button" className="ai__direct-open" onClick={() => onOpen(hit)}>
+            <b>
+              {shortLabel(hit)} {articleTitle(hit.article)}
+            </b>
+            {punishmentLines(hit).map((line) => (
+              <span key={line} className="pen">
+                {line}
+              </span>
+            ))}
+          </button>
+          {calculable.includes(hit.document.id) && (
+            <button type="button" className="ai__chip" onClick={() => onCharge([hit])}>
+              <PlusIcon size={13} /> В калькулятор
+            </button>
+          )}
+        </div>
+      ))}
+      {onAi && (
+        <button type="button" className="ai__chip ai__chip--more" disabled={busy} onClick={onAi}>
+          <SparkIcon size={14} /> Разобрать с ИИ
+        </button>
+      )}
+    </div>
   );
 }

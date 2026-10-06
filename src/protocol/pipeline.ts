@@ -8,6 +8,7 @@ import { findForSituation, searchArticles, sourceLabel, type Charge, type Detent
 import { AnswerFormatError, parseAnswer, type LegalAnswer } from './answer';
 import { aliasScope, matchAliases, type QueryAlias } from './aliases';
 import { AI_INTENTS, classify, type Classification, type QuestionType } from './classify';
+import { directPunishment } from './direct';
 import { buildContext, type CaseState, type Perspective } from './context';
 import { analysisPrompt, type Depth } from './prompt';
 import { AiError, type AiProvider } from './provider';
@@ -182,7 +183,7 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
 }
 
 /** Why the app answered itself, with no AI analysis. */
-export type SystemReason = 'greeting' | 'nonsense' | 'out_of_scope' | 'real_law' | 'article_lookup' | 'clarify_scope';
+export type SystemReason = 'greeting' | 'nonsense' | 'out_of_scope' | 'real_law' | 'article_lookup' | 'clarify_scope' | 'punishment';
 
 /** An answer: the AI's analysis, or the app's own word. */
 export type Outcome =
@@ -192,7 +193,7 @@ export type Outcome =
       reason: SystemReason;
       text: string;
       classification: Classification;
-      /** For an article number: what the search found, to open. */
+      /** For an article number, or «что будет за кражу?»: the articles the base found, to open. */
       hits?: SearchHit[];
       /** For «закон или правила?»: the answers as buttons. */
       options?: { label: string; choice: ScopeChoice }[];
@@ -206,6 +207,7 @@ const SYSTEM_TEXT: Record<SystemReason, string> = {
   real_law: 'Я не использую реальные законы РФ — только законы и правила вашего сервера, загруженные в Кремлёвский Ассистент.',
   article_lookup: 'Это номер статьи — вот что нашлось в базе. Откройте нужную.',
   clarify_scope: 'Уточните, вас интересует закон или правила сервера?',
+  punishment: 'Вот что грозит по законам вашего сервера — ответ из базы, без ИИ и без лимита. Если важны обстоятельства (повторно, группой, при сотруднике), разберите ситуацию с ИИ.',
 };
 
 const MISMATCH_NOTE: Record<Scope, string> = {
@@ -224,6 +226,8 @@ export interface QuestionInput extends Omit<AnalyseInput, 'scope' | 'terms'> {
    * loader, it is asked only for a question that goes on to the search — the app's own answers need nothing.
    */
   aliases?: readonly QueryAlias[] | (() => Promise<readonly QueryAlias[]>);
+  /** False to have the AI weigh even «что будет за кражу?», which the base answers alone by default. */
+  direct?: boolean;
 }
 
 /**
@@ -259,6 +263,11 @@ export async function answerQuestion(input: QuestionInput): Promise<Outcome> {
       .map(({ document, article }) => ({ document, article }))
       .slice(0, 3);
     return system('article_lookup', classification, { hits });
+  }
+  // «Что будет за кражу?»: the article that names the deed, with its punishment — the base's answer, no AI call.
+  if (!previous && choice !== 'server_rule' && input.direct !== false) {
+    const direct = directPunishment(pack, message, input.organization?.documents);
+    if (direct) return system('punishment', { ...classification, why: `наказание за «${direct.subject}» — ответила база, без ИИ` }, { hits: direct.hits });
   }
 
   // An approved expression of the players: its normal form is the search phrases — no AI call for them — and its

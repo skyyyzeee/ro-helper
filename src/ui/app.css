@@ -5733,3 +5733,13 @@ select option {
 /* «Практика» before a round: the choice of laws and «Начать» under the intro, centred with it. */
 .quiz__intro .quiz__docs { width: 100%; max-width: 460px; }
 .quiz__intro .quiz__start { align-self: center; min-width: 160px; margin-top: 4px; }
+/* «Что будет за кражу?» answered by the base: each article with its punishment, a click away from the article. */
+.ai__direct { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 8px; }
+.ai__direct-row { display: flex; align-items: center; gap: 8px; width: 100%; }
+.ai__direct-open {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px; flex: 1; min-width: 0;
+  padding: 10px 12px; border-radius: var(--radius-card); border: 1px solid var(--line); background: var(--surface);
+  text-align: left; font-size: 13.5px; line-height: 1.4;
+}
+.ai__direct-open:hover { background: var(--surface-hover); }
+.ai__direct-open .pen { white-space: normal; }

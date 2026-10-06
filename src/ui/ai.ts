@@ -172,6 +172,8 @@ export interface SendOptions {
   choice?: ScopeChoice;
   /** The depth of this one answer: «Подробнее» asks the full analysis of the same case. */
   depth?: Depth;
+  /** False: the AI weighs it even when the base could answer alone («Разобрать с ИИ»). */
+  direct?: boolean;
 }
 
 export interface AiChat {
@@ -329,17 +331,19 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
         return done;
       };
       try {
-        const connection = await connect(platform);
+        // Connected only when the AI is asked: the app's own answers («что будет за кражу?») need no AI at all.
+        let connecting: Promise<AiService> | null = null;
+        const service: AiService = { complete: async (request) => (await (connecting ??= connect(platform).then(serviceFor))).complete(request) };
         if (mine) {
           setAnswering(false);
           const lastQuestion = [...current.current].reverse().find((m) => m.role === 'user')?.text ?? '';
-          const check = await checkMyAnswer({ provider: serviceFor(connection), pack, organization, situation: lastQuestion, answer: question, previous });
+          const check = await checkMyAnswer({ provider: service, pack, organization, situation: lastQuestion, answer: question, previous });
           return finish({ text: answerCheckText(check), answerCheck: check });
         }
         const side = PERSPECTIVES.find((p) => p.id === perspective)?.label;
         const outcome = await answerQuestion({
           aliases: () => (aliases.current ??= loadAliases(platform)),
-          provider: serviceFor(connection),
+          provider: service,
           pack,
           organization,
           message: perspective && previous ? `Разбери это же дело с точки зрения: ${side}.` : question,
@@ -347,6 +351,7 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
           perspective,
           depth: options.brief ? 'quick' : (options.depth ?? depth),
           choice: options.choice ?? choice,
+          ...(options.direct === false ? { direct: false } : {}),
         });
         if (outcome.kind === 'system') {
           return finish({
@@ -354,7 +359,8 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
             system: {
               reason: outcome.reason,
               ...(outcome.hits ? { hits: outcome.hits } : {}),
-              ...(outcome.options ? { options: outcome.options, question } : {}),
+              ...(outcome.options || outcome.reason === 'punishment' ? { question } : {}),
+              ...(outcome.options ? { options: outcome.options } : {}),
             },
           });
         }
