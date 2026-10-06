@@ -17,7 +17,8 @@
     "eval": "tsx scripts/ai-eval.ts",
     "eval:ai": "tsx scripts/ai-eval.ts --group traps",
     "test:server": "node --test server/server.test.mjs",
-    "charters:check": "tsx scripts/charters-check.ts"
+    "charters:check": "tsx scripts/charters-check.ts",
+    "laws:check": "node scripts/laws-check.mjs"
   },
   "dependencies": {
     "@fontsource/onest": "^5.3.1",
