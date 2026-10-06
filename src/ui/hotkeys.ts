@@ -21,9 +21,9 @@ const subscribe = (listener: () => void) => {
 
 /**
  * Follows a key being registered: taken by another program, it is remembered as such and told over the game —
- * `whatFails` is what will not work, «Быстрый поиск по ней не откроется».
+ * `whatFails` is what will not work, «Быстрый поиск по ней не откроется»; null keeps it to the settings.
  */
-export function trackHotkey(platform: PlatformAdapter, name: string, accelerator: string, registration: Promise<void>, whatFails: string): void {
+export function trackHotkey(platform: PlatformAdapter, name: string, accelerator: string, registration: Promise<void>, whatFails: string | null): void {
   const attempt = (attempts.get(name) ?? 0) + 1;
   attempts.set(name, attempt);
   registration.then(
@@ -34,6 +34,8 @@ export function trackHotkey(platform: PlatformAdapter, name: string, accelerator
       if (attempts.get(name) !== attempt) return;
       taken.set(name, accelerator);
       changed();
+      // Without words for it, the place that set the key says it itself: nine keys are not nine notices.
+      if (whatFails === null) return;
       // Said once for a key: the registration is tried again whenever another key changes.
       if (told.has(`${name} ${accelerator}`)) return;
       told.add(`${name} ${accelerator}`);
@@ -55,4 +57,15 @@ export function forgetHotkey(name: string): void {
 /** The key of this name that another program holds, if the last try to register it failed. */
 export function useTakenHotkey(name: string | undefined): string | undefined {
   return useSyncExternalStore(subscribe, () => (name ? taken.get(name) : undefined));
+}
+
+/** The keys whose names start so that another program holds: the phrases' nine are «phrase-1»…«phrase-9». */
+export function useTakenHotkeys(prefix: string): string[] {
+  const joined = useSyncExternalStore(subscribe, () =>
+    [...taken]
+      .filter(([name]) => name.startsWith(prefix))
+      .map(([, accelerator]) => accelerator)
+      .join('\n'),
+  );
+  return joined ? joined.split('\n') : [];
 }

@@ -14,7 +14,7 @@ import { AI_CUSTOM_SETTING, AI_KEY_SETTING, AI_KEY_URL, AI_PROVIDER_SETTING, AI_
 import type { CustomAi } from '../protocol';
 import { AdminIcon, BookIcon, CloseIcon, DiscordIcon, GitHubIcon, HelpIcon, InfoIcon, KeyboardIcon, PaletteIcon, PinIcon, SparkIcon, TuneIcon, WarnIcon } from './icons';
 import { formatDate } from './lawBits';
-import { DEFAULT_QUICK_HOTKEY, DEFAULT_VOICE_HOTKEY, MAX_OPACITY, MIN_OPACITY, STREAMER_KEY } from './overlaySettings';
+import { DEFAULT_QUICK_HOTKEY, DEFAULT_TIMER_HOTKEY, DEFAULT_VOICE_HOTKEY, MAX_OPACITY, MIN_OPACITY, STREAMER_KEY } from './overlaySettings';
 import { captureHotkey, hasModifier, hotkeyKeys } from './profile';
 import type { Laws, LawsStatus } from './laws';
 import type { Updates } from './updates';
@@ -639,6 +639,9 @@ export interface SettingsViewProps {
   /** The quick search's key; empty when off. */
   quickHotkey: string;
   onQuickHotkey: (accelerator: string) => void;
+  /** The detention timer's key, empty when off; absent for those who detain no one. */
+  timerHotkey?: string;
+  onTimerHotkey?: (accelerator: string) => void;
   opacity: number;
   onOpacity: (value: number) => void;
   /** The theme and the accent; without it (a bare overlay in tests) the choice is not shown. */
@@ -678,6 +681,8 @@ export function SettingsView({
   onVoiceHotkey,
   quickHotkey,
   onQuickHotkey,
+  timerHotkey,
+  onTimerHotkey,
   onMemos,
   opacity,
   onOpacity,
@@ -943,6 +948,24 @@ export function SettingsView({
           </div>
         )}
       </Block>
+
+      {timerHotkey !== undefined && onTimerHotkey && (
+        <Block title="Таймер задержания">
+          <Switch
+            label="Таймер задержания поверх игры"
+            hint="Клавиша запускает отсчёт в момент задержания: маленькая карточка поверх игры показывает, сколько оно длится. Ещё раз — стоп."
+            on={!!timerHotkey}
+            onChange={(on) => onTimerHotkey(on ? DEFAULT_TIMER_HOTKEY : '')}
+          />
+          {timerHotkey && <HotkeyField name="timer" label="Запустить и остановить таймер" hotkey={timerHotkey} onHotkey={onTimerHotkey} onCapturing={onCapturing} />}
+          {timerHotkey && (timerHotkey === hotkey || timerHotkey === voiceHotkey || timerHotkey === quickHotkey) && (
+            <div className="warn" role="alert">
+              <WarnIcon />
+              <span>Эта клавиша уже занята — выберите другую, иначе таймер не запустится.</span>
+            </div>
+          )}
+        </Block>
+      )}
       </div>
 
       <div className="settings__part" id={sectionId('faq')}>

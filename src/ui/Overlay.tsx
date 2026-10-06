@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
   calculateDetention,
   changedArticles,
@@ -47,14 +47,14 @@ import { CasesView } from './CasesView';
 import { BackIcon, BookIcon, CalculatorIcon, ChevronDownIcon, CloseIcon, DocumentsIcon, NewsIcon, MemoIcon, MicIcon, OrganizationIcon, PinIcon, ProfileIcon, SearchIcon, ServerIcon, SettingsIcon, SparkIcon } from './icons';
 import { SideRail } from './SideRail';
 import { canRecord, startRecording, type Recording } from './voice';
-import { DEFAULT_OPACITY, DEFAULT_QUICK_HOTKEY, DEFAULT_VOICE_HOTKEY, OPACITY_KEY, QUICK_HOTKEY_KEY, VOICE_HOTKEY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
+import { DEFAULT_OPACITY, DEFAULT_QUICK_HOTKEY, DEFAULT_TIMER_HOTKEY, DEFAULT_VOICE_HOTKEY, OPACITY_KEY, QUICK_HOTKEY_KEY, TIMER_HOTKEY_KEY, VOICE_HOTKEY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
 import { formatHotkey, type Profile } from './profile';
 import { OrganizationChoice } from './OrganizationChoice';
 import { PinSurface } from './PinSurface';
 import { PrivacyView } from './PrivacyView';
 import { ReleaseNotesView } from './ReleaseNotesView';
-import { aiPinCard, articlePinCard, calculatorPinCard } from './pinCards';
-import { CALCULATOR_ID, hasCard, keepableGroups, pinCard, placeOf, restoreGroups, surfaceNow, unpinCard, updateCard, type Place } from './pinLayout';
+import { aiPinCard, articlePinCard, calculatorPinCard, phrasesPinCard, timerPinCard } from './pinCards';
+import { CALCULATOR_ID, MIN_WIDTH, PHRASES_ID, TIMER_ID, hasCard, keepableGroups, pinCard, placeOf, restoreGroups, surfaceNow, unpinCard, updateCard, type Place } from './pinLayout';
 import { applyPreset, cardCount, deletePreset, nextPresetName, presetsKey, readPresets, savePreset, type PinPreset } from './pinPresets';
 import { formatDate } from './lawBits';
 import { ResizeEdges } from './ResizeEdges';
@@ -64,7 +64,9 @@ import { ServerChoice } from './ServerChoice';
 import { SettingsView, type SettingsSection } from './SettingsView';
 import { NoResults } from './NoResults';
 import { Dropdown } from './Dropdown';
-import { forgetHotkey, trackHotkey } from './hotkeys';
+import { forgetHotkey, trackHotkey, useTakenHotkeys } from './hotkeys';
+import { PHRASE_KEYS, PHRASE_KEYS_SETTING, fillPhrase, usePhrases } from './phrases';
+import { PhrasesBlock } from './PhrasesBlock';
 import { usePlayerCard } from './player';
 import { reportText } from './report';
 import { aiCapabilitiesOf, isFaction } from '../account/capabilities';
@@ -733,6 +735,84 @@ export function Overlay({
       () => show('failed'),
     );
   };
+  // Phrases for the game's chat (issue #40): the faction's, kept ready. A click or a key puts one into the
+  // clipboard; the player pastes it into the chat. Nothing is ever typed into the game.
+  const phrasesControl = usePhrases(platform, pack.server.id, isFaction(organization) ? organization : undefined);
+  const { phrases } = phrasesControl;
+  const fillOwn = (text: string) => fillPhrase(text, { player: playerCard, organization: organization?.name });
+  const [phraseKeys, setPhraseKeys] = useState('');
+  useEffect(() => {
+    void platform.readSetting<string>(PHRASE_KEYS_SETTING).then((saved) => setPhraseKeys(typeof saved === 'string' ? saved : ''));
+  }, [platform]);
+  const changePhraseKeys = (keys: string) => {
+    setPhraseKeys(keys);
+    void platform.writeSetting(PHRASE_KEYS_SETTING, keys);
+  };
+  /** By its key, over the game: into the clipboard, and a notice that it is there. */
+  const pressPhrase = useRef<(index: number) => void>(() => {});
+  pressPhrase.current = (index) => {
+    const phrase = phrases[index];
+    if (!phrase) return;
+    void platform.writeClipboard(fillOwn(phrase.text));
+    void platform.showToast({ id: `phrase-${phrase.id}-${Date.now()}`, title: `Скопировано: ${phrase.title}`, text: 'Вставьте в чат игры: Ctrl+V' });
+  };
+  const keyed = phraseKeys ? Math.min(PHRASE_KEYS, phrases.length) : 0;
+  useEffect(() => {
+    if (capturing || !keyed) return;
+    const names = Array.from({ length: keyed }, (_, i) => `phrase-${i + 1}`);
+    names.forEach((name, i) => trackHotkey(platform, name, `${phraseKeys}+${i + 1}`, platform.registerShortcut(name, `${phraseKeys}+${i + 1}`, () => pressPhrase.current(i)), null));
+    return () =>
+      names.forEach((name) => {
+        forgetHotkey(name);
+        void platform.unregisterShortcut(name);
+      });
+  }, [platform, phraseKeys, keyed, capturing]);
+  const takenPhraseKeys = useTakenHotkeys('phrase-');
+  // Pinned over the game, the card follows the list and the profile.
+  const phrasesCardText = JSON.stringify(phrases.map((p) => ({ title: p.title, text: fillOwn(p.text) })));
+  const phrasesCard = useMemo(() => phrasesPinCard(JSON.parse(phrasesCardText)), [phrasesCardText]);
+  useEffect(() => {
+    setGroups((list) => (phrasesCard.actions?.length ? updateCard(list, phrasesCard) : unpinCard(list, PHRASES_ID)));
+  }, [phrasesCard]);
+
+  // The detention timer (issue #40): its key starts the count the moment the handcuffs go on — a small card
+  // over the game — and stops it; the next press starts anew. For the forces of the state.
+  const [timerHotkey, setTimerHotkey] = useState(DEFAULT_TIMER_HOTKEY);
+  useEffect(() => {
+    void platform.readSetting<string>(TIMER_HOTKEY_KEY).then((saved) => setTimerHotkey(typeof saved === 'string' ? saved : DEFAULT_TIMER_HOTKEY));
+  }, [platform]);
+  const changeTimerHotkey = (accelerator: string) => {
+    setTimerHotkey(accelerator);
+    void platform.writeSetting(TIMER_HOTKEY_KEY, accelerator);
+  };
+  const [timer, setTimer] = useState<{ since: number; stopped?: number } | null>(null);
+  const toggleTimer = useCallback(() => setTimer((now) => (!now || now.stopped ? { since: Date.now() } : { ...now, stopped: Date.now() })), []);
+  const detains = !!organization?.force;
+  useEffect(() => {
+    if (capturing || !detains || !timerHotkey || timerHotkey === profile.hotkey || timerHotkey === voiceHotkey || timerHotkey === quickHotkey) return;
+    trackHotkey(platform, 'timer', timerHotkey, platform.registerShortcut('timer', timerHotkey, toggleTimer), 'Таймер задержания по ней не запустится.');
+    return () => {
+      forgetHotkey('timer');
+      void platform.unregisterShortcut('timer');
+    };
+  }, [platform, timerHotkey, detains, capturing, profile.hotkey, voiceHotkey, quickHotkey, toggleTimer]);
+  // The timer is its card: started, it is pinned; its card closed over the game, the timer is over.
+  useEffect(() => {
+    setGroups((list) => {
+      if (!timer) return unpinCard(list, TIMER_ID);
+      const card = timerPinCard(timer.since, timer.stopped);
+      if (hasCard(list, TIMER_ID)) return updateCard(list, card);
+      // A small card: only the time is on it.
+      return pinCard(list, card, surface()).map((group) => (group.id === TIMER_ID && !group.width ? { ...group, width: MIN_WIDTH } : group));
+    });
+  }, [timer]);
+  const timerShown = hasCard(groups, TIMER_ID);
+  const timerWasShown = useRef(false);
+  useEffect(() => {
+    if (timerWasShown.current && !timerShown) setTimer(null);
+    timerWasShown.current = timerShown;
+  }, [timerShown]);
+
   /** Ctrl+C copies the charges, unless there is text selected to copy. Says whether it did. */
   const copyShortcut = useRef<() => boolean>(() => false);
   copyShortcut.current = () => {
@@ -1127,7 +1207,7 @@ export function Overlay({
     <AiAccess.Provider value={aiCan}>
     {/* In the browser there is no second window: the stand-in game scene shows the cards itself. */}
     {platform.kind === 'browser' && (
-      <PinSurface groups={groups} live onChange={setGroups} onClearCalculator={() => setCharges([])} toast={previewToast} onToastEnd={() => setPreviewToast(null)} />
+      <PinSurface groups={groups} live onChange={setGroups} onClearCalculator={() => setCharges([])} onCopy={(text) => void platform.writeClipboard(text)} toast={previewToast} onToastEnd={() => setPreviewToast(null)} />
     )}
     <div className={`shell shell--${side}`}>
       {platform.kind === 'tauri' && <ResizeEdges />}
@@ -1443,6 +1523,8 @@ export function Overlay({
             onVoiceHotkey={changeVoiceHotkey}
             quickHotkey={quickHotkey}
             onQuickHotkey={changeQuickHotkey}
+            timerHotkey={detains ? timerHotkey : undefined}
+            onTimerHotkey={changeTimerHotkey}
             onMemos={() => openSection('memos')}
             opacity={opacity}
             onOpacity={changeOpacity}
@@ -1509,6 +1591,33 @@ export function Overlay({
             onOrganization={() => setOrganizationOpen(true)}
             onOpen={openHit}
             onCopy={(text) => void platform.writeClipboard(text)}
+            tools={
+              isFaction(organization) ? (
+                <>
+                  {detains && (
+                    <div className="dept__tools">
+                      <button className={timer && !timer.stopped ? 'settings__button dept__timer dept__timer--on' : 'settings__button dept__timer'} type="button" onClick={toggleTimer}>
+                        {timer && !timer.stopped ? 'Остановить таймер задержания' : 'Запустить таймер задержания'}
+                      </button>
+                      {timerHotkey && <span className="kbd">{formatHotkey(timerHotkey)}</span>}
+                      <span className="dept__sub">отсчёт поверх игры с момента задержания</span>
+                    </div>
+                  )}
+                  <PhrasesBlock
+                    control={phrasesControl}
+                    fill={fillOwn}
+                    onCopy={(phrase) => void platform.writeClipboard(fillOwn(phrase.text))}
+                    pinned={hasCard(groups, PHRASES_ID)}
+                    onPin={() => togglePin(phrasesCard)}
+                    keys={phraseKeys}
+                    onKeys={changePhraseKeys}
+                    takenKeys={takenPhraseKeys}
+                    nameless={!playerCard.gameName && !playerCard.position}
+                    onProfile={() => openSection('profile')}
+                  />
+                </>
+              ) : undefined
+            }
           />
         ) : aiOpen && aiTab === 'lawyer' ? (
           <LawyerView

@@ -30,5 +30,9 @@ export const DEFAULT_VOICE_HOTKEY = 'Alt+W';
 export const QUICK_HOTKEY_KEY = 'quick.hotkey';
 export const DEFAULT_QUICK_HOTKEY = 'Alt+S';
 
+/** The detention timer's key (issue #40): starts and stops the count over the game; an empty setting turns it off. */
+export const TIMER_HOTKEY_KEY = 'timer.hotkey';
+export const DEFAULT_TIMER_HOTKEY = 'Ctrl+Shift+T';
+
 /** Streamer mode: the app is left out of screen capture (OBS, Discord, screenshots). Windows' own, set at every start. */
 export const STREAMER_KEY = 'overlay.streamer';

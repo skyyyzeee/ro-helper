@@ -14,7 +14,7 @@ import {
   type SearchHit,
 } from '../core';
 import type { PinCard } from '../platform/types';
-import { CALCULATOR_ID } from './pinLayout';
+import { CALCULATOR_ID, PHRASES_ID, TIMER_ID } from './pinLayout';
 import { entryPart, hitKey } from './saved';
 
 /**
@@ -104,6 +104,24 @@ export function calculatorPinCard(result: DetentionResult, fineTyped?: number): 
     lines,
     ...(warnings.length ? { warning: warnings.join('; ') } : {}),
   };
+}
+
+/** The phrases for the chat as a card over the game: a button each, as they are pasted — the profile's words in. */
+export function phrasesPinCard(phrases: { title: string; text: string }[]): PinCard {
+  return { id: PHRASES_ID, kind: 'phrases', heading: 'Заготовки для чата', lines: [], actions: phrases.map((p) => ({ label: p.title, text: p.text })) };
+}
+
+/** The detention timer as a card over the game: running since, or stopped at. */
+export function timerPinCard(since: number, stopped?: number): PinCard {
+  return { id: TIMER_ID, kind: 'timer', heading: 'Задержание', lines: [], since, ...(stopped ? { stopped } : {}) };
+}
+
+/** «12:05», «1:02:07»: how long a detention has run. */
+export function elapsed(ms: number): string {
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  const two = (n: number) => String(n).padStart(2, '0');
+  const hours = Math.floor(seconds / 3600);
+  return hours ? `${hours}:${two(Math.floor(seconds / 60) % 60)}:${two(seconds % 60)}` : `${two(Math.floor(seconds / 60))}:${two(seconds % 60)}`;
 }
 
 /** The AI's short answer to a question asked over the game, as a card: the question on top, the answer's lines below. */

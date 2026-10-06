@@ -119,6 +119,8 @@ export interface PinBridge {
   areas(areas: PinArea[]): Promise<void>;
   /** Asks the overlay to empty its calculator. */
   clearCalculator(): Promise<void>;
+  /** Puts a phrase into the clipboard, for the player to paste into the game's chat. */
+  copy(text: string): Promise<void>;
   onToast(listener: (toast: ShownToast) => void): () => void;
   /** The notice has gone: the window may hide again when nothing is pinned. */
   toastDone(): Promise<void>;
@@ -139,6 +141,7 @@ export function createPinBridge(): PinBridge {
     layout: (groups) => invoke('pin_layout', { groups }),
     areas: (areas) => invoke('pin_areas', { areas }),
     clearCalculator: () => emitTo('main', PIN_CLEAR_EVENT),
+    copy: (text) => writeText(text),
     onToast: (listener) => subscribe(PIN_TOAST_EVENT, listener),
     toastDone: () => invoke('pin_toast_done'),
     look: async () => (await load('settings.json', { defaults: {}, autoSave: 300 })).get<PinLook>(PIN_LOOK_KEY),

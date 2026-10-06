@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { elapsed } from './pinCards';
 import type { PinBridge, ShownToast } from '../platform/tauri';
 import type { PinArea, PinCard, PinGroup, PinLook } from '../platform/types';
 import { applyAppearance, isTheme } from './appearance';
@@ -9,7 +10,8 @@ import { CARD_WIDTH, MIN_HEIGHT, compactGroup, detachCard, dropSide, joinGroups,
  * What a card pinned over the game shows: an article's part, or the calculator's total. Compact, only the
  * heading, the punishment and the warning: the text is for when there is room.
  */
-function PinCardBody({ card, compact }: { card: PinCard; compact: boolean }) {
+function PinCardBody({ card, compact, onCopy }: { card: PinCard; compact: boolean; onCopy?: (text: string) => void }) {
+  if (card.kind === 'timer') return <Timer card={card} />;
   return (
     <>
       {card.kind === 'calculator' ? (
@@ -44,6 +46,64 @@ function PinCardBody({ card, compact }: { card: PinCard; compact: boolean }) {
         </div>
       ))}
       {card.warning && <div className="pin__warn">{card.warning}</div>}
+      {card.actions && <Phrases actions={card.actions} compact={compact} onCopy={onCopy} />}
+    </>
+  );
+}
+
+/**
+ * The phrases for the chat: pressed, one goes to the clipboard and says so for a moment. The player pastes it
+ * into the game's chat themselves — nothing here types into the game.
+ */
+function Phrases({ actions, compact, onCopy }: { actions: NonNullable<PinCard['actions']>; compact: boolean; onCopy?: (text: string) => void }) {
+  const [copied, setCopied] = useState<number | null>(null);
+  useEffect(() => {
+    if (copied === null) return;
+    const timer = setTimeout(() => setCopied(null), 1400);
+    return () => clearTimeout(timer);
+  }, [copied]);
+  return (
+    <div className={compact ? 'pin__phrases pin__phrases--compact' : 'pin__phrases'} role="group" aria-label="Заготовки для чата">
+      {actions.map((action, index) => (
+        <button
+          key={`${index} ${action.label}`}
+          className={copied === index ? 'pin__phrase pin__phrase--copied' : 'pin__phrase'}
+          type="button"
+          title={action.text}
+          disabled={!onCopy}
+          onClick={() => {
+            onCopy?.(action.text);
+            setCopied(index);
+          }}
+        >
+          <span className="pin__phrase-n">{index + 1}</span>
+          <span className="pin__phrase-t">{copied === index ? 'Скопировано — Ctrl+V в чат' : action.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** The detention timer: how long since it was started, ticking; stopped, the time it came to. */
+function Timer({ card }: { card: PinCard }) {
+  const [now, setNow] = useState(() => Date.now());
+  const running = card.since !== undefined && card.stopped === undefined;
+  useEffect(() => {
+    if (!running) return;
+    setNow(Date.now());
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(tick);
+  }, [running, card.since]);
+  const from = card.since ?? now;
+  const started = new Intl.DateTimeFormat('ru-RU', { timeZone: 'Europe/Moscow', hour: '2-digit', minute: '2-digit' }).format(from);
+  return (
+    <>
+      <div className="pin__big" role="timer" aria-label="Время задержания">
+        <span>{elapsed((card.stopped ?? now) - from)}</span>
+      </div>
+      <div className="pin__line">
+        {card.heading} · с {started} МСК{running ? '' : ' · остановлен'}
+      </div>
     </>
   );
 }
@@ -73,6 +133,8 @@ export interface PinSurfaceProps {
   onChange: (groups: PinGroup[]) => void;
   /** «Очистить» on the calculator's card: the calculator is emptied, and its card goes (issue #23). */
   onClearCalculator?: () => void;
+  /** A phrase pressed on the phrases' card: into the clipboard (issue #40). */
+  onCopy?: (text: string) => void;
   /** Where the blocks are now, in physical pixels, for the window that lets the mouse through elsewhere. */
   onAreas?: (areas: PinArea[]) => void;
   /** A notice at the top right — a new version is out — and what to do when it has gone. */
@@ -111,7 +173,7 @@ const cardKey = (groupId: string, cardId: string) => `${groupId} :: ${cardId}`;
  * Everything pinned over the game: blocks of cards, each where the user dropped it. A block is dragged
  * by its head; dropped onto another it joins it, and a card dragged out of a block becomes one of its own.
  */
-export function PinSurface({ groups: incoming, live, onChange, onClearCalculator, onAreas, toast, onToastEnd }: PinSurfaceProps) {
+export function PinSurface({ groups: incoming, live, onChange, onClearCalculator, onCopy, onAreas, toast, onToastEnd }: PinSurfaceProps) {
   const [groups, setGroups] = useState(incoming);
   const [drag, setDrag] = useState<Drag | null>(null);
   /** Which card of a paged block is on show, by block. */
@@ -432,7 +494,7 @@ export function PinSurface({ groups: incoming, live, onChange, onClearCalculator
                       <CloseIcon size={14} />
                     </button>
                   </div>
-                  <PinCardBody card={card} compact={!!group.compact} />
+                  <PinCardBody card={card} compact={!!group.compact} onCopy={onCopy} />
                 </div>
               ))}
             </div>
@@ -499,5 +561,7 @@ export function PinWindow({ bridge }: { bridge: PinBridge }) {
 
   const clearCalculator = useCallback(() => void bridge.clearCalculator(), [bridge]);
 
-  return <PinSurface groups={groups} live={live} onChange={change} onClearCalculator={clearCalculator} onAreas={areas} toast={toast} onToastEnd={endToast} />;
+  const copy = useCallback((text: string) => void bridge.copy(text), [bridge]);
+
+  return <PinSurface groups={groups} live={live} onChange={change} onClearCalculator={clearCalculator} onCopy={copy} onAreas={areas} toast={toast} onToastEnd={endToast} />;
 }

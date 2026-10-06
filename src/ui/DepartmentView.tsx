@@ -27,10 +27,12 @@ export interface DepartmentViewProps {
   /** A point of the charter, opened as an article. */
   onOpen: (hit: SearchHit) => void;
   onCopy: (text: string) => void;
+  /** What is at hand over the game for the faction — the detention timer, the phrases for the chat — above the rest. */
+  tools?: ReactNode;
 }
 
 /** «Отдел»: what the player's organisation does by the law of their server. */
-export function DepartmentView({ pack, organization, topic, onTopic, row, onOrganization, onOpen, onCopy }: DepartmentViewProps) {
+export function DepartmentView({ pack, organization, topic, onTopic, row, onOrganization, onOpen, onCopy, tools }: DepartmentViewProps) {
   const topics = useMemo(
     () => topicsFor(organization).map((t) => ({ ...t, hits: topicArticles(pack, t.id, organization?.documents) })).filter((t) => t.hits.length),
     [pack, organization],
@@ -65,6 +67,7 @@ export function DepartmentView({ pack, organization, topic, onTopic, row, onOrga
 
   return (
     <div className="dept">
+      {tools}
       {topics.length > 0 && (
         <section aria-label="Как это делается по закону">
           <div className="sec-t">
@@ -82,7 +85,7 @@ export function DepartmentView({ pack, organization, topic, onTopic, row, onOrga
         </section>
       )}
       {cards.length > 0 && <Charter cards={cards} name={organization!.name} onOpen={onOpen} onCopy={onCopy} />}
-      {!topics.length && !cards.length && (
+      {!topics.length && !cards.length && !tools && (
         <div className="empty">
           {organization && organization.id !== 'none' ? (
             <>Для «{organization.name}» на сервере {pack.server.name} здесь пока нечего показать.</>

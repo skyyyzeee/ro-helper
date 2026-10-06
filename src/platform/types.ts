@@ -12,7 +12,7 @@ export interface WindowBounds {
 export interface PinCard {
   /** What it stands for: `uk-65#1` for an article's part, `calculator` for the total. */
   id: string;
-  kind: 'article' | 'calculator' | 'ai';
+  kind: 'article' | 'calculator' | 'ai' | 'phrases' | 'timer';
   /** Article: «УК ст. 88 ч. 1. Халатность»; calculator: the total, «30 мес». */
   heading: string;
   /** Stars to set, beside the calculator's total. */
@@ -25,6 +25,11 @@ export interface PinCard {
   penalty?: string;
   lines: string[];
   warning?: string;
+  /** Phrases for the chat (issue #40): a button each; pressed, its text goes to the clipboard — never into the game. */
+  actions?: { label: string; text: string }[];
+  /** The detention timer: when it was started and, once stopped, when — in milliseconds since the epoch. */
+  since?: number;
+  stopped?: number;
 }
 
 /**

@@ -399,6 +399,7 @@ describe('the cards over the game', () => {
       layout: vi.fn(async () => {}),
       areas: vi.fn(async () => {}),
       clearCalculator: vi.fn(async () => {}),
+      copy: vi.fn(async () => {}),
       onToast: () => () => {},
       toastDone: vi.fn(async () => {}),
       look: async () => undefined,
