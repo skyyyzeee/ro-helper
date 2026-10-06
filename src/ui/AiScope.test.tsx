@@ -55,6 +55,16 @@ describe('the AI as a closed layer over the base', () => {
     await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
   });
 
+  it('offers the laws when a question of the laws was asked in the rules, and asks it there at a click', async () => {
+    const { ask, user, bodies } = await openAi({ [SCOPE_SETTING]: 'server_rule' });
+    await ask('при задержании хочу зачитать миранду, что зачитывать?');
+    const note = await within(screen.getByRole('log')).findByRole('note');
+    expect(note).toHaveTextContent(/похож на вопрос о законах/);
+    const before = bodies.length;
+    await user.click(within(note).getByRole('button', { name: 'Разобрать по законам' }));
+    await vi.waitFor(() => expect(bodies.slice(before).some((b) => b.includes('ОБЛАСТЬ ВОПРОСА — ЗАКОНЫ') || b.includes('НАЙДЕННЫЕ ИСТОЧНИКИ'))).toBe(true));
+  });
+
   it('keeps the choice of laws or rules, and gives the AI only that kind of source', async () => {
     const { ask, user, platform, bodies } = await openAi();
     // A small choice inside the field at the bottom, «Законы и правила» first.
