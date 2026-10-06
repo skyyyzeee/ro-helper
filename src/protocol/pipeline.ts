@@ -9,6 +9,7 @@ import { AnswerFormatError, parseAnswer, type LegalAnswer } from './answer';
 import { aliasScope, matchAliases, type QueryAlias } from './aliases';
 import { AI_INTENTS, classify, type Classification, type QuestionType } from './classify';
 import { directPunishment } from './direct';
+import { hintTerms } from './hints';
 import { buildContext, type CaseState, type Perspective } from './context';
 import { analysisPrompt, type Depth } from './prompt';
 import { AiError, type AiProvider } from './provider';
@@ -129,7 +130,9 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
     aiCalls += 1;
     terms = (await searchTerms(provider, searchText, scope, false, previous ? undefined : message)).phrases;
   }
-  const search = (text: string) => findForSituation(inScope, text, { boostDocuments: organization?.documents, lawTerms: terms, limit: SOURCES });
+  // The law's words for what the player told in everyday ones (hints.ts), beside the AI's: its miss is not the search's.
+  const phrases = [...new Set([...hintTerms(searchText), ...terms])];
+  const search = (text: string) => findForSituation(inScope, text, { boostDocuments: organization?.documents, lawTerms: phrases, limit: SOURCES });
   const sources = labelSources(previous ? followUpHits(inScope, previous, search(message), search(searchText)) : search(message));
   const context = buildContext({ pack, organization, message, sources, perspective, previous });
   // A first question may be answered again to anyone who asks it with the same laws (ADR 0007); a follow-up is its own case.
