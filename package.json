@@ -16,7 +16,8 @@
     "tauri": "tauri",
     "eval": "tsx scripts/ai-eval.ts",
     "eval:ai": "tsx scripts/ai-eval.ts --group traps",
-    "test:server": "node --test server/server.test.mjs"
+    "test:server": "node --test server/server.test.mjs",
+    "charters:check": "tsx scripts/charters-check.ts"
   },
   "dependencies": {
     "@fontsource/onest": "^5.3.1",
