@@ -260,3 +260,16 @@ describe('the players\' expressions the admins approved', () => {
     expect(requests).toHaveLength(1);
   });
 });
+
+describe('answers given again (ADR 0007)', () => {
+  it('a first question may be answered from the server\'s cache — its steps and its answer; a follow-up may not', async () => {
+    const { provider, requests } = fakeAi(() => good());
+    const first = await answerQuestion({ provider, pack, message: 'украл телефон у прохожего на улице', depth: 'quick', choice: 'law' });
+    expect(requests.map((r) => r.cache)).toEqual(['украл телефон у прохожего на улице', 'украл телефон у прохожего на улице']);
+    if (first.kind !== 'analysis') throw new Error('no analysis');
+    requests.length = 0;
+    await answerQuestion({ provider, pack, message: 'а если он был в маске', depth: 'quick', previous: first.analysis.case });
+    expect(requests.length).toBeGreaterThan(0);
+    expect(requests.every((r) => r.cache === undefined)).toBe(true);
+  });
+});

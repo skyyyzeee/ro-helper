@@ -17,6 +17,11 @@ export interface AiRequest {
   counts?: boolean;
   /** The question needs reasoning, not just a lookup: the model may think longer. */
   think?: boolean;
+  /**
+   * The player's question, when the answer may be given again to anyone who asks the same with the same laws: a
+   * first question, not a follow-up. Through the AI server it is answered from its cache (ADR 0007).
+   */
+  cache?: string;
 }
 
 export interface AiProvider {
@@ -56,13 +61,13 @@ async function post(url: string, init: RequestInit, seconds: number, offline: st
 /** The AI server: it holds the AI key, counts the daily limits and passes the question on. */
 export function serverProvider(server: string, device: string): AiProvider {
   return {
-    async complete({ system, turns, json = false, counts = true, think = false }) {
+    async complete({ system, turns, json = false, counts = true, think = false, cache }) {
       const response = await post(
         `${server}/v1/chat`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Device': device },
-          body: JSON.stringify({ system, messages: asMessages(turns), json, counts, ...(think ? { think } : {}) }),
+          body: JSON.stringify({ system, messages: asMessages(turns), json, counts, ...(think ? { think } : {}), ...(cache ? { cache: true, question: cache } : {}) }),
         },
         think ? 150 : 90,
         'Нет связи с сервером ИИ — проверьте интернет.',
