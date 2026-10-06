@@ -1,10 +1,10 @@
 // Runs on a page of forum.russia.online — from the bookmark «Проверить законы» or pasted into the browser's
-// console — after http://127.0.0.1:8787/check (npm run laws:check) has put the list of threads into window.name.
+// console — after http://127.0.0.1:8788/check (npm run laws:check) has put the list of threads into window.name.
 //
 // The forum lets a person's browser in and not a server, so the threads are read here, in the person's own
 // session: each is fetched like a page they open (one at a time, with a pause), its text taken the way a snapshot
 // takes it — the longest post of the thread's author, as the browser lays it out — and compared with ours by its
-// checksum. Only the changed texts go back to 127.0.0.1:8787, in window.name, which survives the navigation (the
+// checksum. Only the changed texts go back to 127.0.0.1:8788, in window.name, which survives the navigation (the
 // forum forbids its pages to call another address).
 (async () => {
   const PAUSE_MS = 400;
@@ -14,7 +14,8 @@
   } catch {
     job = null;
   }
-  if (!job || job.kind !== 'laws-check') {
+  // The list comes in window.name, which any page could have set: only the helper's own address is gone back to.
+  if (!job || job.kind !== 'laws-check' || !/^http:\/\/127\.0\.0\.1:8788\//.test(String(job.back)) || !Array.isArray(job.docs)) {
     alert('Сначала запустите «npm run laws:check» и откройте http://127.0.0.1:8788/check — оттуда браузер сам перейдёт на форум.');
     return;
   }

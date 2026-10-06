@@ -8,7 +8,7 @@
 // takes back the texts that differ. It writes them to data/<server>/sources/<doc>.txt, with the date of the edit
 // and of the snapshot in the .meta.json beside, and stops. Then, as always: npm run import.
 import { createServer } from 'node:http';
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const root = join(import.meta.dirname, '..');
@@ -60,10 +60,12 @@ const today = () => new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 1
 
 /** The new text of a document, and its dates in the meta — changed in place, the rest of the file as it was. */
 function save({ server, doc, text, edited }) {
-  if (!SERVERS.includes(server) || !/^[a-z0-9-]+$/.test(doc)) throw new Error(`bad document ${server}/${doc}`);
+  if (!SERVERS.includes(server) || !/^[a-z0-9-]+$/.test(doc) || typeof text !== 'string' || !text.trim()) throw new Error(`bad document ${server}/${doc}`);
   const dir = sourceDir(server);
-  writeFileSync(join(dir, `${doc}.txt`), text);
   const metaFile = join(dir, `${doc}.meta.json`);
+  // Only a document we already keep is rewritten: nothing new is made from what a page sent.
+  if (!existsSync(metaFile)) throw new Error(`no such document ${server}/${doc}`);
+  writeFileSync(join(dir, `${doc}.txt`), text);
   let meta = readFileSync(metaFile, 'utf8');
   const when = edited ? moscow(edited) : null;
   if (when) meta = meta.replace(/("lastEdited":\s*")[^"]*(")/, `$1${when}$2`);
@@ -121,6 +123,9 @@ createServer((request, response) => {
   }
 
   if (request.method === 'POST' && url.pathname === '/save') {
+    // The texts of the laws are written from what is sent here, and they go on to every player: only this
+    // helper's own page may send them — not some other site open in the browser while the check runs.
+    if (request.headers.origin !== BASE) return response.writeHead(403).end('Только со страницы проверки.');
     const parts = [];
     request.on('data', (chunk) => parts.push(chunk));
     request.on('end', () => {
@@ -128,22 +133,29 @@ createServer((request, response) => {
       try {
         result = JSON.parse(Buffer.concat(parts).toString('utf8'));
         if (result?.kind !== 'laws-result') throw new Error('not a result');
+        result.changed = Array.isArray(result.changed) ? result.changed : [];
+        result.failed = Array.isArray(result.failed) ? result.failed : [];
       } catch {
         return response.writeHead(400).end('Это не итог проверки.');
       }
       const lines = [];
       for (const doc of result.changed) {
-        save(doc);
+        try {
+          save(doc);
+        } catch (error) {
+          result.failed = [...result.failed, { server: String(doc?.server), doc: String(doc?.doc), error: String(error.message ?? error) }];
+          continue;
+        }
         lines.push(`${doc.server} · ${doc.doc}${doc.kept !== undefined ? ` (прежних строк ${doc.kept}%)` : ""}`);
       }
       const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
-      console.log(`\nПроверено тем: ${result.checked}. Изменилось документов: ${result.changed.length}.`);
+      console.log(`\nПроверено тем: ${result.checked}. Изменилось документов: ${lines.length}.`);
       for (const line of lines) console.log(`  изменён: ${line}`);
       for (const f of result.failed) console.log(`  не прочитан: ${f.server} · ${f.doc} — ${f.error}`);
       for (const u of result.unsure ?? []) console.log(`  проверить вручную: ${u.server} · ${u.doc} — ${u.why}`);
-      console.log(result.changed.length ? '\nДальше: npm run import, затем npm run charters:check.' : '\nВсе законы совпадают с форумом.');
+      console.log(lines.length ? '\nДальше: npm run import, затем npm run charters:check.' : '\nВсе законы совпадают с форумом.');
       response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(
-        `<p>Проверено тем: <b>${result.checked}</b>. Изменилось документов: <b>${result.changed.length}</b>.</p>` +
+        `<p>Проверено тем: <b>${result.checked}</b>. Изменилось документов: <b>${lines.length}</b>.</p>` +
           (lines.length ? `<ul>${lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul><p>Тексты сохранены. Дальше: <code>npm run import</code>, затем <code>npm run charters:check</code>.</p>` : '<p>Все законы совпадают с форумом — делать ничего не нужно.</p>') +
           ((result.unsure ?? []).length ? `<p class="bad">Не сохранены — тема сильно изменилась или в ней несколько похожих сообщений; откройте и проверьте вручную:</p><ul>${result.unsure.map((u) => `<li class="bad">${esc(`${u.server} · ${u.doc} — ${u.why}`)}</li>`).join('')}</ul>` : '') +
           (result.failed.length ? `<p class="bad">Не прочитаны (проверьте вручную):</p><ul>${result.failed.map((f) => `<li class="bad">${esc(`${f.server} · ${f.doc} — ${f.error}`)}</li>`).join('')}</ul>` : '') +

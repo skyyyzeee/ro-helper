@@ -5702,6 +5702,13 @@ select option {
   min-width: 0;
 }
 
+/* The notes under the tiles keep clear of them. */
+.phrases > .set__hint,
+.phrases > .dept__note,
+.phrases > .warn {
+  margin-top: 10px;
+}
+
 .phrases__keys,
 .phrases__actions {
   display: flex;
