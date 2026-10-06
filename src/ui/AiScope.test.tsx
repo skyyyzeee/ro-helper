@@ -42,6 +42,19 @@ describe('the AI as a closed layer over the base', () => {
     expect(await screen.findByRole('heading', { name: /Кража/ })).toBeInTheDocument();
   });
 
+  it('tells what a deed is punished with from the base, with no AI, and asks the AI only when asked to', async () => {
+    const { ask, fetch, user } = await openAi();
+    await ask('Что будет за кражу?');
+    const log = screen.getByRole('log');
+    const article = await within(log).findByRole('button', { name: /^УК ст. 65 Кража/ });
+    expect(article.textContent).toMatch(/штраф|лишение свободы|мес/i);
+    expect(within(log).getByText(/ответ из базы, без ИИ/)).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
+
+    await user.click(within(log).getByRole('button', { name: /Разобрать с ИИ/ }));
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
+  });
+
   it('keeps the choice of laws or rules, and gives the AI only that kind of source', async () => {
     const { ask, user, platform, bodies } = await openAi();
     // A small choice inside the field at the bottom, «Законы и правила» first.
