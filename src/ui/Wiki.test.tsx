@@ -1,6 +1,9 @@
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { renderApp } from '../test/renderApp';
+import { WIKI_FORMAT, type WikiData } from '../wiki/model';
+import { AUTO_KEY } from './updates';
+import { WIKI_MANIFEST_URL, WIKI_URL, readWiki } from './wiki';
 
 describe('the wiki of Russia Online', () => {
   it('opens from the side column: its catalogs, a search of the whole wiki, a thing\'s page with its source', async () => {
@@ -18,5 +21,36 @@ describe('the wiki of Russia Online', () => {
     expect(page).toHaveTextContent('Данные и изображения: вики Russia Online. Все права принадлежат Russia Online.');
     await user.click(within(page).getByRole('button', { name: /Открыть на вики/ }));
     expect(platform.calls.at(-1)).toEqual({ method: 'openExternal', args: ['https://wiki.russia.online/ru/vehicles/car/samara'] });
+  });
+});
+
+describe('a newer wiki without a new version of the app', () => {
+  const newer = async () => {
+    const bundled = (await import('../data/wiki.json')).default as unknown as WikiData;
+    const entry = { ...bundled.entries.find((e) => e.catalog === 'vehicles')!, id: 'vehicles:fresh-car', title: 'Свежая машина' };
+    const data: WikiData = { ...bundled, takenAt: '2099-01-01T00:00:00.000Z', entries: [entry, ...bundled.entries] };
+    return { text: JSON.stringify(data), manifest: JSON.stringify({ format: WIKI_FORMAT, takenAt: data.takenAt, count: data.entries.length }) };
+  };
+
+  it('is downloaded when the repository has one, kept for the next launch, and shown', async () => {
+    const { text, manifest } = await newer();
+    const { platform, user } = await renderApp({ platform: { remote: { [WIKI_MANIFEST_URL]: manifest, [WIKI_URL]: text } } });
+    await user.click(screen.getByRole('button', { name: 'Вики Russia Online' }));
+    const wiki = await screen.findByRole('region', { name: 'Вики' }, { timeout: 5000 });
+    expect(await within(wiki).findByRole('button', { name: 'Свежая машина' }, { timeout: 5000 })).toBeInTheDocument();
+    expect(platform.state.laws.get('wiki')).toBe(text);
+  });
+
+  it('is not downloaded with the app\'s updates off, nor when it is no newer, nor taken broken', async () => {
+    const { text, manifest } = await newer();
+    const off = await renderApp({ settings: { [AUTO_KEY]: false }, platform: { remote: { [WIKI_MANIFEST_URL]: manifest, [WIKI_URL]: text } } });
+    await off.user.click(screen.getByRole('button', { name: 'Вики Russia Online' }));
+    await screen.findByRole('region', { name: 'Вики' }, { timeout: 5000 });
+    expect(off.platform.calls.some((c) => c.method === 'download' && String(c.args[0]).includes('wiki'))).toBe(false);
+
+    expect(readWiki(text)).toBeDefined();
+    expect(readWiki(text.replace('"tags":[', '"tags":null,"x":['))).toBeUndefined();
+    expect(readWiki(JSON.stringify({ ...JSON.parse(text), format: 99 }))).toBeUndefined();
+    expect(readWiki('not json')).toBeUndefined();
   });
 });
