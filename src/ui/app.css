@@ -5428,7 +5428,7 @@ select option {
 .wiki__group small, .wiki__filter small { color: var(--text-faint); font-weight: 500; margin-left: 3px; }
 .wiki__tools { display: flex; gap: 8px; }
 .wiki__find { flex: 1; min-width: 0; }
-.wiki__sort { flex: none; width: auto; }
+.wiki__sort { flex: none; width: 180px; }
 .wiki__filter { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 10px; font-size: 13px; background: var(--surface); border: 1px solid var(--line); cursor: pointer; }
 .wiki__filter input { accent-color: var(--accent); margin: 0; }
 .wiki__filter--on { border-color: oklch(0.78 0.1 var(--accent-hue) / 0.6); }

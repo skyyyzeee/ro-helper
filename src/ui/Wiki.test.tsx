@@ -15,7 +15,7 @@ describe('the wiki of Russia Online', () => {
     const page = within(wiki).getByRole('article', { name: 'TAZ 2114' });
     expect(page).toHaveTextContent('LADA Samara');
     expect(page).toHaveTextContent('Гос. стоимость');
-    expect(page).toHaveTextContent('Данные: вики Russia Online');
+    expect(page).toHaveTextContent('Данные и изображения: вики Russia Online. Все права принадлежат Russia Online.');
     await user.click(within(page).getByRole('button', { name: /Открыть на вики/ }));
     expect(platform.calls.at(-1)).toEqual({ method: 'openExternal', args: ['https://wiki.russia.online/ru/vehicles/car/samara'] });
   });

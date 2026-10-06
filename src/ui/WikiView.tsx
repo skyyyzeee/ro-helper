@@ -3,6 +3,7 @@ import { usePlatform } from '../platform/PlatformContext';
 import { loadWiki, neighbours, pick, tagsOf, type WikiSort } from '../wiki/catalog';
 import { formatRubles } from '../core';
 import { FRESH, type Gender, type WikiCatalogId, type WikiData, type WikiEntry } from '../wiki/model';
+import { Dropdown } from './Dropdown';
 import { BackIcon, ExternalIcon, SearchIcon } from './icons';
 
 /** How many cards at a time: the rest on «Показать ещё». */
@@ -38,12 +39,12 @@ function Card({ entry, onOpen, showCatalog }: { entry: WikiEntry; onOpen: () => 
   );
 }
 
-/** «Данные: вики Russia Online» — the source of every page of the section, with a way to it. */
+/** The source of every page of the section, whose it is, and a way to it (README «Лицензия и права»). */
 function Source({ url }: { url: string }) {
   const platform = usePlatform();
   return (
     <p className="wiki__source">
-      Данные: вики Russia Online.{' '}
+      Данные и изображения: вики Russia Online. Все права принадлежат Russia Online.{' '}
       <button className="link" type="button" onClick={() => void platform.openExternal(url)}>
         Открыть на вики <ExternalIcon />
       </button>
@@ -247,13 +248,7 @@ export function WikiView() {
 
             <div className="wiki__tools">
               <input className="presets__input wiki__find" type="search" aria-label="Поиск в разделе" placeholder="Поиск в разделе" value={words} onChange={(e) => setWords(e.target.value)} />
-              <select className="presets__input wiki__sort" aria-label="Порядок" value={sort} onChange={(e) => setSort(e.target.value as WikiSort)}>
-                {SORTS.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
+              <Dropdown className="wiki__sort" label="Порядок" value={sort} onChange={(value) => setSort(value as WikiSort)} options={SORTS.map((s) => ({ value: s.id, label: s.label }))} />
             </div>
             {filters.length > 0 && (
               <div className="wiki__filters" aria-label="Фильтры">
