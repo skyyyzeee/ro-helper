@@ -1,10 +1,11 @@
 import { startTransition, useEffect, useMemo, useState } from 'react';
 import { usePlatform } from '../platform/PlatformContext';
-import { loadWiki, neighbours, pick, tagsOf, type WikiSort } from '../wiki/catalog';
+import { neighbours, pick, tagsOf, type WikiSort } from '../wiki/catalog';
 import { formatRubles } from '../core';
 import { FRESH, type Gender, type WikiCatalogId, type WikiData, type WikiEntry } from '../wiki/model';
 import { Dropdown } from './Dropdown';
 import { BackIcon, ExternalIcon, SearchIcon } from './icons';
+import { useWiki } from './wiki';
 
 /**
  * How many cards at a time: the rest on «Показать ещё». The wiki's pictures are big — a flat's is 2560×1440 and
@@ -153,8 +154,7 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel }: { data: WikiData;
  * said on every page; the pictures come from its CDN.
  */
 export function WikiView() {
-  const [data, setData] = useState<WikiData | null>(null);
-  const [failed, setFailed] = useState(false);
+  const { data, failed } = useWiki();
   const [catalog, setCatalog] = useState<WikiCatalogId>('vehicles');
   const [group, setGroup] = useState<string | undefined>();
   const [gender, setGender] = useState<Gender>('male');
@@ -165,9 +165,6 @@ export function WikiView() {
   const [shown, setShown] = useState(PAGE);
   const [entry, setEntry] = useState<WikiEntry | null>(null);
 
-  useEffect(() => {
-    loadWiki().then(setData, () => setFailed(true));
-  }, []);
   // Another catalog, tab or filter: from the top.
   useEffect(() => setShown(PAGE), [catalog, group, gender, tags, words, everywhere, sort]);
 
