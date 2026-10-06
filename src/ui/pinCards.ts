@@ -64,7 +64,7 @@ export function articlePinCard(hit: SearchHit, rules?: CalculatorRules): PinCard
 }
 
 /** «штраф 35 000 ₽ · арест 20 сут · Лишение права управления: ст. 8.6 ч. 3». */
-function administrativeTotal(result: AdministrativeResult): string {
+export function administrativeTotal(result: AdministrativeResult): string {
   const counted = result.items.filter((r) => r.applicable);
   return [
     counted.some((r) => r.fine) && `штраф ${formatRubles(result.fineTotal)}`,

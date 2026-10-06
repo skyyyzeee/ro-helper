@@ -14,6 +14,27 @@ async function find(user: Awaited<ReturnType<typeof renderApp>>['user'], query: 
 }
 
 describe('criminal calculator', () => {
+  it('copies a report out of the charges for an officer of the state; a citizen has none to write (issue #40)', async () => {
+    const { platform, user } = await renderApp({ profile: { organization: 'mvd' }, settings: { player: { gameName: 'Ivan_Petrov', position: 'Сержант' } } });
+    await find(user, 'ук 65 ч 1');
+    await user.keyboard('{Enter}');
+    await user.click(within(panel()).getByRole('button', { name: 'Рапорт' }));
+    const lines = platform.state.clipboard.split('\n');
+    expect(lines[0]).toBe('РАПОРТ');
+    expect(lines[1]).toMatch(/ · Тверской · МВД$/);
+    expect(lines[3]).toBe('Составил: Сержант Ivan_Petrov');
+    expect(platform.state.clipboard).toContain('Обвинение: ст. 65 ч. 1 УК');
+    expect(platform.state.clipboard).toContain('Наказание: лишение свободы на 30 мес');
+    expect(await within(panel()).findByRole('button', { name: 'Скопирован' })).toBeInTheDocument();
+  });
+
+  it('offers no report without a service of the state', async () => {
+    const { user } = await renderApp();
+    await find(user, 'ук 65 ч 1');
+    await user.keyboard('{Enter}');
+    expect(within(panel()).queryByRole('button', { name: 'Рапорт' })).not.toBeInTheDocument();
+  });
+
   it('opens beside the results with the first charge, marks it in the results and closes when emptied', async () => {
     const { platform, user } = await renderApp();
     await find(user, 'ук 65');

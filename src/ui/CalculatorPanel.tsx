@@ -71,11 +71,14 @@ export interface CalculatorPanelProps {
   pinned: boolean;
   /** Pins the total over the game, to read the charges out to the detainee. */
   onPin: () => void;
+  /** Copies a report made of the charges (issue #40); absent for those who write none. */
+  onReport?: () => void;
+  reportState?: CopyState;
 }
 
 /** The side panel: criminal and administrative charges, their totals by law, and the charges to copy. */
 export function CalculatorPanel(props: CalculatorPanelProps) {
-  const { result, onClear, onCopy, copyState, pinned, onPin } = props;
+  const { result, onClear, onCopy, copyState, pinned, onPin, onReport, reportState } = props;
   const count = (result.criminal?.items.length ?? 0) + (result.administrative?.items.length ?? 0);
 
   return (
@@ -103,6 +106,17 @@ export function CalculatorPanel(props: CalculatorPanelProps) {
               Ctrl+C
             </span>
           </button>
+          {onReport && (
+            <button
+              className="btn calc__report"
+              type="button"
+              disabled={!result.charge}
+              title="Скопировать рапорт: статьи и наказание уже вписаны"
+              onClick={onReport}
+            >
+              {reportState === 'copied' ? 'Скопирован' : reportState === 'failed' ? 'Не удалось' : 'Рапорт'}
+            </button>
+          )}
           <button
             className={pinned ? 'btn btn--icon btn--on' : 'btn btn--icon'}
             type="button"

@@ -3947,6 +3947,12 @@ select option {
   min-width: 0;
 }
 
+/* «Рапорт» beside «Скопировать»: the report out of the charges. */
+.calc__report {
+  flex: none;
+  padding: 0 14px;
+}
+
 /* A choice of one from a list, drawn by the assistant: the button as a field, the list as a panel under it. */
 .dd {
   position: relative;

@@ -65,6 +65,8 @@ import { SettingsView, type SettingsSection } from './SettingsView';
 import { NoResults } from './NoResults';
 import { Dropdown } from './Dropdown';
 import { forgetHotkey, trackHotkey } from './hotkeys';
+import { usePlayerCard } from './player';
+import { reportText } from './report';
 import { aiCapabilitiesOf, isFaction } from '../account/capabilities';
 import { useStats } from './stats';
 import { useAnnouncements } from './announcements';
@@ -713,6 +715,24 @@ export function Overlay({
       () => show('failed'),
     );
   };
+  // A report out of the charges, for those who file them: the state's services (issue #40).
+  const [playerCard] = usePlayerCard(platform);
+  const [reportState, setReportState] = useState<CopyState>('idle');
+  const reportTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(reportTimer.current), []);
+  const copyReport = () => {
+    if (!result?.charge || !organization) return;
+    const show = (state: CopyState) => {
+      setReportState(state);
+      clearTimeout(reportTimer.current);
+      reportTimer.current = setTimeout(() => setReportState('idle'), 1500);
+    };
+    const text = reportText({ result, fineTyped: typedNumber(fineInput), server: pack.server.name, organization: organization.name, player: playerCard });
+    platform.writeClipboard(text).then(
+      () => show('copied'),
+      () => show('failed'),
+    );
+  };
   /** Ctrl+C copies the charges, unless there is text selected to copy. Says whether it did. */
   const copyShortcut = useRef<() => boolean>(() => false);
   copyShortcut.current = () => {
@@ -1128,6 +1148,8 @@ export function Overlay({
           onFineInput={setFineInput}
           onCopy={copyCharges}
           copyState={copyState}
+          onReport={organization?.kind === 'state' ? copyReport : undefined}
+          reportState={reportState}
           pinned={pinnedCalculator}
           onPin={() => {
             if (!result) return;
