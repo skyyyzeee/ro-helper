@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { startTransition, useEffect, useMemo, useState } from 'react';
 import { usePlatform } from '../platform/PlatformContext';
 import { loadWiki, neighbours, pick, tagsOf, type WikiSort } from '../wiki/catalog';
 import { formatRubles } from '../core';
@@ -6,8 +6,11 @@ import { FRESH, type Gender, type WikiCatalogId, type WikiData, type WikiEntry }
 import { Dropdown } from './Dropdown';
 import { BackIcon, ExternalIcon, SearchIcon } from './icons';
 
-/** How many cards at a time: the rest on «Показать ещё». */
-const PAGE = 60;
+/**
+ * How many cards at a time: the rest on «Показать ещё». The wiki's pictures are big — a flat's is 2560×1440 and
+ * megabytes — so a page is what a screen or two shows, not more to fetch and decode on every tab.
+ */
+const PAGE = 30;
 
 const SORTS: { id: WikiSort; label: string }[] = [
   { id: 'new', label: 'Сначала новые' },
@@ -16,9 +19,17 @@ const SORTS: { id: WikiSort; label: string }[] = [
   { id: 'name', label: 'По названию' },
 ];
 
-/** A picture from the wiki's CDN; nothing when it does not load (offline) — the card keeps its place. */
-function Picture({ src, alt, className }: { src?: string; alt: string; className: string }) {
+/**
+ * A picture from the wiki's CDN; nothing when it does not load (offline) — the card keeps its place. An animation
+ * is a video: it plays on its own page, and a card shows that it is one instead of fetching it.
+ */
+function Picture({ src, alt, className, play }: { src?: string; alt: string; className: string; play?: boolean }) {
   const [broken, setBroken] = useState(false);
+  useEffect(() => setBroken(false), [src]);
+  if (src && /.(webm|mp4)$/i.test(src) && !broken) {
+    if (!play) return <span className={`${className} wiki__noimage wiki__video`} aria-hidden="true" />;
+    return <video className={className} src={src} autoPlay loop muted playsInline aria-label={alt} onError={() => setBroken(true)} />;
+  }
   if (!src || broken) return <span className={`${className} wiki__noimage`} aria-hidden="true" />;
   return <img className={className} src={src} alt={alt} loading="lazy" decoding="async" onError={() => setBroken(true)} />;
 }
@@ -33,7 +44,7 @@ function Card({ entry, onOpen, showCatalog }: { entry: WikiEntry; onOpen: () => 
       <span className="wiki__name">{entry.title}</span>
       <span className="wiki__meta">
         <span>{showCatalog ?? entry.subtitle}</span>
-        {entry.price ? <b>{formatRubles(entry.price)}</b> : entry.priceNote ? <b>{entry.priceNote}</b> : null}
+        {entry.price ? <b>{formatRubles(entry.price)}</b> : entry.priceNote && !(showCatalog ?? entry.subtitle ?? '').startsWith(entry.priceNote) ? <b>{entry.priceNote}</b> : null}
       </span>
     </button>
   );
@@ -65,7 +76,7 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel }: { data: WikiData;
         <span>{backLabel}</span>
       </button>
       <div className="wiki__hero">
-        <Picture src={shown?.image ?? entry.image} alt={shown?.name || entry.title} className="wiki__big" />
+        <Picture src={shown?.image ?? entry.image} alt={shown?.name || entry.title} className="wiki__big" play />
         <div className="wiki__about">
           <h2 className="wiki__title">{entry.title}</h2>
           {entry.subtitle && <p className="wiki__subtitle">{entry.subtitle}</p>}
@@ -172,14 +183,16 @@ export function WikiView() {
   if (failed) return <p className="empty">Не удалось открыть вики.</p>;
   if (!data) return <p className="empty">Загружаю вики…</p>;
 
-  const choose = (id: WikiCatalogId) => {
-    setCatalog(id);
-    setGroup(undefined);
-    setTags([]);
-    setWords('');
-    setEverywhere('');
-    setEntry(null);
-  };
+  // The tab lights up at once; the cards of the new one follow as soon as they are ready.
+  const choose = (id: WikiCatalogId) =>
+    startTransition(() => {
+      setCatalog(id);
+      setGroup(undefined);
+      setTags([]);
+      setWords('');
+      setEverywhere('');
+      setEntry(null);
+    });
 
   return (
     <section className="wiki" aria-label="Вики">

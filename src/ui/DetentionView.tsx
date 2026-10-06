@@ -3,7 +3,8 @@ import type { SearchHit } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
 import { AiHead, citedIn, type AiTab } from './AiView';
 import type { DetentionCheck, DetentionReview, StepVerdict } from './detention';
-import { CheckIcon, WarnIcon } from './icons';
+import { AiIntro } from './AiIntro';
+import { CheckIcon, TopicIcon, WarnIcon } from './icons';
 
 const VERDICTS: Record<StepVerdict, { title: string; className: string }> = {
   ok: { title: 'По закону', className: 'demand--lawful' },
@@ -75,28 +76,15 @@ export function DetentionView({
       </div>
 
       {!result && !detention.busy && !detention.error && (
-        <>
-          <p className="set__hint">
-            После задержания расскажите в поле внизу (или голосом 🎤), что вы делали и в каком порядке, и нажмите <b>Enter</b>. ИИ
-            проверит каждый шаг по законам сервера: что сделано по закону, где нарушение и как надо было, — и что вы пропустили. Это
-            самопроверка: ничего не записывается, разбор видите только вы.
-          </p>
-          <div className="ai__examples" aria-label="Пример">
-            <span className="set__label">Попробуйте:</span>
-            <button
-              type="button"
-              className="ai__example"
-              onClick={() =>
-                void detention.review(
-                  'Остановил подозреваемого в краже, представился, надел наручники, обыскал без понятых, отвёз в отдел, адвоката дал через 40 минут, протокол составил в конце',
-                )
-              }
-            >
-              Остановил подозреваемого в краже, представился, надел наручники, обыскал без понятых, отвёз в отдел, адвоката дал через 40 минут,
-              протокол составил в конце
-            </button>
-          </div>
-        </>
+        <AiIntro
+          icon={<TopicIcon id="detention" size={24} />}
+          title="Как прошло задержание?"
+          examples={['Остановил подозреваемого в краже, представился, надел наручники, обыскал без понятых, отвёз в отдел, адвоката дал через 40 минут, протокол составил в конце']}
+          onExample={(text) => void detention.review(text)}
+        >
+          Расскажите в поле внизу или голосом, что вы делали и в каком порядке. ИИ проверит каждый шаг по законам сервера: что по
+          закону, где нарушение и как надо было, — и что вы пропустили. Разбор видите только вы.
+        </AiIntro>
       )}
 
       {detention.busy && (

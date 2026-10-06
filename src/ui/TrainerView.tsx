@@ -1,7 +1,7 @@
 import type { SearchHit, ServerPack } from '../core';
 import { Dropdown } from './Dropdown';
 import { AiHead, shortLabel, type AiTab } from './AiView';
-import { CheckIcon, CloseIcon, WarnIcon } from './icons';
+import { CheckIcon, CloseIcon, SchoolIcon, WarnIcon } from './icons';
 import { ROUND, type Trainer, type Verdict } from './trainer';
 
 const VERDICTS: Record<Verdict, { title: string; className: string }> = {
@@ -45,26 +45,32 @@ export function TrainerView({
               </span>
             </div>
           )}
-          <p className="set__hint">
-            {ROUND} вопросов по статьям законов сервера — как на аттестации. Отвечайте своими словами в поле внизу (или голосом 🎤) —
-            ИИ сверит ответ с текстом статьи и покажет, что упущено.
-          </p>
-          <div className="set__row quiz__docs">
-            <span className="set__label">Вопросы по</span>
-            <Dropdown
-              className="quiz__select"
-              label="Документ для вопросов"
-              value={trainer.documents.length === 1 ? trainer.documents[0] : 'many'}
-              onChange={(value) => value !== 'many' && trainer.setDocuments([value])}
-              options={[
-                ...(trainer.documents.length > 1 ? [{ value: 'many', lead: chosen.map((d) => d.short).join(', '), label: 'законы вашей организации' }] : []),
-                ...pack.documents.map((d) => ({ value: d.id, lead: d.short, label: d.title })),
-              ]}
-            />
+          <div className="ai__intro ai__intro--tab quiz__intro">
+            <span className="ai__hello-icon" aria-hidden="true">
+              <SchoolIcon />
+            </span>
+            <h2 className="ai__hello">Готовы к аттестации?</h2>
+            <p className="set__hint">
+              {ROUND} вопросов по статьям законов сервера. Отвечайте своими словами в поле внизу или голосом — ИИ сверит ответ с
+              текстом статьи и покажет, что упущено.
+            </p>
+            <div className="set__row quiz__docs">
+              <span className="set__label">Вопросы по</span>
+              <Dropdown
+                className="quiz__select"
+                label="Документ для вопросов"
+                value={trainer.documents.length === 1 ? trainer.documents[0] : 'many'}
+                onChange={(value) => value !== 'many' && trainer.setDocuments([value])}
+                options={[
+                  ...(trainer.documents.length > 1 ? [{ value: 'many', lead: chosen.map((d) => d.short).join(', '), label: 'законы вашей организации' }] : []),
+                  ...pack.documents.map((d) => ({ value: d.id, lead: d.short, label: d.title })),
+                ]}
+              />
+            </div>
+            <button className="btn btn--primary quiz__start" type="button" onClick={() => void trainer.start()}>
+              {phase === 'done' ? 'Пройти ещё раз' : 'Начать'}
+            </button>
           </div>
-          <button className="btn btn--primary quiz__start" type="button" onClick={() => void trainer.start()}>
-            {phase === 'done' ? 'Пройти ещё раз' : 'Начать'}
-          </button>
         </>
       )}
 

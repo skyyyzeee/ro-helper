@@ -2,7 +2,8 @@ import { useState } from 'react';
 import type { SearchHit } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
 import { AiHead, citedIn, type AiTab } from './AiView';
-import { CheckIcon, WarnIcon } from './icons';
+import { AiIntro } from './AiIntro';
+import { CheckIcon, TopicIcon, WarnIcon } from './icons';
 import type { LawyerCheck, Verdict } from './lawyer';
 
 const VERDICTS: Record<Verdict, { title: string; className: string }> = {
@@ -58,23 +59,15 @@ export function LawyerView({
       </div>
 
       {!result && !lawyer.busy && !lawyer.error && (
-        <>
-          <p className="set__hint">
-            Перескажите в поле внизу (или голосом 🎤), что требует адвокат, и нажмите <b>Enter</b>. ИИ проверит каждое требование по
-            законам сервера: законно ли оно, на чём основано, что вы обязаны сделать и на каком основании можете отказать, — и
-            предложит, как ответить. Он не подыгрывает ни вам, ни адвокату: если адвокат прав, так и скажет.
-          </p>
-          <div className="ai__examples" aria-label="Пример">
-            <span className="set__label">Попробуйте:</span>
-            <button
-              type="button"
-              className="ai__example"
-              onClick={() => void lawyer.check('Адвокат требует свидание с задержанным наедине, копию протокола задержания и отпустить его, потому что прошло 30 минут')}
-            >
-              Адвокат требует свидание с задержанным наедине, копию протокола задержания и отпустить его, потому что прошло 30 минут
-            </button>
-          </div>
-        </>
+        <AiIntro
+          icon={<TopicIcon id="rights" size={24} />}
+          title="Что требует адвокат?"
+          examples={['Адвокат требует свидание с задержанным наедине, копию протокола задержания и отпустить его, потому что прошло 30 минут']}
+          onExample={(text) => void lawyer.check(text)}
+        >
+          Перескажите требования в поле внизу или голосом. ИИ проверит каждое по законам сервера: законно ли оно, что вы обязаны
+          сделать и на каком основании можете отказать, — и подскажет, как ответить. Если адвокат прав, так и скажет.
+        </AiIntro>
       )}
 
       {lawyer.busy && (

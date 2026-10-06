@@ -1902,6 +1902,14 @@ export function Overlay({
               <b>Esc</b> к поиску
             </span>
           </>
+        ) : (department || wikiOpen) && !open ? (
+          // A page of tiles and cards: no list to walk with the arrows, nothing to put in the calculator.
+          <>
+            <span>клик — открыть</span>
+            <span>
+              <b>Esc</b> назад
+            </span>
+          </>
         ) : (
           <>
             <span>
