@@ -94,6 +94,24 @@ export function gradeCase(c: EvalCase, outcome: Outcome): Grade {
   const aiCalls = outcome.kind === 'system' ? outcome.aiCalls : (outcome.analysis.aiCalls ?? 0);
   const hardGates: string[] = [];
 
+  // «Что будет за кражу?» answered by the base alone (direct.ts): its articles are the answer, as the AI's would be.
+  if (outcome.kind === 'system' && outcome.reason === 'punishment' && behavior === 'answer') {
+    const given = (outcome.hits ?? []).map(refOf);
+    const expect = c.expect ?? [];
+    const forbidden = (c.forbid ?? []).filter((f) => matches(f, given));
+    if (forbidden.length) hardGates.push(`применена запрещённая статья: ${forbidden.join(', ')}`);
+    const found: Grade['found'] = !expect.length ? 'n/a' : expect.every((e) => matches(e, given)) ? 'right' : 'missed';
+    return {
+      pass: !hardGates.length && (found === 'right' || found === 'n/a'),
+      hardGates,
+      found,
+      ...(expect.length ? { searched: found === 'right' } : {}),
+      classified: true,
+      hallucinations: [],
+      aiCalls,
+      detail: `ответ базы без ИИ: ${given.join(', ')}`,
+    };
+  }
   if (outcome.kind === 'system') {
     const classified =
       behavior === 'system' ? !c.reason || outcome.reason === c.reason : behavior === 'clarify' ? outcome.reason === 'clarify_scope' : false;
