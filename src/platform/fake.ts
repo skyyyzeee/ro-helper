@@ -14,6 +14,8 @@ export interface FakePlatform extends PlatformAdapter {
     hotkey: string | null;
     voiceHotkey: string | null;
     quickHotkey: string | null;
+    /** The other keys over the game, by name: the detention timer, the phrases. */
+    shortcuts: Record<string, string>;
     /** What the overlay last told the quick search. */
     quickState: QuickState | null;
     /** What is pinned over the game, block by block. */
@@ -39,6 +41,8 @@ export interface FakePlatform extends PlatformAdapter {
   changePins(groups: PinGroup[]): void;
   /** Simulates «Очистить» pressed on the calculator's card over the game. */
   clearCalculatorFromPin(): void;
+  /** Simulates the player pressing one of the other keys over the game. */
+  pressShortcut(id: string): void;
   /** Simulates the quick search asking the overlay for something. */
   quickRequest(request: QuickRequest): void;
   /** Simulates the push-to-talk key: held down, then let go. */
@@ -58,6 +62,8 @@ export interface FakeOptions {
   laws?: Record<string, string>;
   /** A newer version the releases offer; none by default. */
   update?: AppUpdate | 'offline';
+  /** Keys another program holds: registering one of them fails, as Windows makes it. */
+  takenHotkeys?: string[];
 }
 
 /** In-memory adapter for tests and the browser preview. Records every call. */
@@ -68,11 +74,17 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
   const pinListeners = new Set<(groups: PinGroup[]) => void>();
   const clearListeners = new Set<() => void>();
   const quickListeners = new Set<(request: QuickRequest) => void>();
+  const onShortcut = new Map<string, () => void>();
+  /** Windows gives a key to one program only. */
+  const free = (accelerator: string) => {
+    if (options.takenHotkeys?.includes(accelerator)) throw new Error('HotKey already registered');
+  };
   const state: FakePlatform['state'] = {
     overlayVisible: true,
     hotkey: null,
     voiceHotkey: null,
     quickHotkey: null,
+    shortcuts: {},
     quickState: null,
     pins: [],
     remote: options.remote ?? {},
@@ -113,7 +125,22 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
     },
     async registerQuickHotkey(accelerator) {
       record('registerQuickHotkey', accelerator);
+      free(accelerator);
       state.quickHotkey = accelerator;
+    },
+    async registerShortcut(id, accelerator, onPress) {
+      record('registerShortcut', id, accelerator);
+      free(accelerator);
+      state.shortcuts[id] = accelerator;
+      onShortcut.set(id, onPress);
+    },
+    async unregisterShortcut(id) {
+      record('unregisterShortcut', id);
+      delete state.shortcuts[id];
+      onShortcut.delete(id);
+    },
+    pressShortcut(id) {
+      onShortcut.get(id)?.();
     },
     async unregisterQuickHotkey() {
       record('unregisterQuickHotkey');
@@ -136,11 +163,13 @@ export function createFakePlatform(options: FakeOptions = {}): FakePlatform {
 
     async registerHotkey(accelerator, onPress) {
       record('registerHotkey', accelerator);
+      free(accelerator);
       state.hotkey = accelerator;
       onHotkey = onPress;
     },
     async registerVoiceHotkey(accelerator, onDown, onUp) {
       record('registerVoiceHotkey', accelerator);
+      free(accelerator);
       state.voiceHotkey = accelerator;
       onVoice = { down: onDown, up: onUp };
     },

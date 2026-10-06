@@ -7,6 +7,7 @@ import { AdminSection } from './AdminView';
 import { AiMarksAdmin } from './AiMarksAdmin';
 import { FaqSection } from './Faq';
 import { useCapabilities } from './roles';
+import { useTakenHotkey } from './hotkeys';
 import { ACCENT_HUES, THEMES, organizationHue, type AppearanceControl } from './appearance';
 import { AI_SERVER, APP_VERSION, AUTHORS, LINKS } from './about';
 import { AI_CUSTOM_SETTING, AI_KEY_SETTING, AI_KEY_URL, AI_PROVIDER_SETTING, AI_SERVER_SETTING, type AiProvider } from './ai';
@@ -97,12 +98,16 @@ function HotkeyField({
   onHotkey,
   onCapturing,
   label = 'Открыть и скрыть оверлей',
+  name,
 }: {
   hotkey: string;
   onHotkey: (accelerator: string) => void;
   onCapturing: (capturing: boolean) => void;
   label?: string;
+  /** What the key is registered as (`hotkeys.ts`): held by another program, the field says so. */
+  name?: string;
 }) {
+  const taken = useTakenHotkey(name) === hotkey;
   const [listening, setListening] = useState(false);
   const [unsupported, setUnsupported] = useState(false);
 
@@ -157,6 +162,12 @@ function HotkeyField({
           )}
         </button>
       </div>
+      {taken && !listening && (
+        <div className="warn" role="alert">
+          <WarnIcon />
+          <span>Сочетание занято другой программой — клавиша не сработает. Задайте другое.</span>
+        </div>
+      )}
       <p className="set__hint">{listening ? 'Нажмите нужное сочетание. Esc — отмена.' : 'Нажмите на поле и задайте новое сочетание.'}</p>
       {unsupported && <p className="set__hint">Эту клавишу назначить нельзя: подойдут буквы, цифры, F1–F24, пробел.</p>}
       {!hasModifier(hotkey) && (
@@ -805,7 +816,7 @@ export function SettingsView({
           on={!!voiceHotkey}
           onChange={(on) => onVoiceHotkey(on ? DEFAULT_VOICE_HOTKEY : '')}
         />
-        {voiceHotkey && <HotkeyField label="Держать, чтобы спросить" hotkey={voiceHotkey} onHotkey={onVoiceHotkey} onCapturing={onCapturing} />}
+        {voiceHotkey && <HotkeyField name="voice" label="Держать, чтобы спросить" hotkey={voiceHotkey} onHotkey={onVoiceHotkey} onCapturing={onCapturing} />}
         {voiceHotkey && voiceHotkey === hotkey && (
           <div className="warn" role="alert">
             <WarnIcon />
@@ -914,7 +925,7 @@ export function SettingsView({
 
       <div className="settings__part" id={sectionId('keys')}>
       <Block title="Горячая клавиша">
-        <HotkeyField hotkey={hotkey} onHotkey={onHotkey} onCapturing={onCapturing} />
+        <HotkeyField name="overlay" hotkey={hotkey} onHotkey={onHotkey} onCapturing={onCapturing} />
       </Block>
 
       <Block title="Быстрый поиск">
@@ -924,7 +935,7 @@ export function SettingsView({
           on={!!quickHotkey}
           onChange={(on) => onQuickHotkey(on ? DEFAULT_QUICK_HOTKEY : '')}
         />
-        {quickHotkey && <HotkeyField label="Открыть быстрый поиск" hotkey={quickHotkey} onHotkey={onQuickHotkey} onCapturing={onCapturing} />}
+        {quickHotkey && <HotkeyField name="quick" label="Открыть быстрый поиск" hotkey={quickHotkey} onHotkey={onQuickHotkey} onCapturing={onCapturing} />}
         {quickHotkey && (quickHotkey === hotkey || quickHotkey === voiceHotkey) && (
           <div className="warn" role="alert">
             <WarnIcon />

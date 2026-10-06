@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { forgetHotkey, trackHotkey } from './hotkeys';
 import { usePlatform } from '../platform/PlatformContext';
 import { useAppearance } from './appearance';
 import { Onboarding } from './Onboarding';
@@ -42,8 +43,11 @@ export function App() {
   const hotkey = profile?.hotkey ?? DEFAULT_HOTKEY;
   useEffect(() => {
     if (capturing) return;
-    void platform.registerHotkey(hotkey, () => void platform.toggleOverlay());
-    return () => void platform.unregisterHotkey();
+    trackHotkey(platform, 'overlay', hotkey, platform.registerHotkey(hotkey, () => void platform.toggleOverlay()), 'Ассистент по ней не откроется — откройте его значком у часов.');
+    return () => {
+      forgetHotkey('overlay');
+      void platform.unregisterHotkey();
+    };
   }, [platform, hotkey, capturing]);
 
   const save = useCallback(

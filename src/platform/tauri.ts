@@ -158,6 +158,8 @@ export async function createTauriPlatform(): Promise<PlatformAdapter> {
   let hotkey: string | null = null;
   let voiceHotkey: string | null = null;
   let quickHotkey: string | null = null;
+  /** The other keys over the game, by name. */
+  const shortcuts = new Map<string, string>();
 
   /**
    * A landscape window at the right of the work area (screen minus taskbar), centred top to bottom, in
@@ -319,6 +321,23 @@ export async function createTauriPlatform(): Promise<PlatformAdapter> {
       queueHotkey(async () => {
         if (quickHotkey) await unregister(quickHotkey);
         quickHotkey = null;
+      }),
+    registerShortcut: (id, accelerator, onPress) =>
+      queueHotkey(async () => {
+        const held = shortcuts.get(id);
+        if (held) await unregister(held);
+        shortcuts.delete(id);
+        if (await isRegistered(accelerator)) await unregister(accelerator);
+        await register(accelerator, (event) => {
+          if (event.state === 'Pressed') onPress();
+        });
+        shortcuts.set(id, accelerator);
+      }),
+    unregisterShortcut: (id) =>
+      queueHotkey(async () => {
+        const held = shortcuts.get(id);
+        if (held) await unregister(held);
+        shortcuts.delete(id);
       }),
     sendQuickState: (state) => emitTo(QUICK_LABEL, QUICK_STATE_EVENT, state),
     onQuickRequest(listener) {

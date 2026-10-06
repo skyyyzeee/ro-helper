@@ -64,6 +64,7 @@ import { ServerChoice } from './ServerChoice';
 import { SettingsView, type SettingsSection } from './SettingsView';
 import { NoResults } from './NoResults';
 import { Dropdown } from './Dropdown';
+import { forgetHotkey, trackHotkey } from './hotkeys';
 import { aiCapabilitiesOf, isFaction } from '../account/capabilities';
 import { useStats } from './stats';
 import { useAnnouncements } from './announcements';
@@ -579,12 +580,21 @@ export function Overlay({
   // Registered while no hotkey is being recorded in the settings, and never on the overlay's own key.
   useEffect(() => {
     if (capturing || !voiceHotkey || voiceHotkey === profile.hotkey) return;
-    void platform.registerVoiceHotkey(
+    trackHotkey(
+      platform,
+      'voice',
       voiceHotkey,
-      () => void talkDown.current(),
-      () => void talkUp.current(),
+      platform.registerVoiceHotkey(
+        voiceHotkey,
+        () => void talkDown.current(),
+        () => void talkUp.current(),
+      ),
+      'Вопрос голосом по ней не запишется.',
     );
-    return () => void platform.unregisterVoiceHotkey();
+    return () => {
+      forgetHotkey('voice');
+      void platform.unregisterVoiceHotkey();
+    };
   }, [platform, voiceHotkey, capturing, profile.hotkey]);
   useEffect(() => () => talk.current.recording?.cancel(), []);
 
@@ -601,8 +611,11 @@ export function Overlay({
   // Not while a key is being recorded, and never on a key the overlay or the voice already use.
   useEffect(() => {
     if (capturing || !quickHotkey || quickHotkey === profile.hotkey || quickHotkey === voiceHotkey) return;
-    void platform.registerQuickHotkey(quickHotkey);
-    return () => void platform.unregisterQuickHotkey();
+    trackHotkey(platform, 'quick', quickHotkey, platform.registerQuickHotkey(quickHotkey), 'Быстрый поиск по ней не откроется.');
+    return () => {
+      forgetHotkey('quick');
+      void platform.unregisterQuickHotkey();
+    };
   }, [platform, quickHotkey, capturing, profile.hotkey, voiceHotkey]);
   /** An article came into the calculator from the bar: the calculator is pinned over the game, to see it there (issue #20). */
   const [pinFromQuick, setPinFromQuick] = useState(false);

@@ -136,6 +136,13 @@ export interface PlatformAdapter {
   /** The quick search's own key (ticket 27): pressed, the bar shows at the top of the screen. Replaces any previous one. */
   registerQuickHotkey(accelerator: string): Promise<void>;
   unregisterQuickHotkey(): Promise<void>;
+  /**
+   * A key for one more thing done over the game — the detention timer, a phrase for the chat — under a name of
+   * its own, so each is changed or let go apart. Like every key here, it rejects when Windows will not give the
+   * key: another program holds it.
+   */
+  registerShortcut(id: string, accelerator: string, onPress: () => void): Promise<void>;
+  unregisterShortcut(id: string): Promise<void>;
   /** What the quick search asks of the overlay: an article into the calculator, a question to the AI. Returns unsubscribe. */
   onQuickRequest(listener: (request: QuickRequest) => void): () => void;
   /** Tells the quick search what is in the calculator and the recent articles. */
