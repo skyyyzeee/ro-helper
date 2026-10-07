@@ -121,7 +121,7 @@ describe('checking the answer against the laws', () => {
   it('flags an article of the laws the AI was not shown, a wrong number, a part the article lacks', () => {
     const notShown = validateAnswer(pack, sources, answer({ norms: [{ ...answer().norms[0], source: 'S7', ref: 'УК ст. 88' }] }));
     expect(notShown.issues[0]).toMatch(/не было среди найденных/);
-    const wrongNumber = validateAnswer(pack, sources, answer({ norms: [{ ...answer().norms[0], ref: 'УК ст. 66' }] }));
+    const wrongNumber = validateAnswer(pack, sources, answer({ norms: [{ ...answer().norms[0], ref: 'УК ст. 66', why: 'грабеж — открытое хищение чужого имущества' }] }));
     expect(wrongNumber.issues[0]).toMatch(/не тот номер/);
     const noPart = validateAnswer(pack, sources, answer({ norms: [{ ...answer().norms[0], part: '7' }] }));
     expect(noPart.issues[0]).toMatch(/нет части 7/);

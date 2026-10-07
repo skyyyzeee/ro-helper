@@ -177,7 +177,23 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
 
   const validation = validateAnswer(pack, sources, answer, scope);
   // The side's points are shown only where they stand on the sources: one that does not is left out, not flagged.
-  if (answer.guide) answer.guide = groundedGuide(answer.guide, sources, scope);
+  if (answer.guide) {
+    // Marks are the defence's check of the procedure: in a list of steps or rights they mean nothing.
+    answer.guide = groundedGuide(answer.guide, sources, scope).map(({ mark, ...item }) => (perspective === 'lawyer' && mark ? { ...item, mark } : item));
+  }
+  // A side asked for and none of its points given (the model left the field out): its block is put together from
+  // what the answer does say on the sources — the steps, what is broken, what it is punished with.
+  if (perspective && !answer.guide?.length) {
+    const said = (claim: LegalAnswer['violation'], lead: string) => (claim ? [{ ...claim, text: `${lead}${claim.text}` }] : []);
+    const fallback =
+      perspective === 'state'
+        ? [...answer.procedure, ...said(answer.violation, 'Нарушение: '), ...said(answer.punishment, 'Наказание: ')]
+        : perspective === 'lawyer'
+          ? answer.procedure.map((step) => ({ ...step, mark: 'unknown' as const }))
+          : [...said(answer.violation, 'Что вменяют: '), ...said(answer.punishment, 'Что грозит: '), ...answer.procedure];
+    const grounded = groundedGuide(fallback, sources, scope);
+    if (grounded.length) answer.guide = grounded;
+  }
   // A label the AI miswrote over a source it gave is shown — and kept — under the source's own label.
   answer.norms = validation.norms.map((n) => n.norm);
   // Nothing found for a few words that tell no situation («чела приняли, что ему будет?»): not «не найдено» — the

@@ -5772,3 +5772,8 @@ select option {
 .guide__item--ok .guide__mark { background: var(--now-bg); color: var(--now-text); }
 .guide__item--violated .guide__mark { background: var(--penalty-bg); color: var(--penalty-text); }
 .guide__item--unknown .guide__mark { background: var(--surface-active); color: var(--text-muted); }
+
+/* The analysis behind the side's answer, folded (AnswerView «Подробный разбор»). */
+.answer__more { margin-top: 6px; }
+.answer__more > summary { cursor: pointer; font-size: 13px; color: var(--text-muted); padding: 4px 0; }
+.answer__more[open] > summary { margin-bottom: 6px; }

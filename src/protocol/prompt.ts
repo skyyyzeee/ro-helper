@@ -43,9 +43,10 @@ const SCHEMA = `{
 }`;
 
 /** The schema with "guide" for an answer seen from a side. */
+// First in the object, right after the situation: a model writes the fields in order and leaves out the last ones.
 const SCHEMA_WITH_GUIDE = SCHEMA.replace(
-  '\n  "uncertainty"',
-  '\n  "guide": [{"text": "пункт для игрока", "sources": ["id"], "mark": "ok" | "violated" | "unknown" (только для защиты)}],\n  "uncertainty"',
+  '\n  "facts"',
+  '\n  "guide": [{"text": "пункт для игрока — обязательно, 3–8 пунктов", "sources": ["id"], "mark": "ok" | "violated" | "unknown" (только для защиты)}],\n  "facts"',
 );
 
 export function analysisPrompt(pack: ServerPack, depth: Depth, scope: Scope = 'law', perspective?: Perspective): string {

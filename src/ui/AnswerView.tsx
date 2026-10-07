@@ -259,6 +259,8 @@ export function AnswerView({
   const groups: [string, CheckedNorm[]][] = lawSide.length && ruleSide.length
     ? [['По закону', lawSide], ['По правилам сервера', ruleSide]]
     : [[ruleSide.length ? 'Применимые правила сервера' : 'Применимые нормы', validation.norms]];
+  // An answer for the player's side leads with it, and keeps the analysis behind it short.
+  const lean = !!(answer.guide?.length && analysis.perspective);
   const chargeHits = (calculation?.charges ?? []).map((c) => ({ article: c.article, document: c.document, part: c.part, stage: c.stage }));
 
   return (
@@ -281,6 +283,96 @@ export function AnswerView({
         <Guide items={answer.guide} perspective={analysis.perspective} sources={byId} onOpen={onOpen} />
       )}
 
+      {lean ? (
+        // The side's answer said it: the punishment and the articles stay at hand, the rest of the analysis folds away.
+        <>
+      {(answer.punishment || calculation) && (
+        <Block title="Наказание">
+          {answer.punishment && (
+            <p className="ai__line">
+              <ClaimLine claim={answer.punishment} sources={byId} onOpen={onOpen} />
+            </p>
+          )}
+          {calculation && (
+            <div className="answer__calc">
+              <span className="demand__label">Калькулятор:</span> <b>{calculationLine(calculation.result) || '—'}</b>
+              <span className="answer__charge">{calculation.result.charge}</span>
+              <button type="button" className="chip-btn" onClick={() => onCharge(chargeHits)}>
+                <PlusIcon size={13} /> Открыть в калькуляторе
+              </button>
+              {calculation.result.charge && (
+                <button type="button" className="chip-btn" onClick={() => copy('charge', calculation.result.charge)}>
+                  {copied === 'charge' ? 'Скопировано' : 'Скопировать обвинение'}
+                </button>
+              )}
+            </div>
+          )}
+        </Block>
+      )}
+
+      {groups.map(([title, norms]) => norms.length > 0 && (
+        <Block key={title} title={title}>
+          <ul className="sources">
+            {norms.map((checked, i) => (
+              <SourceCard
+                key={`${checked.norm.source}-${i}`}
+                checked={checked}
+                onOpen={onOpen}
+                onCharge={(hit) => onCharge([{ ...hit, stage: checked.norm.stage }])}
+                onPin={onPinArticle}
+                onLink={onLink}
+                chargeable={!!checked.hit && calculable.includes(checked.hit.document.id) && !checked.issues.length}
+              />
+            ))}
+          </ul>
+        </Block>
+      ))}
+
+          <details className="answer__more">
+            <summary>Подробный разбор</summary>
+      {answer.situation && (
+        <Block title="Ситуация">
+          <p className="ai__line">{answer.situation}</p>
+        </Block>
+      )}
+
+      {answer.violation && (
+        <Block title="Нарушение">
+          <p className="ai__line">
+            <ClaimLine claim={answer.violation} sources={byId} onOpen={onOpen} />
+          </p>
+        </Block>
+      )}
+
+      {answer.procedure.length > 0 && (
+        <Block title="Процедура">
+          <ol className="answer__list">
+            {answer.procedure.map((step) => (
+              <li key={step.text}>
+                <ClaimLine claim={step} sources={byId} onOpen={onOpen} />
+              </li>
+            ))}
+          </ol>
+        </Block>
+      )}
+
+      {(answer.uncertainty.length > 0 || answer.assumptions.length > 0) && (
+        <Block title="Неопределённость">
+          <ul className="answer__list">
+            {answer.assumptions.map((item) => (
+              <li key={`a-${item}`}>Допущено: {item}</li>
+            ))}
+            {answer.uncertainty.map((item) => (
+              <li key={`u-${item}`}>{item}</li>
+            ))}
+          </ul>
+        </Block>
+      )}
+
+          </details>
+        </>
+      ) : (
+        <>
       {answer.situation && (
         <Block title="Ситуация">
           <p className="ai__line">{answer.situation}</p>
@@ -360,6 +452,9 @@ export function AnswerView({
             ))}
           </ul>
         </Block>
+      )}
+
+        </>
       )}
 
       {answer.questions.length > 0 && (
