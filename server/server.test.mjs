@@ -34,6 +34,7 @@ async function fakeGigachat({ life = 30 * 60_000, delay = 0 } = {}) {
     }
     seen.chats += 1;
     const question = JSON.parse(body).messages.at(-1).content;
+    seen.models = [...(seen.models ?? []), JSON.parse(body).model];
     await new Promise((resolve) => setTimeout(resolve, delay));
     if (question.includes('травка')) return json(response, 200, { choices: [{ message: { content: 'Генеративные языковые модели не обладают собственным мнением…' }, finish_reason: 'blacklist' }] });
     if (question.includes('сломай')) return json(response, 200, { choices: [{ message: { content: '{"phra e": [' }, finish_reason: 'stop' }] });
@@ -352,5 +353,22 @@ test('the question itself goes to ANALYSIS_MODEL, its steps to GigaChat; past th
     ai.stop();
     giga.server.close();
     paidServer.close();
+  }
+});
+
+test('a chain for the question: a GigaChat model on its free tokens first, the paid one when it is used up', async () => {
+  const giga = await fakeGigachat();
+  const paid = await fakePaid();
+  const ai = await aiServer({ ...gigaEnv(giga), AI_BASE_URL: paid.url, AI_API_KEY: 'paid-key', ANALYSIS_MODEL: 'gigachat:GigaChat-3-Ultra,gpt-4.1-mini' });
+  try {
+    assert.equal((await ai.ask('украл телефон')).body.text, '{"from": "gigachat"}');
+    assert.equal(giga.seen.models.at(-1), 'GigaChat-3-Ultra');
+    // Its free tokens used up (402): the paid model answers.
+    assert.equal((await ai.ask('лимит кончился')).body.text, '{"from": "paid"}');
+    assert.equal(paid.seen.chats, 1);
+  } finally {
+    ai.stop();
+    giga.server.close();
+    paid.server.close();
   }
 });

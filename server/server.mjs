@@ -27,7 +27,9 @@ const CONFIG = {
    * The model that answers the player's question itself (the analysis — what the app counts as a question), while
    * GigaChat answers its steps (the search phrases). Empty: GigaChat first for everything, as before.
    */
-  analysisModel: env('ANALYSIS_MODEL', '').trim(),
+  // In turn, comma-separated: «gigachat:GigaChat-3-Ultra» is a model of GigaChat's (its free tokens first), any other a
+  // model of the paid API; when one does not answer — its free tokens used up, the budget spent — the next does.
+  analysisModels: env('ANALYSIS_MODEL', '').split(',').map((m) => m.trim()).filter(Boolean),
   /** Rubles per 1M tokens, in and out, for counting the budget: of a model not in MODEL_PRICES. */
   priceIn: num('PRICE_IN_RUB', 20),
   priceOut: num('PRICE_OUT_RUB', 104),
@@ -268,12 +270,12 @@ function readableJson(text) {
   }
 }
 
-async function gigachat({ system, messages, json }) {
+async function gigachat({ system, messages, json }, model = CONFIG.gigachat.model) {
   return inGigachatTurn(async () => {
     const response = await fetch(`${CONFIG.gigachat.api}/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await gigachatToken()}` },
-      body: JSON.stringify({ model: CONFIG.gigachat.model, messages: [{ role: 'system', content: system }, ...messages], max_tokens: CONFIG.maxOutputTokens }),
+      body: JSON.stringify({ model, messages: [{ role: 'system', content: system }, ...messages], max_tokens: CONFIG.maxOutputTokens }),
     });
     const body = await response.json().catch(() => null);
     // 401: the token went stale early — the next request takes a new one. 402/429: the free tokens are used up, or too fast.
@@ -285,26 +287,31 @@ async function gigachat({ system, messages, json }) {
     if (choice?.finish_reason === 'blacklist') throw new Declined('blacklist');
     if (!text.trim()) throw new Declined('empty');
     if (json && !readableJson(text)) throw new Declined('format');
-    return { text, rubles: 0 };
+    const usage = body?.usage ?? {};
+    return { text, rubles: 0, usage: { input: usage.prompt_tokens ?? 0, output: usage.completion_tokens ?? 0 } };
   });
 }
 
 /**
- * Who answers. The player's question itself goes to ANALYSIS_MODEL when one is set and the day's budget allows —
- * GigaChat if it fails. Everything else, and everything past the budget: GigaChat first, when it is set up; the paid
- * API for what it does not answer, while the budget allows.
+ * Who answers. The player's question itself goes to the ANALYSIS_MODEL ones in turn — a GigaChat model on its
+ * free tokens, a paid one while the day's budget allows. Everything else, and what none of them answered: GigaChat
+ * first, when it is set up; the paid API for what it does not answer, while the budget allows.
  */
 async function chat(request, kind = 'question') {
   const canPay = !!CONFIG.apiKey && state.spent < CONFIG.budgetPerDay;
-  if (CONFIG.analysisModel && kind === 'question' && canPay) {
-    try {
-      const answer = await paid(request, [CONFIG.analysisModel]);
-      state.answered.paid += 1;
-      dirty = true;
-      return answer;
-    } catch (error) {
-      console.error(new Date().toISOString(), `${CONFIG.analysisModel}:`, error.message ?? error);
-      if (!CONFIG.gigachat.key) throw error;
+  if (kind === 'question') {
+    for (const name of CONFIG.analysisModels) {
+      const giga = name.startsWith('gigachat:');
+      if (giga ? !CONFIG.gigachat.key : !canPay) continue;
+      try {
+        const answer = giga ? await gigachat(request, name.slice('gigachat:'.length)) : await paid(request, [name]);
+        state.answered[giga ? 'gigachat' : 'paid'] += 1;
+        dirty = true;
+        return answer;
+      } catch (error) {
+        // Its free tokens used up (402), busy, or the answer unreadable: the next one answers.
+        console.error(new Date().toISOString(), `${name}:`, error.message ?? error);
+      }
     }
   }
   if (CONFIG.gigachat.key) {
@@ -623,10 +630,12 @@ const server = createServer(async (request, response) => {
     const request = { system: input.system.slice(0, 8000), messages, json: !!input.json, think: input.think === true };
     // An admin trying a model: that model only, off the computer's limit (the daily budget still counts), no cache.
     if (typeof input.model === 'string' && isAdmin(request_)) {
-      if (!CONFIG.trialModels.includes(input.model)) return send(response, 400, { error: `Модель не из списка: ${CONFIG.trialModels.join(', ')}` });
+      // «gigachat:GigaChat-2-Max»: any model of GigaChat's, on its free tokens.
+      const gigaModel = /^gigachat:(GigaChat[\w.-]*)$/.exec(input.model)?.[1];
+      if (!gigaModel && !CONFIG.trialModels.includes(input.model)) return send(response, 400, { error: `Модель не из списка: ${CONFIG.trialModels.join(', ')}` });
       rollDay();
-      if (state.spent >= CONFIG.budgetPerDay) return send(response, 429, { error: 'Дневной бюджет ИИ исчерпан.' });
-      const answer = input.model === 'gigachat' ? await gigachat(request) : await paid(request, [input.model]);
+      if (!gigaModel && input.model !== 'gigachat' && state.spent >= CONFIG.budgetPerDay) return send(response, 429, { error: 'Дневной бюджет ИИ исчерпан.' });
+      const answer = gigaModel ? await gigachat(request, gigaModel) : input.model === 'gigachat' ? await gigachat(request) : await paid(request, [input.model]);
       count(device, ip, 'step', answer.rubles);
       return send(response, 200, { text: answer.text, usage: answer.usage ?? null });
     }
