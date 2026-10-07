@@ -51,6 +51,11 @@ const CONFIG = {
   cacheFile: env('CACHE_FILE', './cache.json'),
   cacheDays: num('CACHE_DAYS', 7),
   cacheMax: num('CACHE_MAX', 5000),
+  /**
+   * The models an admin may ask for one request (the exam, comparing them before a change): «gigachat» or a model of
+   * the paid API. Such a request is off the computer's limit, not kept in the cache, and says its tokens.
+   */
+  trialModels: env('TRIAL_MODELS', 'gigachat,gpt-5-nano,gpt-4.1-nano,gpt-4.1-mini,gpt-4o-mini').split(',').map((m) => m.trim()).filter(Boolean),
   /** The admins' token for reading the marks from the app (bash set-key.sh admin); none — no reading. */
   adminToken: env('ADMIN_TOKEN', '').trim(),
   /**
@@ -172,9 +177,9 @@ async function inTurn(models, call) {
 }
 
 /** The paid OpenAI-compatible API, model after model while they are busy. */
-async function paid({ system, messages, json, think }) {
+async function paid({ system, messages, json, think }, models = CONFIG.models) {
   if (!CONFIG.apiKey) throw new UpstreamError(503, null, 'no paid API key');
-  const body = await inTurn(CONFIG.models, (model) =>
+  const body = await inTurn(models, (model) =>
     upstream(
       '/chat/completions',
       {
@@ -197,7 +202,7 @@ async function paid({ system, messages, json, think }) {
   const text = body?.choices?.[0]?.message?.content ?? '';
   const usage = body?.usage ?? {};
   const rubles = ((usage.prompt_tokens ?? 0) * CONFIG.priceIn + (usage.completion_tokens ?? 0) * CONFIG.priceOut) / 1e6;
-  return { text, rubles };
+  return { text, rubles, usage: { input: usage.prompt_tokens ?? 0, output: usage.completion_tokens ?? 0 } };
 }
 
 // ——— GigaChat ———
@@ -496,6 +501,7 @@ function send(response, status, body) {
 }
 
 const server = createServer(async (request, response) => {
+  const request_ = request;
   if (request.method === 'OPTIONS') {
     response.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
@@ -578,6 +584,15 @@ const server = createServer(async (request, response) => {
       : [];
     if (!messages.length || typeof input.system !== 'string') return send(response, 400, { error: 'Пустой вопрос.' });
     const request = { system: input.system.slice(0, 8000), messages, json: !!input.json, think: input.think === true };
+    // An admin trying a model: that model only, off the computer's limit (the daily budget still counts), no cache.
+    if (typeof input.model === 'string' && isAdmin(request_)) {
+      if (!CONFIG.trialModels.includes(input.model)) return send(response, 400, { error: `Модель не из списка: ${CONFIG.trialModels.join(', ')}` });
+      rollDay();
+      if (state.spent >= CONFIG.budgetPerDay) return send(response, 429, { error: 'Дневной бюджет ИИ исчерпан.' });
+      const answer = input.model === 'gigachat' ? await gigachat(request) : await paid(request, [input.model]);
+      count(device, ip, 'step', answer.rubles);
+      return send(response, 200, { text: answer.text, usage: answer.usage ?? null });
+    }
     // A question the app says may be answered again (a first question, not a follow-up): from the cache when it was
     // asked before — free, and off no one's limit; only the address's limit stands, against a flood.
     const question = input.cache === true ? normalQuestion(input.question) : '';
