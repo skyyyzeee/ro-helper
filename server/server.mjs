@@ -23,10 +23,18 @@ const CONFIG = {
    * is tried. The first is AI_MODEL; AI_MODELS, comma-separated, replaces the whole list.
    */
   models: env('AI_MODELS', `${env('AI_MODEL', 'gpt-5-nano')},gpt-4.1-nano,gpt-4o-mini`).split(',').map((m) => m.trim()).filter(Boolean),
-  /** Rubles per 1M tokens, in and out, for counting the budget. */
+  /**
+   * The model that answers the player's question itself (the analysis — what the app counts as a question), while
+   * GigaChat answers its steps (the search phrases). Empty: GigaChat first for everything, as before.
+   */
+  analysisModel: env('ANALYSIS_MODEL', '').trim(),
+  /** Rubles per 1M tokens, in and out, for counting the budget: of a model not in MODEL_PRICES. */
   priceIn: num('PRICE_IN_RUB', 20),
   priceOut: num('PRICE_OUT_RUB', 104),
-  /** Everyone together may spend this much a day; past it, the AI rests until midnight (Moscow). */
+  /**
+   * Everyone together may spend this much a day. Past it the paid API rests until midnight (Moscow): with GigaChat
+   * set up, the questions go on to it; without, the AI rests too.
+   */
   budgetPerDay: num('BUDGET_RUB_PER_DAY', 20),
   /** Per computer and per address, a day. */
   questionsPerDevice: num('QUESTIONS_PER_DEVICE', 50),
@@ -111,7 +119,8 @@ function rollDay() {
 /** Why this request may not go on today, or nothing when it may. */
 function refusal(device, ip, kind) {
   rollDay();
-  if (state.spent >= CONFIG.budgetPerDay) return 'На сегодня ИИ Кремлёвского Ассистента исчерпал общий лимит. Он снова заработает после полуночи по Москве.';
+  // Past the budget GigaChat, free, goes on answering; only with no GigaChat does the AI rest.
+  if (state.spent >= CONFIG.budgetPerDay && !CONFIG.gigachat.key) return 'На сегодня ИИ Кремлёвского Ассистента исчерпал общий лимит. Он снова заработает после полуночи по Москве.';
   if ((state.ips[ip] ?? 0) >= CONFIG.requestsPerIp) return 'Слишком много вопросов с вашего адреса за сегодня. Попробуйте завтра.';
   const used = state.devices[device] ?? { questions: 0 };
   if (kind === 'question' && used.questions >= CONFIG.questionsPerDevice) return `На сегодня вопросы ИИ закончились (${CONFIG.questionsPerDevice} в день). Они снова появятся после полуночи по Москве.`;
@@ -179,7 +188,9 @@ async function inTurn(models, call) {
 /** The paid OpenAI-compatible API, model after model while they are busy. */
 async function paid({ system, messages, json, think }, models = CONFIG.models) {
   if (!CONFIG.apiKey) throw new UpstreamError(503, null, 'no paid API key');
+  let used = models[0];
   const body = await inTurn(models, (model) =>
+    (used = model) &&
     upstream(
       '/chat/completions',
       {
@@ -201,9 +212,18 @@ async function paid({ system, messages, json, think }, models = CONFIG.models) {
   );
   const text = body?.choices?.[0]?.message?.content ?? '';
   const usage = body?.usage ?? {};
-  const rubles = ((usage.prompt_tokens ?? 0) * CONFIG.priceIn + (usage.completion_tokens ?? 0) * CONFIG.priceOut) / 1e6;
+  const [priceIn, priceOut] = MODEL_PRICES[used] ?? [CONFIG.priceIn, CONFIG.priceOut];
+  const rubles = ((usage.prompt_tokens ?? 0) * priceIn + (usage.completion_tokens ?? 0) * priceOut) / 1e6;
   return { text, rubles, usage: { input: usage.prompt_tokens ?? 0, output: usage.completion_tokens ?? 0 } };
 }
+
+/** Rubles per 1M tokens, in and out, by ProxyAPI's list (October 2026): the budget counts what each model costs. */
+const MODEL_PRICES = {
+  'gpt-4.1-mini': [104, 413],
+  'gpt-4.1-nano': [26, 104],
+  'gpt-5-nano': [13, 104],
+  'gpt-5-mini': [65, 516],
+};
 
 // ——— GigaChat ———
 
@@ -269,8 +289,24 @@ async function gigachat({ system, messages, json }) {
   });
 }
 
-/** GigaChat first, when it is set up; the paid API for whatever it does not answer. */
-async function chat(request) {
+/**
+ * Who answers. The player's question itself goes to ANALYSIS_MODEL when one is set and the day's budget allows —
+ * GigaChat if it fails. Everything else, and everything past the budget: GigaChat first, when it is set up; the paid
+ * API for what it does not answer, while the budget allows.
+ */
+async function chat(request, kind = 'question') {
+  const canPay = !!CONFIG.apiKey && state.spent < CONFIG.budgetPerDay;
+  if (CONFIG.analysisModel && kind === 'question' && canPay) {
+    try {
+      const answer = await paid(request, [CONFIG.analysisModel]);
+      state.answered.paid += 1;
+      dirty = true;
+      return answer;
+    } catch (error) {
+      console.error(new Date().toISOString(), `${CONFIG.analysisModel}:`, error.message ?? error);
+      if (!CONFIG.gigachat.key) throw error;
+    }
+  }
   if (CONFIG.gigachat.key) {
     try {
       const answer = await gigachat(request);
@@ -281,7 +317,8 @@ async function chat(request) {
       const why = error instanceof Declined ? error.message.split(' ')[0] : 'network';
       state.answered.why[why] = (state.answered.why[why] ?? 0) + 1;
       if (!(error instanceof Declined) || why === 'token') console.error(new Date().toISOString(), 'GigaChat:', error.message ?? error);
-      if (!CONFIG.apiKey) throw new UpstreamError(502, null, `GigaChat: ${why}`);
+      // Past the budget, or with no paid API, what GigaChat declines is told as the AI not answering.
+      if (!canPay) throw new UpstreamError(502, null, `GigaChat: ${why}`);
     }
   }
   const answer = await paid(request);
@@ -512,7 +549,7 @@ const server = createServer(async (request, response) => {
   }
   if (request.method === 'GET' && request.url === '/v1/status') {
     rollDay();
-    return send(response, 200, { ok: true, open: state.spent < CONFIG.budgetPerDay, answered: state.answered, spent: Math.round(state.spent * 100) / 100, marks: state.marks ?? 0, cache: cache.size });
+    return send(response, 200, { ok: true, open: state.spent < CONFIG.budgetPerDay || !!CONFIG.gigachat.key, answered: state.answered, spent: Math.round(state.spent * 100) / 100, marks: state.marks ?? 0, cache: cache.size });
   }
   if (request.method === 'GET' && request.url.startsWith('/v1/feedback')) {
     if (!isAdmin(request)) return send(response, 403, { error: 'Нужен ключ администратора.' });
@@ -608,7 +645,7 @@ const server = createServer(async (request, response) => {
     }
     const why = refusal(device, ip, kind);
     if (why) return send(response, 429, { error: why });
-    const { text, rubles } = await chat(request);
+    const { text, rubles } = await chat(request, kind);
     count(device, ip, kind, rubles);
     if (key && keepable(text, request.json)) rememberAnswer(key, text, question);
     return send(response, 200, { text });
