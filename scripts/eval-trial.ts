@@ -23,6 +23,12 @@ export function trialProvider(server: string, model: string, token: string, toke
       });
       const body = (await response.json().catch(() => null)) as { text?: string; error?: string; usage?: Tokens | null } | null;
       if (!response.ok || !body?.text) throw new AiError(body?.error ?? `Сервер ИИ не ответил (код ${response.status}).`, response.status === 429 ? 'limit' : 'failed');
+      // A paid model answers with its tokens. None: the server did not take the request as the admins' — the key is
+      // not the one in its .env, or the server is older — and the answer is GigaChat's: the exam would compare nothing.
+      if (model !== 'gigachat' && !body.usage) {
+        console.error('\nСервер ответил не этой моделью: он не принял ключ администратора (не тот ключ или старая версия сервера). Экзамен остановлен.');
+        process.exit(1);
+      }
       tokens.input += body.usage?.input ?? 0;
       tokens.output += body.usage?.output ?? 0;
       return body.text;
