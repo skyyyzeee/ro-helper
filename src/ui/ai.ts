@@ -44,10 +44,10 @@ export const AI_KEY_SETTING = 'ai.key';
 export const AI_KEY_URL = 'https://aistudio.google.com/apikey';
 
 export const PERSPECTIVES: { id: Perspective; label: string }[] = [
-  { id: 'state', label: 'Государство' },
-  { id: 'citizen', label: 'Гражданский' },
-  { id: 'lawyer', label: 'Адвокат' },
-  { id: 'crime', label: 'Крайм' },
+  { id: 'state', label: 'Сотрудник' },
+  { id: 'citizen', label: 'Гражданин' },
+  { id: 'lawyer', label: 'Защита' },
+  { id: 'crime', label: 'Квалификация' },
 ];
 
 /**
@@ -348,7 +348,10 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
           organization,
           message: perspective && previous ? `Разбери это же дело с точки зрения: ${side}.` : question,
           previous,
-          perspective,
+          // Each answer is for a side: the one asked for, or the player's own — an officer gets what to do, a citizen
+          // their rights, the defence what to check.
+          perspective: perspective ?? perspectivesFor(organization)[0],
+          ...(perspective && previous ? { rerun: true } : {}),
           depth: options.brief ? 'quick' : (options.depth ?? depth),
           choice: options.choice ?? choice,
           ...(options.direct === false ? { direct: false } : {}),
@@ -507,6 +510,7 @@ export function answerText(answer: LegalAnswer): string {
     answer.norms.length ? `Статьи: ${answer.norms.map((n) => n.ref + (n.part ? ` ч. ${n.part}` : '')).join(', ')}` : '',
     answer.punishment && `Наказание: ${answer.punishment.text}`,
     answer.procedure[0] && `Что делать: ${answer.procedure[0].text}`,
+    ...(answer.guide ?? []).map((item, i) => `${i + 1}. ${item.text}`),
   ]
     .filter(Boolean)
     .join('\n');

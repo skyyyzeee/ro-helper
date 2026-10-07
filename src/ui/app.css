@@ -5750,3 +5750,25 @@ select option {
 }
 .ai__direct-open:hover { background: var(--surface-hover); }
 .ai__direct-open .pen { white-space: normal; }
+
+/* The answer for the player's side (AnswerView Guide): first, in the side's colour, each point with its articles. */
+.guide {
+  --guide-hue: 245;
+  margin: 8px 0 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+  border: 1px solid oklch(0.78 0.1 var(--guide-hue) / 0.35);
+  background: oklch(0.7 0.1 var(--guide-hue) / 0.1);
+}
+.guide--citizen { --guide-hue: 155; }
+.guide--lawyer { --guide-hue: 60; }
+.guide--crime { --guide-hue: 25; }
+.guide__title { margin-bottom: 6px; font-size: 13px; font-weight: 700; color: oklch(0.88 0.08 var(--guide-hue)); }
+.guide__list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.45; }
+.guide--lawyer .guide__list { padding-left: 0; list-style: none; }
+.guide__item { display: flex; gap: 8px; }
+.guide--state .guide__item, .guide--citizen .guide__item, .guide--crime .guide__item { display: list-item; }
+.guide__mark { flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; font-size: 12px; font-weight: 800; }
+.guide__item--ok .guide__mark { background: var(--now-bg); color: var(--now-text); }
+.guide__item--violated .guide__mark { background: var(--penalty-bg); color: var(--penalty-text); }
+.guide__item--unknown .guide__mark { background: var(--surface-active); color: var(--text-muted); }

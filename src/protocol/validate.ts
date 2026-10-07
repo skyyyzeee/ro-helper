@@ -3,7 +3,7 @@
 // norms must name its own sources, and every figure in it must stand in those very sources; an article the answer
 // mentions must be among them. What does not pass marks the answer as one to check — it is never shown as confirmed.
 import { articleLabel, articleText, calculateDetention, leadPart, type Charge, type DetentionResult, type SearchHit, type ServerPack } from '../core';
-import type { AnswerNorm, Claim, LegalAnswer } from './answer';
+import type { AnswerNorm, Claim, GuideItem, LegalAnswer } from './answer';
 import { SOURCE_TYPE_LABELS, inScope, type Scope, type Source, type SourceType } from './sources';
 
 /**
@@ -182,4 +182,17 @@ export function calculateCharges(pack: ServerPack, validation: Validation): { ch
   }
   if (!charges.length) return null;
   return { charges, result: calculateDetention(charges, { mode: 'custody', offender: 'citizen' }, rules) };
+}
+
+/**
+ * The points for the player's side that stand on the sources: each names given sources of the question's kind, holds
+ * no figure they lack and no article that is not among them. The rest are left out — advice without its law is not
+ * shown at all.
+ */
+export function groundedGuide(guide: GuideItem[], sources: Source[], scope?: Scope): GuideItem[] {
+  const byId = new Map(sources.map((s) => [s.id, s]));
+  const numbers = new Set(sources.map((s) => s.hit.article.number));
+  return guide.filter(
+    (item) => item.sources.length > 0 && !checkClaim(item, 'Пункт', byId, scope, []).length && namedArticles(item.text).every((n) => numbers.has(n)),
+  );
 }

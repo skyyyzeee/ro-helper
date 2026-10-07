@@ -113,4 +113,17 @@ describe('the analysis on screen', () => {
     expect(alert).toHaveTextContent('Нет связи с Gemini');
     expect(within(alert).getByRole('button', { name: 'поиск по законам' })).toBeInTheDocument();
   });
+
+  it('answers an officer with what to do first, and offers the other sides but not their own', async () => {
+    vi.stubGlobal('fetch', vi.fn(fakeGeminiFetch({})));
+    const app = await renderApp({ settings: GEMINI, profile: { organization: 'mvd' } });
+    await app.user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
+    await app.user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'у меня украли телефон{Enter}');
+    const guide = await screen.findByRole('region', { name: 'Что делать' });
+    expect(guide).toHaveTextContent('Потребуйте объяснения и составьте протокол');
+    expect(within(guide).getByRole('button', { name: /УК/ })).toBeInTheDocument();
+    const sides = screen.getByRole('group', { name: 'Разобрать с другой стороны' });
+    expect(within(sides).queryByRole('button', { name: 'Сотрудник' })).not.toBeInTheDocument();
+    expect(within(sides).getByRole('button', { name: 'Защита' })).toBeInTheDocument();
+  });
 });

@@ -2,6 +2,7 @@
 // of law. The rules here are the first line only — the scope narrows what it may see, the schema and the checks
 // (validate.ts) decide what is shown as confirmed.
 import type { ServerPack } from '../core';
+import { PERSPECTIVE_GUIDE, type Perspective } from './context';
 import type { Scope } from './sources';
 
 /** Quick: article → violation → punishment → source. Full: facts → norms → alternatives → procedure. */
@@ -41,7 +42,13 @@ const SCHEMA = `{
   "notFound": false
 }`;
 
-export function analysisPrompt(pack: ServerPack, depth: Depth, scope: Scope = 'law'): string {
+/** The schema with "guide" for an answer seen from a side. */
+const SCHEMA_WITH_GUIDE = SCHEMA.replace(
+  '\n  "uncertainty"',
+  '\n  "guide": [{"text": "пункт для игрока", "sources": ["id"], "mark": "ok" | "violated" | "unknown" (только для защиты)}],\n  "uncertainty"',
+);
+
+export function analysisPrompt(pack: ServerPack, depth: Depth, scope: Scope = 'law', perspective?: Perspective): string {
   return [
     coreRules(pack, scope),
     'ЗАДАЧА: разбери ситуацию игрока по источникам из блока «НАЙДЕННЫЕ ИСТОЧНИКИ». Ссылайся по их id ("source": "S3") и с подписью ЭТОГО ЖЕ источника из его заголовка — не переписывай подпись из примера. У "violation", "punishment" и каждого шага "procedure" — список id источников, где это сказано; без источника утверждение не пиши. Каждая цифра наказания и порядка — только из текста указанных источников.',
@@ -53,12 +60,17 @@ export function analysisPrompt(pack: ServerPack, depth: Depth, scope: Scope = 'l
     '"fit": "direct" — норма подходит к фактам прямо; "partial" — только если верно допущение или недостающий факт. Если вывод зависит от неизвестного факта (был ли он сотрудником, где это было, оконченное ли действие), задай 1–3 самых важных вопроса в "questions" с короткими вариантами ответа, а в "assumptions" напиши, что пришлось допустить. Не задавай вопросов, ответ на которые не меняет вывод, и не спрашивай о том, что уже сказано в сообщении или в фактах дела. Если из сообщения не понять, что произошло (кто и что сделал), не подбирай норму наугад — спроси об этом в "questions".',
     'Если есть «ФАКТЫ ДЕЛА ДО ЭТОГО СООБЩЕНИЯ», новое сообщение — поправка или «а если…»: измени в "facts" только затронутые факты (исправленный факт пометь в конце «(изменено)»), остальные оставь как были, и пересмотри только то, что от них зависит. Поправка игрока важнее допущения.',
     'Если указана «ТОЧКА ЗРЕНИЯ», отвечай с неё, но факты и источники те же: точка зрения не меняет ни нормы, ни факты.',
+    perspective
+      ? `${PERSPECTIVE_GUIDE[perspective]} ${depth === 'quick' ? '3–5 пунктов.' : '4–8 пунктов.'} Пункт без источника не пиши. Это главное в ответе для игрока: пиши конкретно и обращаясь к нему («потребуйте», «вы вправе»).`
+      : '',
     '"ref" копируй дословно из заголовка источника — вместе с названием документа, как он там написан («6-ФЗ ст. 13», а не «УК ст. 13»). Пиши для игрока обычным языком: не упоминай в тексте названия полей (stage, fit, source) и id источников.',
     depth === 'quick'
       ? 'РЕЖИМ — БЫСТРЫЙ РАЗБОР: 1–2 главные нормы, "procedure" и "uncertainty" — не больше чем по одному пункту, всё предельно коротко.'
       : 'РЕЖИМ — ПОЛНЫЙ РАЗБОР: все подходящие нормы (включая альтернативную квалификацию, с "fit": "partial"), порядок действий по шагам, от чего зависит вывод.',
-    `Ответь ТОЛЬКО JSON-объектом такого вида, без пояснений вне него:\n${SCHEMA}`,
-  ].join('\n\n');
+    `Ответь ТОЛЬКО JSON-объектом такого вида, без пояснений вне него:\n${perspective ? SCHEMA_WITH_GUIDE : SCHEMA}`,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 }
 
 /**

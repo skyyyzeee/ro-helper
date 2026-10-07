@@ -344,7 +344,7 @@ export function AiView({
           ),
         )}
         {last?.role === 'ai' && !last.pending && !last.failed && !last.system && lastQuestion && (
-          <div className="ai__sides" aria-label="Разобрать с другой стороны">
+          <div className="ai__sides" role="group" aria-label="Разобрать с другой стороны">
             <button type="button" className="ai__chip ai__chip--more" disabled={chat.busy} onClick={() => void chat.send('Разбери подробнее', undefined, { depth: 'full' })}>
               Подробнее
             </button>
@@ -356,8 +356,9 @@ export function AiView({
                 Составить документ
               </button>
             )}
-            <span className="set__label">С точки зрения:</span>
-            {PERSPECTIVES.filter((side) => chat.perspectives.includes(side.id)).map((side) => (
+            <span className="set__label">Другая сторона:</span>
+            {/* The answer is already for the player's side (or the one asked): the others are offered. */}
+            {PERSPECTIVES.filter((side) => chat.perspectives.includes(side.id) && side.id !== last.analysis?.perspective).map((side) => (
               <button key={side.id} type="button" className="ai__chip" disabled={chat.busy} onClick={() => void chat.send(lastQuestion, side.id)}>
                 {side.label}
               </button>

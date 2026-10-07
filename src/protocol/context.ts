@@ -18,6 +18,29 @@ export const PERSPECTIVE_FOCUS: Record<Perspective, string> = {
   crime: 'квалификация действий по нормам и её последствия — без советов, как уйти от ответственности',
 };
 
+/**
+ * What the answer gives each side, as "guide" — its own shape, not the same analysis said otherwise. Every point
+ * stands on the sources: what they do not say is not said.
+ */
+export const PERSPECTIVE_GUIDE: Record<Perspective, string> = {
+  state:
+    'ДЛЯ СОТРУДНИКА — "guide": что ему делать, по шагам и по порядку: на каком основании действовать, что сделать, что он обязан (представиться, разъяснить права, вести запись — только если это сказано в источниках), чего делать нельзя, как оформить. Каждый шаг — с id источников.',
+  citizen:
+    'ДЛЯ ГРАЖДАНИНА — "guide": его права в этой ситуации: что от него вправе требовать, что он вправе не делать или потребовать сам, что ему грозит, как и куда обжаловать. Каждый пункт — с id источников.',
+  lawyer:
+    'ДЛЯ ЗАЩИТЫ — "guide": проверка процедуры. Каждое требование источников к действиям сотрудника — отдельным пунктом, с "mark": "ok" — по фактам соблюдено, "violated" — нарушено, "unknown" — из фактов не видно. В конце — что потребовать или обжаловать. Каждый пункт — с id источников.',
+  crime:
+    'КВАЛИФИКАЦИЯ — "guide": какие действия под какие нормы подпадают, что за них грозит, что утяжеляет. Без советов, как уйти от ответственности. Каждый пункт — с id источников.',
+};
+
+/** The words of the law a side needs beyond the case: searched beside it, so its sources are there. */
+export const PERSPECTIVE_TERMS: Record<Perspective, string[]> = {
+  state: ['обязанности сотрудника', 'полномочия сотрудника'],
+  citizen: ['права гражданина', 'обжалование'],
+  lawyer: ['права задержанного', 'защитник', 'обжалование действий'],
+  crime: [],
+};
+
 /** The case as it stands after the earlier answers: a follow-up changes it, it is not told again. */
 export interface CaseState {
   facts: string[];

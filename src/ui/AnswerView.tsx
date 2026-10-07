@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { articleText, articleTitle, formatPunishment, formatRubles, leadPart, type DetentionResult, type SearchHit, type Stage } from '../core';
-import { SOURCE_TYPE_LABELS, STATUS_LABELS, type Analysis, type CheckedNorm, type Claim, type Source, type SourceType, type Status } from '../protocol';
+import { SOURCE_TYPE_LABELS, STATUS_LABELS, type Analysis, type CheckedNorm, type Claim, type GuideItem, type Perspective, type Source, type SourceType, type Status } from '../protocol';
 import { shortLabel } from './AiView';
 import { answerText } from './ai';
 import { CheckIcon, ExternalIcon, PinIcon, PlusIcon, WarnIcon } from './icons';
@@ -80,6 +80,45 @@ function ClaimLine({ claim, sources, onOpen }: { claim: Claim; sources: Map<stri
         </button>
       ))}
     </>
+  );
+}
+
+/** What the answer is for each side: its own block, first. */
+const GUIDE_TITLES: Record<Perspective, string> = {
+  state: 'Что делать',
+  citizen: 'Ваши права',
+  lawyer: 'Проверка процедуры',
+  crime: 'Квалификация и последствия',
+};
+
+const MARKS: Record<NonNullable<GuideItem['mark']>, { sign: string; label: string }> = {
+  ok: { sign: '✓', label: 'Соблюдено' },
+  violated: { sign: '✗', label: 'Нарушено' },
+  unknown: { sign: '?', label: 'Из фактов не видно' },
+};
+
+/** The answer for the player's side: steps, rights or requirements checked — each with the articles it rests on. */
+function Guide({ items, perspective, sources, onOpen }: { items: GuideItem[]; perspective: Perspective; sources: Map<string, Source>; onOpen: (hit: SearchHit) => void }) {
+  const steps = perspective === 'state';
+  const List = steps ? 'ol' : 'ul';
+  return (
+    <section className={`guide guide--${perspective}`} aria-label={GUIDE_TITLES[perspective]}>
+      <div className="guide__title">{GUIDE_TITLES[perspective]}</div>
+      <List className="guide__list">
+        {items.map((item) => (
+          <li key={item.text} className={item.mark ? `guide__item guide__item--${item.mark}` : 'guide__item'}>
+            {item.mark && (
+              <span className="guide__mark" title={MARKS[item.mark].label} aria-label={MARKS[item.mark].label}>
+                {MARKS[item.mark].sign}
+              </span>
+            )}
+            <span>
+              <ClaimLine claim={item} sources={sources} onOpen={onOpen} />
+            </span>
+          </li>
+        ))}
+      </List>
+    </section>
   );
 }
 
@@ -237,6 +276,10 @@ export function AnswerView({
           {note}
         </p>
       ))}
+
+      {answer.guide && answer.guide.length > 0 && analysis.perspective && (
+        <Guide items={answer.guide} perspective={analysis.perspective} sources={byId} onOpen={onOpen} />
+      )}
 
       {answer.situation && (
         <Block title="Ситуация">

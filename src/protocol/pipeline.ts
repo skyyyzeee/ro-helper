@@ -10,11 +10,11 @@ import { aliasScope, matchAliases, type QueryAlias } from './aliases';
 import { AI_INTENTS, classify, type Classification, type QuestionType } from './classify';
 import { directPunishment } from './direct';
 import { hintTerms } from './hints';
-import { buildContext, type CaseState, type Perspective } from './context';
+import { PERSPECTIVE_TERMS, buildContext, type CaseState, type Perspective } from './context';
 import { analysisPrompt, type Depth } from './prompt';
 import { AiError, type AiProvider } from './provider';
 import { labelSources, packInScope, type Scope, type ScopeChoice, type Source } from './sources';
-import { calculateCharges, validateAnswer, type Validation } from './validate';
+import { calculateCharges, groundedGuide, validateAnswer, type Validation } from './validate';
 
 /** A message this short that finds nothing tells no situation: the player is asked to describe it. */
 const VAGUE_WORDS = 6;
@@ -23,6 +23,8 @@ const wordCount = (text: string) => (text.match(/[а-яёa-z0-9]+/gi) ?? []).len
 
 /** Articles given to the AI for one question. */
 export const SOURCES = 14;
+/** At most so many of the sources are the side's own law (context.ts PERSPECTIVE_TERMS). */
+const SIDE_SOURCES = 3;
 
 const TERMS_TASK: Record<Scope, string> = {
   law: 'на языке законов: юридические термины, названия правонарушений, участники, предметы («незаконное ношение оружия», «сокрытие лица», «неповиновение сотруднику полиции»). Первыми — само правонарушение, если оно есть (кража, грабёж, побои), названное термином закона, даже если игрок его не назвал: деньги сотруднику, чтобы отпустил, — «дача взятки»; не выполнил требование сотрудника — «неповиновение законному требованию»; пьяный за рулём — «управление в состоянии опьянения»; нашли оружие без лицензии — «незаконное хранение оружия». Сотрудник взял деньги — «получение взятки»; сотрудник избил задержанного — «превышение должностных полномочий»; ударил полицейского — «насилие в отношении представителя власти»; пообещал убить — «угроза убийством». Потом участники и порядок действий',
@@ -97,6 +99,11 @@ export interface AnalyseInput {
   scope?: Scope;
   /** Search phrases already asked for (the classifier's call): not asked again. */
   terms?: string[];
+  /**
+   * The same case again, from another side: the message only asks for the side, it tells nothing — the sources are
+   * the case's own and the side's words, not what «Разбери с точки зрения…» would find.
+   */
+  rerun?: boolean;
 }
 
 export interface Analysis {
@@ -115,6 +122,8 @@ export interface Analysis {
   aiCalls?: number;
   /** The search phrases the AI gave, in the words of the base — for the debug view. */
   terms?: string[];
+  /** The side the answer is for, its "guide" shaped for it. */
+  perspective?: Perspective;
 }
 
 /** The analysis of a situation in a scope: sources from the base, the AI's answer, the checks, the calculator. */
@@ -123,9 +132,11 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
   const scope = input.scope ?? previous?.scope ?? 'law';
   const inScope = packInScope(pack, scope);
   let aiCalls = 0;
-  // A follow-up is searched with the facts it changes: «а если без маски» alone finds nothing.
-  const searchText = previous ? `${previous.facts.join('. ')}\n${message}` : message;
-  let terms = input.terms;
+  // A follow-up is searched with the facts it changes: «а если без маски» alone finds nothing. A side asked for is
+  // the same case: its facts alone, and no AI call for phrases.
+  const rerun = !!(input.rerun && previous);
+  const searchText = previous ? (rerun ? previous.facts.join('. ') : `${previous.facts.join('. ')}\n${message}`) : message;
+  let terms = input.terms ?? (rerun ? [] : undefined);
   if (!terms) {
     aiCalls += 1;
     terms = (await searchTerms(provider, searchText, scope, false, previous ? undefined : message)).phrases;
@@ -133,10 +144,18 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
   // The law's words for what the player told in everyday ones (hints.ts), beside the AI's: its miss is not the search's.
   const phrases = [...new Set([...hintTerms(searchText), ...terms])];
   const search = (text: string) => findForSituation(inScope, text, { boostDocuments: organization?.documents, lawTerms: phrases, limit: SOURCES });
-  const sources = labelSources(previous ? followUpHits(inScope, previous, search(message), search(searchText)) : search(message));
+  const found = previous ? followUpHits(inScope, previous, search(rerun ? searchText : message), search(searchText)) : search(message);
+  // The side's own law — the rights of a detainee for the defence, an officer's duties — after the case's, never in
+  // its place: a few articles that hold the side's words whole.
+  const side = (perspective ? PERSPECTIVE_TERMS[perspective] : []).flatMap((words) =>
+    searchArticles(inScope, `${words} `, { boostDocuments: organization?.documents, limit: 2 }).filter((hit) => hit.document.kind !== 'penal-code'),
+  );
+  const own = new Set(found.map((hit) => hit.article.id));
+  const extra = side.filter((hit, i) => !own.has(hit.article.id) && side.findIndex((h) => h.article.id === hit.article.id) === i).slice(0, SIDE_SOURCES);
+  const sources = labelSources([...found.slice(0, SOURCES - extra.length), ...extra.map(({ article, document }) => ({ article, document }))]);
   const context = buildContext({ pack, organization, message, sources, perspective, previous });
   // A first question may be answered again to anyone who asks it with the same laws (ADR 0007); a follow-up is its own case.
-  const request = { system: analysisPrompt(pack, depth, scope), turns: [{ role: 'user' as const, parts: [{ text: context }] }], json: true, think: depth === 'full', ...(previous ? {} : { cache: message }) };
+  const request = { system: analysisPrompt(pack, depth, scope, perspective), turns: [{ role: 'user' as const, parts: [{ text: context }] }], json: true, think: depth === 'full', ...(previous ? {} : { cache: message }) };
 
   let answer: LegalAnswer;
   try {
@@ -157,6 +176,8 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
   }
 
   const validation = validateAnswer(pack, sources, answer, scope);
+  // The side's points are shown only where they stand on the sources: one that does not is left out, not flagged.
+  if (answer.guide) answer.guide = groundedGuide(answer.guide, sources, scope);
   // A label the AI miswrote over a source it gave is shown — and kept — under the source's own label.
   answer.norms = validation.norms.map((n) => n.norm);
   // Nothing found for a few words that tell no situation («чела приняли, что ему будет?»): not «не найдено» — the
@@ -175,6 +196,7 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
     scope,
     aiCalls,
     terms,
+    ...(perspective ? { perspective } : {}),
     case: {
       facts: answer.facts.length ? answer.facts : (previous?.facts ?? []),
       assumptions: answer.assumptions,
