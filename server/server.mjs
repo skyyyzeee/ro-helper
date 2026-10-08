@@ -6,7 +6,7 @@
 // not answer. It keeps the spending in check: a few questions a day per computer and per address, and a daily
 // budget in rubles for everyone together.
 // Plain Node (18+ — Ubuntu 24.04 ships 18: no global `crypto`, import what is used), no packages: `node server.mjs`, behind Caddy for HTTPS (see README.md).
-import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
+import { createHash, createPublicKey, randomUUID, timingSafeEqual, verify } from 'node:crypto';
 import { createServer } from 'node:http';
 import { appendFileSync, readFileSync, writeFileSync, renameSync, existsSync, statSync } from 'node:fs';
 
@@ -40,6 +40,14 @@ const CONFIG = {
   budgetPerDay: num('BUDGET_RUB_PER_DAY', 20),
   /** Per computer and per address, a day. */
   questionsPerDevice: num('QUESTIONS_PER_DEVICE', 50),
+  /**
+   * Sign-in (ADR 0002): the app sends the player's Supabase token; its signature is checked by the project's public
+   * keys (no secret here), and the questions are counted per account — one player on two computers, one limit.
+   * Empty SUPABASE_URL: no sign-in at all. REQUIRE_SIGN_IN=1: no answer without it (after the announcement).
+   */
+  supabaseUrl: env('SUPABASE_URL', '').replace(/\/$/, ''),
+  requireSignIn: env('REQUIRE_SIGN_IN', '0') === '1',
+  questionsPerAccount: num('QUESTIONS_PER_ACCOUNT', 50),
   requestsPerIp: num('REQUESTS_PER_IP', 200),
   maxOutputTokens: num('MAX_OUTPUT_TOKENS', 900),
   stateFile: env('STATE_FILE', './state.json'),
@@ -95,7 +103,7 @@ const today = () => new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 1
 // ——— What was spent today, kept on disk so a restart does not reset the limits ———
 
 /** A fresh day: nothing spent, nothing asked; `answered` — who answered, and why the paid API had to; `marks` — marks taken. */
-const freshDay = () => ({ day: today(), spent: 0, devices: {}, ips: {}, answered: { gigachat: 0, paid: 0, cached: 0, why: {} }, marks: 0 });
+const freshDay = () => ({ day: today(), spent: 0, devices: {}, accounts: {}, ips: {}, answered: { gigachat: 0, paid: 0, cached: 0, why: {} }, marks: 0 });
 let state = freshDay();
 if (existsSync(CONFIG.stateFile)) {
   try {
@@ -118,19 +126,27 @@ function rollDay() {
   dirty = true;
 }
 
-/** Why this request may not go on today, or nothing when it may. */
-function refusal(device, ip, kind) {
+/**
+ * Why this request may not go on today, or nothing when it may. A signed-in player's questions are counted on their
+ * account, not on the computer; the address's limit stands for everyone, against a flood of accounts.
+ */
+function refusal(device, ip, kind, account) {
   rollDay();
   // Past the budget GigaChat, free, goes on answering; only with no GigaChat does the AI rest.
   if (state.spent >= CONFIG.budgetPerDay && !CONFIG.gigachat.key) return 'На сегодня ИИ Кремлёвского Ассистента исчерпал общий лимит. Он снова заработает после полуночи по Москве.';
   if ((state.ips[ip] ?? 0) >= CONFIG.requestsPerIp) return 'Слишком много вопросов с вашего адреса за сегодня. Попробуйте завтра.';
+  if (account) {
+    const mine = state.accounts?.[account] ?? { questions: 0 };
+    if (kind === 'question' && mine.questions >= CONFIG.questionsPerAccount) return `На сегодня вопросы ИИ закончились (${CONFIG.questionsPerAccount} в день). Они снова появятся после полуночи по Москве.`;
+    return null;
+  }
   const used = state.devices[device] ?? { questions: 0 };
   if (kind === 'question' && used.questions >= CONFIG.questionsPerDevice) return `На сегодня вопросы ИИ закончились (${CONFIG.questionsPerDevice} в день). Они снова появятся после полуночи по Москве.`;
   return null;
 }
 
-function count(device, ip, kind, rubles) {
-  const used = (state.devices[device] ??= { questions: 0 });
+function count(device, ip, kind, rubles, account) {
+  const used = account ? ((state.accounts ??= {})[account] ??= { questions: 0 }) : (state.devices[device] ??= { questions: 0 });
   if (kind === 'question') used.questions += 1;
   state.ips[ip] = (state.ips[ip] ?? 0) + 1;
   state.spent += rubles;
@@ -518,6 +534,50 @@ function latestMarks(filter, limit) {
   return marks;
 }
 
+// ——— Sign-in: the player's Supabase token ———
+
+/** The project's public keys by id, read from its JWKS and read again for a key not known (they rotate). */
+let jwks = { keys: new Map(), at: 0 };
+async function publicKey(kid) {
+  if (!jwks.keys.has(kid) && Date.now() - jwks.at > 60_000) {
+    jwks.at = Date.now();
+    try {
+      const response = await fetch(`${CONFIG.supabaseUrl}/auth/v1/.well-known/jwks.json`, { signal: AbortSignal.timeout(5000) });
+      const { keys } = await response.json();
+      jwks.keys = new Map(keys.filter((k) => k.kid && k.kty === 'EC').map((k) => [k.kid, createPublicKey({ key: k, format: 'jwk' })]));
+    } catch (error) {
+      console.error(new Date().toISOString(), 'jwks:', error.message);
+    }
+  }
+  return jwks.keys.get(kid);
+}
+
+const fromBase64Url = (part) => Buffer.from(part, 'base64url');
+
+/**
+ * The account a request is from: the id in a Supabase token that is signed by the project's key (ES256), not
+ * expired, for this project and a signed-in player. Anything else — no token, a forged or a stale one — is no account.
+ */
+async function accountOf(request) {
+  if (!CONFIG.supabaseUrl) return null;
+  const token = String(request.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const header = JSON.parse(fromBase64Url(parts[0]).toString('utf8'));
+    const claims = JSON.parse(fromBase64Url(parts[1]).toString('utf8'));
+    if (header.alg !== 'ES256' || typeof header.kid !== 'string') return null;
+    if (claims.iss !== `${CONFIG.supabaseUrl}/auth/v1` || claims.aud !== 'authenticated' || !(claims.exp * 1000 > Date.now())) return null;
+    if (typeof claims.sub !== 'string' || !/^[\w-]{8,64}$/.test(claims.sub)) return null;
+    const key = await publicKey(header.kid);
+    if (!key) return null;
+    const signed = verify('sha256', Buffer.from(`${parts[0]}.${parts[1]}`), { key, dsaEncoding: 'ieee-p1363' }, fromBase64Url(parts[2]));
+    return signed ? claims.sub : null;
+  } catch {
+    return null;
+  }
+}
+
 // ——— HTTP ———
 
 /** A question with a dozen articles is some 60 KB. Text only: no speech is taken — it is recognised on the players' computers. */
@@ -620,6 +680,13 @@ const server = createServer(async (request, response) => {
     }
   }
 
+  // The admins' token is no player's: an exam is not signed in. A player not signed in, when sign-in is required, is
+  // told how to go on — the laws and the calculator need none.
+  const account = isAdmin(request_) ? null : await accountOf(request_);
+  if (CONFIG.requireSignIn && !account && !isAdmin(request_)) {
+    return send(response, 401, { error: 'Чтобы спрашивать ИИ, войдите в аккаунт: «Профиль» → «Войти». Или укажите свой ключ ИИ в настройках.' });
+  }
+
   try {
     // Every step of one question — the law terms, then the answer — is one call; only the answer counts as a question.
     const kind = input.counts === false ? 'step' : 'question';
@@ -654,10 +721,10 @@ const server = createServer(async (request, response) => {
       dirty = true;
       return send(response, 200, { text: hit.text, cached: true });
     }
-    const why = refusal(device, ip, kind);
+    const why = refusal(device, ip, kind, account);
     if (why) return send(response, 429, { error: why });
     const { text, rubles } = await chat(request, kind);
-    count(device, ip, kind, rubles);
+    count(device, ip, kind, rubles, account);
     if (key && keepable(text, request.json)) rememberAnswer(key, text, question);
     return send(response, 200, { text });
   } catch (error) {

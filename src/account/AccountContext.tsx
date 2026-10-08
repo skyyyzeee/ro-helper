@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { setAiTokenSource } from './aiToken';
 import { SignInError, type Account, type Accounts, type Provider } from './types';
 
 type Failure = Exclude<SignInError['reason'], 'cancelled'>;
@@ -29,6 +30,12 @@ const failure = (error: unknown): Failure | undefined => {
 
 export function AccountProvider({ accounts, children }: { accounts: Accounts; children: ReactNode }) {
   const [status, setStatus] = useState<AccountStatus>({ kind: 'loading' });
+
+  // The AI server counts a signed-in player's questions on their account (ADR 0002).
+  useEffect(() => {
+    setAiTokenSource(accounts.aiToken);
+    return () => setAiTokenSource(null);
+  }, [accounts]);
 
   useEffect(() => {
     let active = true;
