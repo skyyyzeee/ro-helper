@@ -284,3 +284,35 @@ test('a broken JSON answer is not kept', async () => {
     giga.server.close();
   }
 });
+
+test('an admin may try one model for a request: that model, off the computer\'s limit, its tokens told', async () => {
+  const giga = await fakeGigachat();
+  const models = [];
+  const paidServer = await listen(async (request, response) => {
+    models.push(JSON.parse(await read(request)).model);
+    json(response, 200, { choices: [{ message: { content: '{"from": "paid"}' } }], usage: { prompt_tokens: 1200, completion_tokens: 80 } });
+  });
+  const paidUrl = `http://127.0.0.1:${paidServer.address().port}`;
+  const ai = await aiServer({ ...gigaEnv(giga), AI_BASE_URL: paidUrl, AI_API_KEY: 'paid-key', ADMIN_TOKEN: 'admin-token-0123456789', QUESTIONS_PER_DEVICE: '1' });
+  const trial = (model, token = 'admin-token-0123456789') =>
+    fetch(`${ai.base}/v1/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Device': 'device-0001', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ system: 's', messages: [{ role: 'user', content: 'украл' }], json: true, model }),
+    }).then(async (r) => ({ status: r.status, body: await r.json() }));
+  try {
+    const first = await trial('gpt-4.1-mini');
+    assert.deepEqual(first.body, { text: '{"from": "paid"}', usage: { input: 1200, output: 80 } });
+    assert.deepEqual(models, ['gpt-4.1-mini']);
+    // Off the computer's limit of one question a day.
+    assert.equal((await trial('gpt-4.1-mini')).status, 200);
+    assert.equal((await trial('gigachat')).body.text, '{"from": "gigachat"}');
+    assert.equal((await trial('gpt-9-ultra')).status, 400);
+    // Without the admins' key the model asked is not taken: GigaChat first, as for everyone.
+    assert.equal((await trial('gpt-4.1-mini', 'wrong')).body.text, '{"from": "gigachat"}');
+  } finally {
+    ai.stop();
+    giga.server.close();
+    paidServer.close();
+  }
+});
