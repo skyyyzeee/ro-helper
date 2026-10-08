@@ -20,14 +20,14 @@ vi.mock('../data', async (importOriginal) => {
 });
 
 const SEEN = 'laws.seen:tverskoi';
-const VERSION = '2026-09-27T23:04:03+03:00';
+const VERSION = '2026-10-08T03:59:49+03:00';
 const search = () => screen.getByRole('searchbox', { name: 'Поиск по законам' });
 const changesScreen = () => screen.queryByRole('region', { name: 'Что изменилось' });
 
 beforeEach(() => {
   // Three days after the update: still «recent».
   vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(new Date('2026-09-30T12:00:00+03:00'));
+  vi.setSystemTime(new Date('2026-10-11T12:00:00+03:00'));
 });
 afterEach(() => vi.useRealTimers());
 
@@ -42,7 +42,7 @@ describe('«Что изменилось»', () => {
     const { platform } = await renderApp({ settings: { [SEEN]: '2026-09-01T10:00:00+03:00' } });
     const view = await screen.findByRole('region', { name: 'Что изменилось' });
     expect(view).toHaveTextContent('С прошлого обновления');
-    expect(view).toHaveTextContent('Правки от 27.09.2026');
+    expect(view).toHaveTextContent('Правки от 08.10.2026');
     const uk = within(view).getByRole('group', { name: /^УК / });
     const rows = within(uk).getAllByRole('button').map((b) => b.textContent);
     expect(rows).toEqual(['Измененост. 65Кража', expect.stringMatching(/^Добавленост\. 113\S/), 'Удаленост. 999Отменённое преступление']);
@@ -62,7 +62,7 @@ describe('«Что изменилось»', () => {
     await user.click(within(view).getByRole('button', { name: /^Изменено/ }));
 
     const diff = screen.getByRole('article', { name: 'Было → стало: Статья 65. Кража' });
-    expect(diff).toHaveTextContent('Изменено 27.09.2026');
+    expect(diff).toHaveTextContent('Изменено 08.10.2026');
     const before = within(diff).getByRole('region', { name: 'Было' });
     const after = within(diff).getByRole('region', { name: 'Стало' });
     expect(before).toHaveTextContent('1. Кража, то есть скрытое хищение имущества');
@@ -100,7 +100,7 @@ describe('«Что изменилось»', () => {
     expect(row).toHaveTextContent('ст. 65 ч. 1');
     expect(row).toHaveTextContent('изменено');
     await user.keyboard('{ArrowRight}');
-    await user.click(screen.getByRole('button', { name: /^Изменено 27\.09\.2026/ }));
+    await user.click(screen.getByRole('button', { name: /^Изменено 08.10.2026/ }));
     const diff = screen.getByRole('article', { name: 'Было → стало: Статья 65. Кража' });
     // From the article «←» goes back to it; there is no need for «Открыть статью целиком».
     expect(within(diff).getByRole('button', { name: 'Статья' })).toBeInTheDocument();
@@ -110,7 +110,7 @@ describe('«Что изменилось»', () => {
   });
 
   it('stops marking the articles two weeks after the update', async () => {
-    vi.setSystemTime(new Date('2026-10-16T12:00:00+03:00'));
+    vi.setSystemTime(new Date('2026-10-27T12:00:00+03:00'));
     const { user } = await renderApp();
     await user.type(search(), 'ук 65');
     expect(screen.getAllByRole('listitem')[0]).not.toHaveTextContent('изменено');
@@ -122,6 +122,6 @@ describe('«Что изменилось»', () => {
     await user.click(screen.getByRole('button', { name: 'Что изменилось в законах' }));
     const view = screen.getByRole('region', { name: 'Что изменилось' });
     expect(view).toHaveTextContent('За 60 дней');
-    expect(view).toHaveTextContent('Правки от 27.09.2026');
+    expect(view).toHaveTextContent('Правки от 08.10.2026');
   });
 });

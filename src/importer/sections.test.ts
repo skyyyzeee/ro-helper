@@ -41,8 +41,8 @@ describe('sections named by a pattern where the forum lost its list numbers (rea
 
   it('takes only the title lines for sections, not the lines a zero-width space happens to end (подразделения МВД)', () => {
     const units = parseWith('kutuzovskiy', 'ch-mvd-units');
-    expect(units.articles.map((a) => a.number)).toEqual(['1', '2', '3', '4', '5', '6']);
-    expect(units.articles[0]).toMatchObject({ title: 'ОД — Отдел Дознания' });
-    expect(units.articles[0].parts[0].text).toBe('Расшифровка: Отдел дознания');
+    expect(units.articles.map((a) => a.number)).toEqual(['1', '2', '3', '4', '5', '6', '7']);
+    expect(units.articles[0]).toMatchObject({ title: 'ОД — Отдел дознания' });
+    expect(units.articles[0].parts[0].text).toBe('Функции:');
   });
 });

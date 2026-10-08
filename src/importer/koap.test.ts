@@ -21,7 +21,7 @@ const part = (number: string, partNumber?: string) => {
 describe('КоАП Тверского (real forum text)', () => {
   it('reads every chapter and article; every «влечет» line becomes a sanction', () => {
     expect(koap.chapters).toHaveLength(19);
-    expect(koap.articles).toHaveLength(138);
+    expect(koap.articles).toHaveLength(139);
     const sanctionLines = text.split('\n').filter((line) => /^\s*(влеч[её]т|влекут)\s/.test(line)).length;
     expect(koap.articles.flatMap((a) => a.parts.filter((p) => p.punishment))).toHaveLength(sanctionLines);
     expect(koap.header).toEqual(['КОДЕКС РО', 'ОБ АДМИНИСТРАТИВНЫХ ПРАВОНАРУШЕНИЯХ']);

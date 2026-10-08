@@ -14,10 +14,10 @@ const article = (id: string, number: string, chapter?: string) => {
 /** Articles in each thread of the Тверской legislative base, counted on the forum. */
 const FORUM_COUNTS: Record<string, number> = {
   // УПК lost its part three, «Судебное производство», to 4-ФКЗ on 21 September.
-  const: 117, upk: 129, tk: 40, ethics: 27,
+  const: 117, upk: 130, tk: 40, ethics: 27,
   fkz1: 46, fkz2: 35, fkz3: 14, fkz4: 136,
   fz1: 42, fz2: 23, fz3: 37, fz4: 20, fz5: 26, fz6: 32, fz7: 31,
-  fz8: 40, fz9: 20, fz10: 4, fz11: 18, fz12: 10, fz13: 71, fz14: 15, fz15: 7, fz16: 13, 'fz16-fsvng': 36,
+  fz8: 40, fz9: 20, fz10: 4, fz11: 18, fz12: 17, fz13: 71, fz14: 15, fz15: 7, fz16: 13, 'fz16-fsvng': 36,
   'msk-charter': 21, 'msk-health': 17, 'msk-news': 26, 'msk-property': 51,
 };
 
