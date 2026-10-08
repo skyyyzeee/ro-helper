@@ -278,6 +278,17 @@ describe('the AI services and their failures', () => {
     await expect(server.complete(request)).rejects.toMatchObject({ kind: 'offline' });
   });
 
+  it('sends a signed-in player\'s token to the AI server, and nothing when nobody is signed in; tells «войдите» as said', async () => {
+    const fetch = vi.fn(async (_url: string, _init: RequestInit) => new Response(JSON.stringify({ text: 'ok' })));
+    vi.stubGlobal('fetch', fetch);
+    await serverProvider('https://ai.test', 'd1', async () => 'player-token').complete(request);
+    expect(new Headers(fetch.mock.calls[0][1].headers).get('Authorization')).toBe('Bearer player-token');
+    await serverProvider('https://ai.test', 'd1', async () => null).complete(request);
+    expect(new Headers(fetch.mock.calls[1][1].headers).get('Authorization')).toBeNull();
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'Чтобы спрашивать ИИ, войдите в аккаунт.' }), { status: 401 })));
+    await expect(serverProvider('https://ai.test', 'd1').complete(request)).rejects.toMatchObject({ message: 'Чтобы спрашивать ИИ, войдите в аккаунт.' });
+  });
+
   it('says a wrong Gemini key is wrong, and sends the key in a header, never in the address', async () => {
     const fetch = vi.fn(async (_url: string, _init: RequestInit) => new Response(JSON.stringify({ error: { message: 'API key not valid. Please pass a valid API key.' } }), { status: 400 }));
     vi.stubGlobal('fetch', fetch);

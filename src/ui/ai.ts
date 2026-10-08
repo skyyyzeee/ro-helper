@@ -29,6 +29,7 @@ import {
   type Turn,
 } from '../protocol';
 import type { SearchHit } from '../core';
+import { aiToken } from '../account/aiToken';
 import { aiCapabilitiesOf, aiProfileOf, type AiProfile } from '../account/capabilities';
 import type { PlatformAdapter } from '../platform/types';
 import { loadAliases } from './feedback';
@@ -135,7 +136,7 @@ export async function connect(platform: PlatformAdapter): Promise<AiConnection> 
 /** The service behind a connection. */
 export const serviceFor = (connection: AiConnection): AiService =>
   connection.provider === 'server'
-    ? serverProvider(connection.server, connection.device)
+    ? serverProvider(connection.server, connection.device, aiToken)
     : connection.provider === 'custom'
       ? openaiProvider(connection)
       : geminiProvider(connection.key);

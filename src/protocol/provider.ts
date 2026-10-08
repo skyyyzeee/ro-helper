@@ -59,14 +59,16 @@ async function post(url: string, init: RequestInit, seconds: number, offline: st
 }
 
 /** The AI server: it holds the AI key, counts the daily limits and passes the question on. */
-export function serverProvider(server: string, device: string): AiProvider {
+/** `token`: the signed-in player's (ADR 0002) — their questions are counted on the account; none, on the computer. */
+export function serverProvider(server: string, device: string, token: () => Promise<string | null> = async () => null): AiProvider {
   return {
     async complete({ system, turns, json = false, counts = true, think = false, cache }) {
+      const signedIn = await token();
       const response = await post(
         `${server}/v1/chat`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Device': device },
+          headers: { 'Content-Type': 'application/json', 'X-Device': device, ...(signedIn ? { Authorization: `Bearer ${signedIn}` } : {}) },
           body: JSON.stringify({ system, messages: asMessages(turns), json, counts, ...(think ? { think } : {}), ...(cache ? { cache: true, question: cache } : {}) }),
         },
         think ? 150 : 90,
