@@ -206,13 +206,26 @@ export function calculateCharges(pack: ServerPack, validation: Validation): { ch
 
 /**
  * The points for the player's side that stand on the sources: each names given sources of the question's kind, holds
- * no figure they lack and no article that is not among them. The rest are left out — advice without its law is not
- * shown at all.
+ * no figure they lack and no article that is not among them — «УПК ст. 12» is the УПК's, not a source's ст. 12 of
+ * another law. The rest are left out — advice without its law is not shown at all. A source's id the model wrote
+ * into the text («(S6)») is no word for the player: taken out.
  */
 export function groundedGuide(guide: GuideItem[], sources: Source[], scope?: Scope): GuideItem[] {
   const byId = new Map(sources.map((s) => [s.id, s]));
   const numbers = new Set(sources.map((s) => s.hit.article.number));
-  return guide.filter(
-    (item) => item.sources.length > 0 && !checkClaim(item, 'Пункт', byId, scope, []).length && namedArticles(item.text).every((n) => numbers.has(n)),
-  );
+  const given = (short: string, number: string) => {
+    const named = short.toLowerCase();
+    const of = sources.filter((s) => s.hit.document.short.toLowerCase() === named || s.hit.document.aliases.includes(named));
+    // A word before «ст.» that names no document of the sources («Согласно ст. 12») leaves the number to tell.
+    return of.length ? of.some((s) => s.hit.article.number === number) : numbers.has(number);
+  };
+  return guide
+    .map((item) => ({ ...item, text: item.text.replace(/\s*\((?:[SCRO]\d+(?:,\s*)?)+\)/g, '').trim() }))
+    .filter(
+      (item) =>
+        item.sources.length > 0 &&
+        !checkClaim(item, 'Пункт', byId, scope, []).length &&
+        namedArticles(item.text).every((n) => numbers.has(n)) &&
+        [...item.text.matchAll(/((?:\d+-)?[А-ЯЁA-Z][А-ЯЁа-яёA-Za-z]*)\s+(?:ст\.?|стать[яиеюей]+)\s*(\d+(?:\.\d+)*)/g)].every((m) => given(m[1], m[2])),
+    );
 }

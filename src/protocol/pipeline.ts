@@ -196,6 +196,12 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
     const grounded = groundedGuide(fallback, sources, scope);
     if (grounded.length) answer.guide = grounded;
   }
+  // The side answered on the sources — the defence checking the procedure often names no norm of its own: that is
+  // an answer to check, not «не найдено» over the very points that stand on the base.
+  if (perspective && answer.guide?.length && validation.status === 'not-found') {
+    validation.status = 'likely';
+    answer.notFound = false;
+  }
   // A label the AI miswrote over a source it gave is shown — and kept — under the source's own label.
   answer.norms = validation.norms.map((n) => n.norm);
   // Nothing found for a few words that tell no situation («чела приняли, что ему будет?»): not «не найдено» — the
