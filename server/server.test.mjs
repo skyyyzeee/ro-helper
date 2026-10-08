@@ -34,6 +34,7 @@ async function fakeGigachat({ life = 30 * 60_000, delay = 0 } = {}) {
     }
     seen.chats += 1;
     const question = JSON.parse(body).messages.at(-1).content;
+    seen.models = [...(seen.models ?? []), JSON.parse(body).model];
     await new Promise((resolve) => setTimeout(resolve, delay));
     if (question.includes('травка')) return json(response, 200, { choices: [{ message: { content: 'Генеративные языковые модели не обладают собственным мнением…' }, finish_reason: 'blacklist' }] });
     if (question.includes('сломай')) return json(response, 200, { choices: [{ message: { content: '{"phra e": [' }, finish_reason: 'stop' }] });
@@ -282,5 +283,92 @@ test('a broken JSON answer is not kept', async () => {
   } finally {
     ai.stop();
     giga.server.close();
+  }
+});
+
+test('an admin may try one model for a request: that model, off the computer\'s limit, its tokens told', async () => {
+  const giga = await fakeGigachat();
+  const models = [];
+  const paidServer = await listen(async (request, response) => {
+    models.push(JSON.parse(await read(request)).model);
+    json(response, 200, { choices: [{ message: { content: '{"from": "paid"}' } }], usage: { prompt_tokens: 1200, completion_tokens: 80 } });
+  });
+  const paidUrl = `http://127.0.0.1:${paidServer.address().port}`;
+  const ai = await aiServer({ ...gigaEnv(giga), AI_BASE_URL: paidUrl, AI_API_KEY: 'paid-key', ADMIN_TOKEN: 'admin-token-0123456789', QUESTIONS_PER_DEVICE: '1' });
+  const trial = (model, token = 'admin-token-0123456789') =>
+    fetch(`${ai.base}/v1/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Device': 'device-0001', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ system: 's', messages: [{ role: 'user', content: 'украл' }], json: true, model }),
+    }).then(async (r) => ({ status: r.status, body: await r.json() }));
+  try {
+    const first = await trial('gpt-4.1-mini');
+    assert.deepEqual(first.body, { text: '{"from": "paid"}', usage: { input: 1200, output: 80 } });
+    assert.deepEqual(models, ['gpt-4.1-mini']);
+    // Off the computer's limit of one question a day.
+    assert.equal((await trial('gpt-4.1-mini')).status, 200);
+    assert.equal((await trial('gigachat')).body.text, '{"from": "gigachat"}');
+    assert.equal((await trial('gpt-9-ultra')).status, 400);
+    // Without the admins' key the model asked is not taken: GigaChat first, as for everyone.
+    assert.equal((await trial('gpt-4.1-mini', 'wrong')).body.text, '{"from": "gigachat"}');
+  } finally {
+    ai.stop();
+    giga.server.close();
+    paidServer.close();
+  }
+});
+
+test('the question itself goes to ANALYSIS_MODEL, its steps to GigaChat; past the budget GigaChat answers all', async () => {
+  const giga = await fakeGigachat();
+  const models = [];
+  const paidServer = await listen(async (request, response) => {
+    models.push(JSON.parse(await read(request)).model);
+    // 100 000 tokens of gpt-4.1-mini in: 10.4 ₽ — past a budget of 10 ₽ at once.
+    json(response, 200, { choices: [{ message: { content: '{"from": "paid"}' } }], usage: { prompt_tokens: 100000, completion_tokens: 100 } });
+  });
+  const ai = await aiServer({
+    ...gigaEnv(giga),
+    AI_BASE_URL: `http://127.0.0.1:${paidServer.address().port}`,
+    AI_API_KEY: 'paid-key',
+    ANALYSIS_MODEL: 'gpt-4.1-mini',
+    BUDGET_RUB_PER_DAY: '10',
+  });
+  const step = (text) =>
+    fetch(`${ai.base}/v1/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Device': 'device-0001' },
+      body: JSON.stringify({ system: 's', messages: [{ role: 'user', content: text }], json: true, counts: false }),
+    }).then((r) => r.json());
+  try {
+    assert.equal((await step('украл')).text, '{"from": "gigachat"}');
+    assert.equal((await ai.ask('украл телефон')).body.text, '{"from": "paid"}');
+    assert.deepEqual(models, ['gpt-4.1-mini']);
+    const after = await ai.status();
+    assert.ok(after.spent > 10);
+    assert.equal(after.open, true);
+    // The budget spent: the next question is GigaChat's, not refused.
+    assert.equal((await ai.ask('ещё вопрос')).body.text, '{"from": "gigachat"}');
+    assert.deepEqual(models, ['gpt-4.1-mini']);
+  } finally {
+    ai.stop();
+    giga.server.close();
+    paidServer.close();
+  }
+});
+
+test('a chain for the question: a GigaChat model on its free tokens first, the paid one when it is used up', async () => {
+  const giga = await fakeGigachat();
+  const paid = await fakePaid();
+  const ai = await aiServer({ ...gigaEnv(giga), AI_BASE_URL: paid.url, AI_API_KEY: 'paid-key', ANALYSIS_MODEL: 'gigachat:GigaChat-3-Ultra,gpt-4.1-mini' });
+  try {
+    assert.equal((await ai.ask('украл телефон')).body.text, '{"from": "gigachat"}');
+    assert.equal(giga.seen.models.at(-1), 'GigaChat-3-Ultra');
+    // Its free tokens used up (402): the paid model answers.
+    assert.equal((await ai.ask('лимит кончился')).body.text, '{"from": "paid"}');
+    assert.equal(paid.seen.chats, 1);
+  } finally {
+    ai.stop();
+    giga.server.close();
+    paid.server.close();
   }
 });

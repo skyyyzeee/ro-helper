@@ -5785,3 +5785,7 @@ select option {
 .ai__sidetab:hover:not(:disabled) { color: var(--text); }
 .ai__sidetab--on { background: var(--surface-active); color: var(--text); }
 .ai__sidetab:disabled { opacity: 0.5; cursor: default; }
+
+/* The question looks like the other kind of base than the one chosen: said, with the way there. */
+.ai__switch { align-items: center; flex-wrap: wrap; }
+.ai__switch .ai__chip { margin-left: auto; }

@@ -118,6 +118,8 @@ export interface Analysis {
   scope: Scope;
   /** What the app says beside the answer: the question looks like the rules while the laws were chosen, say. */
   notes?: string[];
+  /** The other kind of base the question looks like: offered as a button, to analyse it there. */
+  switchTo?: 'law' | 'server_rule';
   /** How many AI calls it took — the exam and the debug view count them. */
   aiCalls?: number;
   /** The search phrases the AI gave, in the words of the base — for the debug view. */
@@ -351,6 +353,7 @@ export async function answerQuestion(input: QuestionInput): Promise<Outcome> {
   const keep = matched.length > 0 || scope === 'law';
   const analysis = await analyse({ ...input, scope, ...(terms && keep ? { terms } : {}) });
   analysis.aiCalls = (analysis.aiCalls ?? 0) + aiCalls;
+  if (classification.mismatch && classification.mismatch !== 'mixed') analysis.switchTo = classification.mismatch;
   if (classification.mismatch) analysis.notes = [classification.why === 'слова не подсказали — так решил ИИ' ? RULES_HINT : MISMATCH_NOTE[classification.mismatch]];
   return { kind: 'analysis', analysis, classification };
 }

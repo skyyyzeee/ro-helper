@@ -298,6 +298,7 @@ export function AiView({
                     onCopy={onCopy}
                     onLink={onLink}
                     onClarify={(text) => void chat.send(text)}
+                    onSwitch={chat.messages[index - 1]?.role === 'user' ? (scope) => void chat.send(chat.messages[index - 1].text, undefined, { choice: scope }) : undefined}
                   />
                   {chat.messages[index - 1]?.role === 'user' && (
                     <MarkBar send={(vote, correction) => onMark(chat.messages[index - 1].text, message.analysis!, vote, correction, message.classification?.type)} />
