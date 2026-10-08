@@ -14,7 +14,7 @@ import { AI_CUSTOM_SETTING, AI_KEY_SETTING, AI_KEY_URL, AI_PROVIDER_SETTING, AI_
 import type { CustomAi } from '../protocol';
 import { AdminIcon, BookIcon, CloseIcon, DiscordIcon, GitHubIcon, HelpIcon, InfoIcon, KeyboardIcon, PaletteIcon, PinIcon, SparkIcon, TuneIcon, WarnIcon } from './icons';
 import { formatDate } from './lawBits';
-import { DEFAULT_QUICK_HOTKEY, DEFAULT_TIMER_HOTKEY, DEFAULT_VOICE_HOTKEY, MAX_OPACITY, MIN_OPACITY, STREAMER_KEY } from './overlaySettings';
+import { DEFAULT_NOTE_HOTKEY, DEFAULT_QUICK_HOTKEY, DEFAULT_TIMER_HOTKEY, DEFAULT_VOICE_HOTKEY, MAX_OPACITY, MIN_OPACITY, NOTE_MAX, STREAMER_KEY } from './overlaySettings';
 import { captureHotkey, hasModifier, hotkeyKeys } from './profile';
 import type { Laws, LawsStatus } from './laws';
 import type { Updates } from './updates';
@@ -434,6 +434,38 @@ function cardsLabel(n: number): string {
   return `${n} карточек`;
 }
 
+/**
+ * The note: written here, kept on this computer only, pinned over the game as a card of its lines. The note's key
+ * brings the cursor here.
+ */
+function NoteField({ note }: { note: NonNullable<SettingsViewProps['note']> }) {
+  const field = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (note.focusAt) field.current?.focus();
+  }, [note.focusAt]);
+  return (
+    <>
+      <h4 className="set__sub">Заметка</h4>
+      <textarea
+        ref={field}
+        className="note__field"
+        aria-label="Заметка"
+        placeholder="Приметы, номера, план: «чёрный Skyline, А777АА, двое в масках»"
+        value={note.text}
+        maxLength={NOTE_MAX}
+        rows={4}
+        onChange={(e) => note.onText(e.target.value)}
+      />
+      <div className="set__row">
+        <button className="settings__button" type="button" disabled={!note.pinned && !note.text.trim()} onClick={() => note.onPin(!note.pinned)}>
+          {note.pinned ? 'Открепить заметку' : 'Закрепить поверх игры'}
+        </button>
+        <span className="set__label">Хранится только на этом компьютере</span>
+      </div>
+    </>
+  );
+}
+
 /** Saving what is pinned now as a set, under a name or the next free one. */
 function PresetForm({ disabled, placeholder, onSave }: { disabled: boolean; placeholder: string; onSave: (name: string) => void }) {
   const [name, setName] = useState('');
@@ -642,6 +674,11 @@ export interface SettingsViewProps {
   /** The detention timer's key, empty when off; absent for those who detain no one. */
   timerHotkey?: string;
   onTimerHotkey?: (accelerator: string) => void;
+  /**
+   * The note pinned over the game (issue #40): its text, whether it is pinned, and its key — empty when off.
+   * `focusAt`: the key was pressed then — the field takes the cursor. Absent in a bare overlay of the tests.
+   */
+  note?: { text: string; pinned: boolean; onText: (text: string) => void; onPin: (on: boolean) => void; hotkey: string; onHotkey: (accelerator: string) => void; focusAt?: number };
   opacity: number;
   onOpacity: (value: number) => void;
   /** The theme and the accent; without it (a bare overlay in tests) the choice is not shown. */
@@ -683,6 +720,7 @@ export function SettingsView({
   onQuickHotkey,
   timerHotkey,
   onTimerHotkey,
+  note,
   onMemos,
   opacity,
   onOpacity,
@@ -867,6 +905,7 @@ export function SettingsView({
           )}
         </Row>
         <p className="set__hint">Карточки перетаскиваются за шапку; брошенная на другую встаёт к ней с той стороны, куда её бросили.</p>
+        {note && <NoteField note={note} />}
 
         <h4 className="set__sub">Наборы</h4>
         {presets.length > 0 ? (
@@ -948,6 +987,24 @@ export function SettingsView({
           </div>
         )}
       </Block>
+
+      {note && (
+        <Block title="Заметка">
+          <Switch
+            label="Клавиша заметки"
+            hint="Открывает ассистента на заметке: приметы, номера, план. Закреплённая заметка видна поверх игры."
+            on={!!note.hotkey}
+            onChange={(on) => note.onHotkey(on ? DEFAULT_NOTE_HOTKEY : '')}
+          />
+          {note.hotkey && <HotkeyField name="note" label="Открыть заметку" hotkey={note.hotkey} onHotkey={note.onHotkey} onCapturing={onCapturing} />}
+          {note.hotkey && [hotkey, voiceHotkey, quickHotkey, timerHotkey].includes(note.hotkey) && (
+            <div className="warn" role="alert">
+              <WarnIcon />
+              <span>Эта клавиша уже занята — выберите другую, иначе заметка по ней не откроется.</span>
+            </div>
+          )}
+        </Block>
+      )}
 
       {timerHotkey !== undefined && onTimerHotkey && (
         <Block title="Таймер задержания">

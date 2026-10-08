@@ -12,7 +12,7 @@ export interface WindowBounds {
 export interface PinCard {
   /** What it stands for: `uk-65#1` for an article's part, `calculator` for the total. */
   id: string;
-  kind: 'article' | 'calculator' | 'ai' | 'phrases' | 'timer';
+  kind: 'article' | 'calculator' | 'ai' | 'phrases' | 'timer' | 'note';
   /** Article: «УК ст. 88 ч. 1. Халатность»; calculator: the total, «30 мес». */
   heading: string;
   /** Stars to set, beside the calculator's total. */

@@ -14,7 +14,7 @@ import {
   type SearchHit,
 } from '../core';
 import type { PinCard } from '../platform/types';
-import { CALCULATOR_ID, PHRASES_ID, TIMER_ID } from './pinLayout';
+import { CALCULATOR_ID, NOTE_ID, PHRASES_ID, TIMER_ID } from './pinLayout';
 import { entryPart, hitKey } from './saved';
 
 /**
@@ -109,6 +109,11 @@ export function calculatorPinCard(result: DetentionResult, fineTyped?: number): 
 /** The phrases for the chat as a card over the game: a button each, as they are pasted — the profile's words in. */
 export function phrasesPinCard(phrases: { title: string; text: string }[]): PinCard {
   return { id: PHRASES_ID, kind: 'phrases', heading: 'Заготовки для чата', lines: [], actions: phrases.map((p) => ({ label: p.title, text: p.text })) };
+}
+
+/** The player's note over the game (issue #40): signs, plates, the plan — a line a line, as written. */
+export function notePinCard(text: string): PinCard {
+  return { id: NOTE_ID, kind: 'note', heading: 'Заметка', lines: text.split('\n').map((line) => line.trimEnd()).filter(Boolean) };
 }
 
 /** The detention timer as a card over the game: running since, or stopped at. */
