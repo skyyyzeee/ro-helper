@@ -5777,3 +5777,11 @@ select option {
 .answer__more { margin-top: 6px; }
 .answer__more > summary { cursor: pointer; font-size: 13px; color: var(--text-muted); padding: 4px 0; }
 .answer__more[open] > summary { margin-bottom: 6px; }
+
+/* The sides of an answer (AiView SideTabs): its own first; another, asked once, shown again at once. */
+.ai__tabs-wrap { margin-bottom: 6px; }
+.ai__sidetabs { display: inline-flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--surface); }
+.ai__sidetab { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border: 0; border-radius: 9px; background: transparent; color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.ai__sidetab:hover:not(:disabled) { color: var(--text); }
+.ai__sidetab--on { background: var(--surface-active); color: var(--text); }
+.ai__sidetab:disabled { opacity: 0.5; cursor: default; }

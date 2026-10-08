@@ -163,6 +163,15 @@ export interface AiMessage {
   tag?: string;
   /** What the classifier took the question for, and why — for the admin's debug view; not kept in the history. */
   classification?: { type: string; why: string };
+  /**
+   * The same case for the other sides, asked once each (AiView's tabs): shown again at once, at no cost. Kept while
+   * the conversation is open, not in the history.
+   */
+  sides?: Partial<Record<Perspective, Analysis>>;
+  /** The side on screen; the answer's own when not set. */
+  side?: Perspective;
+  /** The side being asked for now, or why it could not be. */
+  sideState?: { side: Perspective; pending?: boolean; error?: string };
 }
 
 export interface SendOptions {
@@ -191,6 +200,8 @@ export interface AiChat {
   perspectives: Perspective[];
   /** Asks; resolves with the answer, or a failed one saying why — or nothing while another question is on its way. */
   send: (text: string, perspective?: Perspective, options?: SendOptions) => Promise<AiMessage | undefined>;
+  /** The answer of a message for another side: from the ones asked before, or asked now — once for each side. */
+  showSide: (messageId: number, side: Perspective) => Promise<void>;
   /** A new conversation; the one on show stays in the history. */
   clear: () => void;
   /** A notice from the app itself, shown as a failed answer. */
@@ -377,6 +388,42 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
     [busy, platform, pack, organization, depth, choice, answering],
   );
 
+  const showSide = useCallback(
+    async (messageId: number, side: Perspective) => {
+      const message = current.current.find((m) => m.id === messageId);
+      if (!message?.analysis) return;
+      const update = (patch: Partial<AiMessage>) => setMessages((list) => list.map((m) => (m.id === messageId ? { ...m, ...patch } : m)));
+      // The answer's own side, or one asked before: on screen at once.
+      if (side === message.analysis.perspective || message.sides?.[side]) return update({ side, sideState: undefined });
+      if (busy) return;
+      setBusy(true);
+      update({ sideState: { side, pending: true } });
+      try {
+        let connecting: Promise<AiService> | null = null;
+        const service: AiService = { complete: async (request) => (await (connecting ??= connect(platform).then(serviceFor))).complete(request) };
+        const label = PERSPECTIVES.find((p) => p.id === side)?.label ?? side;
+        const outcome = await answerQuestion({
+          provider: service,
+          pack,
+          organization,
+          message: `Разбери это же дело с точки зрения: ${label}.`,
+          previous: message.analysis.case,
+          perspective: side,
+          rerun: true,
+          depth,
+          choice: message.analysis.scope === 'mixed' ? 'auto' : message.analysis.scope,
+        });
+        if (outcome.kind !== 'analysis') throw new Error(outcome.text);
+        setMessages((list) => list.map((m) => (m.id === messageId ? { ...m, side, sideState: undefined, sides: { ...m.sides, [side]: outcome.analysis } } : m)));
+      } catch (error) {
+        update({ sideState: { side, error: error instanceof Error ? error.message : String(error) } });
+      } finally {
+        setBusy(false);
+      }
+    },
+    [busy, platform, pack, organization, depth],
+  );
+
   const clear = useCallback(() => {
     conversation.current = newConversationId();
     setMessages([]);
@@ -470,6 +517,7 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
     current: caseOf(messages) ?? null,
     perspectives: perspectivesFor(organization),
     send,
+    showSide,
     clear,
     note,
     history,
@@ -534,6 +582,8 @@ interface StoredMessage {
   answer?: LegalAnswer;
   sources?: { id?: string; document: string; article: string; part?: string }[];
   case?: CaseState;
+  /** The side the answer was for (its block «Что делать», «Ваши права»…). */
+  side?: Perspective;
 }
 
 /**
@@ -630,6 +680,7 @@ function storeMessage(message: AiMessage): StoredMessage {
       ? {
           answer: analysis.answer,
           case: analysis.case,
+          ...(analysis.perspective ? { side: analysis.perspective } : {}),
           sources: analysis.sources.map(({ id, hit }) => ({
             id,
             document: hit.document.id,
@@ -666,6 +717,7 @@ function restoreMessage(pack: ServerPack, message: StoredMessage): Omit<AiMessag
       validation,
       calculation: calculateCharges(pack, validation),
       scope: message.case?.scope ?? 'law',
+      ...(message.side ? { perspective: message.side } : {}),
       case: message.case ?? { facts: answer.facts, assumptions: answer.assumptions, norms: [], conclusion: answer.situation },
     },
   };

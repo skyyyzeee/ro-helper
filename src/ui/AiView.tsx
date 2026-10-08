@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef } from 'react';
 import type { Capability } from '../account/capabilities';
 import { articleLabel, articleTitle, formatPunishment, type SearchHit, type Stage } from '../core';
 import { STATUS_LABELS, diffCases, type Analysis } from '../protocol';
-import { PERSPECTIVES, type AiChat, type Perspective } from './ai';
+import { PERSPECTIVES, type AiChat, type AiMessage, type Perspective } from './ai';
 import { AnswerView, calculationLine } from './AnswerView';
 import { AnswerCheckView } from './AnswerCheckView';
 import { CaseChange } from './CaseChange';
@@ -285,8 +285,11 @@ export function AiView({
               ) : message.analysis ? (
                 <>
                   {chat.cases && changeAt(index) && <CaseChange diff={changeAt(index)!} />}
+                  {message.analysis.perspective && chat.perspectives.length > 1 && (
+                    <SideTabs message={message} sides={chat.perspectives} busy={chat.busy} onSide={(side) => void chat.showSide(message.id, side)} />
+                  )}
                   <AnswerView
-                    analysis={message.analysis}
+                    analysis={(message.side && message.sides?.[message.side]) || message.analysis}
                     busy={chat.busy}
                     calculable={calculable}
                     onOpen={onOpen}
@@ -356,13 +359,6 @@ export function AiView({
                 Составить документ
               </button>
             )}
-            <span className="set__label">Другая сторона:</span>
-            {/* The answer is already for the player's side (or the one asked): the others are offered. */}
-            {PERSPECTIVES.filter((side) => chat.perspectives.includes(side.id) && side.id !== last.analysis?.perspective).map((side) => (
-              <button key={side.id} type="button" className="ai__chip" disabled={chat.busy} onClick={() => void chat.send(lastQuestion, side.id)}>
-                {side.label}
-              </button>
-            ))}
           </div>
         )}
         {chat.current && chat.current.facts.length > 0 && (
@@ -455,6 +451,47 @@ function Punishments({ hits, calculable, onOpen, onCharge, onAi, busy }: { hits:
         <button type="button" className="ai__chip ai__chip--more" disabled={busy} onClick={onAi}>
           <SparkIcon size={14} /> Разобрать с ИИ
         </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The sides of one answer as tabs over it: the answer's own first, the others asked once each — then shown at once,
+ * the same case with the articles each side needs, no question spent again.
+ */
+function SideTabs({ message, sides, busy, onSide }: { message: AiMessage; sides: Perspective[]; busy: boolean; onSide: (side: Perspective) => void }) {
+  const own = message.analysis!.perspective!;
+  const shown = message.side ?? own;
+  const order = [own, ...sides.filter((side) => side !== own)];
+  const state = message.sideState;
+  return (
+    <div className="ai__tabs-wrap">
+      <div className="ai__sidetabs" role="tablist" aria-label="Сторона">
+        {order.map((side) => {
+          const label = PERSPECTIVES.find((p) => p.id === side)?.label ?? side;
+          const ready = side === own || !!message.sides?.[side];
+          return (
+            <button
+              key={side}
+              type="button"
+              role="tab"
+              aria-selected={side === shown}
+              className={side === shown ? 'ai__sidetab ai__sidetab--on' : 'ai__sidetab'}
+              disabled={!ready && busy}
+              title={ready ? undefined : 'Разобрать это же дело с этой стороны'}
+              onClick={() => onSide(side)}
+            >
+              {label}
+              {state?.side === side && state.pending && <span className="ai__dots" aria-hidden="true" />}
+            </button>
+          );
+        })}
+      </div>
+      {state?.error && (
+        <p className="set__hint" role="alert">
+          {state.error}
+        </p>
       )}
     </div>
   );
