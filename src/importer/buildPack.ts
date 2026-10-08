@@ -18,6 +18,8 @@ export interface SourceMeta {
   subpoints?: 'list';
   /** Points docs: «titles» takes a capitalised line after a finished sentence for a sub-heading of what follows (МВД Тверского). */
   subheadings?: 'titles';
+  /** Points docs: «numbered» takes «1. …» lines for points beside «5.1» ones (ФСБ Арбатского). */
+  points?: 'numbered';
   /** Sections docs: a pattern for the section titles where the forum's marks do not tell them (see `parseSectionsText`). */
   headings?: string;
   thread: number;
@@ -61,7 +63,7 @@ export function buildPack(serverDir: string, server: ServerSources): BuildResult
     if (!available.has(id)) continue;
     const meta = JSON.parse(readFileSync(join(sourcesDir, `${id}.meta.json`), 'utf8')) as SourceMeta;
     const text = readFileSync(join(sourcesDir, `${id}.txt`), 'utf8');
-    const parsed = parseLawText(text, meta.id, meta.format, { subpoints: meta.subpoints, subheadings: meta.subheadings, headings: meta.headings });
+    const parsed = parseLawText(text, meta.id, meta.format, { subpoints: meta.subpoints, subheadings: meta.subheadings, points: meta.points, headings: meta.headings });
     const fixed = applyOverrides(parsed.articles, parsed.issues, overrides);
     issues.push(...[...fixed.issues, ...fixed.stale].map((issue) => ({ ...issue, document: id })));
     documents.push({

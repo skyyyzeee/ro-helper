@@ -14,8 +14,10 @@ const NAMES = [
   'keyboard_arrow_down', 'warning', 'open_in_new', 'download', 'keyboard', 'drag_indicator', 'resize', 'view_carousel',
   'unfold_less', 'keep', 'star', 'star-fill', 'description', 'calculate', 'sticky_note_2', 'account_circle', 'palette',
   // The AI.
-  'wand_stars', 'mic', 'history',
+  'wand_stars', 'mic', 'history', 'school',
   'tune', 'menu_book', 'info', 'admin_panel_settings', 'help', 'campaign',
+  // The department's topics of the law.
+  'lock', 'record_voice_over', 'manage_search', 'bolt', 'directions_car', 'forum', 'lock_open', 'payments', 'hourglass_bottom',
   // Organisations.
   'local_police', 'traffic', 'security', 'verified_user', 'military_tech', 'policy', 'gavel', 'balance',
   'account_balance', 'local_hospital', 'newspaper', 'cases', 'how_to_vote', 'skull', 'person',

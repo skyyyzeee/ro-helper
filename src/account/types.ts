@@ -54,6 +54,11 @@ export interface Accounts {
   sendUsage(counts: UsageCount[]): Promise<void>;
   /** Roles, leader requests and the admin's tools, for the signed-in player. */
   readonly roles: RolesApi;
+  /**
+   * The signed-in player's token for the AI server (ADR 0002): it counts their questions on the account. Fresh — renewed
+   * when about to run out; null when nobody is signed in.
+   */
+  aiToken(): Promise<string | null>;
 }
 
 /** A count for the author: a day, a server, what was done, how many times. Nothing of the player. */

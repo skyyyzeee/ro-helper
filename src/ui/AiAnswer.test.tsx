@@ -113,4 +113,33 @@ describe('the analysis on screen', () => {
     expect(alert).toHaveTextContent('Нет связи с Gemini');
     expect(within(alert).getByRole('button', { name: 'поиск по законам' })).toBeInTheDocument();
   });
+
+  it('answers an officer with what to do first, and shows the other sides in tabs — each asked once', async () => {
+    const bodies: string[] = [];
+    const fetch = vi.fn(fakeGeminiFetch({}, bodies));
+    vi.stubGlobal('fetch', fetch);
+    const app = await renderApp({ settings: GEMINI, profile: { organization: 'mvd' } });
+    await app.user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
+    await app.user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'у меня украли телефон{Enter}');
+    const guide = await screen.findByRole('region', { name: 'Что делать' });
+    expect(guide).toHaveTextContent('Потребуйте объяснения и составьте протокол');
+    expect(within(guide).getByRole('button', { name: /УК/ })).toBeInTheDocument();
+
+    const tabs = screen.getByRole('tablist', { name: 'Сторона' });
+    expect(within(tabs).getAllByRole('tab').map((t) => t.textContent)).toEqual(['Сотрудник', 'Защита', 'Гражданин']);
+    expect(within(tabs).getByRole('tab', { name: 'Сотрудник' })).toHaveAttribute('aria-selected', 'true');
+
+    // Another side: asked once, with the case's facts — then shown again at no cost.
+    const before = fetch.mock.calls.length;
+    await app.user.click(within(tabs).getByRole('tab', { name: 'Защита' }));
+    expect(await screen.findByRole('region', { name: 'Проверка процедуры' })).toBeInTheDocument();
+    expect(bodies.at(-1)).toContain('ФАКТЫ ДЕЛА ДО ЭТОГО СООБЩЕНИЯ');
+    const asked = fetch.mock.calls.length;
+    expect(asked).toBe(before + 1);
+    await app.user.click(within(tabs).getByRole('tab', { name: 'Сотрудник' }));
+    expect(screen.getByRole('region', { name: 'Что делать' })).toBeInTheDocument();
+    await app.user.click(within(tabs).getByRole('tab', { name: 'Защита' }));
+    expect(screen.getByRole('region', { name: 'Проверка процедуры' })).toBeInTheDocument();
+    expect(fetch.mock.calls.length).toBe(asked);
+  });
 });

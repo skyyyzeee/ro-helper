@@ -67,12 +67,24 @@ export interface WikiCatalog {
   genders: boolean;
 }
 
+/** The shape of wiki.json this app reads: a newer one downloaded is taken only in this shape. */
+export const WIKI_FORMAT = 1;
+
 export interface WikiData {
+  /** The shape it is written in (WIKI_FORMAT). */
+  format?: number;
   /** When the wiki was read (ISO). */
   takenAt: string;
   source: string;
   catalogs: WikiCatalog[];
   entries: WikiEntry[];
+}
+
+/** What the repository has, for the app to see whether a newer wiki is there without downloading it whole. */
+export interface WikiManifest {
+  format: number;
+  takenAt: string;
+  count: number;
 }
 
 /** The tag of an entry new on the wiki. */

@@ -3,7 +3,7 @@ import type { Organization, SearchHit, ServerPack } from '../core';
 import { CHARTER_TITLES, charterCards, type CharterCard, type CharterDigest } from '../core/charter';
 import { topicArticles, topicsFor } from '../core/topics';
 import digests from '../data/charters.json';
-import { BackIcon } from './icons';
+import { BackIcon, TopicIcon } from './icons';
 
 const DIGESTS = digests as unknown as Record<string, CharterDigest>;
 
@@ -75,10 +75,15 @@ export function DepartmentView({ pack, organization, topic, onTopic, row, onOrga
           </div>
           <div className="dept__topics">
             {topics.map((t) => (
-              <button key={t.id} className="dept__topic" type="button" onClick={() => onTopic(t.id)}>
-                <b>{t.title}</b>
-                <span>{t.hint}</span>
-                <small>{articles(t.hits.length)}</small>
+              <button key={t.id} className={`dept__topic dept__topic--${t.id}`} type="button" onClick={() => onTopic(t.id)}>
+                <span className="dept__ico" aria-hidden="true">
+                  <TopicIcon id={t.id} />
+                </span>
+                <span className="dept__ttl">
+                  <b>{t.title}</b>
+                  <span>{t.hint}</span>
+                  <small>{articles(t.hits.length)}</small>
+                </span>
               </button>
             ))}
           </div>

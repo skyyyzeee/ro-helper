@@ -292,6 +292,8 @@ export function createSupabaseAccounts(platform: PlatformAdapter, options: Supab
 
   return {
     roles,
+    // getSession renews a token about to run out before giving it.
+    aiToken: async () => (await client.auth.getSession()).data.session?.access_token ?? null,
     settings: {
       async pull(since) {
         let query = client.from('user_settings').select('key,value,updated_at');

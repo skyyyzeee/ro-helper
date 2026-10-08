@@ -5034,6 +5034,9 @@ select option {
 .ai__hello { margin: 0; font-size: 22px; font-weight: 700; }
 .ai__intro .set__hint { max-width: 460px; }
 .ai__intro .ai__examples { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; max-width: 600px; margin: 6px 0 2px; }
+/* A tab's own first screen (AiIntro): one example, as wide as two. */
+.ai__intro--tab { padding-top: 10px; }
+.ai__intro--tab .ai__examples { grid-template-columns: 1fr; max-width: 520px; }
 .ai__intro .ai__example {
   font-style: normal; text-align: left; padding: 12px 14px; border-radius: var(--radius-card); line-height: 1.45;
   background: var(--surface); border: 1px solid var(--line);
@@ -5324,8 +5327,12 @@ select option {
 .dept {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 22px;
   padding-bottom: 12px;
+}
+
+.dept > section > .sec-t {
+  margin-bottom: 10px;
 }
 
 .dept__head {
@@ -5350,14 +5357,16 @@ select option {
 
 .dept__topics {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 8px;
 }
 
+/* A topic: its badge in its own colour, then what it is and how many articles. */
 .dept__topic {
+  --topic-hue: 245;
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  align-items: flex-start;
+  gap: 10px;
   padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid var(--line);
@@ -5371,16 +5380,52 @@ select option {
 .dept__topic:hover,
 .dept__topic:focus-visible {
   background: var(--surface-hover);
+  border-color: oklch(0.78 0.1 var(--topic-hue) / 0.45);
 }
 
-.dept__topic span {
+.dept__topic--detention { --topic-hue: 25; }
+.dept__topic--rights { --topic-hue: 200; }
+.dept__topic--search { --topic-hue: 245; }
+.dept__topic--force { --topic-hue: 60; }
+.dept__topic--vehicle { --topic-hue: 165; }
+.dept__topic--interrogation { --topic-hue: 290; }
+.dept__topic--release { --topic-hue: 140; }
+.dept__topic--fines { --topic-hue: 95; }
+.dept__topic--terms { --topic-hue: 330; }
+
+.dept__ico {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  color: oklch(0.85 0.1 var(--topic-hue));
+  background: oklch(0.7 0.12 var(--topic-hue) / 0.18);
+}
+
+.dept__ttl {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dept__ttl > b {
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.dept__ttl > span {
   font-size: 12px;
+  line-height: 1.35;
   color: var(--text-muted);
 }
 
-.dept__topic small {
-  font-size: 11px;
-  color: var(--accent-text);
+.dept__ttl > small {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: oklch(0.85 0.08 var(--topic-hue));
 }
 
 .dept__cards {
@@ -5498,15 +5543,19 @@ select option {
 .wiki__filter--on { border-color: oklch(0.78 0.1 var(--accent-hue) / 0.6); }
 .wiki__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .wiki__row { display: grid; grid-auto-flow: column; grid-auto-columns: 150px; gap: 10px; overflow-x: auto; padding-bottom: 6px; }
-.wiki__card { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: var(--radius-card); background: var(--surface); border: 1px solid var(--line); text-align: left; }
+/* A card off screen is neither laid out nor painted: a tab of hundreds scrolls as one of a few. */
+.wiki__card { content-visibility: auto; contain-intrinsic-size: auto 210px; display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: var(--radius-card); background: var(--surface); border: 1px solid var(--line); text-align: left; }
 .wiki__card:hover { background: var(--surface-hover); border-color: oklch(0.78 0.1 var(--accent-hue) / 0.4); }
 .wiki__thumb { position: relative; aspect-ratio: 1; border-radius: 10px; background: rgb(0 0 0 / 0.22); overflow: hidden; display: grid; place-items: center; }
 .wiki__img { width: 100%; height: 100%; object-fit: contain; }
+.wiki__noimage.wiki__video { display: grid; place-items: center; }
+.wiki__video::after { content: '▶'; font-size: 30px; color: var(--text-muted); }
 .wiki__noimage { display: block; width: 100%; height: 100%; }
 .wiki__fresh { position: absolute; top: 6px; left: 6px; padding: 2px 7px; border-radius: 6px; font-size: 11px; font-weight: 700; background: var(--accent); color: var(--on-accent); text-shadow: none; }
 .wiki__name { font-size: 13px; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .wiki__meta { display: flex; justify-content: space-between; gap: 6px; font-size: 11.5px; color: var(--text-faint); margin-top: auto; }
-.wiki__meta b { color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+.wiki__meta > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wiki__meta b { color: var(--text-muted); font-weight: 600; white-space: nowrap; flex: none; }
 .wiki__more { align-self: center; }
 .wiki__source { margin: 6px 0 0; font-size: 12px; color: var(--text-faint); }
 .wiki__entry { display: flex; flex-direction: column; gap: 12px; }
@@ -5653,6 +5702,13 @@ select option {
   min-width: 0;
 }
 
+/* The notes under the tiles keep clear of them. */
+.phrases > .set__hint,
+.phrases > .dept__note,
+.phrases > .warn {
+  margin-top: 10px;
+}
+
 .phrases__keys,
 .phrases__actions {
   display: flex;
@@ -5680,3 +5736,56 @@ select option {
     flex-basis: 100%;
   }
 }
+
+/* «Практика» before a round: the choice of laws and «Начать» under the intro, centred with it. */
+.quiz__intro .quiz__docs { width: 100%; max-width: 460px; }
+.quiz__intro .quiz__start { align-self: center; min-width: 160px; margin-top: 4px; }
+/* «Что будет за кражу?» answered by the base: each article with its punishment, a click away from the article. */
+.ai__direct { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 8px; }
+.ai__direct-row { display: flex; align-items: center; gap: 8px; width: 100%; }
+.ai__direct-open {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px; flex: 1; min-width: 0;
+  padding: 10px 12px; border-radius: var(--radius-card); border: 1px solid var(--line); background: var(--surface);
+  text-align: left; font-size: 13.5px; line-height: 1.4;
+}
+.ai__direct-open:hover { background: var(--surface-hover); }
+.ai__direct-open .pen { white-space: normal; }
+
+/* The answer for the player's side (AnswerView Guide): first, in the side's colour, each point with its articles. */
+.guide {
+  --guide-hue: 245;
+  margin: 8px 0 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+  border: 1px solid oklch(0.78 0.1 var(--guide-hue) / 0.35);
+  background: oklch(0.7 0.1 var(--guide-hue) / 0.1);
+}
+.guide--citizen { --guide-hue: 155; }
+.guide--lawyer { --guide-hue: 60; }
+.guide--crime { --guide-hue: 25; }
+.guide__title { margin-bottom: 6px; font-size: 13px; font-weight: 700; color: oklch(0.88 0.08 var(--guide-hue)); }
+.guide__list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.45; }
+.guide--lawyer .guide__list { padding-left: 0; list-style: none; }
+.guide__item { display: flex; gap: 8px; }
+.guide--state .guide__item, .guide--citizen .guide__item, .guide--crime .guide__item { display: list-item; }
+.guide__mark { flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; font-size: 12px; font-weight: 800; }
+.guide__item--ok .guide__mark { background: var(--now-bg); color: var(--now-text); }
+.guide__item--violated .guide__mark { background: var(--penalty-bg); color: var(--penalty-text); }
+.guide__item--unknown .guide__mark { background: var(--surface-active); color: var(--text-muted); }
+
+/* The analysis behind the side's answer, folded (AnswerView «Подробный разбор»). */
+.answer__more { margin-top: 6px; }
+.answer__more > summary { cursor: pointer; font-size: 13px; color: var(--text-muted); padding: 4px 0; }
+.answer__more[open] > summary { margin-bottom: 6px; }
+
+/* The sides of an answer (AiView SideTabs): its own first; another, asked once, shown again at once. */
+.ai__tabs-wrap { margin-bottom: 6px; }
+.ai__sidetabs { display: inline-flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--surface); }
+.ai__sidetab { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border: 0; border-radius: 9px; background: transparent; color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.ai__sidetab:hover:not(:disabled) { color: var(--text); }
+.ai__sidetab--on { background: var(--surface-active); color: var(--text); }
+.ai__sidetab:disabled { opacity: 0.5; cursor: default; }
+
+/* The question looks like the other kind of base than the one chosen: said, with the way there. */
+.ai__switch { align-items: center; flex-wrap: wrap; }
+.ai__switch .ai__chip { margin-left: auto; }

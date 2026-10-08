@@ -32,10 +32,10 @@ const OLD_GIBDD = [
 ].join('\n');
 
 const COUNTS: [string, LawFormat, number][] = [
-  ['ch-mvd', 'points', 250], ['ch-gibdd', 'points', 89], ['ch-fso', 'points', 97], ['ch-hospital', 'points', 223], ['ch-news', 'points', 157],
+  ['ch-mvd', 'points', 250], ['ch-gibdd', 'points', 89], ['ch-fso', 'points', 97], ['ch-hospital', 'points', 222], ['ch-news', 'points', 157],
   ['sk-main', 'points', 39], ['sk-gsu', 'points', 51], ['sk-inspections', 'points', 20], ['sk-ranks', 'points', 12],
-  ['rules-main', 'points', 97], ['rules-gov', 'points', 117], ['rules-crime', 'points', 52],
-  ['ch-army', 'law', 65], ['ch-army-discipline', 'law', 37], ['ch-army-guard', 'law', 44],
+  ['rules-main', 'points', 98], ['rules-gov', 'points', 117], ['rules-crime', 'points', 52],
+  ['ch-army', 'law', 65], ['ch-army-discipline', 'law', 43], ['ch-army-guard', 'law', 44],
   ['sk-uniform', 'law', 11], ['sk-ethics', 'law', 10], ['sk-kso', 'law', 10], ['sk-appeals', 'law', 14],
 ];
 
@@ -74,7 +74,9 @@ describe('charters, regulations and project rules (real Тверской forum t
   });
 
   it('without the option a title after a sentence stays the point’s own (больница: «Строгий выговор 2/3»)', () => {
-    expect(point('ch-hospital', '5.12').parts.at(-1)!.text).toBe('Строгий выговор 2/3');
+    // The shape of the hospital charter's п. 5.12 before 8 October: the punishment broken onto a line of its own.
+    const old = parseLawText(['5. ЗАПРЕЩЕНО', '5.12. Сотруднику запрещено играть в азартные игры. | Строгий выговор /', 'Строгий выговор 2/3'].join('\n'), 'ch-hospital', 'points');
+    expect(old.articles.find((a) => a.number === '5.12')!.parts.at(-1)!.text).toBe('Строгий выговор 2/3');
   });
 
   it('a number written twice in one chapter keeps its place in the ids (the old ГИБДД charter: 4.2.1)', () => {
@@ -99,8 +101,8 @@ describe('charters, regulations and project rules (real Тверской forum t
 
   it('a numbered heading in capitals, punishments after «|» and «➤ Исключение к п. …» (больница)', () => {
     expect(parse('ch-hospital').chapters[0]).toMatchObject({ number: '1', title: 'ОБЩИЕ ПОЛОЖЕНИЯ БОЛЬНИЦЫ' });
-    expect(point('ch-hospital', '5.37').notes).toEqual([{ label: 'Наказание', text: 'Строгий выговор / Строгий выговор 2/3' }]);
-    expect(point('ch-hospital', '5.42').notes.map((n) => n.label)).toEqual(['Наказание', 'Исключение', 'Исключение']);
+    expect(point('ch-hospital', '5.36').notes).toEqual([{ label: 'Наказание', text: 'Строгий выговор / Строгий выговор 2/3' }]);
+    expect(point('ch-hospital', '5.41').notes.map((n) => n.label)).toEqual(['Наказание', 'Исключение', 'Исключение']);
   });
 
   it('regulations in sections and numbered paragraphs, signed at the end (Положение о СК)', () => {
@@ -168,16 +170,16 @@ describe('sub-points as a list of their point (ФСО regulation)', () => {
 });
 
 /** The charters of the other servers, read from their own snapshots. */
-const parseOn = (server: string, id: string, format: LawFormat) =>
-  parseLawText(readFileSync(join(root, 'data', server, 'sources', `${id}.txt`), 'utf8'), id, format);
+const parseOn = (server: string, id: string, format: LawFormat, options: PointsOptions = {}) =>
+  parseLawText(readFileSync(join(root, 'data', server, 'sources', `${id}.txt`), 'utf8'), id, format, options);
 
 describe('charters of Арбатский and Кутузовский (real forum text)', () => {
   const CHARTERS: [string, string, LawFormat, number][] = [
-    ['arbatskiy', 'ch-mvd', 'law', 80], ['arbatskiy', 'ch-gibdd', 'law', 32], ['arbatskiy', 'ch-fsb', 'law', 21],
-    ['arbatskiy', 'ch-army', 'law', 78], ['arbatskiy', 'sk-charter', 'law', 67],
-    ['arbatskiy', 'ch-hospital', 'points', 125], ['arbatskiy', 'ch-news', 'points', 225],
-    ['kutuzovskiy', 'ch-mvd', 'points', 337], ['kutuzovskiy', 'ch-gibdd', 'law', 33], ['kutuzovskiy', 'ch-army-discipline', 'points', 86],
-    ['kutuzovskiy', 'ch-hospital', 'points', 156], ['kutuzovskiy', 'ch-news', 'points', 141], ['kutuzovskiy', 'sk-appeals', 'law', 29],
+    ['arbatskiy', 'ch-mvd', 'law', 85], ['arbatskiy', 'ch-gibdd', 'law', 33],
+    ['arbatskiy', 'ch-army', 'law', 78], ['arbatskiy', 'sk-charter', 'law', 88],
+    ['arbatskiy', 'ch-hospital', 'points', 143], ['arbatskiy', 'ch-news', 'points', 219],
+    ['kutuzovskiy', 'ch-mvd', 'points', 336], ['kutuzovskiy', 'ch-gibdd', 'law', 33], ['kutuzovskiy', 'ch-army-discipline', 'points', 96],
+    ['kutuzovskiy', 'ch-hospital', 'points', 165], ['kutuzovskiy', 'ch-news', 'points', 138], ['kutuzovskiy', 'sk-appeals', 'law', 29],
   ];
 
   it('reads every point and article, with nothing left unparsed', () => {
@@ -187,12 +189,21 @@ describe('charters of Арбатский and Кутузовский (real forum 
     }
   });
 
+  it('a charter numbering its points «1.», «5.1» anew in each chapter, a chapter heading lost on the forum (ФСБ Арбатского)', () => {
+    const fsb = parseOn('arbatskiy', 'ch-fsb', 'points', { points: 'numbered' });
+    expect({ count: fsb.articles.length, issues: fsb.issues }).toEqual({ count: 225, issues: [] });
+    expect(fsb.articles[0]).toMatchObject({ number: '1', chapter: 'I' });
+    // «ГЛАВА» alone: the chapter after VIII, with the points of its own 1.1, not VIII's again.
+    expect(fsb.chapters.map((c) => c.number)).toEqual(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']);
+    expect(fsb.articles.find((a) => a.chapter === 'IX' && a.number === '1.1')!.parts[0].text).toMatch(/^Уклонение от службы/);
+  });
+
   it('takes «Наказание: …» on the line under a point as its punishment', () => {
     const discipline = parseOn('kutuzovskiy', 'ch-army-discipline', 'points');
     const ethics = discipline.articles.find((a) => a.number === '4.1')!;
     expect(ethics.parts[0].text).toBe('Несоблюдение военной этики.');
     expect(ethics.notes).toEqual([{ label: 'Наказание', text: 'Выговор/Переаттестация' }]);
-    expect(discipline.articles.filter((a) => a.notes.some((n) => n.label === 'Наказание'))).toHaveLength(49);
+    expect(discipline.articles.filter((a) => a.notes.some((n) => n.label === 'Наказание'))).toHaveLength(51);
 
     const hospital = parseOn('arbatskiy', 'ch-hospital', 'points');
     expect(hospital.articles.find((a) => a.number === '2.4')!.notes).toEqual([{ label: 'Наказание', text: 'Строгий выговор' }]);

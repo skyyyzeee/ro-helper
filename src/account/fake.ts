@@ -141,6 +141,7 @@ export function createFakeAccounts(signedIn: Account | null = null): FakeAccount
       },
     },
     current: async () => account,
+    aiToken: async () => (account ? `token-of-${account.id}` : null),
     signIn(provider) {
       calls.push(`signIn:${provider}`);
       return wait();

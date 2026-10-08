@@ -6,7 +6,7 @@
 // not answer. It keeps the spending in check: a few questions a day per computer and per address, and a daily
 // budget in rubles for everyone together.
 // Plain Node (18+ — Ubuntu 24.04 ships 18: no global `crypto`, import what is used), no packages: `node server.mjs`, behind Caddy for HTTPS (see README.md).
-import { randomUUID, timingSafeEqual } from 'node:crypto';
+import { createHash, createPublicKey, randomUUID, timingSafeEqual, verify } from 'node:crypto';
 import { createServer } from 'node:http';
 import { appendFileSync, readFileSync, writeFileSync, renameSync, existsSync, statSync } from 'node:fs';
 
@@ -23,13 +23,31 @@ const CONFIG = {
    * is tried. The first is AI_MODEL; AI_MODELS, comma-separated, replaces the whole list.
    */
   models: env('AI_MODELS', `${env('AI_MODEL', 'gpt-5-nano')},gpt-4.1-nano,gpt-4o-mini`).split(',').map((m) => m.trim()).filter(Boolean),
-  /** Rubles per 1M tokens, in and out, for counting the budget. */
+  /**
+   * The model that answers the player's question itself (the analysis — what the app counts as a question), while
+   * GigaChat answers its steps (the search phrases). Empty: GigaChat first for everything, as before.
+   */
+  // In turn, comma-separated: «gigachat:GigaChat-3-Ultra» is a model of GigaChat's (its free tokens first), any other a
+  // model of the paid API; when one does not answer — its free tokens used up, the budget spent — the next does.
+  analysisModels: env('ANALYSIS_MODEL', '').split(',').map((m) => m.trim()).filter(Boolean),
+  /** Rubles per 1M tokens, in and out, for counting the budget: of a model not in MODEL_PRICES. */
   priceIn: num('PRICE_IN_RUB', 20),
   priceOut: num('PRICE_OUT_RUB', 104),
-  /** Everyone together may spend this much a day; past it, the AI rests until midnight (Moscow). */
+  /**
+   * Everyone together may spend this much a day. Past it the paid API rests until midnight (Moscow): with GigaChat
+   * set up, the questions go on to it; without, the AI rests too.
+   */
   budgetPerDay: num('BUDGET_RUB_PER_DAY', 20),
   /** Per computer and per address, a day. */
   questionsPerDevice: num('QUESTIONS_PER_DEVICE', 50),
+  /**
+   * Sign-in (ADR 0002): the app sends the player's Supabase token; its signature is checked by the project's public
+   * keys (no secret here), and the questions are counted per account — one player on two computers, one limit.
+   * Empty SUPABASE_URL: no sign-in at all. REQUIRE_SIGN_IN=1: no answer without it (after the announcement).
+   */
+  supabaseUrl: env('SUPABASE_URL', '').replace(/\/$/, ''),
+  requireSignIn: env('REQUIRE_SIGN_IN', '0') === '1',
+  questionsPerAccount: num('QUESTIONS_PER_ACCOUNT', 50),
   requestsPerIp: num('REQUESTS_PER_IP', 200),
   maxOutputTokens: num('MAX_OUTPUT_TOKENS', 900),
   stateFile: env('STATE_FILE', './state.json'),
@@ -43,6 +61,19 @@ const CONFIG = {
   feedbackMaxBytes: num('FEEDBACK_MAX_MB', 50) * 1024 * 1024,
   /** The admins' reviews of the marks: approved, rejected, to check again — with the normal form they gave. */
   reviewsFile: env('REVIEWS_FILE', './reviews.json'),
+  /**
+   * Answers already given (ADR 0007): the same question with the same sources is answered again from here, with no
+   * AI call and nothing off the player's limit. Kept this many days (0 — no cache), at most so many, no id of
+   * anyone; a 👎 to an answer drops it.
+   */
+  cacheFile: env('CACHE_FILE', './cache.json'),
+  cacheDays: num('CACHE_DAYS', 7),
+  cacheMax: num('CACHE_MAX', 5000),
+  /**
+   * The models an admin may ask for one request (the exam, comparing them before a change): «gigachat» or a model of
+   * the paid API. Such a request is off the computer's limit, not kept in the cache, and says its tokens.
+   */
+  trialModels: env('TRIAL_MODELS', 'gigachat,gpt-5-nano,gpt-4.1-nano,gpt-4.1-mini,gpt-4o-mini').split(',').map((m) => m.trim()).filter(Boolean),
   /** The admins' token for reading the marks from the app (bash set-key.sh admin); none — no reading. */
   adminToken: env('ADMIN_TOKEN', '').trim(),
   /**
@@ -72,7 +103,7 @@ const today = () => new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 1
 // ——— What was spent today, kept on disk so a restart does not reset the limits ———
 
 /** A fresh day: nothing spent, nothing asked; `answered` — who answered, and why the paid API had to; `marks` — marks taken. */
-const freshDay = () => ({ day: today(), spent: 0, devices: {}, ips: {}, answered: { gigachat: 0, paid: 0, why: {} }, marks: 0 });
+const freshDay = () => ({ day: today(), spent: 0, devices: {}, accounts: {}, ips: {}, answered: { gigachat: 0, paid: 0, cached: 0, why: {} }, marks: 0 });
 let state = freshDay();
 if (existsSync(CONFIG.stateFile)) {
   try {
@@ -95,18 +126,27 @@ function rollDay() {
   dirty = true;
 }
 
-/** Why this request may not go on today, or nothing when it may. */
-function refusal(device, ip, kind) {
+/**
+ * Why this request may not go on today, or nothing when it may. A signed-in player's questions are counted on their
+ * account, not on the computer; the address's limit stands for everyone, against a flood of accounts.
+ */
+function refusal(device, ip, kind, account) {
   rollDay();
-  if (state.spent >= CONFIG.budgetPerDay) return 'На сегодня ИИ Кремлёвского Ассистента исчерпал общий лимит. Он снова заработает после полуночи по Москве.';
+  // Past the budget GigaChat, free, goes on answering; only with no GigaChat does the AI rest.
+  if (state.spent >= CONFIG.budgetPerDay && !CONFIG.gigachat.key) return 'На сегодня ИИ Кремлёвского Ассистента исчерпал общий лимит. Он снова заработает после полуночи по Москве.';
   if ((state.ips[ip] ?? 0) >= CONFIG.requestsPerIp) return 'Слишком много вопросов с вашего адреса за сегодня. Попробуйте завтра.';
+  if (account) {
+    const mine = state.accounts?.[account] ?? { questions: 0 };
+    if (kind === 'question' && mine.questions >= CONFIG.questionsPerAccount) return `На сегодня вопросы ИИ закончились (${CONFIG.questionsPerAccount} в день). Они снова появятся после полуночи по Москве.`;
+    return null;
+  }
   const used = state.devices[device] ?? { questions: 0 };
   if (kind === 'question' && used.questions >= CONFIG.questionsPerDevice) return `На сегодня вопросы ИИ закончились (${CONFIG.questionsPerDevice} в день). Они снова появятся после полуночи по Москве.`;
   return null;
 }
 
-function count(device, ip, kind, rubles) {
-  const used = (state.devices[device] ??= { questions: 0 });
+function count(device, ip, kind, rubles, account) {
+  const used = account ? ((state.accounts ??= {})[account] ??= { questions: 0 }) : (state.devices[device] ??= { questions: 0 });
   if (kind === 'question') used.questions += 1;
   state.ips[ip] = (state.ips[ip] ?? 0) + 1;
   state.spent += rubles;
@@ -164,9 +204,11 @@ async function inTurn(models, call) {
 }
 
 /** The paid OpenAI-compatible API, model after model while they are busy. */
-async function paid({ system, messages, json, think }) {
+async function paid({ system, messages, json, think }, models = CONFIG.models) {
   if (!CONFIG.apiKey) throw new UpstreamError(503, null, 'no paid API key');
-  const body = await inTurn(CONFIG.models, (model) =>
+  let used = models[0];
+  const body = await inTurn(models, (model) =>
+    (used = model) &&
     upstream(
       '/chat/completions',
       {
@@ -188,9 +230,18 @@ async function paid({ system, messages, json, think }) {
   );
   const text = body?.choices?.[0]?.message?.content ?? '';
   const usage = body?.usage ?? {};
-  const rubles = ((usage.prompt_tokens ?? 0) * CONFIG.priceIn + (usage.completion_tokens ?? 0) * CONFIG.priceOut) / 1e6;
-  return { text, rubles };
+  const [priceIn, priceOut] = MODEL_PRICES[used] ?? [CONFIG.priceIn, CONFIG.priceOut];
+  const rubles = ((usage.prompt_tokens ?? 0) * priceIn + (usage.completion_tokens ?? 0) * priceOut) / 1e6;
+  return { text, rubles, usage: { input: usage.prompt_tokens ?? 0, output: usage.completion_tokens ?? 0 } };
 }
+
+/** Rubles per 1M tokens, in and out, by ProxyAPI's list (October 2026): the budget counts what each model costs. */
+const MODEL_PRICES = {
+  'gpt-4.1-mini': [104, 413],
+  'gpt-4.1-nano': [26, 104],
+  'gpt-5-nano': [13, 104],
+  'gpt-5-mini': [65, 516],
+};
 
 // ——— GigaChat ———
 
@@ -235,12 +286,12 @@ function readableJson(text) {
   }
 }
 
-async function gigachat({ system, messages, json }) {
+async function gigachat({ system, messages, json }, model = CONFIG.gigachat.model) {
   return inGigachatTurn(async () => {
     const response = await fetch(`${CONFIG.gigachat.api}/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await gigachatToken()}` },
-      body: JSON.stringify({ model: CONFIG.gigachat.model, messages: [{ role: 'system', content: system }, ...messages], max_tokens: CONFIG.maxOutputTokens }),
+      body: JSON.stringify({ model, messages: [{ role: 'system', content: system }, ...messages], max_tokens: CONFIG.maxOutputTokens }),
     });
     const body = await response.json().catch(() => null);
     // 401: the token went stale early — the next request takes a new one. 402/429: the free tokens are used up, or too fast.
@@ -252,12 +303,33 @@ async function gigachat({ system, messages, json }) {
     if (choice?.finish_reason === 'blacklist') throw new Declined('blacklist');
     if (!text.trim()) throw new Declined('empty');
     if (json && !readableJson(text)) throw new Declined('format');
-    return { text, rubles: 0 };
+    const usage = body?.usage ?? {};
+    return { text, rubles: 0, usage: { input: usage.prompt_tokens ?? 0, output: usage.completion_tokens ?? 0 } };
   });
 }
 
-/** GigaChat first, when it is set up; the paid API for whatever it does not answer. */
-async function chat(request) {
+/**
+ * Who answers. The player's question itself goes to the ANALYSIS_MODEL ones in turn — a GigaChat model on its
+ * free tokens, a paid one while the day's budget allows. Everything else, and what none of them answered: GigaChat
+ * first, when it is set up; the paid API for what it does not answer, while the budget allows.
+ */
+async function chat(request, kind = 'question') {
+  const canPay = !!CONFIG.apiKey && state.spent < CONFIG.budgetPerDay;
+  if (kind === 'question') {
+    for (const name of CONFIG.analysisModels) {
+      const giga = name.startsWith('gigachat:');
+      if (giga ? !CONFIG.gigachat.key : !canPay) continue;
+      try {
+        const answer = giga ? await gigachat(request, name.slice('gigachat:'.length)) : await paid(request, [name]);
+        state.answered[giga ? 'gigachat' : 'paid'] += 1;
+        dirty = true;
+        return answer;
+      } catch (error) {
+        // Its free tokens used up (402), busy, or the answer unreadable: the next one answers.
+        console.error(new Date().toISOString(), `${name}:`, error.message ?? error);
+      }
+    }
+  }
   if (CONFIG.gigachat.key) {
     try {
       const answer = await gigachat(request);
@@ -268,13 +340,76 @@ async function chat(request) {
       const why = error instanceof Declined ? error.message.split(' ')[0] : 'network';
       state.answered.why[why] = (state.answered.why[why] ?? 0) + 1;
       if (!(error instanceof Declined) || why === 'token') console.error(new Date().toISOString(), 'GigaChat:', error.message ?? error);
-      if (!CONFIG.apiKey) throw new UpstreamError(502, null, `GigaChat: ${why}`);
+      // Past the budget, or with no paid API, what GigaChat declines is told as the AI not answering.
+      if (!canPay) throw new UpstreamError(502, null, `GigaChat: ${why}`);
     }
   }
   const answer = await paid(request);
   state.answered.paid += 1;
   dirty = true;
   return answer;
+}
+
+// ——— Answers already given (ADR 0007) ———
+
+/** A question as it is matched: the 👎 to an answer finds the answer by it. */
+const normalQuestion = (text) => (typeof text === 'string' ? text.replace(/\s+/g, ' ').trim().toLowerCase().replace(/ё/g, 'е').slice(0, 600) : '');
+
+/** The request as the AI gets it: the same key, the same answer. The laws' text is in it — new laws, a new key. */
+const cacheKey = ({ system, messages, json, think }) => createHash('sha256').update(JSON.stringify([system, messages, json, think])).digest('hex');
+
+/** key → { text, at, question }, oldest first. */
+const cache = new Map();
+if (existsSync(CONFIG.cacheFile)) {
+  try {
+    for (const [key, entry] of JSON.parse(readFileSync(CONFIG.cacheFile, 'utf8'))) cache.set(key, entry);
+  } catch {
+    // A broken file: the cache starts over.
+  }
+}
+let cacheDirty = false;
+setInterval(() => {
+  if (!cacheDirty) return;
+  cacheDirty = false;
+  writeFileSync(`${CONFIG.cacheFile}.part`, JSON.stringify([...cache]), { mode: 0o600 });
+  renameSync(`${CONFIG.cacheFile}.part`, CONFIG.cacheFile);
+}, 15000).unref();
+
+function cached(key) {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.at > CONFIG.cacheDays * 86_400_000) {
+    cache.delete(key);
+    cacheDirty = true;
+    return null;
+  }
+  return entry;
+}
+
+function rememberAnswer(key, text, question) {
+  if (CONFIG.cacheDays <= 0 || !question) return;
+  cache.delete(key);
+  cache.set(key, { text, at: Date.now(), question });
+  while (cache.size > CONFIG.cacheMax) cache.delete(cache.keys().next().value);
+  cacheDirty = true;
+}
+
+/** A 👎: every answer kept for that question is dropped — the next one is asked of the AI again. */
+function forgetAnswers(question) {
+  const q = normalQuestion(question);
+  for (const [key, entry] of cache) if (entry.question === q) cache.delete(key);
+  cacheDirty = true;
+}
+
+/** An answer worth keeping: a JSON answer that is JSON at all — a broken one would only be retried again and again. */
+function keepable(text, json) {
+  if (!json) return true;
+  try {
+    JSON.parse(text.trim().replace(/^```(?:json)?\s*|```\s*$/g, ''));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // ——— The players' marks ———
@@ -399,6 +534,50 @@ function latestMarks(filter, limit) {
   return marks;
 }
 
+// ——— Sign-in: the player's Supabase token ———
+
+/** The project's public keys by id, read from its JWKS and read again for a key not known (they rotate). */
+let jwks = { keys: new Map(), at: 0 };
+async function publicKey(kid) {
+  if (!jwks.keys.has(kid) && Date.now() - jwks.at > 60_000) {
+    jwks.at = Date.now();
+    try {
+      const response = await fetch(`${CONFIG.supabaseUrl}/auth/v1/.well-known/jwks.json`, { signal: AbortSignal.timeout(5000) });
+      const { keys } = await response.json();
+      jwks.keys = new Map(keys.filter((k) => k.kid && k.kty === 'EC').map((k) => [k.kid, createPublicKey({ key: k, format: 'jwk' })]));
+    } catch (error) {
+      console.error(new Date().toISOString(), 'jwks:', error.message);
+    }
+  }
+  return jwks.keys.get(kid);
+}
+
+const fromBase64Url = (part) => Buffer.from(part, 'base64url');
+
+/**
+ * The account a request is from: the id in a Supabase token that is signed by the project's key (ES256), not
+ * expired, for this project and a signed-in player. Anything else — no token, a forged or a stale one — is no account.
+ */
+async function accountOf(request) {
+  if (!CONFIG.supabaseUrl) return null;
+  const token = String(request.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const header = JSON.parse(fromBase64Url(parts[0]).toString('utf8'));
+    const claims = JSON.parse(fromBase64Url(parts[1]).toString('utf8'));
+    if (header.alg !== 'ES256' || typeof header.kid !== 'string') return null;
+    if (claims.iss !== `${CONFIG.supabaseUrl}/auth/v1` || claims.aud !== 'authenticated' || !(claims.exp * 1000 > Date.now())) return null;
+    if (typeof claims.sub !== 'string' || !/^[\w-]{8,64}$/.test(claims.sub)) return null;
+    const key = await publicKey(header.kid);
+    if (!key) return null;
+    const signed = verify('sha256', Buffer.from(`${parts[0]}.${parts[1]}`), { key, dsaEncoding: 'ieee-p1363' }, fromBase64Url(parts[2]));
+    return signed ? claims.sub : null;
+  } catch {
+    return null;
+  }
+}
+
 // ——— HTTP ———
 
 /** A question with a dozen articles is some 60 KB. Text only: no speech is taken — it is recognised on the players' computers. */
@@ -426,6 +605,7 @@ function send(response, status, body) {
 }
 
 const server = createServer(async (request, response) => {
+  const request_ = request;
   if (request.method === 'OPTIONS') {
     response.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
@@ -436,7 +616,7 @@ const server = createServer(async (request, response) => {
   }
   if (request.method === 'GET' && request.url === '/v1/status') {
     rollDay();
-    return send(response, 200, { ok: true, open: state.spent < CONFIG.budgetPerDay, answered: state.answered, spent: Math.round(state.spent * 100) / 100, marks: state.marks ?? 0 });
+    return send(response, 200, { ok: true, open: state.spent < CONFIG.budgetPerDay || !!CONFIG.gigachat.key, answered: state.answered, spent: Math.round(state.spent * 100) / 100, marks: state.marks ?? 0, cache: cache.size });
   }
   if (request.method === 'GET' && request.url.startsWith('/v1/feedback')) {
     if (!isAdmin(request)) return send(response, 403, { error: 'Нужен ключ администратора.' });
@@ -492,6 +672,7 @@ const server = createServer(async (request, response) => {
     if (why) return send(response, 429, { error: why });
     try {
       keepMark(device, mark);
+      if (mark.vote === 'down') forgetAnswers(mark.question);
       return send(response, 200, { ok: true });
     } catch (error) {
       console.error(new Date().toISOString(), 'feedback:', error);
@@ -499,17 +680,52 @@ const server = createServer(async (request, response) => {
     }
   }
 
+  // The admins' token is no player's: an exam is not signed in. A player not signed in, when sign-in is required, is
+  // told how to go on — the laws and the calculator need none.
+  const account = isAdmin(request_) ? null : await accountOf(request_);
+  if (CONFIG.requireSignIn && !account && !isAdmin(request_)) {
+    return send(response, 401, { error: 'Чтобы спрашивать ИИ, войдите в аккаунт: «Профиль» → «Войти». Или укажите свой ключ ИИ в настройках.' });
+  }
+
   try {
     // Every step of one question — the law terms, then the answer — is one call; only the answer counts as a question.
     const kind = input.counts === false ? 'step' : 'question';
-    const why = refusal(device, ip, kind);
-    if (why) return send(response, 429, { error: why });
     const messages = Array.isArray(input.messages)
       ? input.messages.filter((m) => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string').slice(-14)
       : [];
     if (!messages.length || typeof input.system !== 'string') return send(response, 400, { error: 'Пустой вопрос.' });
-    const { text, rubles } = await chat({ system: input.system.slice(0, 8000), messages, json: !!input.json, think: input.think === true });
-    count(device, ip, kind, rubles);
+    const request = { system: input.system.slice(0, 8000), messages, json: !!input.json, think: input.think === true };
+    // An admin trying a model: that model only, off the computer's limit (the daily budget still counts), no cache.
+    if (typeof input.model === 'string' && isAdmin(request_)) {
+      // «gigachat:GigaChat-2-Max»: any model of GigaChat's, on its free tokens.
+      const gigaModel = /^gigachat:(GigaChat[\w.-]*)$/.exec(input.model)?.[1];
+      if (!gigaModel && !CONFIG.trialModels.includes(input.model)) return send(response, 400, { error: `Модель не из списка: ${CONFIG.trialModels.join(', ')}` });
+      rollDay();
+      if (!gigaModel && input.model !== 'gigachat' && state.spent >= CONFIG.budgetPerDay) return send(response, 429, { error: 'Дневной бюджет ИИ исчерпан.' });
+      const answer = gigaModel ? await gigachat(request, gigaModel) : input.model === 'gigachat' ? await gigachat(request) : await paid(request, [input.model]);
+      // The budget counts what it cost; the address's limit does not: an exam would use up the admin's own day.
+      state.spent += answer.rubles;
+      dirty = true;
+      return send(response, 200, { text: answer.text, usage: answer.usage ?? null });
+    }
+    // A question the app says may be answered again (a first question, not a follow-up): from the cache when it was
+    // asked before — free, and off no one's limit; only the address's limit stands, against a flood.
+    const question = input.cache === true ? normalQuestion(input.question) : '';
+    const key = question ? cacheKey(request) : '';
+    const hit = key ? cached(key) : null;
+    if (hit) {
+      rollDay();
+      if ((state.ips[ip] ?? 0) >= CONFIG.requestsPerIp) return send(response, 429, { error: 'Слишком много вопросов с вашего адреса за сегодня. Попробуйте завтра.' });
+      state.ips[ip] = (state.ips[ip] ?? 0) + 1;
+      state.answered.cached = (state.answered.cached ?? 0) + 1;
+      dirty = true;
+      return send(response, 200, { text: hit.text, cached: true });
+    }
+    const why = refusal(device, ip, kind, account);
+    if (why) return send(response, 429, { error: why });
+    const { text, rubles } = await chat(request, kind);
+    count(device, ip, kind, rubles, account);
+    if (key && keepable(text, request.json)) rememberAnswer(key, text, question);
     return send(response, 200, { text });
   } catch (error) {
     if (!(error instanceof UpstreamError)) console.error(new Date().toISOString(), error);

@@ -12,7 +12,7 @@ export function sourceIn(context: string, wanted = /\S+/): { id: string; ref: st
 }
 
 /** An analysis of a stolen phone, citing УК ст. 65 when it was found, or saying nothing was. */
-export function analysisOf(context: string, patch: Partial<LegalAnswer> = {}): string {
+export function analysisOf(context: string, patch: Partial<LegalAnswer> = {}, guide = false): string {
   const found = sourceIn(context, /^УК ст\. 65$/) ?? sourceIn(context);
   const cited = found ? [found.id] : [];
   const answer: Partial<LegalAnswer> = {
@@ -26,6 +26,8 @@ export function analysisOf(context: string, patch: Partial<LegalAnswer> = {}): s
     uncertainty: [],
     questions: [],
     notFound: !found,
+    // Asked for the player's side: one point, on the article found.
+    ...(guide && found ? { guide: [{ text: 'Потребуйте объяснения и составьте протокол', sources: cited }] } : {}),
     ...patch,
   };
   return JSON.stringify(answer);
@@ -39,7 +41,7 @@ export function fakeGeminiFetch(patch: Partial<LegalAnswer> = {}, bodies: string
     const body = JSON.parse(raw) as { systemInstruction?: { parts: { text: string }[] }; contents: { parts: { text?: string }[] }[] };
     const system = body.systemInstruction?.parts[0]?.text ?? '';
     const context = body.contents.at(-1)?.parts.map((p) => p.text ?? '').join('\n') ?? '';
-    const text = raw.includes('inlineData') ? 'у меня украли телефон' : isAnalysis(system) ? analysisOf(context, patch) : '["кража"]';
+    const text = raw.includes('inlineData') ? 'у меня украли телефон' : isAnalysis(system) ? analysisOf(context, patch, system.includes('"guide"')) : '["кража"]';
     return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] }), { status: 200 });
   };
 }

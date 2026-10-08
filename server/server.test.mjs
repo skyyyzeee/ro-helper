@@ -3,6 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
+import { generateKeyPairSync, sign } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -34,6 +35,7 @@ async function fakeGigachat({ life = 30 * 60_000, delay = 0 } = {}) {
     }
     seen.chats += 1;
     const question = JSON.parse(body).messages.at(-1).content;
+    seen.models = [...(seen.models ?? []), JSON.parse(body).model];
     await new Promise((resolve) => setTimeout(resolve, delay));
     if (question.includes('травка')) return json(response, 200, { choices: [{ message: { content: 'Генеративные языковые модели не обладают собственным мнением…' }, finish_reason: 'blacklist' }] });
     if (question.includes('сломай')) return json(response, 200, { choices: [{ message: { content: '{"phra e": [' }, finish_reason: 'stop' }] });
@@ -58,7 +60,7 @@ async function aiServer(env) {
   const port = 20000 + Math.floor(Math.random() * 20000);
   const dir = mkdtempSync(join(tmpdir(), 'ai-'));
   const child = spawn(process.execPath, [join(import.meta.dirname, 'server.mjs')], {
-    env: { ...process.env, PORT: String(port), STATE_FILE: join(dir, 'state.json'), FEEDBACK_FILE: join(dir, 'feedback.jsonl'), REVIEWS_FILE: join(dir, 'reviews.json'), ...env },
+    env: { ...process.env, PORT: String(port), STATE_FILE: join(dir, 'state.json'), FEEDBACK_FILE: join(dir, 'feedback.jsonl'), REVIEWS_FILE: join(dir, 'reviews.json'), CACHE_FILE: join(dir, 'cache.json'), ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   await new Promise((resolve, reject) => {
@@ -66,11 +68,11 @@ async function aiServer(env) {
     child.on('exit', (code) => reject(new Error(`server exited ${code}`)));
   });
   let n = 0;
-  const ask = async (text, { device = 'device-0001' } = {}) => {
+  const ask = async (text, { device = 'device-0001', cache, token } = {}) => {
     const response = await fetch(`http://127.0.0.1:${port}/v1/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Device': device, 'X-Forwarded-For': `10.0.0.${++n % 250}` },
-      body: JSON.stringify({ system: 's', messages: [{ role: 'user', content: text }], json: true }),
+      headers: { 'Content-Type': 'application/json', 'X-Device': device, 'X-Forwarded-For': `10.0.0.${++n % 250}`, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ system: 's', messages: [{ role: 'user', content: text }], json: true, ...(cache ? { cache: true, question: cache } : {}) }),
     });
     return { status: response.status, body: await response.json() };
   };
@@ -99,7 +101,7 @@ test('GigaChat answers first; the paid API only what it declines — Sber’s fi
     assert.equal((await ai.ask('сломай формат')).body.text, '{"from": "paid"}');
     assert.equal((await ai.ask('лимит кончился')).body.text, '{"from": "paid"}');
     const { answered, spent } = await ai.status();
-    assert.deepEqual(answered, { gigachat: 1, paid: 3, why: { blacklist: 1, format: 1, http: 1 } });
+    assert.deepEqual(answered, { gigachat: 1, paid: 3, cached: 0, why: { blacklist: 1, format: 1, http: 1 } });
     // Only the paid answers cost anything; the key was taken once, «Basic » and the line break dropped.
     assert.ok(spent > 0);
     assert.equal(giga.seen.tokens, 1);
@@ -239,5 +241,201 @@ test('the admins review a mark: approved with its normal form, it joins the dict
   } finally {
     ai.stop();
     giga.server.close();
+  }
+});
+
+test('a first question asked again is answered from the cache: no AI call, off anyone’s limit; a 👎 drops it', async () => {
+  const giga = await fakeGigachat();
+  const ai = await aiServer({ ...gigaEnv(giga), QUESTIONS_PER_DEVICE: '2' });
+  try {
+    const first = await ai.ask('украл телефон', { cache: 'Украл телефон?' });
+    assert.equal(first.body.text, '{"from": "gigachat"}');
+    assert.equal(first.body.cached, undefined);
+    // Another computer, the same question: the same answer, and the AI is not asked.
+    const again = await ai.ask('украл телефон', { cache: 'украл  телефон?', device: 'device-0002' });
+    assert.deepEqual(again.body, { text: '{"from": "gigachat"}', cached: true });
+    assert.equal(giga.seen.chats, 1);
+    // Off no one's limit: the first computer still has its second question.
+    assert.equal((await ai.ask('другое')).status, 200);
+    assert.equal((await ai.ask('украл телефон', { cache: 'Украл телефон?' })).body.cached, true);
+    // Not marked for the cache (a follow-up): asked of the AI, and nothing kept.
+    await ai.ask('украл телефон', { device: 'device-0003' });
+    assert.equal(giga.seen.chats, 3);
+    const { answered, cache } = await ai.status();
+    assert.equal(answered.cached, 2);
+    assert.equal(cache, 1);
+    // A 👎 to it: the next one goes to the AI again.
+    assert.equal((await ai.mark({ vote: 'down', question: 'Украл телефон?' })).status, 200);
+    assert.equal((await ai.ask('украл телефон', { cache: 'Украл телефон?', device: 'device-0004' })).body.cached, undefined);
+    assert.equal(giga.seen.chats, 4);
+  } finally {
+    ai.stop();
+    giga.server.close();
+  }
+});
+
+test('a broken JSON answer is not kept', async () => {
+  const giga = await fakeGigachat();
+  const ai = await aiServer({ ...gigaEnv(giga), AI_BASE_URL: 'http://127.0.0.1:9', AI_API_KEY: '' });
+  try {
+    await ai.ask('сломай формат', { cache: 'сломай' });
+    await ai.ask('сломай формат', { cache: 'сломай' });
+    assert.equal((await ai.status()).cache, 0);
+  } finally {
+    ai.stop();
+    giga.server.close();
+  }
+});
+
+test('an admin may try one model for a request: that model, off the computer\'s limit, its tokens told', async () => {
+  const giga = await fakeGigachat();
+  const models = [];
+  const paidServer = await listen(async (request, response) => {
+    models.push(JSON.parse(await read(request)).model);
+    json(response, 200, { choices: [{ message: { content: '{"from": "paid"}' } }], usage: { prompt_tokens: 1200, completion_tokens: 80 } });
+  });
+  const paidUrl = `http://127.0.0.1:${paidServer.address().port}`;
+  const ai = await aiServer({ ...gigaEnv(giga), AI_BASE_URL: paidUrl, AI_API_KEY: 'paid-key', ADMIN_TOKEN: 'admin-token-0123456789', QUESTIONS_PER_DEVICE: '1' });
+  const trial = (model, token = 'admin-token-0123456789') =>
+    fetch(`${ai.base}/v1/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Device': 'device-0001', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ system: 's', messages: [{ role: 'user', content: 'украл' }], json: true, model }),
+    }).then(async (r) => ({ status: r.status, body: await r.json() }));
+  try {
+    const first = await trial('gpt-4.1-mini');
+    assert.deepEqual(first.body, { text: '{"from": "paid"}', usage: { input: 1200, output: 80 } });
+    assert.deepEqual(models, ['gpt-4.1-mini']);
+    // Off the computer's limit of one question a day.
+    assert.equal((await trial('gpt-4.1-mini')).status, 200);
+    assert.equal((await trial('gigachat')).body.text, '{"from": "gigachat"}');
+    assert.equal((await trial('gpt-9-ultra')).status, 400);
+    // Without the admins' key the model asked is not taken: GigaChat first, as for everyone.
+    assert.equal((await trial('gpt-4.1-mini', 'wrong')).body.text, '{"from": "gigachat"}');
+  } finally {
+    ai.stop();
+    giga.server.close();
+    paidServer.close();
+  }
+});
+
+test('the question itself goes to ANALYSIS_MODEL, its steps to GigaChat; past the budget GigaChat answers all', async () => {
+  const giga = await fakeGigachat();
+  const models = [];
+  const paidServer = await listen(async (request, response) => {
+    models.push(JSON.parse(await read(request)).model);
+    // 100 000 tokens of gpt-4.1-mini in: 10.4 ₽ — past a budget of 10 ₽ at once.
+    json(response, 200, { choices: [{ message: { content: '{"from": "paid"}' } }], usage: { prompt_tokens: 100000, completion_tokens: 100 } });
+  });
+  const ai = await aiServer({
+    ...gigaEnv(giga),
+    AI_BASE_URL: `http://127.0.0.1:${paidServer.address().port}`,
+    AI_API_KEY: 'paid-key',
+    ANALYSIS_MODEL: 'gpt-4.1-mini',
+    BUDGET_RUB_PER_DAY: '10',
+  });
+  const step = (text) =>
+    fetch(`${ai.base}/v1/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Device': 'device-0001' },
+      body: JSON.stringify({ system: 's', messages: [{ role: 'user', content: text }], json: true, counts: false }),
+    }).then((r) => r.json());
+  try {
+    assert.equal((await step('украл')).text, '{"from": "gigachat"}');
+    assert.equal((await ai.ask('украл телефон')).body.text, '{"from": "paid"}');
+    assert.deepEqual(models, ['gpt-4.1-mini']);
+    const after = await ai.status();
+    assert.ok(after.spent > 10);
+    assert.equal(after.open, true);
+    // The budget spent: the next question is GigaChat's, not refused.
+    assert.equal((await ai.ask('ещё вопрос')).body.text, '{"from": "gigachat"}');
+    assert.deepEqual(models, ['gpt-4.1-mini']);
+  } finally {
+    ai.stop();
+    giga.server.close();
+    paidServer.close();
+  }
+});
+
+test('a chain for the question: a GigaChat model on its free tokens first, the paid one when it is used up', async () => {
+  const giga = await fakeGigachat();
+  const paid = await fakePaid();
+  const ai = await aiServer({ ...gigaEnv(giga), AI_BASE_URL: paid.url, AI_API_KEY: 'paid-key', ANALYSIS_MODEL: 'gigachat:GigaChat-3-Ultra,gpt-4.1-mini' });
+  try {
+    assert.equal((await ai.ask('украл телефон')).body.text, '{"from": "gigachat"}');
+    assert.equal(giga.seen.models.at(-1), 'GigaChat-3-Ultra');
+    // Its free tokens used up (402): the paid model answers.
+    assert.equal((await ai.ask('лимит кончился')).body.text, '{"from": "paid"}');
+    assert.equal(paid.seen.chats, 1);
+  } finally {
+    ai.stop();
+    giga.server.close();
+    paid.server.close();
+  }
+});
+
+/** A Supabase project of our own: its public key in a JWKS, and tokens signed by its private key (ES256). */
+async function fakeSupabase() {
+  const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+  const server = await listen((request, response) => {
+    if (request.url !== '/auth/v1/.well-known/jwks.json') return json(response, 404, {});
+    json(response, 200, { keys: [{ ...publicKey.export({ format: 'jwk' }), kid: 'key-1', alg: 'ES256', use: 'sig' }] });
+  });
+  const url = `http://127.0.0.1:${server.address().port}`;
+  const part = (value) => Buffer.from(JSON.stringify(value)).toString('base64url');
+  const token = (sub, { exp = Date.now() / 1000 + 3600, iss = `${url}/auth/v1`, key = privateKey } = {}) => {
+    const head = `${part({ alg: 'ES256', kid: 'key-1', typ: 'JWT' })}.${part({ sub, aud: 'authenticated', iss, exp: Math.floor(exp) })}`;
+    return `${head}.${sign('sha256', Buffer.from(head), { key, dsaEncoding: 'ieee-p1363' }).toString('base64url')}`;
+  };
+  return { url, token, server };
+}
+
+test('a signed-in player\'s questions are counted on the account, not the computer; a forged or stale token is no account', async () => {
+  const giga = await fakeGigachat();
+  const supabase = await fakeSupabase();
+  const ai = await aiServer({ ...gigaEnv(giga), SUPABASE_URL: supabase.url, QUESTIONS_PER_ACCOUNT: '2', QUESTIONS_PER_DEVICE: '1' });
+  const forger = generateKeyPairSync('ec', { namedCurve: 'P-256' }).privateKey;
+  try {
+    const player = supabase.token('user-aaaa-0001');
+    // Two questions on the account, from two computers: the account's limit, not each computer's one.
+    assert.equal((await ai.ask('украл', { device: 'device-pc-1', token: player })).status, 200);
+    assert.equal((await ai.ask('украл', { device: 'device-pc-2', token: player })).status, 200);
+    const third = await ai.ask('украл', { device: 'device-pc-3', token: player });
+    assert.equal(third.status, 429);
+    assert.match(third.body.error, /2 в день/);
+    // Another account has its own.
+    assert.equal((await ai.ask('украл', { device: 'device-pc-1', token: supabase.token('user-bbbb-0002') })).status, 200);
+    // Signed by another key, expired, or of another project: not the account (its limit is used up) — counted on the
+    // computer, as if not signed in: one question there, then the computer's limit.
+    const forged = [
+      supabase.token('user-aaaa-0001', { key: forger }),
+      supabase.token('user-aaaa-0001', { exp: Date.now() / 1000 - 10 }),
+      supabase.token('user-aaaa-0001', { iss: 'https://other.supabase.co/auth/v1' }),
+    ];
+    for (const [i, bad] of forged.entries()) {
+      assert.equal((await ai.ask('украл', { device: `device-fresh-${i}`, token: bad })).status, 200);
+      assert.equal((await ai.ask('украл', { device: `device-fresh-${i}`, token: bad })).status, 429);
+    }
+  } finally {
+    ai.stop();
+    giga.server.close();
+    supabase.server.close();
+  }
+});
+
+test('with sign-in required, a player not signed in is told how to go on; a signed-in one is answered', async () => {
+  const giga = await fakeGigachat();
+  const supabase = await fakeSupabase();
+  const ai = await aiServer({ ...gigaEnv(giga), SUPABASE_URL: supabase.url, REQUIRE_SIGN_IN: '1' });
+  try {
+    const anonymous = await ai.ask('украл');
+    assert.equal(anonymous.status, 401);
+    assert.match(anonymous.body.error, /войдите в аккаунт/i);
+    assert.equal((await ai.ask('украл', { token: supabase.token('user-aaaa-0001', { exp: Date.now() / 1000 - 10 }) })).status, 401);
+    assert.equal((await ai.ask('украл', { token: supabase.token('user-aaaa-0001') })).body.text, '{"from": "gigachat"}');
+  } finally {
+    ai.stop();
+    giga.server.close();
+    supabase.server.close();
   }
 });

@@ -2,8 +2,9 @@
 // shown, of this server, with the part it names, of a type the question's scope allows; every statement about the
 // norms must name its own sources, and every figure in it must stand in those very sources; an article the answer
 // mentions must be among them. What does not pass marks the answer as one to check — it is never shown as confirmed.
-import { articleLabel, articleText, calculateDetention, leadPart, type Charge, type DetentionResult, type SearchHit, type ServerPack } from '../core';
-import type { AnswerNorm, Claim, LegalAnswer } from './answer';
+import { articleLabel, articleText, calculateDetention, leadPart, type Article, type Charge, type DetentionResult, type SearchHit, type ServerPack } from '../core';
+import { cachedStem, words } from '../core/wordIndex';
+import type { AnswerNorm, Claim, GuideItem, LegalAnswer } from './answer';
 import { SOURCE_TYPE_LABELS, inScope, type Scope, type Source, type SourceType } from './sources';
 
 /**
@@ -56,6 +57,24 @@ export function articleExists(pack: ServerPack, ref: string): boolean {
   );
 }
 
+/** The article a label names: the first of that number in a document of that short name. */
+function namedArticle(pack: ServerPack, ref: string): Article | undefined {
+  const parsed = parseRef(ref);
+  if (!parsed) return undefined;
+  for (const d of pack.documents) {
+    if (d.short.toLowerCase() !== parsed.short && !d.aliases.includes(parsed.short)) continue;
+    const found = d.articles.find((a) => a.number === parsed.number);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/** How many words of a text an article holds — its title and text, by their stems. */
+function overlap(text: string, article: Article): number {
+  const own = new Set(words(`${article.title} ${articleText(article)}`).map(cachedStem));
+  return new Set(words(text).map(cachedStem).filter((stem) => own.has(stem))).size;
+}
+
 /** Figures of a text: «50 000», «50.000» and «50000» are one number; article and part numbers are not figures. */
 export function figures(text: string): number[] {
   const cleaned = text.replace(/(?:ст|ч|п|статья|статье|статьи|часть|части|пункт)\.?\s*\d+(?:\.\d+)*/gi, ' ');
@@ -85,11 +104,12 @@ function checkNorm(pack: ServerPack, sources: Map<string, Source>, norm: AnswerN
   const issues: string[] = [];
   const named = parseRef(norm.ref);
   if (named && (named.number !== article.number || !(document.short.toLowerCase() === named.short || document.aliases.includes(named.short)))) {
-    // The label names another article of the server: which of the two the AI meant cannot be told — it is to
-    // check. A label naming none is the AI's slip in writing it («86 УК ст. 2», «R5 ст. 5.3»): the source it gave
-    // is the norm, shown under the source's own label.
-    if (articleExists(pack, norm.ref)) issues.push(`${norm.ref}: ИИ указал не тот номер — источник ${norm.source} это ${document.short} ${article.number}`);
-    else norm = { ...norm, ref: `${document.short} ${articleLabel(article, undefined, document.unit)}` };
+    // Which of the two the AI meant, its own words tell: «why» closer to the source it gave than to the article
+    // the label names — the label is a slip, the source is the norm.
+    const meant = articleExists(pack, norm.ref) ? namedArticle(pack, norm.ref) : undefined;
+    if (meant && overlap(norm.why, meant) > overlap(norm.why, article)) {
+      issues.push(`${norm.ref}: ИИ указал не тот номер — источник ${norm.source} это ${document.short} ${article.number}`);
+    } else norm = { ...norm, ref: `${document.short} ${articleLabel(article, undefined, document.unit)}` };
   }
   if (scope && !inScope(source.type, scope)) {
     issues.push(`${norm.ref || norm.source}: это ${SOURCE_TYPE_LABELS[source.type].toLowerCase()}, а вопрос — о другом`);
@@ -182,4 +202,45 @@ export function calculateCharges(pack: ServerPack, validation: Validation): { ch
   }
   if (!charges.length) return null;
   return { charges, result: calculateDetention(charges, { mode: 'custody', offender: 'citizen' }, rules) };
+}
+
+/**
+ * The points for the player's side that stand on the sources: each names given sources of the question's kind, holds
+ * no figure they lack and no article that is not among them — «УПК ст. 12» is the УПК's, not a source's ст. 12 of
+ * another law. The rest are left out — advice without its law is not shown at all. A source's id the model wrote
+ * into the text («(S6)») is no word for the player: taken out.
+ */
+export function groundedGuide(guide: GuideItem[], sources: Source[], scope?: Scope): GuideItem[] {
+  return sortGuide(guide, sources, scope).kept;
+}
+
+/** A point of the side's answer left out, and why — for the admin's debug view. */
+export interface HiddenPoint {
+  text: string;
+  why: string;
+}
+
+/** {@link groundedGuide}, with the points it leaves out and why each. */
+export function sortGuide(guide: GuideItem[], sources: Source[], scope?: Scope): { kept: GuideItem[]; hidden: HiddenPoint[] } {
+  const byId = new Map(sources.map((s) => [s.id, s]));
+  const numbers = new Set(sources.map((s) => s.hit.article.number));
+  const given = (short: string, number: string) => {
+    const named = short.toLowerCase();
+    const of = sources.filter((s) => s.hit.document.short.toLowerCase() === named || s.hit.document.aliases.includes(named));
+    // A word before «ст.» that names no document of the sources («Согласно ст. 12») leaves the number to tell.
+    return of.length ? of.some((s) => s.hit.article.number === number) : numbers.has(number);
+  };
+  const kept: GuideItem[] = [];
+  const hidden: HiddenPoint[] = [];
+  for (const raw of guide) {
+    const item = { ...raw, text: raw.text.replace(/\s*\((?:[SCRO]\d+(?:,\s*)?)+\)/g, '').trim() };
+    const named = [...item.text.matchAll(/((?:\d+-)?[А-ЯЁA-Z][А-ЯЁа-яёA-Za-z]*)\s+(?:ст\.?|стать[яиеюей]+)\s*(\d+(?:\.\d+)*)/g)].find((m) => !given(m[1], m[2]));
+    const why = !item.sources.length
+      ? 'без источника'
+      : (checkClaim(item, 'Пункт', byId, scope, [])[0] ??
+        (namedArticles(item.text).find((n) => !numbers.has(n)) ? `статья ${namedArticles(item.text).find((n) => !numbers.has(n))} не среди источников` : named ? `${named[1]} ст. ${named[2]} не среди источников` : ''));
+    if (why) hidden.push({ text: item.text, why });
+    else kept.push(item);
+  }
+  return { kept, hidden };
 }

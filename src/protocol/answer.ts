@@ -26,6 +26,12 @@ export interface Claim {
   sources: string[];
 }
 
+/** A point of the answer for the player's side: a step, a right, a requirement checked — with its sources. */
+export interface GuideItem extends Claim {
+  /** For the defence: whether the facts show the requirement kept, broken, or do not say. */
+  mark?: 'ok' | 'violated' | 'unknown';
+}
+
 /** A question whose answer would change the analysis, with the likely answers as buttons. */
 export interface Clarification {
   question: string;
@@ -51,6 +57,11 @@ export interface LegalAnswer {
   punishment: Claim | null;
   /** What the norms say must be done, step by step. */
   procedure: Claim[];
+  /**
+   * The answer for the side the case is seen from (context.ts PERSPECTIVE_GUIDE): what an officer does, what a
+   * citizen may, what the defence checks. Only the points that stand on the sources are kept.
+   */
+  guide?: GuideItem[];
   /** What depends on circumstances not known. */
   uncertainty: string[];
   questions: Clarification[];
@@ -79,6 +90,17 @@ function claim(value: unknown, heading?: RegExp): Claim | null {
   if (heading) said = said.replace(heading, '');
   return said ? { text: said, sources: ids(raw.sources) } : null;
 }
+
+const MARKS = new Set(['ok', 'violated', 'unknown']);
+const guide = (value: unknown): GuideItem[] =>
+  (Array.isArray(value) ? value : [])
+    .map((item): GuideItem | null => {
+      const read = claim(item);
+      const mark = item && typeof item === 'object' ? (item as Record<string, unknown>).mark : undefined;
+      return read ? { ...read, ...(typeof mark === 'string' && MARKS.has(mark) ? { mark: mark as GuideItem['mark'] } : {}) } : null;
+    })
+    .filter((g): g is GuideItem => !!g)
+    .slice(0, 8);
 
 const claims = (value: unknown): Claim[] => (Array.isArray(value) ? value.map((item) => claim(item)).filter((c): c is Claim => !!c).slice(0, 8) : []);
 
@@ -136,6 +158,7 @@ export function readAnswer(o: Record<string, unknown>): LegalAnswer {
     violation: claim(o.violation, /^нарушение\s*:\s*/i),
     punishment: claim(o.punishment, /^наказание\s*:\s*/i),
     procedure: claims(o.procedure),
+    ...(Array.isArray(o.guide) && o.guide.length ? { guide: guide(o.guide) } : {}),
     uncertainty: texts(o.uncertainty),
     questions,
     notFound: o.notFound === true,

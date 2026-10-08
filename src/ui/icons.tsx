@@ -48,6 +48,7 @@ export const SparkIcon = icon('wand_stars', 20);
 export const MicIcon = icon('mic', 20);
 /** The history of AI analyses. */
 export const HistoryIcon = icon('history', 20);
+export const SchoolIcon = icon('school', 24);
 export const TuneIcon = icon('tune', 18);
 export const BookIcon = icon('menu_book', 18);
 export const InfoIcon = icon('info', 18);
@@ -136,3 +137,18 @@ export const TelegramIcon = ({ size = 18 }: { size?: number }) => (
     />
   </svg>
 );
+
+/** The badges of the department's topics of the law («Отдел»), by the topic's id in core/topics.ts. */
+const TOPIC_SYMBOLS: Record<string, SymbolName> = {
+  detention: 'lock',
+  rights: 'record_voice_over',
+  search: 'manage_search',
+  force: 'bolt',
+  vehicle: 'directions_car',
+  interrogation: 'forum',
+  release: 'lock_open',
+  fines: 'payments',
+  terms: 'hourglass_bottom',
+};
+
+export const TopicIcon = ({ id, size = 20 }: { id: string } & Size) => <Symbol name={TOPIC_SYMBOLS[id] ?? 'info'} size={size} />;

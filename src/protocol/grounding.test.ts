@@ -105,7 +105,12 @@ describe('hard gates: what the model makes up never comes out confirmed', () => 
     const slip = validateAnswer(pack, sources, good({ norms: [{ ...good().norms[0], ref: '65 УК ст. 1' }] }), 'law');
     expect(slip).toMatchObject({ status: 'confirmed', needsReview: false });
     expect(slip.norms[0].norm.ref).toBe('УК ст. 65');
-    expect(caught(good({ norms: [{ ...good().norms[0], ref: 'УК ст. 66' }] }))).toMatch(/не тот номер/);
+    // A label of another real article: the reason the AI gave tells which it meant. «тайное хищение» is the source,
+    // УК 65 — the label is a slip; «открытое хищение» is УК 66 — the AI meant another article: to check.
+    const relabelled = validateAnswer(pack, sources, good({ norms: [{ ...good().norms[0], ref: 'УК ст. 66', why: 'тайное хищение чужого имущества' }] }), 'law');
+    expect(relabelled.norms[0].norm.ref).toBe('УК ст. 65');
+    expect(relabelled.needsReview).toBe(false);
+    expect(caught(good({ norms: [{ ...good().norms[0], ref: 'УК ст. 66', why: 'грабеж — открытое хищение чужого имущества' }] }))).toMatch(/не тот номер/);
   });
 });
 
@@ -258,5 +263,18 @@ describe('the players\' expressions the admins approved', () => {
     expect(outcome.kind === 'analysis' && outcome.analysis.terms).toEqual(['исключение из организации']);
     // The analysis only: the phrases came from the dictionary.
     expect(requests).toHaveLength(1);
+  });
+});
+
+describe('answers given again (ADR 0007)', () => {
+  it('a first question may be answered from the server\'s cache — its steps and its answer; a follow-up may not', async () => {
+    const { provider, requests } = fakeAi(() => good());
+    const first = await answerQuestion({ provider, pack, message: 'украл телефон у прохожего на улице', depth: 'quick', choice: 'law' });
+    expect(requests.map((r) => r.cache)).toEqual(['украл телефон у прохожего на улице', 'украл телефон у прохожего на улице']);
+    if (first.kind !== 'analysis') throw new Error('no analysis');
+    requests.length = 0;
+    await answerQuestion({ provider, pack, message: 'а если он был в маске', depth: 'quick', previous: first.analysis.case });
+    expect(requests.length).toBeGreaterThan(0);
+    expect(requests.every((r) => r.cache === undefined)).toBe(true);
   });
 });

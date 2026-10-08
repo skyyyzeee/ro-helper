@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useRef } from 'react';
 import type { Capability } from '../account/capabilities';
-import { articleLabel, articleTitle, type SearchHit, type Stage } from '../core';
+import { articleLabel, articleTitle, formatPunishment, type SearchHit, type Stage } from '../core';
 import { STATUS_LABELS, diffCases, type Analysis } from '../protocol';
-import { PERSPECTIVES, type AiChat, type Perspective } from './ai';
+import { PERSPECTIVES, type AiChat, type AiMessage, type Perspective } from './ai';
 import { AnswerView, calculationLine } from './AnswerView';
 import { AnswerCheckView } from './AnswerCheckView';
 import { CaseChange } from './CaseChange';
@@ -285,8 +285,11 @@ export function AiView({
               ) : message.analysis ? (
                 <>
                   {chat.cases && changeAt(index) && <CaseChange diff={changeAt(index)!} />}
+                  {message.analysis.perspective && chat.perspectives.length > 1 && (
+                    <SideTabs message={message} sides={chat.perspectives} busy={chat.busy} onSide={(side) => void chat.showSide(message.id, side)} />
+                  )}
                   <AnswerView
-                    analysis={message.analysis}
+                    analysis={(message.side && message.sides?.[message.side]) || message.analysis}
                     busy={chat.busy}
                     calculable={calculable}
                     onOpen={onOpen}
@@ -295,6 +298,7 @@ export function AiView({
                     onCopy={onCopy}
                     onLink={onLink}
                     onClarify={(text) => void chat.send(text)}
+                    onSwitch={chat.messages[index - 1]?.role === 'user' ? (scope) => void chat.send(chat.messages[index - 1].text, undefined, { choice: scope }) : undefined}
                   />
                   {chat.messages[index - 1]?.role === 'user' && (
                     <MarkBar send={(vote, correction) => onMark(chat.messages[index - 1].text, message.analysis!, vote, correction, message.classification?.type)} />
@@ -305,7 +309,16 @@ export function AiView({
                 <>
                   <p className="ai__line">{message.text}</p>
                   {/* The app's own answer: what the search found for an article number, or «закон или правила?». */}
-                  {message.system?.hits && message.system.hits.length > 0 && (
+                  {message.system?.reason === 'punishment' && message.system.hits ? (
+                    <Punishments
+                      hits={message.system.hits}
+                      calculable={calculable}
+                      onOpen={onOpen}
+                      onCharge={onCharge}
+                      onAi={message.system.question ? () => void chat.send(message.system!.question!, undefined, { direct: false }) : undefined}
+                      busy={chat.busy}
+                    />
+                  ) : message.system?.hits && message.system.hits.length > 0 && (
                     <div className="ai__chips">
                       {message.system.hits.map((hit) => (
                         <button key={hit.article.id} type="button" className="ai__chip" onClick={() => onOpen(hit)}>
@@ -335,7 +348,7 @@ export function AiView({
           ),
         )}
         {last?.role === 'ai' && !last.pending && !last.failed && !last.system && lastQuestion && (
-          <div className="ai__sides" aria-label="Разобрать с другой стороны">
+          <div className="ai__sides" role="group" aria-label="Разобрать с другой стороны">
             <button type="button" className="ai__chip ai__chip--more" disabled={chat.busy} onClick={() => void chat.send('Разбери подробнее', undefined, { depth: 'full' })}>
               Подробнее
             </button>
@@ -347,12 +360,6 @@ export function AiView({
                 Составить документ
               </button>
             )}
-            <span className="set__label">С точки зрения:</span>
-            {PERSPECTIVES.filter((side) => chat.perspectives.includes(side.id)).map((side) => (
-              <button key={side.id} type="button" className="ai__chip" disabled={chat.busy} onClick={() => void chat.send(lastQuestion, side.id)}>
-                {side.label}
-              </button>
-            ))}
           </div>
         )}
         {chat.current && chat.current.facts.length > 0 && (
@@ -404,5 +411,89 @@ export function AiView({
         <div ref={endRef} />
       </div>
     </section>
+  );
+}
+
+/** The parts of an article that carry a punishment, each with its own: «ч. 2 — …» when there are several. */
+function punishmentLines(hit: SearchHit): string[] {
+  const parts = hit.article.parts.filter((part) => part.punishment);
+  if (parts.length === 1) return [formatPunishment(parts[0].punishment!)];
+  const shown = parts.slice(0, 4).map((part) => `${part.number ? `ч. ${part.number}` : 'Часть'} — ${formatPunishment(part.punishment!)}`);
+  return parts.length > shown.length ? [...shown, `и ещё ${parts.length - shown.length}`] : shown;
+}
+
+/**
+ * «Что будет за кражу?», answered by the base alone: the articles that name the deed and what each is punished
+ * with, to open or put into the calculator; and the AI, when the circumstances matter.
+ */
+function Punishments({ hits, calculable, onOpen, onCharge, onAi, busy }: { hits: SearchHit[]; calculable: string[]; onOpen: (hit: SearchHit) => void; onCharge: (hits: SearchHit[]) => void; onAi?: () => void; busy: boolean }) {
+  return (
+    <div className="ai__direct">
+      {hits.map((hit) => (
+        <div key={hit.article.id} className="ai__direct-row">
+          <button type="button" className="ai__direct-open" onClick={() => onOpen(hit)}>
+            <b>
+              {shortLabel(hit)} {articleTitle(hit.article)}
+            </b>
+            {punishmentLines(hit).map((line) => (
+              <span key={line} className="pen">
+                {line}
+              </span>
+            ))}
+          </button>
+          {calculable.includes(hit.document.id) && (
+            <button type="button" className="ai__chip" onClick={() => onCharge([hit])}>
+              <PlusIcon size={13} /> В калькулятор
+            </button>
+          )}
+        </div>
+      ))}
+      {onAi && (
+        <button type="button" className="ai__chip ai__chip--more" disabled={busy} onClick={onAi}>
+          <SparkIcon size={14} /> Разобрать с ИИ
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The sides of one answer as tabs over it: the answer's own first, the others asked once each — then shown at once,
+ * the same case with the articles each side needs, no question spent again.
+ */
+function SideTabs({ message, sides, busy, onSide }: { message: AiMessage; sides: Perspective[]; busy: boolean; onSide: (side: Perspective) => void }) {
+  const own = message.analysis!.perspective!;
+  const shown = message.side ?? own;
+  const order = [own, ...sides.filter((side) => side !== own)];
+  const state = message.sideState;
+  return (
+    <div className="ai__tabs-wrap">
+      <div className="ai__sidetabs" role="tablist" aria-label="Сторона">
+        {order.map((side) => {
+          const label = PERSPECTIVES.find((p) => p.id === side)?.label ?? side;
+          const ready = side === own || !!message.sides?.[side];
+          return (
+            <button
+              key={side}
+              type="button"
+              role="tab"
+              aria-selected={side === shown}
+              className={side === shown ? 'ai__sidetab ai__sidetab--on' : 'ai__sidetab'}
+              disabled={!ready && busy}
+              title={ready ? undefined : 'Разобрать это же дело с этой стороны'}
+              onClick={() => onSide(side)}
+            >
+              {label}
+              {state?.side === side && state.pending && <span className="ai__dots" aria-hidden="true" />}
+            </button>
+          );
+        })}
+      </div>
+      {state?.error && (
+        <p className="set__hint" role="alert">
+          {state.error}
+        </p>
+      )}
+    </div>
   );
 }

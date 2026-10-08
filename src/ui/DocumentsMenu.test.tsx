@@ -37,8 +37,8 @@ describe('documents menu', () => {
     expect(documentRows()).toHaveLength(66);
     expect(documentRows().slice(0, 3).map((row) => row.textContent)).toEqual([
       'КонституцияКонституция РО117',
-      'УКУголовный кодекс121',
-      'КоАПКодекс об административных правонарушениях138',
+      'УКУголовный кодекс122',
+      'КоАПКодекс об административных правонарушениях139',
     ]);
     const tags = within(menu()).getByRole('group', { name: 'Виды документов' });
     expect(within(tags).getAllByRole('button').map((b) => b.textContent)).toEqual(['Все', 'Кодексы', 'ФКЗ', 'ФЗ', 'Москва', 'Уставы', 'Правила']);
@@ -49,7 +49,7 @@ describe('documents menu', () => {
     await openMenu(user);
     await user.click(within(menu()).getByRole('button', { name: 'Правила' }));
     expect(documentRows().map((row) => row.textContent)).toEqual([
-      'ПравилаОсновные правила проекта97',
+      'ПравилаОсновные правила проекта98',
       'ПравилаПравила государственных организаций117',
       'ПравилаПравила криминальных организаций52',
       'ПравилаПравила для лидеров фракций40',
@@ -87,7 +87,7 @@ describe('documents menu', () => {
     expect(own).toHaveAccessibleName('ГИБДД · ваша организация');
     expect(within(own).getAllByRole('button').map((b) => b.textContent)).toEqual([
       'ПДДПравила дорожного движения116',
-      'КоАПКодекс об административных правонарушениях138',
+      'КоАПКодекс об административных правонарушениях139',
       '15-ФЗОб организации дорожного движения7',
       'УставУстав ГИБДД89',
       '6-ФЗО полиции32',
@@ -195,7 +195,7 @@ describe('searching one document', () => {
     await pick(user, /^УКУголовный кодекс/);
 
     expect(search()).toHaveAttribute('placeholder', 'Поиск: Уголовный кодекс');
-    expect(screen.getByText('121 статья')).toBeInTheDocument();
+    expect(screen.getByText('122 статьи')).toBeInTheDocument();
     const toc = screen.getByLabelText('Оглавление: Уголовный кодекс');
     const [first] = within(toc).getAllByRole('region');
     expect(within(first).getByRole('heading')).toHaveTextContent('Глава 1. Задачи и принципы Уголовного кодекса РО');

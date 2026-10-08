@@ -5,10 +5,11 @@
   "aliases": ["уфсб"],
   "kind": "charter",
   "category": "charters",
-  "format": "law",
+  "format": "points",
+  "points": "numbered",
   "thread": 27443,
   "url": "https://forum.russia.online/threads/ustav-fsb.27443/",
   "posted": "2026-09-23T12:04:00+03:00",
-  "lastEdited": "2026-09-26T19:58:47+03:00",
-  "snapshotAt": "2026-09-27"
+  "lastEdited": "2026-10-07T22:54:19+03:00",
+  "snapshotAt": "2026-10-08"
 }

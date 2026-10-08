@@ -12,9 +12,12 @@
 //   --depth full                                   — the full analysis instead of the quick one
 //   --approved                                     — also the players' questions the admins approved, and the players'
 //                                                    dictionary, from the AI server; the admins' key in AI_ADMIN_TOKEN
+//   --trial gpt-4.1-mini                           — through the AI server, that model only (or «gigachat»): to compare
+//                                                    models before a change; the admins' key in AI_ADMIN_TOKEN
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ServerPack } from '../src/core';
+import { trialProvider, type Tokens } from './eval-trial';
 import { AiError, answerQuestion, gradeCase, openaiProvider, serverProvider, type AiProvider, type Category, type Depth, type EvalCase, type Grade, type QueryAlias } from '../src/protocol';
 
 // about.ts reads the version Vite puts in at build time; outside Vite it is set here, before about.ts is loaded.
@@ -89,11 +92,16 @@ if (giga && args.includes('--models')) {
   console.log('Модели GigaChat:', (list.data ?? []).map((m) => m.id).join(', '));
   process.exit(0);
 }
-const service: AiProvider = giga
-  ? await gigachat(process.env.GIGACHAT_AUTH_KEY!, model ?? 'GigaChat-2')
-  : url
-    ? openaiProvider({ url, model: model!, key: process.env.AI_EVAL_KEY ?? '' })
-    : serverProvider(AI_SERVER, `deval${Math.random().toString(36).slice(2, 12)}`);
+const trial = arg('trial');
+if (trial && !process.env.AI_ADMIN_TOKEN?.trim()) throw new Error('Для --trial нужен ключ администратора в AI_ADMIN_TOKEN.');
+const tokens: Tokens = { input: 0, output: 0 };
+const service: AiProvider = trial
+  ? trialProvider((arg('ai-server') ?? AI_SERVER).replace(/\/$/, ''), trial, process.env.AI_ADMIN_TOKEN!.trim(), tokens)
+  : giga
+    ? await gigachat(process.env.GIGACHAT_AUTH_KEY!, model ?? 'GigaChat-2')
+    : url
+      ? openaiProvider({ url, model: model!, key: process.env.AI_EVAL_KEY ?? '' })
+      : serverProvider(AI_SERVER, `deval${Math.random().toString(36).slice(2, 12)}`);
 /** The model's last answers, to show what it said when an answer could not be read. */
 const said: string[] = [];
 const provider: AiProvider = {
@@ -103,7 +111,7 @@ const provider: AiProvider = {
     return text;
   },
 };
-const via = giga ? `GigaChat · ${model ?? 'GigaChat-2'}` : url ? `${url} · ${model}` : `сервер ИИ ${AI_SERVER}`;
+const via = trial ? `сервер ИИ · ${trial}` : giga ? `GigaChat · ${model ?? 'GigaChat-2'}` : url ? `${url} · ${model}` : `сервер ИИ ${AI_SERVER}`;
 const depth = (arg('depth') ?? 'quick') as Depth;
 
 const { cases: written } = JSON.parse(readFileSync(join(root, 'eval', 'cases.json'), 'utf8')) as { cases: EvalCase[] };
@@ -188,7 +196,7 @@ for (const c of cases) {
   console.log(`      ${c.expect?.length ? `нужно ${c.expect.join(', ')} → ` : ''}${g ? g.detail : row.error} · вызовов ИИ ${g?.aiCalls ?? '?'} · ${seconds} с`);
   if (g?.hardGates.length) console.log(`      ЖЁСТКИЕ ВОРОТА: ${g.hardGates.join(' | ')}`);
   // The server's per-IP limit counts requests: a pause keeps a long run from looking like a flood.
-  if (!url && !giga) await new Promise((resolve) => setTimeout(resolve, 1500));
+  if (!url && !giga && !trial) await new Promise((resolve) => setTimeout(resolve, 1500));
 }
 
 // ——— The report ———
@@ -218,6 +226,9 @@ console.log(
     '',
     'По категориям — прошло / всего · вызовов ИИ:',
     ...[...byCategory].map(([name, e]) => `  ${name.padEnd(19)} ${e.passed}/${e.total} · ${e.calls}`),
+    ...(trial && tokens.input
+      ? ['', `Токены ${trial}: на входе ${tokens.input.toLocaleString('ru-RU')}, на выходе ${tokens.output.toLocaleString('ru-RU')} — цена по прайсу ProxyAPI за 1 млн каждых`]
+      : []),
   ].join('\n'),
 );
 

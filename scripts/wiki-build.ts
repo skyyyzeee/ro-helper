@@ -3,8 +3,8 @@
 //   npm run wiki:build
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Gender, WikiCatalog, WikiCatalogId, WikiData, WikiEntry } from '../src/wiki/model';
-import { FRESH, STATE_ALLOWED } from '../src/wiki/model';
+import type { Gender, WikiCatalog, WikiCatalogId, WikiData, WikiEntry, WikiManifest } from '../src/wiki/model';
+import { FRESH, STATE_ALLOWED, WIKI_FORMAT } from '../src/wiki/model';
 
 const root = join(import.meta.dirname, '..');
 const WIKI = 'https://wiki.russia.online/ru';
@@ -352,7 +352,10 @@ for (const e of entries) {
   if (!e.image) delete e.image;
 }
 
-const data: WikiData = { takenAt: raw('vehicles').takenAt, source: WIKI, catalogs, entries };
+const data: WikiData = { format: WIKI_FORMAT, takenAt: raw('vehicles').takenAt, source: WIKI, catalogs, entries };
 const file = join(root, 'src', 'data', 'wiki.json');
 writeFileSync(file, `${JSON.stringify(data)}\n`);
+// Beside it, a few bytes the installed apps read to see whether a newer wiki is out (src/ui/wiki.ts).
+const manifest: WikiManifest = { format: WIKI_FORMAT, takenAt: data.takenAt, count: entries.length };
+writeFileSync(join(root, 'src', 'data', 'wiki-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 console.log(`wiki.json: ${entries.length} записей, ${catalogs.map((c) => `${c.title} ${c.count}`).join(', ')}; ${(readFileSync(file).length / 1024 / 1024).toFixed(1)} МБ`);

@@ -121,7 +121,7 @@ describe('checking the answer against the laws', () => {
   it('flags an article of the laws the AI was not shown, a wrong number, a part the article lacks', () => {
     const notShown = validateAnswer(pack, sources, answer({ norms: [{ ...answer().norms[0], source: 'S7', ref: 'УК ст. 88' }] }));
     expect(notShown.issues[0]).toMatch(/не было среди найденных/);
-    const wrongNumber = validateAnswer(pack, sources, answer({ norms: [{ ...answer().norms[0], ref: 'УК ст. 66' }] }));
+    const wrongNumber = validateAnswer(pack, sources, answer({ norms: [{ ...answer().norms[0], ref: 'УК ст. 66', why: 'грабеж — открытое хищение чужого имущества' }] }));
     expect(wrongNumber.issues[0]).toMatch(/не тот номер/);
     const noPart = validateAnswer(pack, sources, answer({ norms: [{ ...answer().norms[0], part: '7' }] }));
     expect(noPart.issues[0]).toMatch(/нет части 7/);
@@ -183,7 +183,7 @@ function fakeProvider(...analyses: string[]): AiProvider & { requests: AiRequest
       if (!request.system.includes('JSON-объектом')) return '["кража", "тайное хищение"]';
       const next = analyses.shift();
       if (next === undefined) throw new Error('asked once too often');
-      return next.replace('SOURCE', request.turns[0].parts.map((p) => ('text' in p ? p.text : '')).join('').match(/\[(S\d+)\] УК ст\. 65 «/)?.[1] ?? 'S1');
+      return next.replaceAll('SOURCE', request.turns[0].parts.map((p) => ('text' in p ? p.text : '')).join('').match(/\[(S\d+)\] УК ст\. 65 «/)?.[1] ?? 'S1');
     },
   };
 }
@@ -245,15 +245,16 @@ describe('one question, end to end', () => {
     expect(followUp.case.articles).toEqual(['uk-65']);
   });
 
-  it('gives every point of view the same articles', async () => {
-    const seen: string[] = [];
+  it('keeps the articles of the case for every side, each side adding the law it needs', async () => {
+    const plain = findForSituation(packInScope(pack, 'law'), 'человек в маске с оружием у здания МВД', { lawTerms: ['кража', 'тайное хищение'], limit: 14 }).map((h) => h.article.id);
     for (const perspective of ['state', 'citizen', 'lawyer', 'crime'] as const) {
       const provider = fakeProvider(good);
       const analysis = await analyse({ provider, pack, message: 'человек в маске с оружием у здания МВД', perspective, depth: 'quick' });
-      seen.push(analysis.sources.map((s) => s.hit.article.id).join(','));
+      const ids = analysis.sources.map((s) => s.hit.article.id);
+      // What the case itself finds leads for every side.
+      expect(ids.slice(0, 3), perspective).toEqual(plain.slice(0, 3));
+      expect(analysis.perspective).toBe(perspective);
     }
-    expect(new Set(seen).size).toBe(1);
-    expect(seen[0]).toBe(findForSituation(packInScope(pack, 'law'), 'человек в маске с оружием у здания МВД', { lawTerms: ['кража', 'тайное хищение'], limit: 14 }).map((h) => h.article.id).join(','));
   });
 });
 
@@ -275,6 +276,17 @@ describe('the AI services and their failures', () => {
     await expect(server.complete(request)).rejects.toMatchObject({ kind: 'empty' });
     vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))));
     await expect(server.complete(request)).rejects.toMatchObject({ kind: 'offline' });
+  });
+
+  it('sends a signed-in player\'s token to the AI server, and nothing when nobody is signed in; tells «войдите» as said', async () => {
+    const fetch = vi.fn(async (_url: string, _init: RequestInit) => new Response(JSON.stringify({ text: 'ok' })));
+    vi.stubGlobal('fetch', fetch);
+    await serverProvider('https://ai.test', 'd1', async () => 'player-token').complete(request);
+    expect(new Headers(fetch.mock.calls[0][1].headers).get('Authorization')).toBe('Bearer player-token');
+    await serverProvider('https://ai.test', 'd1', async () => null).complete(request);
+    expect(new Headers(fetch.mock.calls[1][1].headers).get('Authorization')).toBeNull();
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'Чтобы спрашивать ИИ, войдите в аккаунт.' }), { status: 401 })));
+    await expect(serverProvider('https://ai.test', 'd1').complete(request)).rejects.toMatchObject({ message: 'Чтобы спрашивать ИИ, войдите в аккаунт.' });
   });
 
   it('says a wrong Gemini key is wrong, and sends the key in a header, never in the address', async () => {
@@ -339,4 +351,68 @@ describe('the AI services and their failures', () => {
 // A part the calculator can use exists for the theft, so the checks above count something.
 it('uses real data: УК ст. 65 ч. 1 carries a punishment', () => {
   expect(leadPart(THEFT.article)?.punishment).toBeTruthy();
+});
+
+describe('the answer for the player\'s side', () => {
+  const withGuide = (guide: unknown[]) => JSON.stringify({ ...answer(), norms: [{ ...answer().norms[0], source: 'SOURCE' }], guide });
+
+  it('asks for the side\'s own block only when there is a side, and keeps only the points that stand on the sources', async () => {
+    const provider = fakeProvider(
+      withGuide([
+        { text: 'Потребуйте документы', sources: ['SOURCE'] },
+        { text: 'Наденьте наручники', sources: [] },
+        { text: 'Выпишите штраф 999 999 ₽', sources: ['SOURCE'] },
+        { text: 'Сошлитесь на статью 777', sources: ['SOURCE'] },
+        { text: 'Опирайтесь на источник, которого не было', sources: ['S99'] },
+      ]),
+    );
+    const analysis = await analyse({ provider, pack, message: 'украл телефон у прохожего', perspective: 'state', depth: 'quick' });
+    const system = provider.requests.at(-1)!.system;
+    expect(system).toContain('ДЛЯ СОТРУДНИКА');
+    expect(system).toContain('"guide"');
+    expect(analysis.answer.guide?.map((g) => g.text)).toEqual(['Потребуйте документы']);
+    expect(analysis.perspective).toBe('state');
+
+    const none = fakeProvider(good);
+    await analyse({ provider: none, pack, message: 'украл телефон у прохожего', depth: 'quick' });
+    expect(none.requests.at(-1)!.system).not.toContain('"guide"');
+  });
+
+  it('keeps the defence\'s marks, and gives the defence the rights of a detainee among its sources', async () => {
+    const provider = fakeProvider(withGuide([{ text: 'Права разъяснены', sources: ['SOURCE'], mark: 'violated' }, { text: 'Что-то', sources: ['SOURCE'], mark: 'maybe' }]));
+    const analysis = await analyse({ provider, pack, message: 'задержали за кражу телефона, адвоката не дали', perspective: 'lawyer', depth: 'quick' });
+    expect(analysis.answer.guide?.map((g) => g.mark)).toEqual(['violated', undefined]);
+    expect(analysis.sources.map((s) => `${s.hit.document.short} ${s.hit.article.number} ${s.hit.article.title}`).join(' | ')).toMatch(/задержан/i);
+  });
+
+  it('a side answered on the sources is no «не найдено», though the model gave its points and no norms (the defence, live)', async () => {
+    const provider = fakeProvider(
+      JSON.stringify({ ...answer(), norms: [], violation: null, punishment: null, notFound: true, guide: [{ text: 'Проверьте, разъяснили ли права', sources: ['SOURCE'], mark: 'unknown' }] }),
+    );
+    const analysis = await analyse({ provider, pack, message: 'задержали за кражу телефона, права не зачитали', perspective: 'lawyer', depth: 'quick' });
+    expect(analysis.answer.guide).toHaveLength(1);
+    expect(analysis.validation.status).toBe('likely');
+    expect(analysis.answer.notFound).toBe(false);
+  });
+
+  it('a point names its article with the document — another code\'s article of that number is not its source; no source ids in the text', async () => {
+    const provider = fakeProvider(
+      withGuide([
+        { text: 'Это кража по УК ст. 65 (SOURCE).', sources: ['SOURCE'] },
+        { text: 'Жалобу подайте согласно УПК ст. 65.', sources: ['SOURCE'] },
+      ]),
+    );
+    const analysis = await analyse({ provider, pack, message: 'украл телефон у прохожего', perspective: 'citizen', depth: 'quick' });
+    expect(analysis.answer.guide?.map((g) => g.text)).toEqual(['Это кража по УК ст. 65.']);
+    // The admin's debug view is told which point was left out, and why.
+    expect(analysis.hiddenGuide).toEqual([{ text: 'Жалобу подайте согласно УПК ст. 65.', why: 'УПК ст. 65 не среди источников' }]);
+  });
+
+  it('asks the same case from another side with its own sources and no AI call for phrases', async () => {
+    const first = await analyse({ provider: fakeProvider(good), pack, message: 'украл телефон у прохожего', perspective: 'citizen', depth: 'quick' });
+    const provider = fakeProvider(good);
+    const again = await analyse({ provider, pack, message: 'Разбери это же дело с точки зрения: Защита.', previous: first.case, perspective: 'lawyer', rerun: true, depth: 'quick' });
+    expect(provider.requests).toHaveLength(1);
+    expect(again.sources.map((s) => s.hit.article.id)).toContain('uk-65');
+  });
 });
