@@ -105,7 +105,12 @@ describe('hard gates: what the model makes up never comes out confirmed', () => 
     const slip = validateAnswer(pack, sources, good({ norms: [{ ...good().norms[0], ref: '65 УК ст. 1' }] }), 'law');
     expect(slip).toMatchObject({ status: 'confirmed', needsReview: false });
     expect(slip.norms[0].norm.ref).toBe('УК ст. 65');
-    expect(caught(good({ norms: [{ ...good().norms[0], ref: 'УК ст. 66' }] }))).toMatch(/не тот номер/);
+    // A label of another real article: the reason the AI gave tells which it meant. «тайное хищение» is the source,
+    // УК 65 — the label is a slip; «открытое хищение» is УК 66 — the AI meant another article: to check.
+    const relabelled = validateAnswer(pack, sources, good({ norms: [{ ...good().norms[0], ref: 'УК ст. 66', why: 'тайное хищение чужого имущества' }] }), 'law');
+    expect(relabelled.norms[0].norm.ref).toBe('УК ст. 65');
+    expect(relabelled.needsReview).toBe(false);
+    expect(caught(good({ norms: [{ ...good().norms[0], ref: 'УК ст. 66', why: 'грабеж — открытое хищение чужого имущества' }] }))).toMatch(/не тот номер/);
   });
 });
 
