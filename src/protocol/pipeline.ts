@@ -14,7 +14,7 @@ import { PERSPECTIVE_TERMS, buildContext, type CaseState, type Perspective } fro
 import { analysisPrompt, type Depth } from './prompt';
 import { AiError, type AiProvider } from './provider';
 import { labelSources, packInScope, type Scope, type ScopeChoice, type Source } from './sources';
-import { calculateCharges, groundedGuide, validateAnswer, type Validation } from './validate';
+import { calculateCharges, groundedGuide, sortGuide, validateAnswer, type HiddenPoint, type Validation } from './validate';
 
 /** A message this short that finds nothing tells no situation: the player is asked to describe it. */
 const VAGUE_WORDS = 6;
@@ -126,6 +126,8 @@ export interface Analysis {
   terms?: string[];
   /** The side the answer is for, its "guide" shaped for it. */
   perspective?: Perspective;
+  /** The side's points the checks left out, and why — for the debug view. */
+  hiddenGuide?: HiddenPoint[];
 }
 
 /** The analysis of a situation in a scope: sources from the base, the AI's answer, the checks, the calculator. */
@@ -178,10 +180,14 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
   }
 
   const validation = validateAnswer(pack, sources, answer, scope);
-  // The side's points are shown only where they stand on the sources: one that does not is left out, not flagged.
+  // The side's points are shown only where they stand on the sources: one that does not is left out, not flagged —
+  // to the player; the admin's debug view tells which and why.
+  let hiddenGuide: HiddenPoint[] = [];
   if (answer.guide) {
+    const sorted = sortGuide(answer.guide, sources, scope);
+    hiddenGuide = sorted.hidden;
     // Marks are the defence's check of the procedure: in a list of steps or rights they mean nothing.
-    answer.guide = groundedGuide(answer.guide, sources, scope).map(({ mark, ...item }) => (perspective === 'lawyer' && mark ? { ...item, mark } : item));
+    answer.guide = sorted.kept.map(({ mark, ...item }) => (perspective === 'lawyer' && mark ? { ...item, mark } : item));
   }
   // A side asked for and none of its points given (the model left the field out): its block is put together from
   // what the answer does say on the sources — the steps, what is broken, what it is punished with.
@@ -221,6 +227,7 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
     aiCalls,
     terms,
     ...(perspective ? { perspective } : {}),
+    ...(hiddenGuide.length ? { hiddenGuide } : {}),
     case: {
       facts: answer.facts.length ? answer.facts : (previous?.facts ?? []),
       assumptions: answer.assumptions,

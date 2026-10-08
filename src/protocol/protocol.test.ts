@@ -393,6 +393,8 @@ describe('the answer for the player\'s side', () => {
     );
     const analysis = await analyse({ provider, pack, message: 'украл телефон у прохожего', perspective: 'citizen', depth: 'quick' });
     expect(analysis.answer.guide?.map((g) => g.text)).toEqual(['Это кража по УК ст. 65.']);
+    // The admin's debug view is told which point was left out, and why.
+    expect(analysis.hiddenGuide).toEqual([{ text: 'Жалобу подайте согласно УПК ст. 65.', why: 'УПК ст. 65 не среди источников' }]);
   });
 
   it('asks the same case from another side with its own sources and no AI call for phrases', async () => {

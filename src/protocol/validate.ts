@@ -211,6 +211,17 @@ export function calculateCharges(pack: ServerPack, validation: Validation): { ch
  * into the text («(S6)») is no word for the player: taken out.
  */
 export function groundedGuide(guide: GuideItem[], sources: Source[], scope?: Scope): GuideItem[] {
+  return sortGuide(guide, sources, scope).kept;
+}
+
+/** A point of the side's answer left out, and why — for the admin's debug view. */
+export interface HiddenPoint {
+  text: string;
+  why: string;
+}
+
+/** {@link groundedGuide}, with the points it leaves out and why each. */
+export function sortGuide(guide: GuideItem[], sources: Source[], scope?: Scope): { kept: GuideItem[]; hidden: HiddenPoint[] } {
   const byId = new Map(sources.map((s) => [s.id, s]));
   const numbers = new Set(sources.map((s) => s.hit.article.number));
   const given = (short: string, number: string) => {
@@ -219,13 +230,17 @@ export function groundedGuide(guide: GuideItem[], sources: Source[], scope?: Sco
     // A word before «ст.» that names no document of the sources («Согласно ст. 12») leaves the number to tell.
     return of.length ? of.some((s) => s.hit.article.number === number) : numbers.has(number);
   };
-  return guide
-    .map((item) => ({ ...item, text: item.text.replace(/\s*\((?:[SCRO]\d+(?:,\s*)?)+\)/g, '').trim() }))
-    .filter(
-      (item) =>
-        item.sources.length > 0 &&
-        !checkClaim(item, 'Пункт', byId, scope, []).length &&
-        namedArticles(item.text).every((n) => numbers.has(n)) &&
-        [...item.text.matchAll(/((?:\d+-)?[А-ЯЁA-Z][А-ЯЁа-яёA-Za-z]*)\s+(?:ст\.?|стать[яиеюей]+)\s*(\d+(?:\.\d+)*)/g)].every((m) => given(m[1], m[2])),
-    );
+  const kept: GuideItem[] = [];
+  const hidden: HiddenPoint[] = [];
+  for (const raw of guide) {
+    const item = { ...raw, text: raw.text.replace(/\s*\((?:[SCRO]\d+(?:,\s*)?)+\)/g, '').trim() };
+    const named = [...item.text.matchAll(/((?:\d+-)?[А-ЯЁA-Z][А-ЯЁа-яёA-Za-z]*)\s+(?:ст\.?|стать[яиеюей]+)\s*(\d+(?:\.\d+)*)/g)].find((m) => !given(m[1], m[2]));
+    const why = !item.sources.length
+      ? 'без источника'
+      : (checkClaim(item, 'Пункт', byId, scope, [])[0] ??
+        (namedArticles(item.text).find((n) => !numbers.has(n)) ? `статья ${namedArticles(item.text).find((n) => !numbers.has(n))} не среди источников` : named ? `${named[1]} ст. ${named[2]} не среди источников` : ''));
+    if (why) hidden.push({ text: item.text, why });
+    else kept.push(item);
+  }
+  return { kept, hidden };
 }

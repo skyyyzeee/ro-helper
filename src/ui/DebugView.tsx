@@ -1,4 +1,5 @@
 import { SOURCE_TYPE_LABELS, type Analysis } from '../protocol';
+import { PERSPECTIVES } from './ai';
 import { shortLabel } from './AiView';
 
 const SCOPES: Record<string, string> = { law: 'законы', server_rule: 'правила сервера', mixed: 'законы и правила' };
@@ -47,6 +48,24 @@ export function DebugView({ analysis, classification }: { analysis: Analysis; cl
             'всё прошло'
           )}
         </dd>
+        {analysis.perspective && (
+          <>
+            <dt>Сторона</dt>
+            <dd>
+              {PERSPECTIVES.find((p) => p.id === analysis.perspective)?.label ?? analysis.perspective} · пунктов показано: {analysis.answer.guide?.length ?? 0}
+              {analysis.hiddenGuide?.length ? `, скрыто: ${analysis.hiddenGuide.length}` : ''}
+              {analysis.hiddenGuide?.length ? (
+                <ul className="debug__list">
+                  {analysis.hiddenGuide.map((point) => (
+                    <li key={point.text}>
+                      «{point.text}» — {point.why}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </dd>
+          </>
+        )}
         <dt>Итог</dt>
         <dd>
           {validation.status}
