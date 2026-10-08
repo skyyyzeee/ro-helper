@@ -33,7 +33,9 @@ export function parseSectionsText(text: string, documentId: string, options: Sec
     const content = clean(line);
     if (!content) return;
     const next = raw[i + 1] ?? '';
-    const title = headings ? headings.test(content) : MARK.test(line.slice(-2)) || (MARK.test(next) && !clean(next));
+    // A sentence («… лидеру.», «… (медикаменты);») or a line with a punishment is no title, a mark at its end or not.
+    const titleLike = !/[.;!?]$/.test(content) && !/\s\|\s/.test(content);
+    const title = headings ? headings.test(content) : titleLike && (MARK.test(line.slice(-2)) || (MARK.test(next) && !clean(next)));
     if (title) {
       const numbered = headings ? NUMBERED.exec(content) : null;
       const number = numbered?.[1] ?? String(articles.length + 1);

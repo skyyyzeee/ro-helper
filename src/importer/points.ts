@@ -13,6 +13,11 @@ export interface PointsOptions {
   subpoints?: 'list';
   /** «titles»: within a chapter, a capitalised title right after a finished sentence is a sub-heading too. */
   subheadings?: 'titles';
+  /**
+   * «numbered»: a «1. …» line is a point even where the charter also has «5.1» ones — its chapters, numbered on
+   * their own, are what groups them (ФСБ Арбатского since 7 October: «1.», «2.», «5.1», «5.1.1» in each chapter).
+   */
+  points?: 'numbered';
 }
 
 /** Joins a line to the text before it: a heading without a full stop («Замечание (устное)») gets one. */
@@ -172,10 +177,13 @@ export function parsePointsText(text: string, documentId: string, options: Point
       section = `Раздел ${m[1]}. ${(m[2] ?? '').replace(/\.$/, '')}`.trim();
       continue;
     }
-    if ((m = line.match(CHAPTER)) || (m = line.match(CAPS_CHAPTER))) {
+    // «ГЛАВА» with its number and title lost on the forum (ФСБ Арбатского, IX): the chapter after the last one.
+    const last = /^глава$/i.test(line) ? chapters.at(-1)?.number : undefined;
+    const bare = last && (/^\d+$/.test(last) ? String(ordinal(last) + 1) : toRoman(ordinal(last) + 1));
+    if (bare || (m = line.match(CHAPTER)) || (m = line.match(CAPS_CHAPTER))) {
       chapter = {
-        number: m[1],
-        title: (m[2] ?? '').replace(/\.$/, ''),
+        number: bare || m![1],
+        title: bare ? '' : (m![2] ?? '').replace(/\.$/, ''),
         ...(/^раздел/i.test(line) ? { kind: 'section' as const } : {}),
         ...(section ? { section } : {}),
         preface: [],
@@ -191,7 +199,7 @@ export function parsePointsText(text: string, documentId: string, options: Point
       sectionTitles.set(m[1], m[2]);
       continue;
     }
-    if ((m = line.match(POINT)) && (!dotted || m[1].includes('.', m[1].indexOf('.') + 1) || /^\d+\.\d/.test(m[1]))) {
+    if ((m = line.match(POINT)) && (!dotted || options.points === 'numbered' || m[1].includes('.', m[1].indexOf('.') + 1) || /^\d+\.\d/.test(m[1]))) {
       const number = m[1].replace(/\.$/, '');
       if (options.subpoints === 'list' && article && number.startsWith(`${article.number}.`)) {
         item = { marker: number, text: m[2] };
@@ -279,7 +287,13 @@ export function parsePointsText(text: string, documentId: string, options: Point
   // follows its points, so a chapter known only from the contents (ГИБДД IV–X) stands in its place;
   // a chapter of text alone, with no points (ВС Тверского: «ГЛАВА I. ОБЩИЕ ПОЛОЖЕНИЯ»), comes before the next one that has.
   const firstPoint = (c: Chapter) => articles.findIndex((a) => chapterOf.get(a) === c);
-  const withText = chapters.filter((c, i) => filled.has(c) || c.preface.length || !chapters.slice(i + 1).some((later) => later.number === c.number));
+  // The last line of the contents runs into the charter's own title («Глава 14. Премирование», «УСТАВ БОЛЬНИЦЫ»):
+  // that title is the header's, not the copy's.
+  const withText = chapters.filter((c, i) => {
+    if (filled.has(c) || !chapters.slice(i + 1).some((later) => later.number === c.number)) return true;
+    header.push(...c.preface);
+    return false;
+  });
   const order = (c: Chapter, i: number) => {
     if (filled.has(c)) return firstPoint(c);
     const next = c.preface.length ? withText.slice(i + 1).find((later) => filled.has(later)) : undefined;

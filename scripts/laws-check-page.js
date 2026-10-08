@@ -66,6 +66,12 @@
       own.push({ text, fnv: fnv(text), lines: new Set(linesOf(text).map(fnv)), edited: post.querySelector('.message-lastEdit time')?.getAttribute('datetime') ?? null });
     }
     if (!own.length) throw new Error('пустой текст');
+    // A law posted in several posts (a charter, chapter after chapter) is kept as all of them, one after another:
+    // last in the list, so a law in one post is still that post when the two are as close.
+    if (own.length > 1) {
+      const text = `${own.map((post) => post.text.trimEnd()).join('\n\n')}\n`;
+      own.push({ text, fnv: fnv(text), lines: new Set(linesOf(text).map(fnv)), edited: own.map((post) => post.edited).filter(Boolean).sort().at(-1) ?? null });
+    }
     return own;
   }
 
@@ -78,11 +84,21 @@
     const score = (post) => (doc.sample.length ? doc.sample.filter((h) => post.lines.has(h)).length / doc.sample.length : 0);
     const scored = posts.map((post) => ({ post, score: score(post) }));
     const top = Math.max(...scored.map((s) => s.score));
+    // Rewritten as a whole, and a person has looked (--accept): the author's text all the same — all the posts when
+    // there are several, the one post when there is one.
+    if (top < 0.5 && doc.accept) {
+      const single = posts.length > 1 ? posts.slice(0, -1) : posts;
+      const longest = single.reduce((a, b) => (b.text.length > a.text.length ? b : a));
+      // One post holding nearly all of it (a link under it is no part of the law): that post; else all of them —
+      // a charter split 78 / 22 between two posts (ВМ Кутузовского: главы 1–6 и 7–13) is the two of them.
+      return { post: longest.text.length >= posts.at(-1).text.length * 0.9 ? longest : posts.at(-1), score: top };
+    }
     if (top < 0.5) return { unsure: `совпадает строк ${Math.round(top * 100)}% — нужный пост не найден` };
     // Nearly as close as the closest, the earlier post: a draft or a «было / стало» posted after it holds our lines too.
     const best = scored.find((s) => s.score >= top - 0.1);
     // A draft is not the law yet: «Проект редакции…» at its head is told, not taken.
-    if (/проект/i.test(best.post.text.slice(0, 300))) return { unsure: 'похоже на проект редакции, а не на действующий текст' };
+    // «правила проекта» is the game's project, not a draft: only «проект редакции / устава / закона…» is one.
+    if (/проект\s+(?:редакции|устава|закона|изменени|положения|правил)/i.test(best.post.text.slice(0, 300))) return { unsure: 'похоже на проект редакции, а не на действующий текст' };
     return { post: best.post, score: best.score };
   }
 
