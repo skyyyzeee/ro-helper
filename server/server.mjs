@@ -636,7 +636,9 @@ const server = createServer(async (request, response) => {
       rollDay();
       if (!gigaModel && input.model !== 'gigachat' && state.spent >= CONFIG.budgetPerDay) return send(response, 429, { error: 'Дневной бюджет ИИ исчерпан.' });
       const answer = gigaModel ? await gigachat(request, gigaModel) : input.model === 'gigachat' ? await gigachat(request) : await paid(request, [input.model]);
-      count(device, ip, 'step', answer.rubles);
+      // The budget counts what it cost; the address's limit does not: an exam would use up the admin's own day.
+      state.spent += answer.rubles;
+      dirty = true;
       return send(response, 200, { text: answer.text, usage: answer.usage ?? null });
     }
     // A question the app says may be answered again (a first question, not a follow-up): from the cache when it was
