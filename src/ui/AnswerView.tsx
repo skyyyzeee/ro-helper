@@ -192,6 +192,7 @@ export function AnswerView({
   onCopy,
   onClarify,
   onLink,
+  onSwitch,
 }: {
   analysis: Analysis;
   busy: boolean;
@@ -203,6 +204,8 @@ export function AnswerView({
   onCopy: (text: string) => Promise<void>;
   onClarify: (text: string) => void;
   onLink: (url: string) => void;
+  /** The same question again, in the other kind of base the app took it for. */
+  onSwitch?: (scope: 'law' | 'server_rule') => void;
 }) {
   const { answer, validation, calculation } = analysis;
   const [copied, setCopied] = useState<'answer' | 'charge' | null>(null);
@@ -232,11 +235,21 @@ export function AnswerView({
         </div>
       )}
 
-      {analysis.notes?.map((note) => (
-        <p key={note} className="set__hint">
-          {note}
-        </p>
-      ))}
+      {analysis.notes?.map((note) =>
+        analysis.switchTo && onSwitch ? (
+          <div key={note} className="warn ai__switch" role="note">
+            <WarnIcon />
+            <span>{note}</span>
+            <button type="button" className="ai__chip" disabled={busy} onClick={() => onSwitch(analysis.switchTo!)}>
+              {analysis.switchTo === 'law' ? 'Разобрать по законам' : 'Разобрать по правилам сервера'}
+            </button>
+          </div>
+        ) : (
+          <p key={note} className="set__hint">
+            {note}
+          </p>
+        ),
+      )}
 
       {answer.situation && (
         <Block title="Ситуация">
