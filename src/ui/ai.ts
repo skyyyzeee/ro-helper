@@ -61,6 +61,15 @@ const PROFILE_PERSPECTIVES: Record<AiProfile, Perspective[]> = {
 };
 export const perspectivesFor = (organization?: Organization): Perspective[] => PROFILE_PERSPECTIVES[aiProfileOf(organization)];
 
+/**
+ * The player told it as the one it was done to — «меня задержали», «мне не зачитали права», «мои права» — whatever
+ * their organisation: a citizen's question, answered with their rights. «Мне нужно задержать…» is an officer's.
+ */
+const DONE_TO_ME =
+  /(?:^|[^а-яё])(?:меня\s+(?:\S+\s+)?(?:задерж|останов|арестов|оштраф|обыск|удар|изби|забрал|увез|посадил|обвин)|(?:задерж|останов|арестов|оштраф|обыск|удар|изби|забрал|увез|посадил|обвин)\S*\s+меня|мне\s+не\s+(?:зачитал|разъясн|дал|объясн|сказал|предъяв)|мои\s+права|у\s+меня\s+(?:требу|забрал|изъял|отобрал))/i;
+export const sideOfQuestion = (question: string, organization?: Organization): Perspective =>
+  DONE_TO_ME.test(question) && perspectivesFor(organization).includes('citizen') ? 'citizen' : perspectivesFor(organization)[0];
+
 /** A message to the AI: text, or a file sent along with it — a voice recording. */
 export type GeminiTurn = Turn;
 
@@ -360,8 +369,8 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
           message: perspective && previous ? `Разбери это же дело с точки зрения: ${side}.` : question,
           previous,
           // Each answer is for a side: the one asked for, or the player's own — an officer gets what to do, a citizen
-          // their rights, the defence what to check.
-          perspective: perspective ?? perspectivesFor(organization)[0],
+          // their rights, the defence what to check. A new case told as done to the player is the citizen's.
+          perspective: perspective ?? (previous ? perspectivesFor(organization)[0] : sideOfQuestion(question, organization)),
           ...(perspective && previous ? { rerun: true } : {}),
           depth: options.brief ? 'quick' : (options.depth ?? depth),
           choice: options.choice ?? choice,
