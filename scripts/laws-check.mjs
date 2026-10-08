@@ -33,6 +33,13 @@ const linesOf = (text) => text.split('\n').map((line) => line.trim()).filter((li
 /** At most this many lines of our text go to the page: enough to tell its post from a draft or a «было / стало». */
 const SAMPLE = 300;
 
+/**
+ * Documents a person has looked at on the forum and found rewritten as a whole — a new edition, a thread laid out
+ * anew — so that hardly a line of ours is left: their text is taken all the same, the author's post (or posts) as
+ * the forum shows them. `npm run laws:check -- --accept tverskoi/fz12,arbatskiy/ch-fsb`
+ */
+const ACCEPT = new Set((process.argv[process.argv.indexOf('--accept') + 1] ?? '').split(',').filter((d) => process.argv.includes('--accept') && /^[a-z]+\/[a-z0-9-]+$/.test(d)));
+
 /** Every document we keep a snapshot of: its thread and the checksum of our text. */
 function snapshots() {
   const docs = [];
@@ -44,7 +51,8 @@ function snapshots() {
       const lines = linesOf(text);
       const step = Math.max(1, Math.floor(lines.length / SAMPLE));
       const sample = lines.filter((_, i) => i % step === 0).slice(0, SAMPLE).map(fnv);
-      docs.push({ server, doc: meta.id, title: meta.title, thread: meta.thread, fnv: fnv(text), sample });
+      const accept = ACCEPT.has(`${server}/${meta.id}`);
+      docs.push({ server, doc: meta.id, title: meta.title, thread: meta.thread, fnv: fnv(text), sample, ...(accept ? { accept } : {}) });
     }
   }
   return docs;
@@ -56,7 +64,10 @@ function moscow(time) {
   return Number.isNaN(ms) ? null : `${new Date(ms + 3 * 3600_000).toISOString().slice(0, 19)}+03:00`;
 }
 
-const today = () => new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10);
+const now = () => `${new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 19)}+03:00`;
+const today = () => now().slice(0, 10);
+/** A text as read, not as laid out: zero-width spaces and runs of spaces and empty lines make no change to a law. */
+const words = (text) => text.replace(/[​-‍﻿]/g, '').replace(/\s+/g, ' ').trim();
 
 /** The new text of a document, and its dates in the meta — changed in place, the rest of the file as it was. */
 function save({ server, doc, text, edited }) {
@@ -65,9 +76,14 @@ function save({ server, doc, text, edited }) {
   const metaFile = join(dir, `${doc}.meta.json`);
   // Only a document we already keep is rewritten: nothing new is made from what a page sent.
   if (!existsSync(metaFile)) throw new Error(`no such document ${server}/${doc}`);
+  const changed = words(readFileSync(join(dir, `${doc}.txt`), 'utf8')) !== words(text);
   writeFileSync(join(dir, `${doc}.txt`), text);
   let meta = readFileSync(metaFile, 'utf8');
-  const when = edited ? moscow(edited) : null;
+  let when = edited ? moscow(edited) : null;
+  // The forum does not always date an edit (one by its staff, a law moved to a new thread): words changed with no
+  // later date are dated by the check that found them — so «Что изменилось» tells of them, not only the parser.
+  const before = Date.parse(JSON.parse(meta).lastEdited ?? '');
+  if (changed && (!when || !(Date.parse(when) > before))) when = now();
   if (when) meta = meta.replace(/("lastEdited":\s*")[^"]*(")/, `$1${when}$2`);
   meta = meta.replace(/("snapshotAt":\s*")[^"]*(")/, `$1${today()}$2`);
   writeFileSync(metaFile, meta);

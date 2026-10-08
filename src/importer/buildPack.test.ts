@@ -17,27 +17,29 @@ describe('bundled Тверской pack', () => {
 
   it('carries the source and the date the law is current as of', () => {
     const uk = TVERSKOI_PACK.documents.find((d) => d.id === 'uk');
-    expect(uk?.source).toMatchObject({ thread: 1176, lastEdited: '2026-09-21T19:42:48+03:00' });
+    expect(uk?.source).toMatchObject({ thread: 1176, lastEdited: '2026-10-08T03:59:49+03:00' });
     expect(uk).toMatchObject({ kind: 'penal-code', category: 'codes' });
-    expect(TVERSKOI_PACK.documents.find((d) => d.id === 'koap')?.source.lastEdited).toBe('2026-09-21T20:03:14+03:00');
-    expect(TVERSKOI_PACK.documents.find((d) => d.id === 'pdd')?.source.lastEdited).toBe('2026-09-21T19:46:27+03:00');
+    expect(TVERSKOI_PACK.documents.find((d) => d.id === 'koap')?.source.lastEdited).toBe('2026-10-02T23:02:47+03:00');
+    expect(TVERSKOI_PACK.documents.find((d) => d.id === 'pdd')?.source.lastEdited).toBe('2026-09-29T20:47:25+03:00');
     // Never edited since posting: current as of the post itself.
     expect(TVERSKOI_PACK.documents.find((d) => d.id === 'fz16-fsvng')?.source).toMatchObject({ thread: 26674, lastEdited: '2026-09-21T20:05:46+03:00' });
     expect(TVERSKOI_PACK.server).toEqual({ id: 'tverskoi', name: 'Тверской', status: 'active' });
     // The laws and charters checked on 27 September were edited from 21 to 26 September — before the version already
     // out (the project rules, dated by the check at 21:58) — so their entry, and the version, are the time of the import;
     // so are the documents of the organisations added after them, posted long before.
-    expect(TVERSKOI_PACK.version).toBe('2026-09-27T23:04:03+03:00');
+    expect(TVERSKOI_PACK.version).toBe('2026-10-08T03:59:49+03:00');
     expect(TVERSKOI_PACK.documents.find((d) => d.id === 'ch-mvd')?.source).toMatchObject({ thread: 27660 });
     expect(TVERSKOI_PACK.changes.map((c) => c.version)).toEqual([
-      '2026-09-27T23:04:03+03:00', '2026-09-27T22:38:20+03:00', '2026-09-27T21:58:06+03:00', '2026-09-24T15:52:15+03:00', '2026-09-11T12:14:23+03:00',
+      '2026-10-08T03:59:49+03:00', '2026-09-27T23:04:03+03:00', '2026-09-27T22:38:20+03:00', '2026-09-27T21:58:06+03:00', '2026-09-24T15:52:15+03:00', '2026-09-11T12:14:23+03:00',
     ]);
-    expect(TVERSKOI_PACK.changes[0].documents.map((d) => d.documentId)).toEqual(['ch-army-structure', 'ch-army-id', 'ch-gov']);
-    expect(TVERSKOI_PACK.changes[1].documents.some((d) => d.documentId === 'uk')).toBe(true);
-    expect(TVERSKOI_PACK.changes[2].documents.every((d) => d.documentId.startsWith('rules-'))).toBe(true);
-    expect(TVERSKOI_PACK.changes[3].documents.map((d) => d.documentId)).toEqual(['ch-mvd']);
-    expect(TVERSKOI_PACK.changes[4].documents.every((d) => d.kind === 'added' && d.documentId.startsWith('rules-'))).toBe(true);
-    expect(TVERSKOI_PACK.changes[4].documents).toHaveLength(10);
+    // Checked on 8 October: the УК's new ст. 64.1 came with no later edit date on the forum — dated by the check.
+    expect(TVERSKOI_PACK.changes[0].documents.map((d) => d.documentId)).toEqual(expect.arrayContaining(['uk', 'koap', 'ch-hospital', 'rules-main']));
+    expect(TVERSKOI_PACK.changes[1].documents.map((d) => d.documentId)).toEqual(['ch-army-structure', 'ch-army-id', 'ch-gov']);
+    expect(TVERSKOI_PACK.changes[2].documents.some((d) => d.documentId === 'uk')).toBe(true);
+    expect(TVERSKOI_PACK.changes[3].documents.every((d) => d.documentId.startsWith('rules-'))).toBe(true);
+    expect(TVERSKOI_PACK.changes[4].documents.map((d) => d.documentId)).toEqual(['ch-mvd']);
+    expect(TVERSKOI_PACK.changes[5].documents.every((d) => d.kind === 'added' && d.documentId.startsWith('rules-'))).toBe(true);
+    expect(TVERSKOI_PACK.changes[5].documents).toHaveLength(10);
   });
 
   it('holds the legislative base, the charters of the organisations and the project rules: 66 documents', () => {

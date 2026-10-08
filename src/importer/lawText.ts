@@ -215,8 +215,20 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
         stars: tags.stars,
       };
       article.parts.push(part);
-      if (clause) {
-        const { punishment, unparsed } = parsePunishment(clause);
+      // «[Ф] Те же деяния: а) …; б) …; в) …, - наказывается …»: the sanction stands on its own line under the points.
+      let after = i + 1;
+      while (POINT.test(lines[after] ?? '')) after++;
+      const tail = !clause && after > i + 1 ? (lines[after] ?? '').match(/^[-—–]\s*(наказыва(?:ется|ются)\s.*)$/) : null;
+      if (tail) {
+        for (let j = i + 1; j < after; j++) {
+          const point = lines[j].match(POINT)!;
+          part.points.push({ marker: point[1], text: point[2] });
+        }
+        i = after;
+      }
+      const sanction = clause ?? (tail ? splitPenalty(`— ${tail[1]}`).clause : null);
+      if (sanction) {
+        const { punishment, unparsed } = parsePunishment(sanction);
         part.punishment = punishment;
         for (const alt of unparsed) issue(line, `Не разобрано наказание: «${alt}»`, part);
         if (!punishment.alternatives.length) issue(line, 'Нет ни одного наказания', part);

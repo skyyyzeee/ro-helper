@@ -15,8 +15,8 @@ const article = (number: string) => {
 describe('Уголовный кодекс Тверского (real forum text)', () => {
   it('reads every chapter and article, and reports nothing unparsed', () => {
     expect(uk.chapters).toHaveLength(22);
-    expect(uk.articles).toHaveLength(121);
-    expect(uk.articles.filter((a) => a.parts.some((p) => p.punishment))).toHaveLength(68);
+    expect(uk.articles).toHaveLength(122);
+    expect(uk.articles.filter((a) => a.parts.some((p) => p.punishment))).toHaveLength(69);
     // Only ст. 85.1, whose fine is written in words: the server's manual fix (overrides.json) gives its punishment.
     expect(new Set(uk.issues.map((i) => i.article))).toEqual(new Set(['uk-85.1']));
   });
