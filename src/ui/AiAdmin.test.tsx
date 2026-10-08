@@ -85,6 +85,7 @@ describe('the admin\'s debug view', () => {
     expect(view).toHaveTextContent('законы');
     expect(view).toHaveTextContent(/S1 УК ст\. 65/);
     expect(view).toHaveTextContent('всё прошло');
+    expect(view).toHaveTextContent(/Сторона.*пунктов показано/);
   });
 
   it('is not there for a player', async () => {
