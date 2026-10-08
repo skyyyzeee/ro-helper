@@ -374,6 +374,27 @@ describe('the answer for the player\'s side', () => {
     expect(analysis.sources.map((s) => `${s.hit.document.short} ${s.hit.article.number} ${s.hit.article.title}`).join(' | ')).toMatch(/задержан/i);
   });
 
+  it('a side answered on the sources is no «не найдено», though the model gave its points and no norms (the defence, live)', async () => {
+    const provider = fakeProvider(
+      JSON.stringify({ ...answer(), norms: [], violation: null, punishment: null, notFound: true, guide: [{ text: 'Проверьте, разъяснили ли права', sources: ['SOURCE'], mark: 'unknown' }] }),
+    );
+    const analysis = await analyse({ provider, pack, message: 'задержали за кражу телефона, права не зачитали', perspective: 'lawyer', depth: 'quick' });
+    expect(analysis.answer.guide).toHaveLength(1);
+    expect(analysis.validation.status).toBe('likely');
+    expect(analysis.answer.notFound).toBe(false);
+  });
+
+  it('a point names its article with the document — another code\'s article of that number is not its source; no source ids in the text', async () => {
+    const provider = fakeProvider(
+      withGuide([
+        { text: 'Это кража по УК ст. 65 (SOURCE).', sources: ['SOURCE'] },
+        { text: 'Жалобу подайте согласно УПК ст. 65.', sources: ['SOURCE'] },
+      ]),
+    );
+    const analysis = await analyse({ provider, pack, message: 'украл телефон у прохожего', perspective: 'citizen', depth: 'quick' });
+    expect(analysis.answer.guide?.map((g) => g.text)).toEqual(['Это кража по УК ст. 65.']);
+  });
+
   it('asks the same case from another side with its own sources and no AI call for phrases', async () => {
     const first = await analyse({ provider: fakeProvider(good), pack, message: 'украл телефон у прохожего', perspective: 'citizen', depth: 'quick' });
     const provider = fakeProvider(good);
