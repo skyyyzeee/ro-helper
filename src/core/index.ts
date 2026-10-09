@@ -51,3 +51,4 @@ export {
   starCount,
   type SubjectLine,
 } from './format';
+export { OPTIONS, quizRound, seeded, type QuizKind, type QuizQuestion } from './quiz';

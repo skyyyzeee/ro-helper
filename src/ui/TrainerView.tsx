@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import type { SearchHit, ServerPack } from '../core';
 import { Dropdown } from './Dropdown';
 import { AiHead, shortLabel, type AiTab } from './AiView';
 import { CheckIcon, CloseIcon, SchoolIcon, WarnIcon } from './icons';
+import { QuizView } from './QuizView';
 import { ROUND, type Trainer, type Verdict } from './trainer';
 
 const VERDICTS: Record<Verdict, { title: string; className: string }> = {
@@ -13,7 +15,10 @@ const VERDICTS: Record<Verdict, { title: string; className: string }> = {
 /** «7 из 10», «6,5 из 10»: a half for a partly right answer. */
 const scoreText = (score: number, of: number) => `${String(score).replace('.', ',')} из ${of}`;
 
-/** «Тренажёр»: questions on the laws of the organisation, one at a time, the answer given in the search field. */
+/**
+ * «Практика»: the quick tasks with no AI (roadmap 6А) — first, free and with no limit — and the exam with the AI:
+ * questions on the laws of the organisation, one at a time, the answer given in the search field.
+ */
 export function TrainerView({
   trainer,
   pack,
@@ -28,12 +33,47 @@ export function TrainerView({
   const { phase, question, graded } = trainer;
   const chosen = pack.documents.filter((d) => trainer.documents.includes(d.id));
   const choosing = phase === 'idle' || phase === 'done';
+  const [mode, setMode] = useState<'quick' | 'ai'>('quick');
+  // While the AI's exam is under way, its questions stay on screen: the switch waits for its end.
+  const busy = !choosing;
+  const picker = (
+    <div className="set__row quiz__docs">
+      <span className="set__label">Вопросы по</span>
+      <Dropdown
+        className="quiz__select"
+        label="Документ для вопросов"
+        value={trainer.documents.length === 1 ? trainer.documents[0] : 'many'}
+        onChange={(value) => value !== 'many' && trainer.setDocuments([value])}
+        options={[
+          ...(trainer.documents.length > 1 ? [{ value: 'many', lead: chosen.map((d) => d.short).join(', '), label: 'законы вашей организации' }] : []),
+          ...pack.documents.map((d) => ({ value: d.id, lead: d.short, label: d.title })),
+        ]}
+      />
+    </div>
+  );
 
   return (
     <section className="art ai quiz" aria-label="Практика">
       <AiHead tab="trainer" onTab={onTab} />
 
-      {choosing && (
+      {!busy && (
+        <div className="tabs quiz__modes" role="radiogroup" aria-label="Вид практики">
+          {(
+            [
+              ['quick', 'Быстрые задания'],
+              ['ai', 'Экзамен с ИИ'],
+            ] as const
+          ).map(([id, label]) => (
+            <button key={id} type="button" role="radio" aria-checked={mode === id} className={mode === id ? 'tabs__btn tabs__btn--on' : 'tabs__btn'} onClick={() => setMode(id)}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {mode === 'quick' && !busy && <QuizView pack={pack} documents={trainer.documents} picker={picker} onOpen={onOpen} />}
+
+      {mode === 'ai' && choosing && (
         <>
           {phase === 'done' && (
             <div className="quiz__result" role="status">
@@ -54,19 +94,7 @@ export function TrainerView({
               {ROUND} вопросов по статьям законов сервера. Отвечайте своими словами в поле внизу или голосом — ИИ сверит ответ с
               текстом статьи и покажет, что упущено.
             </p>
-            <div className="set__row quiz__docs">
-              <span className="set__label">Вопросы по</span>
-              <Dropdown
-                className="quiz__select"
-                label="Документ для вопросов"
-                value={trainer.documents.length === 1 ? trainer.documents[0] : 'many'}
-                onChange={(value) => value !== 'many' && trainer.setDocuments([value])}
-                options={[
-                  ...(trainer.documents.length > 1 ? [{ value: 'many', lead: chosen.map((d) => d.short).join(', '), label: 'законы вашей организации' }] : []),
-                  ...pack.documents.map((d) => ({ value: d.id, lead: d.short, label: d.title })),
-                ]}
-              />
-            </div>
+            {picker}
             <button className="btn btn--primary quiz__start" type="button" onClick={() => void trainer.start()}>
               {phase === 'done' ? 'Пройти ещё раз' : 'Начать'}
             </button>
@@ -74,14 +102,14 @@ export function TrainerView({
         </>
       )}
 
-      {trainer.error && (
+      {mode === 'ai' && trainer.error && (
         <div className="warn" role="alert">
           <WarnIcon />
           <span>{trainer.error}</span>
         </div>
       )}
 
-      {!choosing && (
+      {mode === 'ai' && !choosing && (
         <>
           <div className="quiz__progress" aria-label={`Вопрос ${trainer.number} из ${ROUND}`}>
             <span>
