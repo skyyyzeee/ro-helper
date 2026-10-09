@@ -32,6 +32,8 @@ async function openTrainer() {
   const app = await renderApp({ settings: GEMINI, profile: { organization: 'mvd' } });
   await app.user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
   await app.user.click(screen.getByRole('radio', { name: 'Практика' }));
+  // The quick tasks come first; the AI's exam is beside them.
+  await app.user.click(screen.getByRole('radio', { name: 'Экзамен с ИИ' }));
   return { ...app, view: screen.getByRole('region', { name: 'Практика' }) };
 }
 
@@ -102,7 +104,50 @@ describe('the exam trainer', () => {
     const { user } = await renderApp({ settings: { [AI_PROVIDER_SETTING]: 'gemini' }, profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
     await user.click(screen.getByRole('radio', { name: 'Практика' }));
+    await user.click(screen.getByRole('radio', { name: 'Экзамен с ИИ' }));
     await user.click(within(screen.getByRole('region', { name: 'Практика' })).getByRole('button', { name: 'Начать' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Сначала вставьте ключ Gemini');
+  });
+});
+
+describe('the quick tasks, with no AI (roadmap 6А)', () => {
+  it('come first in «Практика»: ten tasks from the laws, four answers each, the right one shown, the article to open', async () => {
+    const fetch = vi.fn();
+    vi.stubGlobal('fetch', fetch);
+    const { user } = await renderApp({ profile: { organization: 'mvd' } });
+    await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
+    await user.click(screen.getByRole('radio', { name: 'Практика' }));
+    const view = screen.getByRole('region', { name: 'Практика' });
+    expect(within(view).getByRole('radio', { name: 'Быстрые задания' })).toHaveAttribute('aria-checked', 'true');
+    await user.click(within(view).getByRole('button', { name: 'Начать' }));
+
+    for (let n = 1; n <= 10; n++) {
+      expect(within(view).getByLabelText(`Задание ${n} из 10`)).toBeInTheDocument();
+      const answers = within(within(view).getByRole('group', { name: 'Варианты ответа' })).getAllByRole('button');
+      expect(answers).toHaveLength(4);
+      // The first answer, by its key: right or wrong, the verdict says which is right.
+      await user.keyboard('1');
+      expect(within(view).getByRole('status')).toHaveTextContent(/Верно\.|Неверно\. Правильно:/);
+      expect(answers.every((a) => (a as HTMLButtonElement).disabled)).toBe(true);
+      await user.click(within(view).getByRole('button', { name: n < 10 ? 'Следующее задание' : 'Итог' }));
+    }
+    expect(within(view).getByRole('status')).toHaveTextContent(/Результат: \d+ из 10/);
+    expect(within(view).getByRole('button', { name: 'Пройти ещё раз' })).toBeInTheDocument();
+    // No AI was asked: nothing went over the network.
+    expect(fetch).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('opens the article a task was about', async () => {
+    const { user } = await renderApp({ profile: { organization: 'mvd' } });
+    await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
+    await user.click(screen.getByRole('radio', { name: 'Практика' }));
+    const view = screen.getByRole('region', { name: 'Практика' });
+    await user.click(within(view).getByRole('button', { name: 'Начать' }));
+    await user.keyboard('2');
+    const cite = within(within(view).getByRole('status')).getByRole('button');
+    const name = cite.textContent ?? '';
+    await user.click(cite);
+    expect(await screen.findByRole('article')).toHaveAccessibleName(expect.stringContaining(name.split(' «')[0].split(' ').slice(-1)[0]));
   });
 });

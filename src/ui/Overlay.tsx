@@ -1172,7 +1172,10 @@ export function Overlay({
             ? aiTab === 'document'
               ? 'Опишите, что произошло: кто, где, что сделал…'
               : aiTab === 'trainer'
-                ? 'Ваш ответ своими словами…'
+                ? // The quick tasks are answered above, by a button or 1–4: the field is the AI's exam's, when it asks.
+                  trainer.phase === 'answering'
+                  ? 'Ваш ответ своими словами…'
+                  : 'Ответ на вопрос экзамена с ИИ'
                 : aiTab === 'lawyer'
                   ? 'Что требует адвокат: свидание, копию протокола…'
                   : aiTab === 'detention'
