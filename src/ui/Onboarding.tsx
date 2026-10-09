@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { packFor } from '../data';
+import { serverMeta } from '../data';
 import { usePlatform } from '../platform/PlatformContext';
 import { WarnIcon } from './icons';
 import { OrganizationChoice } from './OrganizationChoice';
@@ -71,7 +71,7 @@ export function Onboarding({
   const [notice, setNotice] = useState(false);
 
   // The laws — and so the organisations to choose from — are the ones of the server in the draft.
-  const pack = packFor(draft.server);
+  const pack = serverMeta(draft.server);
   const organization = pack.organizations.find((o) => o.id === draft.organization);
   const server = SERVERS.find((s) => s.id === draft.server);
 
@@ -147,7 +147,7 @@ export function Onboarding({
               onPick={(id) =>
                 setDraft((d) => {
                   // Another server has its own organisations: one it does not have goes back to «Без организации».
-                  const keep = packFor(id).organizations.some((o) => o.id === d.organization);
+                  const keep = serverMeta(id).organizations.some((o) => o.id === d.organization);
                   return { ...d, server: id, organization: keep ? d.organization : 'none' };
                 })
               }

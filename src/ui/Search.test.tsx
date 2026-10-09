@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { packLabel } from '../core';
-import { TVERSKOI_PACK } from '../data';
+import { TVERSKOI_PACK } from '../data/bundled';
 import { renderApp } from '../test/renderApp';
 
 const results = () => within(screen.getByRole('list', { name: 'Результаты поиска' })).getAllByRole('listitem');

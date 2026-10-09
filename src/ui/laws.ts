@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PACK_FORMAT, type ServerPack } from '../core';
-import { packFor } from '../data';
+import { loadPack, loadedPack } from '../data';
 import { usePlatform } from '../platform/PlatformContext';
 import { formatDate } from './lawBits';
 import { AUTO_KEY, CHECK_EVERY_MS } from './updates';
@@ -57,9 +57,12 @@ export function readPack(text: string | undefined, server: string): ServerPack |
   }
 }
 
+/** The pack if it is this server's: the one before stays on screen while another server's loads. */
+const ofServer = (pack: ServerPack | undefined, server: string): ServerPack | undefined => (pack?.server.id === server ? pack : undefined);
+
 export interface Laws {
-  /** The laws in use: the ones the app came with, or newer ones downloaded since. */
-  pack: ServerPack;
+  /** The laws in use: the ones the app came with, or newer ones downloaded since; none until they are read. */
+  pack: ServerPack | undefined;
   status: LawsStatus;
   /** Asks GitHub for newer laws now, whether or not the app checks by itself. */
   check: () => void;
@@ -72,37 +75,39 @@ export interface Laws {
  */
 export function useLaws(server: string | null): Laws {
   const platform = usePlatform();
-  const bundled = packFor(server ?? '');
-  const [pack, setPack] = useState(bundled);
+  const [pack, setPack] = useState<ServerPack | undefined>(() => (server ? loadedPack(server) : undefined));
   const [status, setStatus] = useState<LawsStatus>({ kind: 'idle' });
   // Read inside the downloads, which outlive a render: the pack in use and the server it is for.
-  const current = useRef(bundled);
+  const current = useRef(pack);
   const serverRef = useRef(server);
   const busy = useRef(false);
 
-  const use = (next: ServerPack) => {
+  const use = (next: ServerPack | undefined) => {
     current.current = next;
     setPack(next);
   };
 
-  // The server's built-in laws at once, then the ones downloaded before if they are newer.
+  // The server's built-in laws, loaded with its server's alone, then the ones downloaded before if they are newer.
+  // Another server chosen, the laws of the one before stay on screen the moment the new ones take to load — the
+  // overlay is not taken down and put up again around them.
   useEffect(() => {
     serverRef.current = server;
-    use(bundled);
     setStatus({ kind: 'idle' });
-    if (!server) return;
+    if (!server) return use(undefined);
+    const ready = loadedPack(server);
+    if (ready && !ofServer(current.current, server)) use(ready);
     let active = true;
-    platform.readLaws(server).then(
-      (text) => {
-        const kept = readPack(text, server);
-        if (active && kept && isNewer(kept, current.current)) use(kept);
-      },
-      () => undefined,
-    );
+    void loadPack(server).then(async (built) => {
+      if (!active) return;
+      const now = ofServer(current.current, server);
+      if (!now || isNewer(built, now)) use(built);
+      const kept = readPack(await platform.readLaws(server).catch(() => undefined), server);
+      if (active && kept && isNewer(kept, ofServer(current.current, server) ?? built)) use(kept);
+    });
     return () => {
       active = false;
     };
-  }, [platform, server, bundled]);
+  }, [platform, server]);
 
   const run = useCallback(
     async (manual: boolean) => {
@@ -111,22 +116,24 @@ export function useLaws(server: string | null): Laws {
       if (manual) setStatus({ kind: 'checking' });
       const stillHere = () => serverRef.current === server;
       try {
+        // The laws in use for this server — or what the app came with, should the check come before they are read.
+        const base = ofServer(current.current, server) ?? (await loadPack(server));
         const manifest = JSON.parse(await platform.download(MANIFEST_URL)) as LawsManifest;
         // A pack in a shape this app does not know waits for the app to be updated.
         const entry = manifest?.format === PACK_FORMAT ? manifest.packs?.[server] : undefined;
-        if (!isNewer(entry, current.current)) {
+        if (!isNewer(entry, ofServer(current.current, server) ?? base)) {
           if (manual && stillHere()) setStatus({ kind: 'latest' });
           return;
         }
         const text = await platform.download(packUrl(server));
         const next = readPack(text, server);
-        if (!next || !isNewer(next, current.current) || !stillHere()) {
+        if (!next || !isNewer(next, ofServer(current.current, server) ?? base) || !stillHere()) {
           if (manual && stillHere()) setStatus({ kind: 'latest' });
           return;
         }
         // Not kept for the next launch is no reason not to use them now.
         await platform.writeLaws(server, text).catch(() => undefined);
-        const previous = current.current;
+        const previous = ofServer(current.current, server) ?? base;
         use(next);
         setStatus({ kind: 'updated', version: next.version });
         // Told over the game only when a law itself changed, not the way the helper reads them.

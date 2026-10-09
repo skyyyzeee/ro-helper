@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TVERSKOI_PACK } from '../data';
+import { TVERSKOI_PACK } from '../data/bundled';
 import { explainEmpty } from './empty';
 import { searchArticles } from './search';
 

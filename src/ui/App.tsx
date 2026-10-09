@@ -72,7 +72,8 @@ export function App() {
         onCapturing={setCapturing}
       />
     );
-  } else if (profile) {
+  } else if (profile && laws.pack) {
+    // The server's laws are read a moment after start (one server's, not all of them): the overlay waits for them.
     screen = (
       <Overlay
         pack={laws.pack}

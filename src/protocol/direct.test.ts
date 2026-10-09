@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ARBATSKIY_PACK, KUTUZOVSKIY_PACK, TVERSKOI_PACK } from '../data';
+import { ARBATSKIY_PACK, KUTUZOVSKIY_PACK, TVERSKOI_PACK } from '../data/bundled';
 import { directPunishment, punishmentSubject } from './direct';
 
 const titles = (pack = TVERSKOI_PACK, question: string) => directPunishment(pack, question)?.hits.map((hit) => `${hit.document.short} ${hit.article.number}`) ?? null;

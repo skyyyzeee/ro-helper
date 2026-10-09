@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TVERSKOI_PACK } from '../data';
+import { TVERSKOI_PACK } from '../data/bundled';
 import { calculateCriminal, crimeCategory, fineFits, type ChargeItem, type Mode, type Stage } from './calculator';
 import type { CalculatorRules } from './model';
 

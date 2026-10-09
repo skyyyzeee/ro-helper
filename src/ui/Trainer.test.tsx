@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { TVERSKOI_PACK } from '../data';
+import { TVERSKOI_PACK } from '../data/bundled';
 import { articleText } from '../core';
 import { renderApp } from '../test/renderApp';
 import { AI_KEY_SETTING, AI_PROVIDER_SETTING } from './ai';

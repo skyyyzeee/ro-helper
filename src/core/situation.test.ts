@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TVERSKOI_PACK } from '../data';
+import { TVERSKOI_PACK } from '../data/bundled';
 import { findForSituation, sourceLabel, sourcesText } from './situation';
 
 const labels = (text: string, limit = 12) => findForSituation(TVERSKOI_PACK, text, { limit }).map(sourceLabel);

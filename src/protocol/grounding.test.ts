@@ -3,7 +3,7 @@
 // and none of it may come out «Подтверждено». Plus the classifier: what is no question of the base costs no AI call.
 import { describe, expect, it, vi } from 'vitest';
 import { articleText, type SearchHit } from '../core';
-import { ARBATSKIY_PACK, TVERSKOI_PACK } from '../data';
+import { ARBATSKIY_PACK, TVERSKOI_PACK } from '../data/bundled';
 import type { LegalAnswer } from './answer';
 import { classify } from './classify';
 import { buildContext } from './context';

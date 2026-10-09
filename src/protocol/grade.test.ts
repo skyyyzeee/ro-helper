@@ -2,7 +2,7 @@
 // see it; a forbidden article applied, or an AI call where the words decided, fails the case whatever else is right.
 import { describe, expect, it } from 'vitest';
 import type { SearchHit } from '../core';
-import { TVERSKOI_PACK } from '../data';
+import { TVERSKOI_PACK } from '../data/bundled';
 import type { LegalAnswer } from './answer';
 import { classify } from './classify';
 import { confirmedHallucinations, gradeCase } from './grade';

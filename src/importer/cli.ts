@@ -98,11 +98,16 @@ for (const server of servers) {
 // when it is newer than theirs and written in a shape they read.
 if (!check) {
   const packs: Record<string, { built?: string; version: string }> = {};
+  // What the app needs of every server before its laws are loaded (the server picker, the factions, the account):
+  // the server and its organisations, a few kilobytes — the packs themselves are loaded one at a time, when used.
+  const servers: Record<string, Pick<ServerPack, 'server' | 'organizations'>> = {};
   for (const server of SERVERS) {
     const file = join(root, 'src', 'data', `${server.id}.json`);
     if (!existsSync(file)) continue;
     const pack = JSON.parse(readFileSync(file, 'utf8')) as ServerPack;
     packs[server.id] = { built: pack.built, version: pack.version };
+    servers[server.id] = { server: pack.server, organizations: pack.organizations };
   }
   writeFileSync(join(root, 'src', 'data', 'manifest.json'), JSON.stringify({ format: PACK_FORMAT, packs }, null, 2) + '\n');
+  writeFileSync(join(root, 'src', 'data', 'servers.json'), JSON.stringify(servers, null, 2) + '\n');
 }
