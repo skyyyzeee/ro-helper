@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { KUTUZOVSKIY_PACK } from '../data';
+import { KUTUZOVSKIY_PACK } from '../data/bundled';
 import { calculateCriminal, type ChargeItem, type Mode, type Stage } from './calculator';
 import { formatRubles } from './format';
 import { calculateDetention } from './detention';

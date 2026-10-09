@@ -1,7 +1,7 @@
 // «Проверить мой ответ»: the AI explains, the checks decide — a fake AI says what the test wants, and an answer is
 // «right» only when every point stands on a source it was given.
 import { describe, expect, it, vi } from 'vitest';
-import { TVERSKOI_PACK } from '../data';
+import { TVERSKOI_PACK } from '../data/bundled';
 import { answerVerdict, checkMyAnswer, type AnswerPoint } from './answerCheck';
 import type { AiProvider, AiRequest } from './provider';
 

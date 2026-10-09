@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { articleHeading, explainEmpty, formatPunishment, searchArticles, type SearchHit, type ServerPack } from '../core';
-import { packFor } from '../data';
+import { loadPack, loadedPack, serverMeta } from '../data';
 import type { PinLook, QuickBridge, QuickState } from '../platform/types';
 import { applyAppearance, isTheme } from './appearance';
 import { BackIcon, CalculatorIcon, CheckIcon, CloseIcon, GripIcon, SearchIcon, SparkIcon } from './icons';
@@ -69,9 +69,15 @@ function QuickArticle({ hit, added, onCharge, onBack }: { hit: SearchHit; added:
  * the recent articles are the assistant's, told to the bar, so nothing is lost when it hides. Esc steps back, then
  * hides the bar; its field keeps what was typed for the next time.
  */
+/**
+ * The bar before its server's laws are read — a moment at its first showing: the server and its organisations,
+ * no documents, so a search finds nothing rather than another server's articles.
+ */
+const waiting = (server: string): ServerPack => ({ format: 0, ...serverMeta(server), version: '', changes: [], documents: [], synonyms: {} });
+
 export function QuickSearch({ bridge }: { bridge: QuickBridge }) {
   const [organization, setOrganization] = useState<string | undefined>();
-  const [pack, setPack] = useState<ServerPack>(() => packFor('tverskoi'));
+  const [pack, setPack] = useState<ServerPack>(() => loadedPack('tverskoi') ?? waiting('tverskoi'));
   const [mode, setMode] = useState<Mode>('laws');
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(0);
@@ -100,7 +106,7 @@ export function QuickSearch({ bridge }: { bridge: QuickBridge }) {
     if (look) applyAppearance(isTheme(look.theme) ? look.theme : 'glass', look.hue);
     const id = profile?.server ?? 'tverskoi';
     setOrganization(profile?.organization);
-    const bundled = packFor(id);
+    const bundled = await loadPack(id);
     const kept = readPack(await bridge.readLaws(id).catch(() => undefined), id);
     setPack(kept && isNewer(kept, bundled) ? kept : bundled);
   }, [bridge]);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DocumentChange, LawDocument, ServerPack } from '../core';
-import { TVERSKOI_PACK } from '../data';
+import { TVERSKOI_PACK } from '../data/bundled';
 import { KEEP_DAYS, compareImports, nextChangelog } from './changelog';
 
 const uk = TVERSKOI_PACK.documents.find((d) => d.id === 'uk')!;

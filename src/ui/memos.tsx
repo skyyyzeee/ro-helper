@@ -3,7 +3,7 @@ import { useAccount } from '../account/AccountContext';
 import { capabilitiesOf, isFaction } from '../account/capabilities';
 import type { Memo } from '../account/roles';
 import { usePlatform } from '../platform/PlatformContext';
-import { packFor } from '../data';
+import { serverMeta } from '../data';
 import { factionName } from './AdminView';
 import { PROFILE_KEY, type Profile } from './profile';
 import { memoPlain } from './memoText';
@@ -60,7 +60,7 @@ export function MemosProvider({ children }: { children: ReactNode }) {
       return;
     }
     const profile = await platform.readSetting<Profile>(PROFILE_KEY);
-    const organization = profile && packFor(profile.server).organizations.find((o) => o.id === profile.organization);
+    const organization = profile && serverMeta(profile.server).organizations.find((o) => o.id === profile.organization);
     const here = profile && isFaction(organization) ? { server: profile.server, organization: organization.id } : null;
     setPlace(here);
     setNow(Date.now());
@@ -104,7 +104,7 @@ export function MemosProvider({ children }: { children: ReactNode }) {
     roles: mine?.roles ?? [],
     admin: !!mine?.admin,
     server: place?.server ?? '',
-    organization: place ? packFor(place.server).organizations.find((o) => o.id === place.organization) : undefined,
+    organization: place ? serverMeta(place.server).organizations.find((o) => o.id === place.organization) : undefined,
   });
   const control: MemosControl = {
     place,

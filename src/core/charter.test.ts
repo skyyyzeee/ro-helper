@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import digests from '../data/charters.json';
-import { PACKS, TVERSKOI_PACK } from '../data';
+import { PACKS, TVERSKOI_PACK } from '../data/bundled';
 import { charterCards, pointArticle, type CharterDigest } from './charter';
 
 const all = digests as unknown as Record<string, CharterDigest>;

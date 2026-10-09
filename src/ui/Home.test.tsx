@@ -1,6 +1,6 @@
 import { cleanup, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { TVERSKOI_PACK } from '../data';
+import { TVERSKOI_PACK } from '../data/bundled';
 import { renderApp } from '../test/renderApp';
 
 const search = () => screen.getByRole('searchbox', { name: 'Поиск по законам' });

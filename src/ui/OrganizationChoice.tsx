@@ -17,7 +17,7 @@ export function OrganizationChoice({
   onPick,
   compact = false,
 }: {
-  pack: ServerPack;
+  pack: Pick<ServerPack, 'organizations'>;
   value: string;
   onPick: (id: string) => void;
   compact?: boolean;

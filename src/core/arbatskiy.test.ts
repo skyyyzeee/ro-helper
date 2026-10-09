@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ARBATSKIY_PACK } from '../data';
+import { ARBATSKIY_PACK } from '../data/bundled';
 import { calculateCriminal, type ChargeItem, type Mode, type Stage } from './calculator';
 import { calculateDetention } from './detention';
 

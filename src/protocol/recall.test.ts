@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { findForSituation } from '../core';
-import { PACKS } from '../data';
+import { PACKS } from '../data/bundled';
 import { hintTerms } from './hints';
 import { SOURCES } from './pipeline';
 import { packInScope } from './sources';
@@ -57,6 +57,8 @@ describe('the hints: the law\'s words for everyday ones', () => {
     ['При задержании хочу зачитать миранду — что зачитывать?', 'разъяснение прав задержанному'],
     ['Сотрудник не разъяснил мне права', 'права задержанного'],
     ['Машина проехала перекрёсток на красный сигнал светофора', 'проезд на запрещающий сигнал'],
+    ['Что дадут по правилам сервера за оскорбление родных в войсе?', 'оскорбление родственников'],
+    ['Обматерил его мамку в голосовом чате', 'оскорбление родственников'],
   ])('«%s» → %s', (text, term) => {
     expect(hintTerms(text)).toContain(term);
   });

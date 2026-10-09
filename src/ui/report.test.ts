@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { calculateDetention, searchArticles, type Charge } from '../core';
-import { TVERSKOI_PACK } from '../data';
+import { TVERSKOI_PACK } from '../data/bundled';
 import { reportText } from './report';
 
 const pack = TVERSKOI_PACK;

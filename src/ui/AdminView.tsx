@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import type { LeaderRequest, PlayerRecord, Role } from '../account/roles';
-import { PACKS } from '../data';
+import { SERVER_INFO } from '../data';
 import { useRoles } from './roles';
 
 /** «Тверской» for a server's id; the id itself for one this copy doesn't know. */
-export const serverName = (server?: string) => (server ? (PACKS[server]?.server.name ?? server) : '');
+export const serverName = (server?: string) => (server ? (SERVER_INFO[server]?.server.name ?? server) : '');
 /** «МВД» for a faction's id on a server. */
 export const factionName = (server?: string, organization?: string) =>
-  (organization && server && PACKS[server]?.organizations.find((o) => o.id === organization)?.name) || organization || '';
+  (organization && server && SERVER_INFO[server]?.organizations.find((o) => o.id === organization)?.name) || organization || '';
 /** «Лидер МВД · Тверской» */
 export const roleLabel = (role: Pick<Role, 'server' | 'organization'> & { role?: Role['role'] }) =>
   `${role.role === 'deputy' ? 'Заместитель' : 'Лидер'} ${factionName(role.server, role.organization)} · ${serverName(role.server)}`;

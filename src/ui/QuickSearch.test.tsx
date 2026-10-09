@@ -43,6 +43,7 @@ const field = () => screen.getByRole('searchbox');
 const results = () => screen.getByRole('list', { name: 'Результаты быстрого поиска' });
 
 describe('the quick search', () => {
+
   it('finds articles as the player types, and Enter asks the assistant to put the chosen one into its calculator', async () => {
     const { requests, tell, user } = renderBar();
     expect(field()).toHaveFocus();

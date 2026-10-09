@@ -10,6 +10,7 @@ import type { Account } from '../account/types';
 import { createFakePlatform, type FakeOptions, type FakePlatform } from '../platform/fake';
 import { PlatformProvider } from '../platform/PlatformContext';
 import { App } from '../ui/App';
+import { SERVER_INFO, loadPack } from '../data';
 import { DEFAULT_HOTKEY } from '../ui/overlaySettings';
 import { APP_VERSION } from '../ui/about';
 import { PROFILE_KEY, type Profile } from '../ui/profile';
@@ -29,6 +30,15 @@ export interface RenderOptions {
 
 /** Every card pinned over the game, block by block, in the order they were pinned. */
 export const pinnedCards = (platform: FakePlatform) => platform.state.pins.flatMap((group) => group.cards);
+
+/**
+ * Every server's laws, read before the app starts: the app loads them a moment after its start (or a server
+ * switch); here they are there at once, as for a player whose laws were read already, so the tests see the app,
+ * not how long a file takes to read. Read when this module is — before any test, outside the tests' time limits:
+ * inside them, megabytes of JSON on a busy computer outran the 10 s of a hook.
+ */
+export const preloadPacks = () => Promise.all(Object.keys(SERVER_INFO).map(loadPack));
+await preloadPacks();
 
 /** Renders the whole app on a fake platform and waits until it has loaded its settings. */
 export async function renderApp(options: RenderOptions = {}) {

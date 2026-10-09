@@ -18,7 +18,7 @@ import {
   type SearchHit,
   type ServerPack,
 } from '../core';
-import { packFor } from '../data';
+import { serverMeta } from '../data';
 import type { PinCard, PinGroup, Toast } from '../platform/types';
 import { usePlatform } from '../platform/PlatformContext';
 import type { QuickRequest } from '../platform/types';
@@ -1172,7 +1172,10 @@ export function Overlay({
             ? aiTab === 'document'
               ? 'Опишите, что произошло: кто, где, что сделал…'
               : aiTab === 'trainer'
-                ? 'Ваш ответ своими словами…'
+                ? // The quick tasks are answered above, by a button or 1–4: the field is the AI's exam's, when it asks.
+                  trainer.phase === 'answering'
+                  ? 'Ваш ответ своими словами…'
+                  : 'Ответ на вопрос экзамена с ИИ'
                 : aiTab === 'lawyer'
                   ? 'Что требует адвокат: свидание, копию протокола…'
                   : aiTab === 'detention'
@@ -1406,7 +1409,7 @@ export function Overlay({
               value={profile.server}
               onPick={(id) => {
                 // It stays open: the organisation is picked next, from the new server's own.
-                const keep = packFor(id).organizations.some((o) => o.id === profile.organization);
+                const keep = serverMeta(id).organizations.some((o) => o.id === profile.organization);
                 onProfile({ ...profile, server: id, organization: keep ? profile.organization : 'none' });
               }}
             />
@@ -1496,7 +1499,7 @@ export function Overlay({
               value={profile.server}
               onPick={(id) => {
                 // Another server has its own organisations: one it does not have goes back to «Без организации».
-                const keep = packFor(id).organizations.some((o) => o.id === profile.organization);
+                const keep = serverMeta(id).organizations.some((o) => o.id === profile.organization);
                 onProfile({ ...profile, server: id, organization: keep ? profile.organization : 'none' });
                 setServerOpen(false);
                 searchRef.current?.focus();
