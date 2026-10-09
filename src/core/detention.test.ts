@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TVERSKOI_PACK } from '../data';
+import { TVERSKOI_PACK } from '../data/bundled';
 import type { Offender } from './administrative';
 import type { Mode } from './calculator';
 import { calculateDetention, type Charge } from './detention';

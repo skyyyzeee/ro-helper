@@ -1,4 +1,4 @@
-import { PACKS } from '../data';
+import { SERVER_INFO } from '../data';
 
 /** What the user chose on first launch; changed later in the settings. */
 export interface Profile {
@@ -22,7 +22,7 @@ export const SERVERS: ServerChoice[] = [
   { id: 'tverskoi', name: 'Тверской' },
   { id: 'arbatskiy', name: 'Арбатский' },
   { id: 'kutuzovskiy', name: 'Кутузовский', note: 'для новичков' },
-].map((server) => ({ ...server, status: PACKS[server.id] ? ('active' as const) : ('soon' as const) }));
+].map((server) => ({ ...server, status: SERVER_INFO[server.id] ? ('active' as const) : ('soon' as const) }));
 
 const MODIFIERS = ['Ctrl', 'Alt', 'Shift'];
 const NAMED_KEYS = new Set(['Space', 'Backquote', 'Insert', 'Delete', 'Home', 'End', 'PageUp', 'PageDown']);

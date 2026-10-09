@@ -1,7 +1,7 @@
 import { act, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { PACK_FORMAT, type ServerPack } from '../core';
-import { TVERSKOI_PACK } from '../data';
+import { TVERSKOI_PACK } from '../data/bundled';
 import { renderApp } from '../test/renderApp';
 import { MANIFEST_URL, isNewer, packUrl, readPack } from './laws';
 import { ANNOUNCEMENTS_URL } from './announcements';

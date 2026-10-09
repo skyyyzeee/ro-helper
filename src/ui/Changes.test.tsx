@@ -6,7 +6,7 @@ import { renderApp } from '../test/renderApp';
 // УК ст. 65 reworded, ст. 113 new, a ст. 999 that is gone.
 vi.mock('../data', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../data')>();
-  const { TVERSKOI_PACK } = actual;
+  const { TVERSKOI_PACK } = await import('../data/bundled');
   const { diffPacks } = await import('../core/changes');
   const earlier = structuredClone(TVERSKOI_PACK);
   const uk = earlier.documents.find((d) => d.id === 'uk')!;
@@ -16,7 +16,8 @@ vi.mock('../data', async (importOriginal) => {
   uk.articles.push({ ...structuredClone(theft), id: 'uk-999', number: '999', title: 'Отменённое преступление' });
   const changes = [{ version: TVERSKOI_PACK.version, documents: diffPacks(earlier, TVERSKOI_PACK) }];
   const pack = { ...TVERSKOI_PACK, changes };
-  return { ...actual, TVERSKOI_PACK: pack, PACKS: { ...actual.PACKS, tverskoi: pack }, packFor: () => pack };
+  // The app loads its server's pack when it is used: that load gives the pack with the update.
+  return { ...actual, loadPack: async () => pack, loadedPack: () => pack };
 });
 
 const SEEN = 'laws.seen:tverskoi';

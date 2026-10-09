@@ -1,5 +1,5 @@
 import type { SyncRules } from '../account/sync';
-import { PACKS } from '../data';
+import { SERVER_INFO } from '../data';
 import { ACCENT_KEY, THEME_KEY } from './appearance';
 import { DEFAULT_HOTKEY, OPACITY_KEY } from './overlaySettings';
 import { presetsKey, type PinPreset } from './pinPresets';
@@ -23,7 +23,7 @@ const list = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
 const join = <T>(first: T[], second: T[], same: (a: T, b: T) => boolean) => [...first, ...second.filter((b) => !first.some((a) => same(a, b)))];
 
 export const SYNC_RULES: SyncRules = {
-  keys: () => [...WHOLE, ...Object.keys(PACKS).flatMap((server) => [favoritesKey(server), recentKey(server), presetsKey(server)])],
+  keys: () => [...WHOLE, ...Object.keys(SERVER_INFO).flatMap((server) => [favoritesKey(server), recentKey(server), presetsKey(server)])],
 
   isSynced: (key) => WHOLE.includes(key) || KEYED.test(key),
 

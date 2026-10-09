@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TVERSKOI_PACK } from '../data';
+import { TVERSKOI_PACK } from '../data/bundled';
 import { articleText, changedArticles, changesSince, diffPacks, diffWords, recentChanges } from './changes';
 import type { ChangeEntry, LawDocument, ServerPack } from './model';
 

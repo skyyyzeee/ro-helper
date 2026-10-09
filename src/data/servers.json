@@ -1,0 +1,492 @@
+{
+  "tverskoi": {
+    "server": {
+      "id": "tverskoi",
+      "name": "Тверской",
+      "status": "active"
+    },
+    "organizations": [
+      {
+        "id": "mvd",
+        "name": "МВД",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fz6",
+          "upk",
+          "ch-mvd"
+        ]
+      },
+      {
+        "id": "gibdd",
+        "name": "ГИБДД",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "pdd",
+          "koap",
+          "fz15",
+          "ch-gibdd",
+          "fz6"
+        ]
+      },
+      {
+        "id": "fsb",
+        "name": "ФСБ",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fz5",
+          "fz14",
+          "fz12",
+          "upk"
+        ]
+      },
+      {
+        "id": "fso",
+        "name": "ФСО",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fz7",
+          "ch-fso"
+        ]
+      },
+      {
+        "id": "army",
+        "name": "Армия / Росгвардия",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fz2",
+          "fz16-fsvng",
+          "ch-army",
+          "ch-army-discipline",
+          "ch-army-guard",
+          "ch-army-structure",
+          "ch-army-id"
+        ]
+      },
+      {
+        "id": "sk",
+        "name": "Следственный комитет",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fz4",
+          "upk",
+          "sk-main",
+          "sk-gsu",
+          "sk-inspections",
+          "sk-uniform",
+          "sk-ethics",
+          "sk-kso",
+          "sk-appeals",
+          "sk-ranks"
+        ]
+      },
+      {
+        "id": "prosecutor",
+        "name": "Прокуратура",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fz3",
+          "upk"
+        ]
+      },
+      {
+        "id": "court",
+        "name": "Суд",
+        "kind": "state",
+        "documents": [
+          "fkz4",
+          "upk"
+        ]
+      },
+      {
+        "id": "government",
+        "name": "Правительство",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fkz1",
+          "fz1",
+          "ethics",
+          "ch-gov"
+        ]
+      },
+      {
+        "id": "hospital",
+        "name": "Больница",
+        "kind": "state",
+        "documents": [
+          "msk-health",
+          "ch-hospital"
+        ]
+      },
+      {
+        "id": "news",
+        "name": "Вести Москвы",
+        "kind": "state",
+        "documents": [
+          "msk-news",
+          "ch-news"
+        ]
+      },
+      {
+        "id": "opg",
+        "name": "ОПГ",
+        "kind": "crime",
+        "documents": [
+          "rules-crime",
+          "rules-war",
+          "rules-robbery",
+          "rules-business",
+          "rules-bank",
+          "rules-workshops",
+          "rules-supply",
+          "rules-fort",
+          "rules-server"
+        ]
+      },
+      {
+        "id": "none",
+        "name": "Без организации",
+        "documents": []
+      }
+    ]
+  },
+  "arbatskiy": {
+    "server": {
+      "id": "arbatskiy",
+      "name": "Арбатский",
+      "status": "active"
+    },
+    "organizations": [
+      {
+        "id": "mvd",
+        "name": "МВД",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fz-police",
+          "upk",
+          "koap",
+          "ch-mvd"
+        ]
+      },
+      {
+        "id": "gibdd",
+        "name": "ГИБДД",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "pdd",
+          "koap",
+          "fz-police",
+          "ch-gibdd",
+          "ch-gibdd-discipline",
+          "ch-gibdd-osb"
+        ]
+      },
+      {
+        "id": "fsb",
+        "name": "ФСБ",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fz-fsb",
+          "upk",
+          "fz-docs",
+          "ch-fsb",
+          "ch-fsb-usb"
+        ]
+      },
+      {
+        "id": "fso",
+        "name": "ФСО",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fz-fso",
+          "fz-territory",
+          "ch-fso"
+        ]
+      },
+      {
+        "id": "army",
+        "name": "Армия",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fz-army",
+          "fz-weapons",
+          "ch-army"
+        ]
+      },
+      {
+        "id": "sk",
+        "name": "Следственный комитет",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fz-sk",
+          "upk",
+          "sk-charter"
+        ]
+      },
+      {
+        "id": "prosecutor",
+        "name": "Прокуратура",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fkz-prosecutor",
+          "upk"
+        ]
+      },
+      {
+        "id": "court",
+        "name": "Суд",
+        "kind": "state",
+        "documents": [
+          "fkz-court",
+          "upk"
+        ]
+      },
+      {
+        "id": "government",
+        "name": "Правительство",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fkz-gov",
+          "ethics",
+          "fz-business",
+          "ch-gov"
+        ]
+      },
+      {
+        "id": "hospital",
+        "name": "Больница",
+        "kind": "state",
+        "documents": [
+          "fz-health",
+          "ch-hospital"
+        ]
+      },
+      {
+        "id": "media",
+        "name": "СМИ",
+        "kind": "state",
+        "documents": [
+          "fz-media",
+          "ch-news",
+          "ch-news-ads",
+          "ch-news-edit"
+        ]
+      },
+      {
+        "id": "advocate",
+        "name": "Адвокатура",
+        "kind": "state",
+        "documents": [
+          "fz-advocacy",
+          "upk"
+        ]
+      },
+      {
+        "id": "opg",
+        "name": "ОПГ",
+        "kind": "crime",
+        "documents": [
+          "rules-crime",
+          "rules-war",
+          "rules-robbery",
+          "rules-business",
+          "rules-bank",
+          "rules-workshops",
+          "rules-supply",
+          "rules-fort",
+          "rules-server"
+        ]
+      },
+      {
+        "id": "none",
+        "name": "Без организации",
+        "documents": []
+      }
+    ]
+  },
+  "kutuzovskiy": {
+    "server": {
+      "id": "kutuzovskiy",
+      "name": "Кутузовский",
+      "status": "active"
+    },
+    "organizations": [
+      {
+        "id": "mvd",
+        "name": "МВД",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fz-police",
+          "upk",
+          "koap",
+          "ch-mvd",
+          "ch-mvd-units"
+        ]
+      },
+      {
+        "id": "gibdd",
+        "name": "ГИБДД",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "pdd",
+          "koap",
+          "fz-gibdd",
+          "ch-gibdd"
+        ]
+      },
+      {
+        "id": "fsb",
+        "name": "ФСБ",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fz-fsb",
+          "fz-secrets",
+          "upk",
+          "ch-fsb"
+        ]
+      },
+      {
+        "id": "fso",
+        "name": "ФСО",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fz-fso",
+          "fz-territory",
+          "ch-fso"
+        ]
+      },
+      {
+        "id": "army",
+        "name": "Армия",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fz-army",
+          "fz-weapons",
+          "ch-army",
+          "ch-army-discipline",
+          "ch-army-guard"
+        ]
+      },
+      {
+        "id": "sk",
+        "name": "Следственный комитет",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fz-sk",
+          "upk",
+          "sk-appeals",
+          "sk-main",
+          "sk-ranks"
+        ]
+      },
+      {
+        "id": "prosecutor",
+        "name": "Прокуратура",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fz-prosecutor",
+          "upk"
+        ]
+      },
+      {
+        "id": "court",
+        "name": "Суд",
+        "kind": "state",
+        "documents": [
+          "fkz-court",
+          "upk"
+        ]
+      },
+      {
+        "id": "government",
+        "name": "Правительство",
+        "kind": "state",
+        "force": true,
+        "documents": [
+          "fkz-gov",
+          "fkz-ministries",
+          "ethics"
+        ]
+      },
+      {
+        "id": "duma",
+        "name": "Государственная Дума",
+        "kind": "state",
+        "documents": [
+          "fkz-duma",
+          "fz-parties"
+        ]
+      },
+      {
+        "id": "hospital",
+        "name": "Больница",
+        "kind": "state",
+        "documents": [
+          "fz-health",
+          "ch-hospital"
+        ]
+      },
+      {
+        "id": "advocate",
+        "name": "Адвокатура",
+        "kind": "state",
+        "documents": [
+          "fz-advocacy",
+          "upk"
+        ]
+      },
+      {
+        "id": "news",
+        "name": "Вести Москвы",
+        "kind": "state",
+        "documents": [
+          "ch-news",
+          "ch-news-edit"
+        ]
+      },
+      {
+        "id": "opg",
+        "name": "ОПГ",
+        "kind": "crime",
+        "documents": [
+          "rules-crime",
+          "rules-war",
+          "rules-robbery",
+          "rules-business",
+          "rules-bank",
+          "rules-workshops",
+          "rules-supply",
+          "rules-fort",
+          "rules-server"
+        ]
+      },
+      {
+        "id": "none",
+        "name": "Без организации",
+        "documents": []
+      }
+    ]
+  }
+}

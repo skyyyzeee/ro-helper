@@ -3,7 +3,7 @@
 //
 //   npm run charters:check
 import digests from '../src/data/charters.json';
-import { PACKS } from '../src/data';
+import { PACKS } from '../src/data/bundled';
 import { charterCards, type CharterDigest } from '../src/core/charter';
 
 let stale = 0;

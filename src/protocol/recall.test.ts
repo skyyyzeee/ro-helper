@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { findForSituation } from '../core';
-import { PACKS } from '../data';
+import { PACKS } from '../data/bundled';
 import { hintTerms } from './hints';
 import { SOURCES } from './pipeline';
 import { packInScope } from './sources';
