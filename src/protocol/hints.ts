@@ -40,6 +40,8 @@ const HINTS: Hint[] = [
   // Swearing: an insult, and to an officer — of a representative of the power.
   { all: [ru(/обматерил|матом|мат\b|матерн|послал на|оскорбил|оскорбля/)], terms: ['оскорбление', 'матерной брани'] },
   { all: [OFFICIAL, ru(/обматерил|матом|послал на|оскорбил|оскорбля/)], terms: ['оскорбление представителя власти'] },
+  // Family insulted — the project's rules name it «оскорбление родственников» (Тверской, Правила 4.2–4.3).
+  { all: [ru(/родн|родствен|\bмам|\bмат(?:ь|ери)\b|\bпап|\bотц|\bбат[яе]/), ru(/оскорб|обозвал|послал|обматерил|матом|упомина|шут/)], terms: ['оскорбление родственников'] },
 ];
 
 /** The law's words for what the text tells in everyday ones; none when no pattern fits. */
