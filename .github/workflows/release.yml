@@ -76,3 +76,24 @@ jobs:
           releaseDraft: true
           releaseAssetNamePattern: RO-Helper_[version]_[arch][setup][ext]
           updaterJsonPreferNsis: true
+
+      # A draft's latest.json points the updater at api.github.com/…/assets/<id>: the API allows 60 requests an hour
+      # from an address without signing in, and past it the update fails («Не удалось обновить», 2.14.1). The ordinary
+      # download link of the same file has no such limit and works once the release is published — written in here.
+      # The signature is of the installer, not of the link: it stays as it was.
+      - name: latest.json with the ordinary download links
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ github.ref_name }}"
+          version="${{ steps.notes.outputs.version }}"
+          url="https://github.com/${{ github.repository }}/releases/download/${tag}/RO-Helper_${version}_x64-setup.exe"
+          gh release download "$tag" --pattern latest.json --dir updater
+          node -e "
+            const fs = require('fs');
+            const json = JSON.parse(fs.readFileSync('updater/latest.json', 'utf8'));
+            for (const platform of Object.values(json.platforms)) platform.url = process.argv[1];
+            fs.writeFileSync('updater/latest.json', JSON.stringify(json, null, 2));
+          " "$url"
+          gh release upload "$tag" updater/latest.json --clobber
