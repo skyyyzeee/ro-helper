@@ -34,5 +34,14 @@ export const DEFAULT_QUICK_HOTKEY = 'Alt+S';
 export const TIMER_HOTKEY_KEY = 'timer.hotkey';
 export const DEFAULT_TIMER_HOTKEY = 'Ctrl+Shift+T';
 
+/**
+ * The note (issue #40): signs, plates, the plan, written in the overlay and pinned over the game. Kept on this
+ * computer only — not synced, sent nowhere. Its key, off unless the player turns it on, opens the overlay on it.
+ */
+export const NOTE_KEY = 'note.text';
+export const NOTE_MAX = 1000;
+export const NOTE_HOTKEY_KEY = 'note.hotkey';
+export const DEFAULT_NOTE_HOTKEY = 'Ctrl+Shift+N';
+
 /** Streamer mode: the app is left out of screen capture (OBS, Discord, screenshots). Windows' own, set at every start. */
 export const STREAMER_KEY = 'overlay.streamer';

@@ -47,14 +47,14 @@ import { CasesView } from './CasesView';
 import { BackIcon, BookIcon, CalculatorIcon, ChevronDownIcon, CloseIcon, DocumentsIcon, NewsIcon, MemoIcon, MicIcon, OrganizationIcon, PinIcon, ProfileIcon, SearchIcon, ServerIcon, SettingsIcon, SparkIcon } from './icons';
 import { SideRail } from './SideRail';
 import { canRecord, startRecording, type Recording } from './voice';
-import { DEFAULT_OPACITY, DEFAULT_QUICK_HOTKEY, DEFAULT_TIMER_HOTKEY, DEFAULT_VOICE_HOTKEY, OPACITY_KEY, QUICK_HOTKEY_KEY, TIMER_HOTKEY_KEY, VOICE_HOTKEY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
+import { DEFAULT_OPACITY, DEFAULT_QUICK_HOTKEY, DEFAULT_TIMER_HOTKEY, DEFAULT_VOICE_HOTKEY, NOTE_HOTKEY_KEY, NOTE_KEY, OPACITY_KEY, QUICK_HOTKEY_KEY, TIMER_HOTKEY_KEY, VOICE_HOTKEY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
 import { formatHotkey, type Profile } from './profile';
 import { OrganizationChoice } from './OrganizationChoice';
 import { PinSurface } from './PinSurface';
 import { PrivacyView } from './PrivacyView';
 import { ReleaseNotesView } from './ReleaseNotesView';
-import { aiPinCard, articlePinCard, calculatorPinCard, phrasesPinCard, timerPinCard } from './pinCards';
-import { CALCULATOR_ID, MIN_WIDTH, PHRASES_ID, TIMER_ID, hasCard, keepableGroups, pinCard, placeOf, restoreGroups, surfaceNow, unpinCard, updateCard, type Place } from './pinLayout';
+import { aiPinCard, articlePinCard, calculatorPinCard, notePinCard, phrasesPinCard, timerPinCard } from './pinCards';
+import { CALCULATOR_ID, MIN_WIDTH, NOTE_ID, PHRASES_ID, TIMER_ID, hasCard, keepableGroups, pinCard, placeOf, restoreGroups, surfaceNow, unpinCard, updateCard, type Place } from './pinLayout';
 import { applyPreset, cardCount, deletePreset, nextPresetName, presetsKey, readPresets, savePreset, type PinPreset } from './pinPresets';
 import { formatDate } from './lawBits';
 import { ResizeEdges } from './ResizeEdges';
@@ -813,6 +813,40 @@ export function Overlay({
     timerWasShown.current = timerShown;
   }, [timerShown]);
 
+  // The note (issue #40): signs, plates, the plan — written in «Закреплённое», kept on this computer only, pinned
+  // over the game as a card that follows the text. Its key, off unless turned on, opens the overlay on it.
+  const [note, setNote] = useState('');
+  useEffect(() => {
+    void platform.readSetting<string>(NOTE_KEY).then((saved) => setNote(typeof saved === 'string' ? saved : ''));
+  }, [platform]);
+  const notePinned = hasCard(groups, NOTE_ID);
+  const changeNote = (text: string) => {
+    setNote(text);
+    void platform.writeSetting(NOTE_KEY, text);
+    if (notePinned) setGroups((list) => updateCard(list, notePinCard(text)));
+  };
+  const pinNote = (on: boolean) => setGroups((list) => (on ? pinCard(list, notePinCard(note), surface()) : unpinCard(list, NOTE_ID)));
+  const [noteHotkey, setNoteHotkey] = useState('');
+  useEffect(() => {
+    void platform.readSetting<string>(NOTE_HOTKEY_KEY).then((saved) => setNoteHotkey(typeof saved === 'string' ? saved : ''));
+  }, [platform]);
+  const changeNoteHotkey = (accelerator: string) => {
+    setNoteHotkey(accelerator);
+    void platform.writeSetting(NOTE_HOTKEY_KEY, accelerator);
+  };
+  const [noteFocusAt, setNoteFocusAt] = useState<number>();
+  // The section is opened by a function set further down; the key reaches it through this.
+  const openNote = useRef(() => {});
+  useEffect(() => {
+    const others = [profile.hotkey, voiceHotkey, quickHotkey, detains ? timerHotkey : ''];
+    if (capturing || !noteHotkey || others.includes(noteHotkey)) return;
+    trackHotkey(platform, 'note', noteHotkey, platform.registerShortcut('note', noteHotkey, () => openNote.current()), 'Заметка по ней не откроется.');
+    return () => {
+      forgetHotkey('note');
+      void platform.unregisterShortcut('note');
+    };
+  }, [platform, noteHotkey, capturing, profile.hotkey, voiceHotkey, quickHotkey, timerHotkey, detains]);
+
   /** Ctrl+C copies the charges, unless there is text selected to copy. Says whether it did. */
   const copyShortcut = useRef<() => boolean>(() => false);
   copyShortcut.current = () => {
@@ -1037,6 +1071,12 @@ export function Overlay({
     // The profile is the account at the top of the settings; the pin, what is pinned in them.
     setSettingsFocus(section === 'profile' ? { section: 'account', at: Date.now() } : section === 'pinned' ? { section: 'pinned', at: Date.now() } : undefined);
     searchRef.current?.focus();
+  };
+  // The note's key: the overlay shown on «Закреплённое», the cursor in the note.
+  openNote.current = () => {
+    void platform.showOverlay();
+    openSection('pinned');
+    setNoteFocusAt(Date.now());
   };
 
   /** The settings are a page of their own (direction C): their name in the header, no search. */
@@ -1525,6 +1565,7 @@ export function Overlay({
             onQuickHotkey={changeQuickHotkey}
             timerHotkey={detains ? timerHotkey : undefined}
             onTimerHotkey={changeTimerHotkey}
+            note={{ text: note, pinned: notePinned, onText: changeNote, onPin: pinNote, hotkey: noteHotkey, onHotkey: changeNoteHotkey, focusAt: noteFocusAt }}
             onMemos={() => openSection('memos')}
             opacity={opacity}
             onOpacity={changeOpacity}

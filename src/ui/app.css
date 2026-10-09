@@ -5789,3 +5789,21 @@ select option {
 /* The question looks like the other kind of base than the one chosen: said, with the way there. */
 .ai__switch { align-items: center; flex-wrap: wrap; }
 .ai__switch .ai__chip { margin-left: auto; }
+
+/* The note in «Закреплённое» (SettingsView NoteField): the memos' field, a line of air above its button. */
+.note__field {
+  box-sizing: border-box;
+  width: 100%;
+  resize: vertical;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: rgb(255 255 255 / calc(0.08 * var(--tint-scale)));
+  color: var(--text);
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.45;
+  outline: none;
+}
+.note__field:focus { box-shadow: inset 0 0 0 1.5px var(--accent); }
