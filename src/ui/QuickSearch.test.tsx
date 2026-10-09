@@ -1,8 +1,8 @@
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { QuickBridge, QuickRequest, QuickState } from '../platform/types';
-import { preloadPacks, renderApp } from '../test/renderApp';
+import { renderApp } from '../test/renderApp';
 import { QuickSearch } from './QuickSearch';
 
 /** The bar on its own, with the settings given; what it asks of the overlay is written down, what it is told is ours to say. */
@@ -43,7 +43,6 @@ const field = () => screen.getByRole('searchbox');
 const results = () => screen.getByRole('list', { name: 'Результаты быстрого поиска' });
 
 describe('the quick search', () => {
-  beforeAll(preloadPacks);
 
   it('finds articles as the player types, and Enter asks the assistant to put the chosen one into its calculator', async () => {
     const { requests, tell, user } = renderBar();
