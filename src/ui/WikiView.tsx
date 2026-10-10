@@ -6,6 +6,7 @@ import { FRESH, type Gender, type WikiCatalogId, type WikiData, type WikiEntry }
 import { Dropdown } from './Dropdown';
 import { BackIcon, ExternalIcon, SearchIcon } from './icons';
 import { useWiki } from './wiki';
+import { Blocks, ChangeCounts, PostsView, UpdatesView, WikiHome, readingTime, useWikiRecent } from './WikiHome';
 
 /**
  * How many cards at a time: the rest on «Показать ещё». The wiki's pictures are big — a flat's is 2560×1440 and
@@ -71,7 +72,7 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel }: { data: WikiData;
   const shown = views[view];
   const more = neighbours(data, entry);
   return (
-    <article className="wiki__entry" aria-label={entry.title}>
+    <article className={`wiki__entry wiki__entry--${entry.catalog}`} aria-label={entry.title}>
       <button className="back" type="button" onClick={onBack}>
         <BackIcon />
         <span>{backLabel}</span>
@@ -81,6 +82,7 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel }: { data: WikiData;
         <div className="wiki__about">
           <h2 className="wiki__title">{entry.title}</h2>
           {entry.subtitle && <p className="wiki__subtitle">{entry.subtitle}</p>}
+          {entry.catalog === 'posts' && <p className="wiki__subtitle">{readingTime(entry)}</p>}
           {entry.tags.length > 0 && (
             <div className="wiki__tags">
               {entry.tags.map((tag) => (
@@ -132,7 +134,12 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel }: { data: WikiData;
           ))}
         </dl>
       )}
-      {entry.text && <p className="wiki__text">{entry.text}</p>}
+      {entry.counts && <ChangeCounts entry={entry} />}
+      {entry.blocks?.length ? (
+        <Blocks blocks={entry.blocks} picture={(src, className) => <Picture src={src} alt="" className={className} />} />
+      ) : (
+        entry.text && <p className="wiki__text">{entry.text}</p>
+      )}
       {more.length > 0 && (
         <>
           <h3 className="wiki__h3">Ещё в этой категории</h3>
@@ -155,7 +162,8 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel }: { data: WikiData;
  */
 export function WikiView() {
   const { data, failed } = useWiki();
-  const [catalog, setCatalog] = useState<WikiCatalogId>('vehicles');
+  // The wiki opens on its home: the articles, the updates, the catalogs in groups, the pages opened last.
+  const [catalog, setCatalog] = useState<WikiCatalogId | 'home'>('home');
   const [group, setGroup] = useState<string | undefined>();
   const [gender, setGender] = useState<Gender>('male');
   const [tags, setTags] = useState<string[]>([]);
@@ -164,24 +172,36 @@ export function WikiView() {
   const [sort, setSort] = useState<WikiSort>('new');
   const [shown, setShown] = useState(PAGE);
   const [entry, setEntry] = useState<WikiEntry | null>(null);
+  const { recent, remember } = useWikiRecent(data);
+  // A page opened is one the player looked at: it goes to «Вы смотрели».
+  const open = (e: WikiEntry) => {
+    remember(e);
+    setEntry(e);
+  };
+  const picture = (src: string | undefined, className: string) => <Picture src={src} alt="" className={className} />;
 
   // Another catalog, tab or filter: from the top.
   useEffect(() => setShown(PAGE), [catalog, group, gender, tags, words, everywhere, sort]);
 
-  const current = data?.catalogs.find((c) => c.id === catalog);
+  const current = catalog === 'home' ? undefined : data?.catalogs.find((c) => c.id === catalog);
   const searching = everywhere.trim().length > 1;
   const list = useMemo(
-    () => (!data ? [] : searching ? pick(data, { words: everywhere, sort: 'name' }) : pick(data, { catalog, group, gender: current?.genders ? gender : undefined, tags, words, sort })),
+    () =>
+      !data || (catalog === 'home' && !searching)
+        ? []
+        : searching
+          ? pick(data, { words: everywhere, sort: 'name' })
+          : pick(data, { catalog: catalog as WikiCatalogId, group, gender: current?.genders ? gender : undefined, tags, words, sort }),
     [data, searching, everywhere, catalog, group, gender, current, tags, words, sort],
   );
-  const filters = useMemo(() => (data ? tagsOf(data, catalog) : []), [data, catalog]);
+  const filters = useMemo(() => (data && catalog !== 'home' ? tagsOf(data, catalog) : []), [data, catalog]);
   const titleOf = (id: WikiCatalogId) => data?.catalogs.find((c) => c.id === id)?.title ?? '';
 
   if (failed) return <p className="empty">Не удалось открыть вики.</p>;
   if (!data) return <p className="empty">Загружаю вики…</p>;
 
   // The tab lights up at once; the cards of the new one follow as soon as they are ready.
-  const choose = (id: WikiCatalogId) =>
+  const choose = (id: WikiCatalogId | 'home') =>
     startTransition(() => {
       setCatalog(id);
       setGroup(undefined);
@@ -194,6 +214,9 @@ export function WikiView() {
   return (
     <section className="wiki" aria-label="Вики">
       <nav className="wiki__nav" aria-label="Разделы вики">
+        <button type="button" className={catalog === 'home' && !searching ? 'wiki__navitem wiki__navitem--on' : 'wiki__navitem'} aria-current={catalog === 'home' && !searching ? 'page' : undefined} onClick={() => choose('home')}>
+          <span>Главная</span>
+        </button>
         {data.catalogs.map((c) => (
           <button key={c.id} type="button" className={c.id === catalog && !searching ? 'wiki__navitem wiki__navitem--on' : 'wiki__navitem'} aria-current={c.id === catalog && !searching ? 'page' : undefined} onClick={() => choose(c.id)}>
             <span>{c.title}</span>
@@ -212,7 +235,7 @@ export function WikiView() {
         </label>
 
         {entry ? (
-          <EntryPage data={data} entry={entry} onOpen={setEntry} onBack={() => setEntry(null)} backLabel={searching ? 'Результаты' : (current?.title ?? 'Назад')} />
+          <EntryPage data={data} entry={entry} onOpen={open} onBack={() => setEntry(null)} backLabel={searching ? 'Результаты' : (current?.title ?? 'Главная')} />
         ) : searching ? (
           <>
             <h2 className="wiki__heading">
@@ -220,10 +243,26 @@ export function WikiView() {
             </h2>
             <div className="wiki__grid">
               {list.slice(0, shown).map((e) => (
-                <Card key={e.id} entry={e} onOpen={() => setEntry(e)} showCatalog={titleOf(e.catalog)} />
+                <Card key={e.id} entry={e} onOpen={() => open(e)} showCatalog={titleOf(e.catalog)} />
               ))}
             </div>
             {!list.length && <p className="empty">Ничего не нашлось.</p>}
+          </>
+        ) : catalog === 'home' ? (
+          <WikiHome data={data} recent={recent} onCatalog={choose} onOpen={open} picture={picture} />
+        ) : catalog === 'posts' ? (
+          <>
+            <h2 className="wiki__heading">Статьи</h2>
+            <PostsView data={data} onOpen={open} picture={picture} />
+          </>
+        ) : catalog === 'updates' && !searching ? (
+          <>
+            <div className="wiki__head">
+              <h2 className="wiki__heading">Обновления</h2>
+              <span className="sp" />
+              <input className="presets__input wiki__find" type="search" aria-label="Поиск в разделе" placeholder="Поиск в разделе" value={words} onChange={(e) => setWords(e.target.value)} />
+            </div>
+            <UpdatesView entries={list.slice(0, shown)} onOpen={open} />
           </>
         ) : (
           <>
@@ -273,14 +312,14 @@ export function WikiView() {
 
             <div className="wiki__grid">
               {list.slice(0, shown).map((e) => (
-                <Card key={e.id} entry={e} onOpen={() => setEntry(e)} />
+                <Card key={e.id} entry={e} onOpen={() => open(e)} />
               ))}
             </div>
             {!list.length && <p className="empty">Ничего не нашлось — уберите фильтр или измените запрос.</p>}
           </>
         )}
 
-        {!entry && list.length > shown && (
+        {!entry && catalog !== 'posts' && list.length > shown && (
           <button className="settings__button wiki__more" type="button" onClick={() => setShown((n) => n + PAGE)}>
             Показать ещё ({(list.length - shown).toLocaleString('ru-RU')})
           </button>

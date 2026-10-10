@@ -16,9 +16,25 @@ export type WikiCatalogId =
   | 'realties'
   | 'recipes'
   | 'crafts'
-  | 'updates';
+  | 'updates'
+  | 'posts';
 
 export type Gender = 'male' | 'female';
+
+/**
+ * A piece of a written page — an article or an update — as the app shows it: a heading, a paragraph, an item of a
+ * list (its depth), a picture. The text is the wiki's; nothing of its layout beyond these.
+ */
+export type WikiBlock =
+  | { type: 'heading'; text: string }
+  | { type: 'paragraph'; text: string }
+  | { type: 'item'; text: string; depth: number; kind?: WikiChange }
+  | { type: 'quote'; text: string }
+  | { type: 'table'; rows: string[][]; header: boolean }
+  | { type: 'image'; src: string };
+
+/** What a line of an update is: something added, changed or fixed — the wiki marks each. */
+export type WikiChange = 'added' | 'changed' | 'fixed';
 
 export interface WikiEntry {
   /** `vehicles:1152` — the catalog and the wiki's own id. */
@@ -45,8 +61,12 @@ export interface WikiEntry {
   tags: string[];
   /** Where it comes from, in words: «Кейс «Автолюбитель»», «Магазин одежды #1». */
   sources: string[];
-  /** A description, or the text of an update. */
+  /** A description, or the text of an update or an article: what an older app shows of it. */
   text?: string;
+  /** An article or an update as written: headings, paragraphs, lists, pictures. Older apps read `text` instead. */
+  blocks?: WikiBlock[];
+  /** An update's lines by what they are: added, changed, fixed. */
+  counts?: Partial<Record<WikiChange, number>>;
   /** Its page on the wiki: the source said on screen. */
   url: string;
   createdAt?: string;
