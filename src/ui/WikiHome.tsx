@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { usePlatform } from '../platform/PlatformContext';
+import { ExternalIcon } from './icons';
 import { FRESH, type WikiBlock, type WikiCatalogId, type WikiChange, type WikiData, type WikiEntry } from '../wiki/model';
 
 /** The wiki's pages the player opened last, newest first: on this computer only, never sent or synced. */
@@ -77,13 +78,17 @@ export function ChangeCounts({ entry }: { entry: WikiEntry }) {
 }
 
 /** The home of the wiki: the articles and the updates, the catalogs in four groups, the pages opened last. */
-export function WikiHome({ data, recent, onCatalog, onOpen, picture }: { data: WikiData; recent: WikiEntry[]; onCatalog: (id: WikiCatalogId) => void; onOpen: (entry: WikiEntry) => void; picture: (src: string | undefined, className: string) => ReactNode }) {
+export function WikiHome({ data, recent, onCatalog, onMap, onOpen, picture }: { data: WikiData; recent: WikiEntry[]; onCatalog: (id: WikiCatalogId) => void; onMap: () => void; onOpen: (entry: WikiEntry) => void; picture: (src: string | undefined, className: string) => ReactNode }) {
   const titleOf = (id: WikiCatalogId) => data.catalogs.find((c) => c.id === id);
   const latest = data.entries.filter((e) => e.catalog === 'updates').sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))[0];
   const posts = titleOf('posts');
   return (
     <div className="wiki__home">
       <div className="wiki__links" role="group" aria-label="Статьи и обновления">
+        <button type="button" className="wiki__link" onClick={onMap}>
+          <b>Карта</b>
+          <span>города, бизнесы, дома, работы — карта вики</span>
+        </button>
         {posts && posts.count > 0 && (
           <button type="button" className="wiki__link" onClick={() => onCatalog('posts')}>
             <b>Статьи</b>
@@ -139,6 +144,29 @@ export function WikiHome({ data, recent, onCatalog, onOpen, picture }: { data: W
           </section>
         </>
       )}
+    </div>
+  );
+}
+
+/** The wiki's map page. */
+export const WIKI_MAP_URL = 'https://wiki.russia.online/ru/map';
+
+/**
+ * The wiki's map, as the wiki itself shows it: its own page inside the assistant, as a browser would open it. Its
+ * points the wiki keeps encrypted and draws by its own code — the app takes none of them, it only frames the page.
+ * Loaded only when opened; the wiki then sees the player's address, as any site does.
+ */
+export function MapView() {
+  const platform = usePlatform();
+  return (
+    <div className="wiki__map">
+      <iframe className="wiki__map-frame" src={WIKI_MAP_URL} title="Карта вики Russia Online" referrerPolicy="no-referrer" />
+      <p className="wiki__source">
+        Карта — страница вики Russia Online, все права принадлежат Russia Online.{' '}
+        <button className="link" type="button" onClick={() => void platform.openExternal(WIKI_MAP_URL)}>
+          Открыть в браузере <ExternalIcon />
+        </button>
+      </p>
     </div>
   );
 }

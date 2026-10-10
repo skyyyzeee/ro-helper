@@ -52,6 +52,14 @@ describe('the wiki’s home, articles and updates', () => {
     expect(within(within(wiki).getByRole('region', { name: 'Вы смотрели' })).getByRole('button', { name: 'МВД' })).toBeInTheDocument();
   });
 
+  it('shows the wiki’s own map page inside the assistant, and opens it in the browser', async () => {
+    const { platform, user, wiki } = await openWiki();
+    await user.click(within(within(wiki).getByRole('group', { name: 'Статьи и обновления' })).getByRole('button', { name: /^Карта/ }));
+    expect(within(wiki).getByTitle('Карта вики Russia Online')).toHaveAttribute('src', 'https://wiki.russia.online/ru/map');
+    await user.click(within(wiki).getByRole('button', { name: /Открыть в браузере/ }));
+    expect(platform.calls.at(-1)).toEqual({ method: 'openExternal', args: ['https://wiki.russia.online/ru/map'] });
+  });
+
   it('lists the updates with what each added, changed and fixed', async () => {
     const { user, wiki } = await openWiki();
     await user.click(within(within(wiki).getByRole('group', { name: 'Статьи и обновления' })).getByRole('button', { name: /^Обновления/ }));

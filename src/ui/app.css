@@ -5893,3 +5893,7 @@ select option {
 .wiki__doc-img { display: block; max-width: 100%; max-height: 360px; border-radius: 10px; }
 .wiki__thumb--wide .wiki__img { object-fit: cover; }
 .wiki__entry--posts .wiki__big { aspect-ratio: 16 / 9; object-fit: cover; }
+
+/* The wiki's map page inside the assistant (MapView). */
+.wiki__map { display: flex; flex-direction: column; gap: 8px; }
+.wiki__map-frame { width: 100%; height: min(70vh, 640px); border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); }

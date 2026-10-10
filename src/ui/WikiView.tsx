@@ -6,7 +6,7 @@ import { FRESH, type Gender, type WikiCatalogId, type WikiData, type WikiEntry }
 import { Dropdown } from './Dropdown';
 import { BackIcon, ExternalIcon, SearchIcon } from './icons';
 import { useWiki } from './wiki';
-import { Blocks, ChangeCounts, PostsView, UpdatesView, WikiHome, readingTime, useWikiRecent } from './WikiHome';
+import { Blocks, ChangeCounts, MapView, PostsView, UpdatesView, WikiHome, readingTime, useWikiRecent } from './WikiHome';
 
 /**
  * How many cards at a time: the rest on «Показать ещё». The wiki's pictures are big — a flat's is 2560×1440 and
@@ -164,6 +164,8 @@ export function WikiView() {
   const { data, failed } = useWiki();
   // The wiki opens on its home: the articles, the updates, the catalogs in groups, the pages opened last.
   const [catalog, setCatalog] = useState<WikiCatalogId | 'home'>('home');
+  // The wiki's own map page, opened from the home.
+  const [mapOpen, setMapOpen] = useState(false);
   const [group, setGroup] = useState<string | undefined>();
   const [gender, setGender] = useState<Gender>('male');
   const [tags, setTags] = useState<string[]>([]);
@@ -203,6 +205,7 @@ export function WikiView() {
   // The tab lights up at once; the cards of the new one follow as soon as they are ready.
   const choose = (id: WikiCatalogId | 'home') =>
     startTransition(() => {
+      setMapOpen(false);
       setCatalog(id);
       setGroup(undefined);
       setTags([]);
@@ -248,8 +251,16 @@ export function WikiView() {
             </div>
             {!list.length && <p className="empty">Ничего не нашлось.</p>}
           </>
+        ) : mapOpen ? (
+          <>
+            <button className="back" type="button" onClick={() => setMapOpen(false)}>
+              <BackIcon />
+              <span>Главная</span>
+            </button>
+            <MapView />
+          </>
         ) : catalog === 'home' ? (
-          <WikiHome data={data} recent={recent} onCatalog={choose} onOpen={open} picture={picture} />
+          <WikiHome data={data} recent={recent} onCatalog={choose} onMap={() => setMapOpen(true)} onOpen={open} picture={picture} />
         ) : catalog === 'posts' ? (
           <>
             <h2 className="wiki__heading">Статьи</h2>
@@ -324,7 +335,7 @@ export function WikiView() {
             Показать ещё ({(list.length - shown).toLocaleString('ru-RU')})
           </button>
         )}
-        {!entry && <Source url={data.source} />}
+        {!entry && !mapOpen && <Source url={data.source} />}
       </div>
     </section>
   );
