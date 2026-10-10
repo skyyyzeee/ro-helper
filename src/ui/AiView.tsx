@@ -8,7 +8,7 @@ import { AnswerCheckView } from './AnswerCheckView';
 import { CaseChange } from './CaseChange';
 import type { Vote } from './feedback';
 import { DebugView } from './DebugView';
-import { MarkBar } from './MarkBar';
+import { MARK_HINT_AFTER, MarkBar, useMarkHint } from './MarkBar';
 import { BackIcon, HistoryIcon, PlusIcon, SparkIcon, WarnIcon } from './icons';
 
 /** «УК ст. 65» — how an answer names an article, without its title. */
@@ -187,6 +187,10 @@ export function AiView({
     else void topRef.current?.scrollIntoView?.({ block: 'start' });
   }, [chat.messages.length, last?.pending]);
   const lastQuestion = [...chat.messages].reverse().find((m) => m.role === 'user')?.text;
+  // Few players mark the answers: once a conversation has had a few, the latest says, once ever, that a mark helps.
+  const markHint = useMarkHint();
+  const answers = chat.messages.filter((m) => m.analysis).length;
+  const lastAnswer = chat.messages.reduce((at, m, i) => (m.analysis ? i : at), -1);
   // «Было → стало»: each answer of the case against the one before it, by the app.
   const view = (analysis: Analysis) => ({ case: analysis.case, ...(analysis.calculation ? { punishment: calculationLine(analysis.calculation.result) } : {}) });
   const changeAt = (index: number) => {
@@ -301,7 +305,11 @@ export function AiView({
                     onSwitch={chat.messages[index - 1]?.role === 'user' ? (scope) => void chat.send(chat.messages[index - 1].text, undefined, { choice: scope }) : undefined}
                   />
                   {chat.messages[index - 1]?.role === 'user' && (
-                    <MarkBar send={(vote, correction) => onMark(chat.messages[index - 1].text, message.analysis!, vote, correction, message.classification?.type)} />
+                    <MarkBar
+                      send={(vote, correction) => onMark(chat.messages[index - 1].text, message.analysis!, vote, correction, message.classification?.type)}
+                      hint={!markHint.over && index === lastAnswer && answers >= MARK_HINT_AFTER}
+                      onHintEnd={markHint.end}
+                    />
                   )}
                   {can?.has('ai.debug') && <DebugView analysis={message.analysis} classification={message.classification} />}
                 </>

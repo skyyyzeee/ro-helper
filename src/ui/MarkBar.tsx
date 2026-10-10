@@ -1,5 +1,27 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { usePlatform } from '../platform/PlatformContext';
 import type { Vote } from './feedback';
+import { CloseIcon } from './icons';
+
+/** Set once the player marked an answer or closed the hint: it is never shown again. */
+export const MARK_HINT_KEY = 'ai.mark-hint';
+/** The hint comes under the answer of this number in a conversation, not before: by then the AI has been of use. */
+export const MARK_HINT_AFTER = 3;
+
+/** Whether the hint to mark answers is over for this player, and the way to end it. */
+export function useMarkHint(): { over: boolean; end: () => void } {
+  const platform = usePlatform();
+  // Over until read: a hint that blinks on and off at start is worse than one a moment late.
+  const [over, setOver] = useState(true);
+  useEffect(() => {
+    void platform.readSetting<boolean>(MARK_HINT_KEY).then((done) => setOver(done === true));
+  }, [platform]);
+  const end = useCallback(() => {
+    setOver(true);
+    void platform.writeSetting(MARK_HINT_KEY, true);
+  }, [platform]);
+  return { over, end };
+}
 
 type State = { kind: 'idle' } | { kind: 'fixing'; text: string } | { kind: 'sending' } | { kind: 'sent'; vote: Vote } | { kind: 'failed'; why: string };
 
@@ -7,10 +29,12 @@ type State = { kind: 'idle' } | { kind: 'fixing'; text: string } | { kind: 'send
  * Under an answer: was it right? 👍, 👎, or «Исправить» — what is right instead. One mark an answer; it is sent on
  * the press, to improve the assistant, and the player is told what goes (PRIVACY.md).
  */
-export function MarkBar({ send }: { send: (vote: Vote, correction?: string) => Promise<void> }) {
+export function MarkBar({ send, hint, onHintEnd }: { send: (vote: Vote, correction?: string) => Promise<void>; hint?: boolean; onHintEnd?: () => void }) {
   const [state, setState] = useState<State>({ kind: 'idle' });
   const mark = async (vote: Vote, correction?: string) => {
     setState({ kind: 'sending' });
+    // A mark given, the hint has done its work.
+    onHintEnd?.();
     try {
       await send(vote, correction);
       setState({ kind: 'sent', vote });
@@ -53,6 +77,15 @@ export function MarkBar({ send }: { send: (vote: Vote, correction?: string) => P
   }
   const busy = state.kind === 'sending';
   return (
+    <>
+    {hint && state.kind === 'idle' && (
+      <p className="mark__hint" role="note">
+        <span>Ответ помог? Отметьте 👍 или 👎 — так ИИ станет точнее. Уходит только вопрос и ответ, без ника и аккаунта.</span>
+        <button className="x" type="button" aria-label="Скрыть подсказку" title="Скрыть" onClick={onHintEnd}>
+          <CloseIcon size={14} />
+        </button>
+      </p>
+    )}
     <div className="mark" aria-label="Оценить ответ">
       <span className="mark__ask">Ответ верный?</span>
       <button className="mark__btn" type="button" aria-label="Ответ верный" title="Верно" disabled={busy} onClick={() => void mark('up')}>
@@ -66,5 +99,6 @@ export function MarkBar({ send }: { send: (vote: Vote, correction?: string) => P
       </button>
       {state.kind === 'failed' && <span className="mark__fail" role="alert">{state.why}</span>}
     </div>
+    </>
   );
 }
