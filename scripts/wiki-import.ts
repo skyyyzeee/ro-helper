@@ -1,5 +1,5 @@
 // Downloads the catalogs of the Russia Online wiki (wiki.russia.online) — vehicles, clothes, haircuts, tattoos, skins,
-// animations, items, businesses, realties, wheels, modkits, crafts, recipes, updates — page by page, one request at a
+// animations, items, businesses, realties, wheels, modkits, crafts, recipes, updates, and its articles — page by page, one request at a
 // time with a pause, and keeps each as data/wiki/<catalog>.json: the records as the wiki gives them, with where and
 // when they were taken. The images stay on the wiki's CDN; only their addresses are kept.
 //
@@ -23,14 +23,21 @@ const CRAFT_FRACTIONS = ['army', 'ems', 'fib', 'gov', 'lscsd', 'lspd', 'opg1', '
 
 const pause = () => new Promise((resolve) => setTimeout(resolve, PAUSE_MS));
 
-/** The data of one page: the loader's own, the layout's and the root's left out. */
-async function load(path: string, query: Record<string, string | number> = {}): Promise<Json> {
+/** Every loader's data of one page, by the route it is of. */
+async function loadRoutes(path: string, query: Record<string, string | number> = {}): Promise<Json> {
   const search = new URLSearchParams(Object.entries(query).map(([k, v]) => [k, String(v)])).toString();
   const url = `${WIKI}/${path}.data${search ? `?${search}` : ''}`;
   const response = await fetch(url, { headers: { 'User-Agent': 'KremlinAssistant-wiki-import (+https://github.com/skyyyzeee/ro-helper)' } });
   if (!response.ok) throw new Error(`${url}: ${response.status}`);
   const decoded = decodeTurboStream(await response.text()) as Json;
   if (Array.isArray(decoded)) throw new Error(`${url}: redirected — ${JSON.stringify(decoded).slice(0, 120)}`);
+  return decoded;
+}
+
+/** The data of one page: the loader's own, the layout's and the root's left out. */
+async function load(path: string, query: Record<string, string | number> = {}): Promise<Json> {
+  const url = `${WIKI}/${path}.data`;
+  const decoded = await loadRoutes(path, query);
   const key = Object.keys(decoded).find((k) => k !== 'root' && k !== 'routes/locale-layout');
   const data = key ? (decoded[key] as Json | undefined)?.data : undefined;
   if (!data || typeof data !== 'object') throw new Error(`${url}: no data`);
@@ -66,7 +73,29 @@ async function messages(): Promise<unknown[]> {
   return [Object.fromEntries(keep.filter((k) => all[k]).map((k) => [k, all[k]]))];
 }
 
+/**
+ * The wiki's articles («Серверы», «Банк», «МВД»…): the list by section comes with any article's page — the one on
+ * the servers is read for it — and each article's text from its own page, one at a time.
+ */
+async function posts(): Promise<unknown[]> {
+  const layout = (await loadRoutes('posts/servery'))['routes/layouts/posts'] as Json | undefined;
+  const sections = ((layout?.data as Json)?.categories as Json[]) ?? [];
+  if (!sections.length) throw new Error('no sections of articles');
+  const all: unknown[] = [];
+  for (const section of sections) {
+    for (const post of (section.posts as Json[]) ?? []) {
+      await pause();
+      const page = (await loadRoutes(`posts/${String(post.slug)}`))['routes/posts.$slug'] as Json | undefined;
+      const full = ((page?.data as Json)?.data as Json) ?? {};
+      const { posts: _, ...about } = section;
+      all.push({ ...post, content: full.content, plainText: full.plainText, section: about });
+    }
+  }
+  return all;
+}
+
 const CATALOGS: Record<string, () => Promise<unknown[]>> = {
+  posts,
   messages,
   vehicles: () => paged('vehicles', results),
   'clothes-male': () => paged('clothes/male', results),

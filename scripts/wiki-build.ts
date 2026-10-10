@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Gender, WikiCatalog, WikiCatalogId, WikiData, WikiEntry, WikiManifest } from '../src/wiki/model';
 import { FRESH, STATE_ALLOWED, WIKI_FORMAT } from '../src/wiki/model';
+import { changeCounts, docBlocks } from '../src/wiki/doc';
 
 const root = join(import.meta.dirname, '..');
 const WIKI = 'https://wiki.russia.online/ru';
@@ -300,6 +301,8 @@ for (const r of raw('crafts').items) {
 
 // ——— Updates ———
 for (const r of raw('updates').items) {
+  // Their lines as written, each marked added / changed / fixed, and how many of each.
+  const blocks = docBlocks(r.content);
   add({
     id: `updates:${r.id}`,
     catalog: 'updates',
@@ -309,8 +312,32 @@ for (const r of raw('updates').items) {
     tags: [],
     sources: [],
     text: r.plainText,
+    ...(blocks.length ? { blocks, counts: changeCounts(blocks) } : {}),
     url: `${WIKI}/changelogs/${r.slug}`,
     createdAt: r.availableAt ?? r.createdAt,
+  });
+}
+
+// ——— Articles: «Серверы», «Банк», «МВД»… by the wiki's sections, in its order ———
+const posts = raw('posts').items as Raw[];
+const sectionNames = new Map<string, string>();
+// In the wiki's own order: the import keeps its sections and their articles as the wiki lists them.
+for (const r of posts) {
+  if (r.section?.slug) sectionNames.set(r.section.slug, r.section.name);
+  add({
+    id: `posts:${r.id}`,
+    catalog: 'posts',
+    title: r.title,
+    subtitle: r.section?.name,
+    group: r.section?.slug,
+    image: r.previewUrl,
+    facts: [],
+    tags: [],
+    sources: [],
+    text: r.plainText,
+    blocks: docBlocks(r.content),
+    url: `${WIKI}/posts/${r.slug}`,
+    createdAt: r.updatedAt ?? r.createdAt,
   });
 }
 
@@ -330,6 +357,7 @@ const TITLES: [WikiCatalogId, string, (group: string) => string][] = [
   ['recipes', 'Рецепты', (g) => `Уровень ${g}`],
   ['crafts', 'Крафт фракций', (g) => g.toUpperCase()],
   ['updates', 'Обновления', (g) => g],
+  ['posts', 'Статьи', (g) => sectionNames.get(g) ?? g],
 ];
 const catalogs: WikiCatalog[] = TITLES.map(([id, title, label]) => {
   const own = entries.filter((e) => e.catalog === id);
@@ -340,7 +368,8 @@ const catalogs: WikiCatalog[] = TITLES.map(([id, title, label]) => {
     title,
     count: own.length,
     genders: own.some((e) => e.gender),
-    groups: [...counts].sort((a, b) => b[1] - a[1]).map(([group, count]) => ({ id: group, label: label(group), count })),
+    // The articles' sections in the wiki's own order (they were added in it); the other tabs, the fullest first.
+    groups: (id === 'posts' ? [...counts] : [...counts].sort((a, b) => b[1] - a[1])).map(([group, count]) => ({ id: group, label: label(group), count })),
   };
 });
 
