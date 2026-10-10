@@ -5897,3 +5897,7 @@ select option {
 /* The wiki's map page inside the assistant (MapView). */
 .wiki__map { display: flex; flex-direction: column; gap: 8px; }
 .wiki__map-frame { width: 100%; height: min(70vh, 640px); border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
+
+/* The one hint to mark answers (MarkBar): once, under the third answer of a conversation. */
+.mark__hint { display: flex; align-items: center; gap: 8px; margin: 6px 0 0; padding: 8px 10px; border-radius: 10px; background: oklch(0.78 0.1 var(--accent-hue) / 0.12); color: var(--text); font-size: 13px; line-height: 1.4; }
+.mark__hint span { flex: 1; }
