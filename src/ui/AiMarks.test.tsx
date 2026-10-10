@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fakeGeminiFetch } from '../test/fakeAi';
 import { renderApp } from '../test/renderApp';
 import { AI_KEY_SETTING, AI_PROVIDER_SETTING } from './ai';
+import { MARK_HINT_KEY } from './MarkBar';
 
 const GEMINI = { [AI_PROVIDER_SETTING]: 'gemini', [AI_KEY_SETTING]: 'test-key' };
 
@@ -57,5 +58,40 @@ describe('marking an answer', () => {
     expect(await within(bar()).findByRole('alert')).toHaveTextContent('На сегодня отзывов достаточно');
     expect(within(bar()).getByRole('button', { name: 'Ответ верный' })).toBeEnabled();
     expect(marks).toHaveLength(1);
+  });
+});
+
+describe('the one hint to mark answers', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const HINT = /Ответ помог\? Отметьте/;
+
+  /** Three answers in one conversation: the first question, then two more. */
+  async function threeAnswers(settings: Record<string, unknown> = {}) {
+    const { user, platform } = await answered();
+    if (Object.keys(settings).length) for (const [k, v] of Object.entries(settings)) platform.settings.set(k, v);
+    expect(screen.queryByText(HINT)).not.toBeInTheDocument();
+    for (const question of ['а если он сотрудник?', 'а если он украл ещё и кошелёк?']) {
+      await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), `${question}{Enter}`);
+      await vi.waitFor(() => expect(screen.getAllByLabelText('Оценить ответ').length).toBeGreaterThanOrEqual(question.includes('кошел') ? 3 : 2), { timeout: 5000 });
+    }
+    return { user, platform };
+  }
+
+  it('comes once, under the third answer of a conversation, and is gone for good when closed', async () => {
+    const { user, platform } = await threeAnswers();
+    const hints = await screen.findAllByText(HINT);
+    expect(hints).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: 'Скрыть подсказку' }));
+    expect(screen.queryByText(HINT)).not.toBeInTheDocument();
+    expect(platform.settings.get(MARK_HINT_KEY)).toBe(true);
+  });
+
+  it('is over once the player has marked an answer', async () => {
+    const { user, platform } = await threeAnswers();
+    await screen.findByText(HINT);
+    const bars = screen.getAllByLabelText('Оценить ответ');
+    await user.click(within(bars[0]).getByRole('button', { name: 'Ответ верный' }));
+    await vi.waitFor(() => expect(screen.queryByText(HINT)).not.toBeInTheDocument());
+    expect(platform.settings.get(MARK_HINT_KEY)).toBe(true);
   });
 });
