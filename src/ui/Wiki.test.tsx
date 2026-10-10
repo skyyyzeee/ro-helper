@@ -24,6 +24,52 @@ describe('the wiki of Russia Online', () => {
   });
 });
 
+describe('the wiki’s home, articles and updates', () => {
+  const openWiki = async () => {
+    const app = await renderApp();
+    await app.user.click(screen.getByRole('button', { name: 'Вики Russia Online' }));
+    return { ...app, wiki: await screen.findByRole('region', { name: 'Вики' }, { timeout: 5000 }) };
+  };
+
+  it('opens on its home: the articles, the latest update, the catalogs in four groups that lead to them', async () => {
+    const { user, wiki } = await openWiki();
+    for (const group of ['Транспорт', 'Персонаж', 'Имущество', 'Предметы и крафт']) expect(within(wiki).getByRole('region', { name: group })).toBeInTheDocument();
+    expect(within(within(wiki).getByRole('group', { name: 'Статьи и обновления' })).getByRole('button', { name: /^Статьи/ })).toHaveTextContent(/\d+ стат/);
+    expect(within(within(wiki).getByRole('group', { name: 'Статьи и обновления' })).getByRole('button', { name: /^Обновления/ })).toHaveTextContent(/Сборка/);
+    await user.click(within(within(wiki).getByRole('region', { name: 'Персонаж' })).getByRole('button', { name: 'Причёски' }));
+    expect(within(wiki).getByRole('heading', { name: /^Причёски/ })).toBeInTheDocument();
+  });
+
+  it('shows the articles by the wiki’s sections, and an article as written, with the pages seen on the home after', async () => {
+    const { user, wiki } = await openWiki();
+    await user.click(within(within(wiki).getByRole('group', { name: 'Статьи и обновления' })).getByRole('button', { name: /^Статьи/ }));
+    for (const section of ['Подготовка', 'Начало игры', 'Работы', 'Фракции']) expect(within(wiki).getByRole('region', { name: section })).toBeInTheDocument();
+    await user.click(within(within(wiki).getByRole('region', { name: 'Фракции' })).getByRole('button', { name: 'МВД' }));
+    const page = within(wiki).getByRole('article', { name: 'МВД' });
+    expect(page).toHaveTextContent('Министерство внутренних дел');
+    expect(page).toHaveTextContent(/мин чтения/);
+    await user.click(within(within(wiki).getByRole('navigation', { name: 'Разделы вики' })).getByRole('button', { name: 'Главная' }));
+    expect(within(within(wiki).getByRole('region', { name: 'Вы смотрели' })).getByRole('button', { name: 'МВД' })).toBeInTheDocument();
+  });
+
+  it('shows the wiki’s own map page inside the assistant, and opens it in the browser', async () => {
+    const { platform, user, wiki } = await openWiki();
+    // A section of its own in the side list, not on the home: the home is the game's information.
+    expect(within(within(wiki).getByRole('group', { name: 'Статьи и обновления' })).queryByRole('button', { name: /^Карта/ })).not.toBeInTheDocument();
+    await user.click(within(within(wiki).getByRole('navigation', { name: 'Разделы вики' })).getByRole('button', { name: 'Карта' }));
+    expect(within(wiki).getByTitle('Карта вики Russia Online')).toHaveAttribute('src', 'https://wiki.russia.online/ru/map');
+    await user.click(within(wiki).getByRole('button', { name: /Открыть в браузере/ }));
+    expect(platform.calls.at(-1)).toEqual({ method: 'openExternal', args: ['https://wiki.russia.online/ru/map'] });
+  });
+
+  it('lists the updates with what each added, changed and fixed', async () => {
+    const { user, wiki } = await openWiki();
+    await user.click(within(within(wiki).getByRole('group', { name: 'Статьи и обновления' })).getByRole('button', { name: /^Обновления/ }));
+    const list = within(wiki).getByRole('list', { name: 'Обновления' });
+    expect(within(list).getByRole('button', { name: /Сборка 4\.3760\.2057/ })).toHaveTextContent(/добавлено 3.*изменено 3.*исправлено 15/);
+  });
+});
+
 describe('a newer wiki without a new version of the app', () => {
   const newer = async () => {
     const bundled = (await import('../data/wiki.json')).default as unknown as WikiData;
@@ -37,6 +83,7 @@ describe('a newer wiki without a new version of the app', () => {
     const { platform, user } = await renderApp({ platform: { remote: { [WIKI_MANIFEST_URL]: manifest, [WIKI_URL]: text } } });
     await user.click(screen.getByRole('button', { name: 'Вики Russia Online' }));
     const wiki = await screen.findByRole('region', { name: 'Вики' }, { timeout: 5000 });
+    await user.click(within(within(wiki).getByRole('navigation', { name: 'Разделы вики' })).getByRole('button', { name: /^Транспорт/ }));
     expect(await within(wiki).findByRole('button', { name: 'Свежая машина' }, { timeout: 5000 })).toBeInTheDocument();
     expect(platform.state.laws.get('wiki')).toBe(text);
   });
