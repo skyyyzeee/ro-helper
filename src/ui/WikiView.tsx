@@ -164,7 +164,7 @@ export function WikiView() {
   const { data, failed } = useWiki();
   // The wiki opens on its home: the articles, the updates, the catalogs in groups, the pages opened last.
   const [catalog, setCatalog] = useState<WikiCatalogId | 'home'>('home');
-  // The wiki's own map page, opened from the home.
+  // The wiki's own map page: a section of its own, beside the home — the home is the game's information.
   const [mapOpen, setMapOpen] = useState(false);
   const [group, setGroup] = useState<string | undefined>();
   const [gender, setGender] = useState<Gender>('male');
@@ -217,8 +217,15 @@ export function WikiView() {
   return (
     <section className="wiki" aria-label="Вики">
       <nav className="wiki__nav" aria-label="Разделы вики">
-        <button type="button" className={catalog === 'home' && !searching ? 'wiki__navitem wiki__navitem--on' : 'wiki__navitem'} aria-current={catalog === 'home' && !searching ? 'page' : undefined} onClick={() => choose('home')}>
+        <button type="button" className={catalog === 'home' && !searching && !mapOpen ? 'wiki__navitem wiki__navitem--on' : 'wiki__navitem'} aria-current={catalog === 'home' && !searching && !mapOpen ? 'page' : undefined} onClick={() => choose('home')}>
           <span>Главная</span>
+        </button>
+        <button type="button" className={mapOpen && !searching ? 'wiki__navitem wiki__navitem--on' : 'wiki__navitem'} aria-current={mapOpen && !searching ? 'page' : undefined} onClick={() => {
+          setEntry(null);
+          setEverywhere('');
+          setMapOpen(true);
+        }}>
+          <span>Карта</span>
         </button>
         {data.catalogs.map((c) => (
           <button key={c.id} type="button" className={c.id === catalog && !searching ? 'wiki__navitem wiki__navitem--on' : 'wiki__navitem'} aria-current={c.id === catalog && !searching ? 'page' : undefined} onClick={() => choose(c.id)}>
@@ -253,14 +260,11 @@ export function WikiView() {
           </>
         ) : mapOpen ? (
           <>
-            <button className="back" type="button" onClick={() => setMapOpen(false)}>
-              <BackIcon />
-              <span>Главная</span>
-            </button>
+            <h2 className="wiki__heading">Карта</h2>
             <MapView />
           </>
         ) : catalog === 'home' ? (
-          <WikiHome data={data} recent={recent} onCatalog={choose} onMap={() => setMapOpen(true)} onOpen={open} picture={picture} />
+          <WikiHome data={data} recent={recent} onCatalog={choose} onOpen={open} picture={picture} />
         ) : catalog === 'posts' ? (
           <>
             <h2 className="wiki__heading">Статьи</h2>

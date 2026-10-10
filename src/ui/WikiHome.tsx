@@ -78,17 +78,13 @@ export function ChangeCounts({ entry }: { entry: WikiEntry }) {
 }
 
 /** The home of the wiki: the articles and the updates, the catalogs in four groups, the pages opened last. */
-export function WikiHome({ data, recent, onCatalog, onMap, onOpen, picture }: { data: WikiData; recent: WikiEntry[]; onCatalog: (id: WikiCatalogId) => void; onMap: () => void; onOpen: (entry: WikiEntry) => void; picture: (src: string | undefined, className: string) => ReactNode }) {
+export function WikiHome({ data, recent, onCatalog, onOpen, picture }: { data: WikiData; recent: WikiEntry[]; onCatalog: (id: WikiCatalogId) => void; onOpen: (entry: WikiEntry) => void; picture: (src: string | undefined, className: string) => ReactNode }) {
   const titleOf = (id: WikiCatalogId) => data.catalogs.find((c) => c.id === id);
   const latest = data.entries.filter((e) => e.catalog === 'updates').sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))[0];
   const posts = titleOf('posts');
   return (
     <div className="wiki__home">
       <div className="wiki__links" role="group" aria-label="Статьи и обновления">
-        <button type="button" className="wiki__link" onClick={onMap}>
-          <b>Карта</b>
-          <span>города, бизнесы, дома, работы — карта вики</span>
-        </button>
         {posts && posts.count > 0 && (
           <button type="button" className="wiki__link" onClick={() => onCatalog('posts')}>
             <b>Статьи</b>
