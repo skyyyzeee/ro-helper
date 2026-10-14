@@ -9,10 +9,13 @@ import { DocBadge, Stars } from './lawBits';
 import { PROFILE_KEY, type Profile } from './profile';
 import { NoResults } from './NoResults';
 import { ResultRow } from './ResultRow';
+import { commandsFor, type QuickCommand } from './quickCommands';
 import { entryPart, hitKey, useHitLookup } from './saved';
 
 /** How many results the bar shows under the field. */
 const SHOWN = 8;
+/** Commands found by a search for the laws, above its results; «/» lists them all. */
+const COMMANDS_SHOWN = 2;
 /** The theme and accent of the overlay, as the pinned cards get them. */
 const LOOK_KEY = 'pin.look';
 
@@ -122,16 +125,25 @@ export function QuickSearch({ bridge }: { bridge: QuickBridge }) {
   }, [bridge, load]);
 
   const boostDocuments = pack.organizations.find((o) => o.id === organization)?.documents;
+  // «/» asks for the commands only (roadmap 2В).
+  const slash = query.trimStart().startsWith('/');
   const hits = useMemo(() => {
     if (mode === 'recent') return state.recent.map(lookup).filter((hit) => hit !== undefined);
-    return mode === 'laws' && query.trim() ? searchArticles(pack, query, { boostDocuments }).slice(0, SHOWN) : [];
-  }, [pack, query, mode, boostDocuments, state.recent, lookup]);
+    return mode === 'laws' && query.trim() && !slash ? searchArticles(pack, query, { boostDocuments }).slice(0, SHOWN) : [];
+  }, [pack, query, slash, mode, boostDocuments, state.recent, lookup]);
+  const commands = useMemo(() => {
+    if (mode !== 'laws' || open) return [];
+    const found = commandsFor(query, state);
+    return slash ? found : found.slice(0, COMMANDS_SHOWN);
+  }, [mode, open, query, slash, state]);
   // Found nothing: where it looked and what to try (roadmap 1В).
   const noResults = useMemo(
-    () => (mode === 'laws' && !hits.length ? explainEmpty(pack, query, { boostDocuments }) : null),
-    [mode, hits, pack, query, boostDocuments],
+    () => (mode === 'laws' && !hits.length && !commands.length && !slash ? explainEmpty(pack, query, { boostDocuments }) : null),
+    [mode, hits, commands, slash, pack, query, boostDocuments],
   );
-  const current = Math.min(selected, hits.length - 1);
+  // Commands first, then the articles; until ↑↓, Enter is the first article's — a search for the laws stays one.
+  const rows = commands.length + hits.length;
+  const current = selected < 0 ? (hits.length ? commands.length : 0) : Math.min(selected, rows - 1);
   const punished = (hit: SearchHit) => !!entryPart(hit.article, hit.part)?.punishment;
   const chargeKey = (hit: SearchHit) => hitKey({ ...hit, part: entryPart(hit.article, hit.part) });
   const added = (key: string) => state.charges.includes(key);
@@ -150,6 +162,18 @@ export function QuickSearch({ bridge }: { bridge: QuickBridge }) {
     const question = query.trim();
     if (!question) return;
     void bridge.request({ kind: 'ask', question }).then(() => bridge.hide());
+  };
+  const run = (command: QuickCommand) => {
+    setQuery('');
+    setSelected(0);
+    if ('bar' in command.run) {
+      switchTo(command.run.bar);
+      return;
+    }
+    const { request } = command.run;
+    // What opens the assistant hides the bar; emptying a list leaves it.
+    void bridge.request(request).then(() => (request.kind === 'open' || request.kind === 'open-calculator' ? bridge.hide() : undefined));
+    input.current?.focus();
   };
   const switchTo = (next: Mode) => {
     setMode(next);
@@ -196,31 +220,44 @@ export function QuickSearch({ bridge }: { bridge: QuickBridge }) {
       }
       return;
     }
-    if (!hits.length) return;
+    if (!rows) return;
+    const command = current < commands.length ? commands[current] : undefined;
+    const hit = command ? undefined : hits[current - commands.length];
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelected(Math.min(current + 1, hits.length - 1));
+      setSelected(Math.min(current + 1, rows - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSelected(Math.max(current - 1, 0));
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      const hit = hits[current];
-      if (punished(hit)) charge(hit);
-      else openHit(hit);
-    } else if (e.key === 'ArrowRight' && e.currentTarget.selectionStart === e.currentTarget.value.length) {
+      if (command) run(command);
+      else if (hit && punished(hit)) charge(hit);
+      else if (hit) openHit(hit);
+    } else if (e.key === 'ArrowRight' && hit && e.currentTarget.selectionStart === e.currentTarget.value.length) {
       e.preventDefault();
-      openHit(hits[current]);
+      openHit(hit);
     }
   };
 
   const list = (
     <div className="list" role="list" aria-label={mode === 'recent' ? 'Недавние' : 'Результаты быстрого поиска'}>
+      {commands.map((command, i) => (
+        <div role="listitem" key={command.id}>
+          <button type="button" className={i === current ? 'row quick__cmd row--selected' : 'row quick__cmd'} aria-label={`Команда: ${command.label}`} onClick={() => run(command)}>
+            <span className="quick__cmd-mark" aria-hidden>
+              /
+            </span>
+            <span className="quick__cmd-label">{command.label}</span>
+            <span className="quick__cmd-tag">команда</span>
+          </button>
+        </div>
+      ))}
       {hits.map((hit, i) => (
         <div role="listitem" key={hitKey(hit)}>
           <ResultRow
             hit={hit}
-            selected={i === current}
+            selected={commands.length + i === current}
             onOpen={() => openHit(hit)}
             calculator={punished(hit) ? { added: added(chargeKey(hit)), onToggle: () => charge(hit) } : undefined}
           />
@@ -248,7 +285,7 @@ export function QuickSearch({ bridge }: { bridge: QuickBridge }) {
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
-            setSelected(0);
+            setSelected(-1);
             setOpen(null);
             if (mode === 'recent') setMode('laws');
           }}
@@ -294,7 +331,7 @@ export function QuickSearch({ bridge }: { bridge: QuickBridge }) {
           </div>
           {hits.length > 0 ? list : <p className="quick__hint quick__hint--in">Здесь появятся статьи, которые вы открывали.</p>}
         </div>
-      ) : hits.length > 0 ? (
+      ) : rows > 0 ? (
         <div className="quick__body">{list}</div>
       ) : (
         query.trim() && (
@@ -326,6 +363,9 @@ export function QuickSearch({ bridge }: { bridge: QuickBridge }) {
             </span>
             <span>
               <kbd>→</kbd> открыть
+            </span>
+            <span>
+              <kbd>/</kbd> команды
             </span>
           </>
         )}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { PlatformAdapter, QuickState } from '../platform/types';
+import type { PlatformAdapter, QuickState, QuickTarget } from '../platform/types';
 import { forgetHotkey, trackHotkey } from './hotkeys';
 import { DEFAULT_QUICK_HOTKEY, QUICK_HOTKEY_KEY } from './overlaySettings';
 
@@ -13,6 +13,8 @@ export interface QuickActions {
   clearCharges: () => void;
   /** A question to the AI, with the overlay shown. */
   ask: (question: string) => void;
+  /** A part of the assistant, opened by a command of the bar (roadmap 2В), with the overlay shown. */
+  open: (to: QuickTarget) => void;
 }
 
 export interface QuickBridgeOptions {
@@ -78,6 +80,9 @@ export function useQuickBridge(platform: PlatformAdapter, { capturing, taken, st
           case 'ask':
             void platform.showOverlay();
             return actions.ask(request.question);
+          case 'open':
+            void platform.showOverlay();
+            return actions.open(request.to);
           case 'hello':
             void platform.sendQuickState(state);
             return;

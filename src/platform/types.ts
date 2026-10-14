@@ -88,7 +88,8 @@ export type ResizeEdge = 'East' | 'North' | 'NorthEast' | 'NorthWest' | 'South' 
 /**
  * What the quick search asks of the overlay, where the calculator, the recent articles and the AI are: an article
  * (by its key, `uk-65#1`) into the calculator, one opened to the recent ones, the recent ones cleared, the
- * calculator or the AI shown, and — when the bar starts — what it should show.
+ * calculator or the AI shown, a part of the assistant opened by a command (roadmap 2В), and — when the bar starts —
+ * what it should show.
  */
 export type QuickRequest =
   | { kind: 'charge'; key: string }
@@ -97,12 +98,20 @@ export type QuickRequest =
   | { kind: 'clear-charges' }
   | { kind: 'open-calculator' }
   | { kind: 'ask'; question: string }
+  | { kind: 'open'; to: QuickTarget }
   | { kind: 'hello' };
 
-/** What the overlay tells the quick search: what is in its calculator and the recent articles, by key. */
+/** What a command of the quick search opens in the assistant (roadmap 2В). */
+export type QuickTarget = 'favorites' | 'pinned' | 'memos' | 'wiki' | 'settings' | 'rules' | 'history' | 'document' | 'lawyer' | 'detention' | 'trainer';
+
+/**
+ * What the overlay tells the quick search: what is in its calculator and the recent articles, by key, and what the
+ * player may do — the bar offers only the commands they can use.
+ */
 export interface QuickState {
   charges: string[];
   recent: string[];
+  can?: string[];
 }
 
 /** What the bar needs of the app: settings and laws to read, being shown and hidden, and asking the assistant. */
