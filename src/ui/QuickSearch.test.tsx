@@ -268,3 +268,15 @@ describe('the overlay, for the commands of the quick search', () => {
     expect(await screen.findByRole('radio', { name: 'Практика' })).toHaveAttribute('aria-checked', 'true');
   });
 });
+
+describe('the quick search, in the player’s words (roadmap 2Б)', () => {
+  it('says how it understood the query, and searches everywhere on a click', async () => {
+    const { user } = renderBar();
+    await user.type(field(), 'сколько штраф за парковку ');
+    const note = await screen.findByRole('note', { name: 'Как понят запрос' });
+    expect(note).toHaveTextContent('Понял как: Наказание');
+    expect(within(results()).getAllByRole('listitem')[0]).toHaveTextContent('ст. 8.12');
+    await user.click(within(note).getByRole('button', { name: 'Искать везде' }));
+    expect(screen.queryByRole('note', { name: 'Как понят запрос' })).not.toBeInTheDocument();
+  });
+});

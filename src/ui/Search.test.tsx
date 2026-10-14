@@ -126,3 +126,27 @@ describe('finding an article by number', () => {
     expect(results().length).toBeGreaterThan(0);
   });
 });
+
+describe('a query in the player’s words (roadmap 2Б)', () => {
+  it('says how it was understood and where it looked; «Искать везде» searches as before', async () => {
+    const { user } = await renderApp();
+    await user.type(search(), 'что ему впаяют за кражу ');
+    const note = screen.getByRole('note', { name: 'Как понят запрос' });
+    expect(note).toHaveTextContent('Понял как: Наказание');
+    expect(results()[0]).toHaveTextContent('ст. 65 ч. 1');
+    expect(screen.getByText('УК, КоАП')).toBeInTheDocument();
+
+    await user.click(within(note).getByRole('button', { name: 'Искать везде' }));
+    expect(screen.queryByRole('note', { name: 'Как понят запрос' })).not.toBeInTheDocument();
+    // Typed on, it is a new query: understood again.
+    await user.type(search(), 'и');
+    expect(screen.getByRole('note', { name: 'Как понят запрос' })).toBeInTheDocument();
+  });
+
+  it('does not say anything for a query in the words of the law', async () => {
+    const { user } = await renderApp();
+    await user.type(search(), 'кража');
+    expect(results().length).toBeGreaterThan(0);
+    expect(screen.queryByRole('note', { name: 'Как понят запрос' })).not.toBeInTheDocument();
+  });
+});
