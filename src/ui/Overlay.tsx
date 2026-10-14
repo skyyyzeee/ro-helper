@@ -1,19 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
-  calculateDetention,
   changedArticles,
   changesSince,
   chapterHeading,
   documentContents, explainEmpty,
-  leadPart,
   recentChanges,
   searchArticles,
   type ChangeEntry,
-  type Charge,
-  type ChargeItem,
-  type Mode,
   type Stage,
-  type Offender,
   type Part,
   type SearchHit,
   type ServerPack,
@@ -24,7 +18,7 @@ import { usePlatform } from '../platform/PlatformContext';
 import type { QuickRequest } from '../platform/types';
 import type { AppearanceControl } from './appearance';
 import { ArticleView } from './ArticleView';
-import { CalculatorPanel, type ChargeFields, type ChargePatch, type CopyState } from './CalculatorPanel';
+import { CalculatorPanel, type CopyState } from './CalculatorPanel';
 import { ChangeDiff, ChangesView, type ChangeRef } from './ChangesView';
 import { DepartmentView } from './DepartmentView';
 import { DocumentsMenu } from './DocumentsMenu';
@@ -56,6 +50,7 @@ import { ReleaseNotesView } from './ReleaseNotesView';
 import { aiPinCard, articlePinCard, calculatorPinCard, notePinCard, phrasesPinCard, timerPinCard } from './pinCards';
 import { CALCULATOR_ID, MIN_WIDTH, NOTE_ID, PHRASES_ID, TIMER_ID, hasCard, pinCard, placeOf, unpinCard, updateCard, type Place } from './pinLayout';
 import { usePins } from './usePins';
+import { typedNumber, useCharges } from './useCharges';
 import { applyPreset, cardCount, deletePreset, nextPresetName, presetsKey, readPresets, savePreset, type PinPreset } from './pinPresets';
 import { formatDate } from './lawBits';
 import { ResizeEdges } from './ResizeEdges';
@@ -110,18 +105,6 @@ const CALCULATOR_PLACE_KEY = 'pins.calculator';
 
 /** Width of the calculator panel plus the gap to the overlay, in CSS pixels. */
 const CALCULATOR_WIDTH = 400 + 12;
-
-/** A charge in the calculator, with what the officer typed for it. */
-interface Entry extends ChargeFields, Omit<ChargePatch, keyof ChargeFields> {
-  key: string;
-  hit: SearchHit;
-}
-
-/** «15 000» → 15000; an empty field is no number. */
-function typedNumber(text: string): number | undefined {
-  const digits = text.replace(/\D/g, '');
-  return digits ? Number(digits) : undefined;
-}
 
 /**
  * Timings of the push-to-talk key, in milliseconds: a «pressed» sooner than `repeat` after the last event is the key
@@ -348,22 +331,14 @@ export function Overlay({
   };
   const changeOf = (hit: SearchHit) => changed.get(hit.article.id);
 
-  // Calculator: charges of both codes, the mode and the offender for the whole detention, the fine typed in.
-  const [charges, setCharges] = useState<Entry[]>([]);
+  // Calculator: charges of both codes, the mode and the offender for the whole detention, the fine typed in (useCharges).
+  const rules = pack.calculator;
+  const { charges, setCharges, setMode, setOffender, fineInput, setFineInput, priority, setPriority, priorityLevels, result, calculable, addable, inCalculator, entryOf, updateCharge, calculatorOpen } = useCharges(rules);
   // What the player does, for their profile and — unless turned off — the author's anonymous counts.
   const count = useStats(platform, pack.server.id);
   // The author's notice to every player, from GitHub (ticket 26).
   const announcements = useAnnouncements(pack.server.id);
-  const [mode, setMode] = useState<Mode>('custody');
-  const [offender, setOffender] = useState<Offender>('citizen');
-  const [fineInput, setFineInput] = useState('');
-  /** Арбатский: bail goes by the wanted priority the officer sets, 1 by default. */
-  const [priority, setPriority] = useState(1);
   const [side, setSide] = useState<'left' | 'right'>('left');
-  const rules = pack.calculator;
-  const calculable = rules ? [rules.criminalCode, rules.administrative.code] : [];
-  const addable = (hit: SearchHit) => calculable.includes(hit.document.id) && !!(hit.part ?? leadPart(hit.article))?.punishment;
-  const inCalculator = (hit: SearchHit) => charges.some((c) => c.key === hitKey(hit));
   const toggleCharge = (hit: SearchHit) => {
     const key = hitKey(hit);
     if (!inCalculator(hit)) {
@@ -385,44 +360,6 @@ export function Overlay({
       ...fresh.filter((hit) => !list.some((c) => c.key === hitKey(hit))).map((hit) => ({ key: hitKey(hit), hit, stage: hit.stage ?? 'done', amount: '', days: '', unpaid: '' })),
     ]);
   };
-  const items = useMemo(
-    () =>
-      charges.map(
-        (c): Charge => ({
-          article: c.hit.article,
-          document: c.hit.document,
-          part: c.hit.part ?? leadPart(c.hit.article)!,
-          stage: c.stage ?? 'done',
-          wantedLevel: c.wantedLevel,
-          choice: c.choice,
-          amount: typedNumber(c.amount),
-          days: typedNumber(c.days),
-          unpaid: typedNumber(c.unpaid),
-        }),
-      ),
-    [charges],
-  );
-  const result = useMemo(
-    () => (rules ? calculateDetention(items, { mode, offender, priority }, rules) : null),
-    [items, mode, offender, priority, rules],
-  );
-  const priorityLevels = rules?.bail.by === 'wanted' ? Object.keys(rules.bail.amounts).map(Number).sort((a, b) => a - b) : null;
-  /** The calculator's entry behind a charge of the result. */
-  const entryOf = (item: ChargeItem) => charges[items.findIndex((c) => c === item)];
-  const updateCharge = (item: ChargeItem, patch: ChargePatch) => {
-    const key = entryOf(item)?.key;
-    setCharges((list) => list.map((c) => (c.key === key ? { ...c, ...patch } : c)));
-  };
-  const calculatorOpen = charges.length > 0;
-
-  // An emptied calculator is a new detention: nothing carries over from the last one.
-  useEffect(() => {
-    if (calculatorOpen) return;
-    setMode('custody');
-    setOffender('citizen');
-    setFineInput('');
-    setPriority(1);
-  }, [calculatorOpen]);
 
   // Pinned over the game: any number of cards, each where the user dragged it, kept for the next launch (usePins).
   // Pinning an article leaves the overlay open for the next search; pinning the calculator hides it.
