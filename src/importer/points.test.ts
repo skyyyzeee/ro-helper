@@ -32,7 +32,7 @@ const OLD_GIBDD = [
 ].join('\n');
 
 const COUNTS: [string, LawFormat, number][] = [
-  ['ch-mvd', 'points', 250], ['ch-gibdd', 'points', 89], ['ch-fso', 'points', 97], ['ch-hospital', 'points', 222], ['ch-news', 'points', 157],
+  ['ch-mvd', 'points', 250], ['ch-gibdd', 'points', 88], ['ch-fso', 'points', 97], ['ch-hospital', 'points', 222], ['ch-news', 'points', 157],
   ['sk-main', 'points', 39], ['sk-gsu', 'points', 51], ['sk-inspections', 'points', 20], ['sk-ranks', 'points', 12],
   ['rules-main', 'points', 98], ['rules-gov', 'points', 117], ['rules-crime', 'points', 52],
   ['ch-army', 'law', 65], ['ch-army-discipline', 'law', 43], ['ch-army-guard', 'law', 44],
@@ -178,7 +178,7 @@ describe('charters of Арбатский and Кутузовский (real forum 
     ['arbatskiy', 'ch-mvd', 'law', 85], ['arbatskiy', 'ch-gibdd', 'law', 33],
     ['arbatskiy', 'ch-army', 'law', 78], ['arbatskiy', 'sk-charter', 'law', 88],
     ['arbatskiy', 'ch-hospital', 'points', 143], ['arbatskiy', 'ch-news', 'points', 219],
-    ['kutuzovskiy', 'ch-mvd', 'points', 336], ['kutuzovskiy', 'ch-gibdd', 'law', 33], ['kutuzovskiy', 'ch-army-discipline', 'points', 96],
+    ['kutuzovskiy', 'ch-mvd', 'points', 336], ['kutuzovskiy', 'ch-gibdd', 'law', 33], ['kutuzovskiy', 'ch-army-discipline', 'points', 103],
     ['kutuzovskiy', 'ch-hospital', 'points', 165], ['kutuzovskiy', 'ch-news', 'points', 138], ['kutuzovskiy', 'sk-appeals', 'law', 29],
   ];
 
