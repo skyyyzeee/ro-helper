@@ -375,9 +375,19 @@ test('a chain for the question: a GigaChat model on its free tokens first, the p
 });
 
 /** A Supabase project of our own: its public key in a JWKS, and tokens signed by its private key (ES256). */
-async function fakeSupabase() {
+async function fakeSupabase(roles = {}) {
   const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+  const seen = { roleReads: 0 };
   const server = await listen((request, response) => {
+    // The roles table, as its rules let it be read: the publishable key, and only the token's own player's rows.
+    if (request.url.startsWith('/rest/v1/roles')) {
+      seen.roleReads += 1;
+      if (request.headers.apikey !== 'publishable-test') return json(response, 401, {});
+      const token = String(request.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+      const sub = JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString('utf8') || '{}').sub;
+      const asked = new URL(request.url, 'http://local').searchParams.get('user_id')?.replace(/^eq\./, '');
+      return json(response, 200, asked === sub ? (roles[sub] ?? []).map((role) => ({ role })) : []);
+    }
     if (request.url !== '/auth/v1/.well-known/jwks.json') return json(response, 404, {});
     json(response, 200, { keys: [{ ...publicKey.export({ format: 'jwk' }), kid: 'key-1', alg: 'ES256', use: 'sig' }] });
   });
@@ -387,7 +397,7 @@ async function fakeSupabase() {
     const head = `${part({ alg: 'ES256', kid: 'key-1', typ: 'JWT' })}.${part({ sub, aud: 'authenticated', iss, exp: Math.floor(exp) })}`;
     return `${head}.${sign('sha256', Buffer.from(head), { key, dsaEncoding: 'ieee-p1363' }).toString('base64url')}`;
   };
-  return { url, token, server };
+  return { url, token, server, seen };
 }
 
 test('a signed-in player\'s questions are counted on the account, not the computer; a forged or stale token is no account', async () => {
@@ -433,6 +443,30 @@ test('with sign-in required, a player not signed in is told how to go on; a sign
     assert.match(anonymous.body.error, /войдите в аккаунт/i);
     assert.equal((await ai.ask('украл', { token: supabase.token('user-aaaa-0001', { exp: Date.now() / 1000 - 10 }) })).status, 401);
     assert.equal((await ai.ask('украл', { token: supabase.token('user-aaaa-0001') })).body.text, '{"from": "gigachat"}');
+  } finally {
+    ai.stop();
+    giga.server.close();
+    supabase.server.close();
+  }
+});
+
+test('a faction\'s leader or deputy asks more a day: their role read with their own token, kept a while', async () => {
+  const giga = await fakeGigachat();
+  const supabase = await fakeSupabase({ 'user-lead-0001': ['leader'], 'user-dept-0002': ['deputy'] });
+  const ai = await aiServer({ ...gigaEnv(giga), SUPABASE_URL: supabase.url, SUPABASE_PUBLISHABLE_KEY: 'publishable-test', QUESTIONS_PER_ACCOUNT: '1', QUESTIONS_PER_LEADER: '3' });
+  try {
+    const ask = (sub) => ai.ask('украл', { device: `device-${sub}`, token: supabase.token(sub) });
+    for (const sub of ['user-lead-0001', 'user-dept-0002']) {
+      for (let n = 0; n < 3; n++) assert.equal((await ask(sub)).status, 200, `${sub} #${n + 1}`);
+      const over = await ask(sub);
+      assert.equal(over.status, 429);
+      assert.match(over.body.error, /3 в день/);
+    }
+    // A player with no role: the ordinary limit.
+    assert.equal((await ask('user-none-0003')).status, 200);
+    assert.match((await ask('user-none-0003')).body.error, /1 в день/);
+    // Read once an account for a while, not on every question.
+    assert.ok(supabase.seen.roleReads <= 3, `roles read ${supabase.seen.roleReads} times`);
   } finally {
     ai.stop();
     giga.server.close();

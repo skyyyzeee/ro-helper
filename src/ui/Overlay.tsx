@@ -1,30 +1,23 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
-  calculateDetention,
   changedArticles,
   changesSince,
   chapterHeading,
   documentContents, explainEmpty,
-  leadPart,
   recentChanges,
   searchArticles,
   type ChangeEntry,
-  type Charge,
-  type ChargeItem,
-  type Mode,
   type Stage,
-  type Offender,
   type Part,
   type SearchHit,
   type ServerPack,
 } from '../core';
 import { serverMeta } from '../data';
-import type { PinCard, PinGroup, Toast } from '../platform/types';
+import type { PinCard, QuickTarget, Toast } from '../platform/types';
 import { usePlatform } from '../platform/PlatformContext';
-import type { QuickRequest } from '../platform/types';
 import type { AppearanceControl } from './appearance';
 import { ArticleView } from './ArticleView';
-import { CalculatorPanel, type ChargeFields, type ChargePatch, type CopyState } from './CalculatorPanel';
+import { CalculatorPanel, type CopyState } from './CalculatorPanel';
 import { ChangeDiff, ChangesView, type ChangeRef } from './ChangesView';
 import { DepartmentView } from './DepartmentView';
 import { DocumentsMenu } from './DocumentsMenu';
@@ -33,7 +26,7 @@ import { caseText, transcribe, useAiChat } from './ai';
 import { sendMark } from './feedback';
 import type { ScopeChoice } from '../protocol';
 import { AiAccess, AiView, TAB_NEEDS, type AiTab } from './AiView';
-import { useRoles } from './roles';
+import { useCapabilities, useRoles } from './roles';
 import { cardText } from './AnswerView';
 import { DocumentView } from './DocumentView';
 import { TrainerView } from './TrainerView';
@@ -47,19 +40,23 @@ import { CasesView } from './CasesView';
 import { BackIcon, BookIcon, CalculatorIcon, ChevronDownIcon, CloseIcon, DocumentsIcon, NewsIcon, MemoIcon, MicIcon, OrganizationIcon, PinIcon, ProfileIcon, SearchIcon, ServerIcon, SettingsIcon, SparkIcon } from './icons';
 import { SideRail } from './SideRail';
 import { canRecord, startRecording, type Recording } from './voice';
-import { DEFAULT_OPACITY, DEFAULT_QUICK_HOTKEY, DEFAULT_TIMER_HOTKEY, DEFAULT_VOICE_HOTKEY, NOTE_HOTKEY_KEY, NOTE_KEY, OPACITY_KEY, QUICK_HOTKEY_KEY, TIMER_HOTKEY_KEY, VOICE_HOTKEY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
+import { DEFAULT_OPACITY, DEFAULT_TIMER_HOTKEY, DEFAULT_VOICE_HOTKEY, NOTE_HOTKEY_KEY, NOTE_KEY, OPACITY_KEY, TIMER_HOTKEY_KEY, VOICE_HOTKEY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
 import { formatHotkey, type Profile } from './profile';
 import { OrganizationChoice } from './OrganizationChoice';
 import { PinSurface } from './PinSurface';
 import { PrivacyView } from './PrivacyView';
 import { ReleaseNotesView } from './ReleaseNotesView';
 import { aiPinCard, articlePinCard, calculatorPinCard, notePinCard, phrasesPinCard, timerPinCard } from './pinCards';
-import { CALCULATOR_ID, MIN_WIDTH, NOTE_ID, PHRASES_ID, TIMER_ID, hasCard, keepableGroups, pinCard, placeOf, restoreGroups, surfaceNow, unpinCard, updateCard, type Place } from './pinLayout';
+import { CALCULATOR_ID, MIN_WIDTH, NOTE_ID, PHRASES_ID, TIMER_ID, hasCard, pinCard, placeOf, unpinCard, updateCard, type Place } from './pinLayout';
+import { usePins } from './usePins';
+import { typedNumber, useCharges } from './useCharges';
+import { useQuickBridge } from './useQuickBridge';
+import { TARGET_NEEDS } from './quickCommands';
 import { applyPreset, cardCount, deletePreset, nextPresetName, presetsKey, readPresets, savePreset, type PinPreset } from './pinPresets';
 import { formatDate } from './lawBits';
 import { ResizeEdges } from './ResizeEdges';
 import { ResultRow } from './ResultRow';
-import { RECENT_LIMIT, entryPart, favoritesKey, hitKey, recentKey, useHitLookup, useStoredKeys } from './saved';
+import { entryPart, hitKey, useSaved } from './saved';
 import { ServerChoice } from './ServerChoice';
 import { SettingsView, type SettingsSection } from './SettingsView';
 import { NoResults } from './NoResults';
@@ -104,25 +101,11 @@ const CHANGED_DAYS = 14;
 /** How far back «Что изменилось» from the settings goes. */
 const LIST_DAYS = 60;
 
-/** What is pinned over the game, per server: blocks of cards where the user put them. */
-const pinsKey = (server: string) => `pins:${server}`;
 /** Where the calculator's card was last left over the game, and how big it was made (issue #22). */
 const CALCULATOR_PLACE_KEY = 'pins.calculator';
 
 /** Width of the calculator panel plus the gap to the overlay, in CSS pixels. */
 const CALCULATOR_WIDTH = 400 + 12;
-
-/** A charge in the calculator, with what the officer typed for it. */
-interface Entry extends ChargeFields, Omit<ChargePatch, keyof ChargeFields> {
-  key: string;
-  hit: SearchHit;
-}
-
-/** «15 000» → 15000; an empty field is no number. */
-function typedNumber(text: string): number | undefined {
-  const digits = text.replace(/\D/g, '');
-  return digits ? Number(digits) : undefined;
-}
 
 /**
  * Timings of the push-to-talk key, in milliseconds: a «pressed» sooner than `repeat` after the last event is the key
@@ -221,6 +204,9 @@ export function Overlay({
   // are the state's), the inner workings for the admin.
   const { mine } = useRoles();
   const aiCan = useMemo(() => aiCapabilitiesOf({ admin: !!mine?.admin, organization }), [mine?.admin, organization]);
+  // What the player may do here, told to the quick search: it offers only the commands they can use (roadmap 2В).
+  const memberCan = useCapabilities({ server: pack.server.id, organization });
+  const quickCan = useMemo(() => [...aiCan, ...memberCan].sort(), [aiCan, memberCan]);
   const writer = useDocumentWriter(platform, pack, boostDocuments, aiCan.has('ai.official_documents'));
   const trainer = useTrainer(platform, pack, boostDocuments, aiCan.has('ai.practice'));
   const lawyer = useLawyerCheck(platform, pack, boostDocuments, aiCan.has('ai.check'));
@@ -233,27 +219,16 @@ export function Overlay({
   const aiMode = aiOpen && !open;
 
   // An empty search shows the favourites, then the recent articles without them; ↑↓ go through both.
-  const lookup = useHitLookup(pack);
-  const [favoriteKeys, updateFavorites] = useStoredKeys(platform, favoritesKey(pack.server.id));
-  const [recentKeys, updateRecent] = useStoredKeys(platform, recentKey(pack.server.id));
-  const favorites = useMemo(() => favoriteKeys.map(lookup).filter((hit) => hit !== undefined), [favoriteKeys, lookup]);
-  const recent = useMemo(
-    () => recentKeys.filter((key) => !favoriteKeys.includes(key)).map(lookup).filter((hit) => hit !== undefined),
-    [recentKeys, favoriteKeys, lookup],
-  );
+  const saved = useSaved(platform, pack);
+  const { lookup, favoriteKeys, recentKeys, favorites, recent, toggleFavorite, updateRecent } = saved;
   const view: 'home' | 'contents' | 'results' = query.trim() ? 'results' : scope ? 'contents' : 'home';
   const home = view === 'home';
   const listed = home ? [...favorites, ...recent] : view === 'contents' ? contents.flatMap((group) => group.hits) : hits;
   const current = Math.min(selected, listed.length - 1);
   const remember = (hit: SearchHit) => {
-    const key = hitKey(hit);
-    updateRecent((list) => [key, ...list.filter((k) => k !== key)].slice(0, RECENT_LIMIT));
+    saved.remember(hit);
     // On the home lists the article moves to the top of the recent ones; the selection goes with it.
-    if (home && !favoriteKeys.includes(key)) setSelected(favorites.length);
-  };
-  const toggleFavorite = (hit: SearchHit) => {
-    const key = hitKey(hit);
-    updateFavorites((list) => (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]));
+    if (home && !favoriteKeys.includes(hitKey(hit))) setSelected(favorites.length);
   };
 
   // New versions of the app, offered under the header; the privacy policy, opened from the settings.
@@ -349,22 +324,14 @@ export function Overlay({
   };
   const changeOf = (hit: SearchHit) => changed.get(hit.article.id);
 
-  // Calculator: charges of both codes, the mode and the offender for the whole detention, the fine typed in.
-  const [charges, setCharges] = useState<Entry[]>([]);
+  // Calculator: charges of both codes, the mode and the offender for the whole detention, the fine typed in (useCharges).
+  const rules = pack.calculator;
+  const { charges, setCharges, setMode, setOffender, fineInput, setFineInput, priority, setPriority, priorityLevels, result, calculable, addable, inCalculator, entryOf, updateCharge, calculatorOpen } = useCharges(rules);
   // What the player does, for their profile and — unless turned off — the author's anonymous counts.
   const count = useStats(platform, pack.server.id);
   // The author's notice to every player, from GitHub (ticket 26).
   const announcements = useAnnouncements(pack.server.id);
-  const [mode, setMode] = useState<Mode>('custody');
-  const [offender, setOffender] = useState<Offender>('citizen');
-  const [fineInput, setFineInput] = useState('');
-  /** Арбатский: bail goes by the wanted priority the officer sets, 1 by default. */
-  const [priority, setPriority] = useState(1);
   const [side, setSide] = useState<'left' | 'right'>('left');
-  const rules = pack.calculator;
-  const calculable = rules ? [rules.criminalCode, rules.administrative.code] : [];
-  const addable = (hit: SearchHit) => calculable.includes(hit.document.id) && !!(hit.part ?? leadPart(hit.article))?.punishment;
-  const inCalculator = (hit: SearchHit) => charges.some((c) => c.key === hitKey(hit));
   const toggleCharge = (hit: SearchHit) => {
     const key = hitKey(hit);
     if (!inCalculator(hit)) {
@@ -386,77 +353,10 @@ export function Overlay({
       ...fresh.filter((hit) => !list.some((c) => c.key === hitKey(hit))).map((hit) => ({ key: hitKey(hit), hit, stage: hit.stage ?? 'done', amount: '', days: '', unpaid: '' })),
     ]);
   };
-  const items = useMemo(
-    () =>
-      charges.map(
-        (c): Charge => ({
-          article: c.hit.article,
-          document: c.hit.document,
-          part: c.hit.part ?? leadPart(c.hit.article)!,
-          stage: c.stage ?? 'done',
-          wantedLevel: c.wantedLevel,
-          choice: c.choice,
-          amount: typedNumber(c.amount),
-          days: typedNumber(c.days),
-          unpaid: typedNumber(c.unpaid),
-        }),
-      ),
-    [charges],
-  );
-  const result = useMemo(
-    () => (rules ? calculateDetention(items, { mode, offender, priority }, rules) : null),
-    [items, mode, offender, priority, rules],
-  );
-  const priorityLevels = rules?.bail.by === 'wanted' ? Object.keys(rules.bail.amounts).map(Number).sort((a, b) => a - b) : null;
-  /** The calculator's entry behind a charge of the result. */
-  const entryOf = (item: ChargeItem) => charges[items.findIndex((c) => c === item)];
-  const updateCharge = (item: ChargeItem, patch: ChargePatch) => {
-    const key = entryOf(item)?.key;
-    setCharges((list) => list.map((c) => (c.key === key ? { ...c, ...patch } : c)));
-  };
-  const calculatorOpen = charges.length > 0;
 
-  // An emptied calculator is a new detention: nothing carries over from the last one.
-  useEffect(() => {
-    if (calculatorOpen) return;
-    setMode('custody');
-    setOffender('citizen');
-    setFineInput('');
-    setPriority(1);
-  }, [calculatorOpen]);
-
-  // Pinned over the game: any number of cards, each where the user dragged it, kept for the next launch.
+  // Pinned over the game: any number of cards, each where the user dragged it, kept for the next launch (usePins).
   // Pinning an article leaves the overlay open for the next search; pinning the calculator hides it.
-  const [groups, setGroups] = useState<PinGroup[]>([]);
-  const [pinsReady, setPinsReady] = useState(false);
-  const pins = pinsKey(pack.server.id);
-  const surface = () => surfaceNow(platform.kind === 'browser');
-  const groupsNow = useRef(groups);
-  groupsNow.current = groups;
-  useEffect(() => {
-    let active = true;
-    setPinsReady(false);
-    // What is on screen now is of the server before; what gets pinned while the saved ones are read is not.
-    const before = new Set(groupsNow.current.map((group) => group.id));
-    void platform.readSetting<PinGroup[]>(pins).then((saved) => {
-      if (!active) return;
-      // The calculator's card belongs to a detention that is long over.
-      const restored = Array.isArray(saved) ? keepableGroups(restoreGroups(saved)) : [];
-      // The quick search can pin the calculator before the saved cards are read: it stays, beside them.
-      setGroups((now) => [...restored, ...now.filter((group) => !before.has(group.id) && !restored.some((r) => r.id === group.id))]);
-      setPinsReady(true);
-    });
-    return () => {
-      active = false;
-    };
-  }, [platform, pins]);
-  useEffect(() => {
-    if (!pinsReady) return;
-    void platform.setPins(groups);
-    void platform.writeSetting(pins, keepableGroups(groups));
-  }, [pinsReady, groups, platform, pins]);
-  // Moving, joining and closing happen on the cards themselves.
-  useEffect(() => platform.onPinsChanged(setGroups), [platform]);
+  const { groups, setGroups, surface } = usePins(platform, pack.server.id);
 
   // Sets of pinned cards saved under a name, per server, to put back over the game at once.
   const [presets, setPresets] = useState<PinPreset[]>([]);
@@ -602,70 +502,33 @@ export function Overlay({
   }, [platform, voiceHotkey, capturing, profile.hotkey]);
   useEffect(() => () => talk.current.recording?.cancel(), []);
 
-  // The quick search (ticket 27): its own key shows its bar over the game; what the bar asks — an article
-  // into the calculator, a question to the AI — is done here, where the calculator and the AI are.
-  const [quickHotkey, setQuickHotkey] = useState(DEFAULT_QUICK_HOTKEY);
-  useEffect(() => {
-    void platform.readSetting<string>(QUICK_HOTKEY_KEY).then((saved) => setQuickHotkey(saved ?? DEFAULT_QUICK_HOTKEY));
-  }, [platform]);
-  const changeQuickHotkey = (accelerator: string) => {
-    setQuickHotkey(accelerator);
-    void platform.writeSetting(QUICK_HOTKEY_KEY, accelerator);
-  };
-  // Not while a key is being recorded, and never on a key the overlay or the voice already use.
-  useEffect(() => {
-    if (capturing || !quickHotkey || quickHotkey === profile.hotkey || quickHotkey === voiceHotkey) return;
-    trackHotkey(platform, 'quick', quickHotkey, platform.registerQuickHotkey(quickHotkey), 'Быстрый поиск по ней не откроется.');
-    return () => {
-      forgetHotkey('quick');
-      void platform.unregisterQuickHotkey();
-    };
-  }, [platform, quickHotkey, capturing, profile.hotkey, voiceHotkey]);
   /** An article came into the calculator from the bar: the calculator is pinned over the game, to see it there (issue #20). */
   const [pinFromQuick, setPinFromQuick] = useState(false);
-  const onQuick = useRef<(request: QuickRequest) => void>(() => {});
-  onQuick.current = (request) => {
-    switch (request.kind) {
-      case 'charge': {
-        const hit = lookup(request.key);
+  // The quick search (ticket 27): its own key shows its bar over the game; what the bar asks is done here (useQuickBridge).
+  const { quickHotkey, changeQuickHotkey } = useQuickBridge(platform, {
+    capturing,
+    taken: [profile.hotkey, voiceHotkey],
+    state: { charges: charges.map((c) => c.key), recent: recentKeys, can: quickCan },
+    actions: {
+      charge: (key) => {
+        const hit = lookup(key);
         if (hit && !inCalculator(hit)) {
           toggleCharge(hit);
           setPinFromQuick(true);
         }
-        return;
-      }
-      case 'remember': {
-        const hit = lookup(request.key);
+      },
+      remember: (key) => {
+        const hit = lookup(key);
         if (hit) remember(hit);
-        return;
-      }
-      case 'clear-recent':
-        updateRecent(() => []);
-        return;
-      case 'clear-charges':
-        setCharges([]);
-        return;
-      case 'open-calculator':
-        void platform.showOverlay();
-        window.setTimeout(() => document.querySelector<HTMLElement>('.calc button, .calc input')?.focus(), 100);
-        return;
-      case 'ask':
-        void platform.showOverlay();
-        openAi(request.question);
-        return;
-      case 'hello':
-        void platform.sendQuickState({ charges: charges.map((c) => c.key), recent: recentKeys });
-        return;
-    }
-  };
-  useEffect(() => platform.onQuickRequest((request) => onQuick.current(request)), [platform]);
+      },
+      clearRecent: () => updateRecent(() => []),
+      clearCharges: () => setCharges([]),
+      ask: (question) => openAi(question),
+      open: (to) => openFromQuick(to),
+    },
+  });
   // «Очистить» on the calculator's card over the game empties the calculator, and the card goes with it (issue #23).
   useEffect(() => platform.onCalculatorCleared(() => setCharges([])), [platform]);
-  // The bar is told what is in the calculator and the recent articles whenever they change.
-  const quickState = JSON.stringify({ charges: charges.map((c) => c.key), recent: recentKeys });
-  useEffect(() => {
-    void platform.sendQuickState(JSON.parse(quickState));
-  }, [platform, quickState]);
 
   const pinnedArticle = open ? hasCard(groups, hitKey(open)) : false;
   const pinnedCalculator = hasCard(groups, CALCULATOR_ID);
@@ -1071,6 +934,38 @@ export function Overlay({
     // The profile is the account at the top of the settings; the pin, what is pinned in them.
     setSettingsFocus(section === 'profile' ? { section: 'account', at: Date.now() } : section === 'pinned' ? { section: 'pinned', at: Date.now() } : undefined);
     searchRef.current?.focus();
+  };
+  /** A part of the assistant, from a command of the quick search (roadmap 2В): only one the player may use. */
+  const openFromQuick = (to: QuickTarget) => {
+    const needs = TARGET_NEEDS[to];
+    if (needs && !quickCan.includes(needs)) return;
+    switch (to) {
+      case 'favorites':
+        openSection('search');
+        setQuery('');
+        setScopeId(null);
+        setSelected(0);
+        return;
+      case 'rules': {
+        openSection('search');
+        const rules = pack.documents.find((d) => d.kind === 'rules');
+        if (rules) pickDocument(rules.id);
+        return;
+      }
+      case 'pinned':
+      case 'memos':
+      case 'wiki':
+      case 'settings':
+        openSection(to);
+        return;
+      case 'history':
+        openAi();
+        setHistoryOpen(true);
+        return;
+      default:
+        openAi();
+        setAiTab(to);
+    }
   };
   // The note's key: the overlay shown on «Закреплённое», the cursor in the note.
   openNote.current = () => {

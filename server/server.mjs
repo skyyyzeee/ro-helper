@@ -48,6 +48,13 @@ const CONFIG = {
   supabaseUrl: env('SUPABASE_URL', '').replace(/\/$/, ''),
   requireSignIn: env('REQUIRE_SIGN_IN', '0') === '1',
   questionsPerAccount: num('QUESTIONS_PER_ACCOUNT', 50),
+  /**
+   * A faction's leader or deputy (their role in the project's table, read with the player's own token and the
+   * project's publishable key — the database lets a player read their own roles) asks more a day. No key: no
+   * roles read, everyone signed in has QUESTIONS_PER_ACCOUNT.
+   */
+  supabaseKey: env('SUPABASE_PUBLISHABLE_KEY', '').trim(),
+  questionsPerLeader: num('QUESTIONS_PER_LEADER', 100),
   requestsPerIp: num('REQUESTS_PER_IP', 200),
   maxOutputTokens: num('MAX_OUTPUT_TOKENS', 900),
   stateFile: env('STATE_FILE', './state.json'),
@@ -130,14 +137,15 @@ function rollDay() {
  * Why this request may not go on today, or nothing when it may. A signed-in player's questions are counted on their
  * account, not on the computer; the address's limit stands for everyone, against a flood of accounts.
  */
-function refusal(device, ip, kind, account) {
+function refusal(device, ip, kind, account, leader = false) {
   rollDay();
   // Past the budget GigaChat, free, goes on answering; only with no GigaChat does the AI rest.
   if (state.spent >= CONFIG.budgetPerDay && !CONFIG.gigachat.key) return 'На сегодня ИИ Кремлёвского Ассистента исчерпал общий лимит. Он снова заработает после полуночи по Москве.';
   if ((state.ips[ip] ?? 0) >= CONFIG.requestsPerIp) return 'Слишком много вопросов с вашего адреса за сегодня. Попробуйте завтра.';
   if (account) {
     const mine = state.accounts?.[account] ?? { questions: 0 };
-    if (kind === 'question' && mine.questions >= CONFIG.questionsPerAccount) return `На сегодня вопросы ИИ закончились (${CONFIG.questionsPerAccount} в день). Они снова появятся после полуночи по Москве.`;
+    const limit = leader ? CONFIG.questionsPerLeader : CONFIG.questionsPerAccount;
+    if (kind === 'question' && mine.questions >= limit) return `На сегодня вопросы ИИ закончились (${limit} в день). Они снова появятся после полуночи по Москве.`;
     return null;
   }
   const used = state.devices[device] ?? { questions: 0 };
@@ -578,6 +586,37 @@ async function accountOf(request) {
   }
 }
 
+/** Whether an account leads a faction or is a deputy, by account, kept for ten minutes: roles change seldom. */
+const leaders = new Map();
+const LEADER_TTL = 10 * 60_000;
+
+/**
+ * Whether the signed-in player is a leader or a deputy anywhere: their roles read from the project's database with
+ * their own token (the rules there let a player read only their own) and the publishable key. A failure to read is
+ * no role — the ordinary limit, never a refusal.
+ */
+async function leaderOf(account, request) {
+  if (!account || !CONFIG.supabaseKey) return false;
+  const known = leaders.get(account);
+  if (known && Date.now() - known.at < LEADER_TTL) return known.leader;
+  let leader = false;
+  try {
+    const token = String(request.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+    const response = await fetch(`${CONFIG.supabaseUrl}/rest/v1/roles?select=role&user_id=eq.${encodeURIComponent(account)}`, {
+      headers: { apikey: CONFIG.supabaseKey, Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (response.ok) {
+      const rows = await response.json();
+      leader = Array.isArray(rows) && rows.some((row) => row?.role === 'leader' || row?.role === 'deputy');
+    }
+  } catch (error) {
+    console.error(new Date().toISOString(), 'roles:', error.message);
+  }
+  leaders.set(account, { leader, at: Date.now() });
+  return leader;
+}
+
 // ——— HTTP ———
 
 /** A question with a dozen articles is some 60 KB. Text only: no speech is taken — it is recognised on the players' computers. */
@@ -721,7 +760,9 @@ const server = createServer(async (request, response) => {
       dirty = true;
       return send(response, 200, { text: hit.text, cached: true });
     }
-    const why = refusal(device, ip, kind, account);
+    // A leader's or deputy's role is asked only for a question, the counted kind: a step is no question.
+    const leader = kind === 'question' ? await leaderOf(account, request_) : false;
+    const why = refusal(device, ip, kind, account, leader);
     if (why) return send(response, 429, { error: why });
     const { text, rubles } = await chat(request, kind);
     count(device, ip, kind, rubles, account);
