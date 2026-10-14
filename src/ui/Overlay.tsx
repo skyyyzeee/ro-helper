@@ -55,7 +55,7 @@ import { applyPreset, cardCount, deletePreset, nextPresetName, presetsKey, readP
 import { formatDate } from './lawBits';
 import { ResizeEdges } from './ResizeEdges';
 import { ResultRow } from './ResultRow';
-import { RECENT_LIMIT, entryPart, favoritesKey, hitKey, recentKey, useHitLookup, useStoredKeys } from './saved';
+import { entryPart, hitKey, useSaved } from './saved';
 import { ServerChoice } from './ServerChoice';
 import { SettingsView, type SettingsSection } from './SettingsView';
 import { NoResults } from './NoResults';
@@ -215,27 +215,16 @@ export function Overlay({
   const aiMode = aiOpen && !open;
 
   // An empty search shows the favourites, then the recent articles without them; ↑↓ go through both.
-  const lookup = useHitLookup(pack);
-  const [favoriteKeys, updateFavorites] = useStoredKeys(platform, favoritesKey(pack.server.id));
-  const [recentKeys, updateRecent] = useStoredKeys(platform, recentKey(pack.server.id));
-  const favorites = useMemo(() => favoriteKeys.map(lookup).filter((hit) => hit !== undefined), [favoriteKeys, lookup]);
-  const recent = useMemo(
-    () => recentKeys.filter((key) => !favoriteKeys.includes(key)).map(lookup).filter((hit) => hit !== undefined),
-    [recentKeys, favoriteKeys, lookup],
-  );
+  const saved = useSaved(platform, pack);
+  const { lookup, favoriteKeys, recentKeys, favorites, recent, toggleFavorite, updateRecent } = saved;
   const view: 'home' | 'contents' | 'results' = query.trim() ? 'results' : scope ? 'contents' : 'home';
   const home = view === 'home';
   const listed = home ? [...favorites, ...recent] : view === 'contents' ? contents.flatMap((group) => group.hits) : hits;
   const current = Math.min(selected, listed.length - 1);
   const remember = (hit: SearchHit) => {
-    const key = hitKey(hit);
-    updateRecent((list) => [key, ...list.filter((k) => k !== key)].slice(0, RECENT_LIMIT));
+    saved.remember(hit);
     // On the home lists the article moves to the top of the recent ones; the selection goes with it.
-    if (home && !favoriteKeys.includes(key)) setSelected(favorites.length);
-  };
-  const toggleFavorite = (hit: SearchHit) => {
-    const key = hitKey(hit);
-    updateFavorites((list) => (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]));
+    if (home && !favoriteKeys.includes(hitKey(hit))) setSelected(favorites.length);
   };
 
   // New versions of the app, offered under the header; the privacy policy, opened from the settings.
