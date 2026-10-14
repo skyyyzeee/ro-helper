@@ -31,6 +31,7 @@ export {
 } from './administrative';
 export { articleFingerprint, changedSince, packLabel, snapshotOf, type PackSnapshot } from './snapshot';
 export { explainEmpty, type EmptySearch, type Try } from './empty';
+export { intentDocuments, searchUnderstood, understand, type Understood, type UnderstoodSearch } from './intent';
 export { calculateDetention, type Charge, type DetentionOptions, type DetentionResult, type DetentionStars } from './detention';
 export {
   SUBJECT_LABELS,

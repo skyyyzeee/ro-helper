@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { articleHeading, explainEmpty, formatPunishment, searchArticles, type SearchHit, type ServerPack } from '../core';
+import { articleHeading, explainEmpty, formatPunishment, searchUnderstood, type Intent, type SearchHit, type ServerPack } from '../core';
 import { loadPack, loadedPack, serverMeta } from '../data';
 import type { PinLook, QuickBridge, QuickState } from '../platform/types';
 import { applyAppearance, isTheme } from './appearance';
@@ -9,6 +9,7 @@ import { DocBadge, Stars } from './lawBits';
 import { PROFILE_KEY, type Profile } from './profile';
 import { NoResults } from './NoResults';
 import { ResultRow } from './ResultRow';
+import { intentWhere } from './intent';
 import { commandsFor, type QuickCommand } from './quickCommands';
 import { entryPart, hitKey, useHitLookup } from './saved';
 
@@ -127,10 +128,14 @@ export function QuickSearch({ bridge }: { bridge: QuickBridge }) {
   const boostDocuments = pack.organizations.find((o) => o.id === organization)?.documents;
   // «/» asks for the commands only (roadmap 2В).
   const slash = query.trimStart().startsWith('/');
-  const hits = useMemo(() => {
-    if (mode === 'recent') return state.recent.map(lookup).filter((hit) => hit !== undefined);
-    return mode === 'laws' && query.trim() && !slash ? searchArticles(pack, query, { boostDocuments }).slice(0, SHOWN) : [];
-  }, [pack, query, slash, mode, boostDocuments, state.recent, lookup]);
+  // What the query asks narrows where it looks (roadmap 2Б); «везде» turns that off for the query as typed.
+  const [everywhereFor, setEverywhereFor] = useState<string | null>(null);
+  const { hits, intent } = useMemo((): { hits: SearchHit[]; intent?: Intent } => {
+    if (mode === 'recent') return { hits: state.recent.map(lookup).filter((hit) => hit !== undefined) };
+    if (mode !== 'laws' || !query.trim() || slash) return { hits: [] };
+    const found = searchUnderstood(pack, query, { boostDocuments, everywhere: everywhereFor === query });
+    return { hits: found.hits.slice(0, SHOWN), intent: found.intent };
+  }, [pack, query, slash, mode, boostDocuments, state.recent, lookup, everywhereFor]);
   const commands = useMemo(() => {
     if (mode !== 'laws' || open) return [];
     const found = commandsFor(query, state);
@@ -332,7 +337,17 @@ export function QuickSearch({ bridge }: { bridge: QuickBridge }) {
           {hits.length > 0 ? list : <p className="quick__hint quick__hint--in">Здесь появятся статьи, которые вы открывали.</p>}
         </div>
       ) : rows > 0 ? (
-        <div className="quick__body">{list}</div>
+        <div className="quick__body">
+          {intent && !open && (
+            <p className="quick__intent" role="note" aria-label="Как понят запрос">
+              Понял как: <b>{intent.label}</b> · {intentWhere(pack, intent)}
+              <button className="link-btn" type="button" onClick={() => setEverywhereFor(query)}>
+                Искать везде
+              </button>
+            </p>
+          )}
+          {list}
+        </div>
       ) : (
         query.trim() && (
           <div className="quick__hint">

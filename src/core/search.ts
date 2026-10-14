@@ -17,6 +17,8 @@ export interface SearchOptions {
   boostDocuments?: string[];
   /** Search only this document, unless the query names another one by its alias («ук 65»). */
   document?: string;
+  /** Search only these documents (an intent's, ADR 0004); a document the query names by its alias is still searched. */
+  documents?: string[];
   limit?: number;
 }
 
@@ -148,6 +150,7 @@ export function searchArticles(pack: ServerPack, raw: string, options: SearchOpt
   const index = wordIndex(pack);
   const matchers = query.words.map((word, i) => matchWord(index, word, query.typing && i === query.words.length - 1));
   const boost = new Set(options.boostDocuments ?? []);
+  const only = options.documents && !query.scope ? new Set(options.documents) : undefined;
   const bonus = (document: LawDocument) =>
     (boost.has(document.id) ? SCORE.organisation : 0) + (document.kind === 'penal-code' ? SCORE.penalCode : 0);
 
@@ -162,6 +165,7 @@ export function searchArticles(pack: ServerPack, raw: string, options: SearchOpt
     let order = 0;
     for (const document of pack.documents) {
       if (query.scope && document !== query.scope) continue;
+      if (only && !only.has(document.id)) continue;
       for (const article of document.articles) {
         order++;
         const score = numberScore(article, query.number);
@@ -188,6 +192,7 @@ export function searchArticles(pack: ServerPack, raw: string, options: SearchOpt
     for (const i of candidates) {
       const entry = index.entries[i];
       if (query.scope && entry.document !== query.scope) continue;
+      if (only && !only.has(entry.document.id)) continue;
       consider(entry.article, entry.document, entry.part, 0, entry.order, entry);
     }
   }
