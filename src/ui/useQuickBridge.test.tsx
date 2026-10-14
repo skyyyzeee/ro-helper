@@ -5,7 +5,7 @@ import type { QuickState } from '../platform/types';
 import { DEFAULT_QUICK_HOTKEY, QUICK_HOTKEY_KEY } from './overlaySettings';
 import { useQuickBridge, type QuickActions } from './useQuickBridge';
 
-const actions = (): QuickActions => ({ charge: vi.fn(), remember: vi.fn(), clearRecent: vi.fn(), clearCharges: vi.fn(), ask: vi.fn() });
+const actions = (): QuickActions => ({ charge: vi.fn(), remember: vi.fn(), clearRecent: vi.fn(), clearCharges: vi.fn(), ask: vi.fn(), open: vi.fn() });
 
 describe('useQuickBridge (roadmap 2А)', () => {
   it('registers the bar’s saved key, and keeps a changed one', async () => {

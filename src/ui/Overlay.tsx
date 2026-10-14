@@ -13,7 +13,7 @@ import {
   type ServerPack,
 } from '../core';
 import { serverMeta } from '../data';
-import type { PinCard, Toast } from '../platform/types';
+import type { PinCard, QuickTarget, Toast } from '../platform/types';
 import { usePlatform } from '../platform/PlatformContext';
 import type { AppearanceControl } from './appearance';
 import { ArticleView } from './ArticleView';
@@ -26,7 +26,7 @@ import { caseText, transcribe, useAiChat } from './ai';
 import { sendMark } from './feedback';
 import type { ScopeChoice } from '../protocol';
 import { AiAccess, AiView, TAB_NEEDS, type AiTab } from './AiView';
-import { useRoles } from './roles';
+import { useCapabilities, useRoles } from './roles';
 import { cardText } from './AnswerView';
 import { DocumentView } from './DocumentView';
 import { TrainerView } from './TrainerView';
@@ -51,6 +51,7 @@ import { CALCULATOR_ID, MIN_WIDTH, NOTE_ID, PHRASES_ID, TIMER_ID, hasCard, pinCa
 import { usePins } from './usePins';
 import { typedNumber, useCharges } from './useCharges';
 import { useQuickBridge } from './useQuickBridge';
+import { TARGET_NEEDS } from './quickCommands';
 import { applyPreset, cardCount, deletePreset, nextPresetName, presetsKey, readPresets, savePreset, type PinPreset } from './pinPresets';
 import { formatDate } from './lawBits';
 import { ResizeEdges } from './ResizeEdges';
@@ -203,6 +204,9 @@ export function Overlay({
   // are the state's), the inner workings for the admin.
   const { mine } = useRoles();
   const aiCan = useMemo(() => aiCapabilitiesOf({ admin: !!mine?.admin, organization }), [mine?.admin, organization]);
+  // What the player may do here, told to the quick search: it offers only the commands they can use (roadmap 2В).
+  const memberCan = useCapabilities({ server: pack.server.id, organization });
+  const quickCan = useMemo(() => [...aiCan, ...memberCan].sort(), [aiCan, memberCan]);
   const writer = useDocumentWriter(platform, pack, boostDocuments, aiCan.has('ai.official_documents'));
   const trainer = useTrainer(platform, pack, boostDocuments, aiCan.has('ai.practice'));
   const lawyer = useLawyerCheck(platform, pack, boostDocuments, aiCan.has('ai.check'));
@@ -504,7 +508,7 @@ export function Overlay({
   const { quickHotkey, changeQuickHotkey } = useQuickBridge(platform, {
     capturing,
     taken: [profile.hotkey, voiceHotkey],
-    state: { charges: charges.map((c) => c.key), recent: recentKeys },
+    state: { charges: charges.map((c) => c.key), recent: recentKeys, can: quickCan },
     actions: {
       charge: (key) => {
         const hit = lookup(key);
@@ -520,6 +524,7 @@ export function Overlay({
       clearRecent: () => updateRecent(() => []),
       clearCharges: () => setCharges([]),
       ask: (question) => openAi(question),
+      open: (to) => openFromQuick(to),
     },
   });
   // «Очистить» on the calculator's card over the game empties the calculator, and the card goes with it (issue #23).
@@ -929,6 +934,38 @@ export function Overlay({
     // The profile is the account at the top of the settings; the pin, what is pinned in them.
     setSettingsFocus(section === 'profile' ? { section: 'account', at: Date.now() } : section === 'pinned' ? { section: 'pinned', at: Date.now() } : undefined);
     searchRef.current?.focus();
+  };
+  /** A part of the assistant, from a command of the quick search (roadmap 2В): only one the player may use. */
+  const openFromQuick = (to: QuickTarget) => {
+    const needs = TARGET_NEEDS[to];
+    if (needs && !quickCan.includes(needs)) return;
+    switch (to) {
+      case 'favorites':
+        openSection('search');
+        setQuery('');
+        setScopeId(null);
+        setSelected(0);
+        return;
+      case 'rules': {
+        openSection('search');
+        const rules = pack.documents.find((d) => d.kind === 'rules');
+        if (rules) pickDocument(rules.id);
+        return;
+      }
+      case 'pinned':
+      case 'memos':
+      case 'wiki':
+      case 'settings':
+        openSection(to);
+        return;
+      case 'history':
+        openAi();
+        setHistoryOpen(true);
+        return;
+      default:
+        openAi();
+        setAiTab(to);
+    }
   };
   // The note's key: the overlay shown on «Закреплённое», the cursor in the note.
   openNote.current = () => {

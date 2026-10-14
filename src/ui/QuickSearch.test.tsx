@@ -210,3 +210,61 @@ describe('the overlay, for the quick search', () => {
     await vi.waitFor(() => expect(platform.state.quickHotkey).toBeNull());
   });
 });
+
+describe('commands in the quick search (roadmap 2В)', () => {
+  const commands = () => within(results()).queryAllByRole('button', { name: /^Команда:/ }).map((button) => button.getAttribute('aria-label'));
+
+  it('lists with «/» only the commands the player may use, and only when there is something to do', async () => {
+    const { tell, user } = renderBar();
+    await tell({ charges: [], recent: [], can: ['ai.analysis'] });
+    await user.type(field(), '/');
+    expect(commands()).toContain('Команда: Спросить ИИ');
+    expect(commands()).not.toContain('Команда: Тренажёр по законам');
+    expect(commands()).not.toContain('Команда: Очистить калькулятор');
+
+    await tell({ charges: ['uk-65#1'], recent: [], can: ['ai.analysis', 'ai.practice'] });
+    expect(commands()).toContain('Команда: Тренажёр по законам');
+    expect(commands()).toContain('Команда: Очистить калькулятор');
+  });
+
+  it('runs a command found by its words: a part of the assistant opens and the bar hides', async () => {
+    const { requests, hidden, tell, user } = renderBar();
+    await tell({ charges: [], recent: [], can: ['ai.practice'] });
+    await user.type(field(), 'тренаж');
+    expect(commands()[0]).toBe('Команда: Тренажёр по законам');
+    await user.keyboard('{Enter}');
+    expect(requests).toEqual([{ kind: 'open', to: 'trainer' }]);
+    await vi.waitFor(() => expect(hidden()).toBe(1));
+    expect(field()).toHaveValue('');
+  });
+
+  it('keeps Enter for the first article when a search for the laws also finds a command', async () => {
+    const { requests, tell, user } = renderBar();
+    await tell({ charges: [], recent: [], can: ['ai.check'] });
+    await user.type(field(), 'задержание');
+    expect(commands()).toContain('Команда: Проверка задержания');
+    await user.keyboard('{Enter}');
+    expect(requests.some((r) => r.kind === 'open')).toBe(false);
+    // Back from the article it opened, ↑ reaches the command.
+    await user.keyboard('{Escape}{ArrowUp}{Enter}');
+    expect(requests.at(-1)).toEqual({ kind: 'open', to: 'detention' });
+  });
+});
+
+describe('the overlay, for the commands of the quick search', () => {
+  it('tells the bar what the player may do, and opens only what they may', async () => {
+    const { platform } = await openApp();
+    await vi.waitFor(() => expect(platform.state.quickState?.can).toBeDefined());
+    expect(platform.state.quickState?.can).not.toContain('ai.practice');
+    act(() => platform.quickRequest({ kind: 'open', to: 'trainer' }));
+    await act(async () => {});
+    expect(screen.getByRole('searchbox', { name: 'Поиск по законам' })).toBeInTheDocument();
+  });
+
+  it('opens the trainer for a state service', async () => {
+    const app = await renderApp({ profile: { organization: 'mvd' } });
+    await vi.waitFor(() => expect(app.platform.state.quickState?.can).toContain('ai.practice'), { timeout: 4000 });
+    act(() => app.platform.quickRequest({ kind: 'open', to: 'trainer' }));
+    expect(await screen.findByRole('radio', { name: 'Практика' })).toHaveAttribute('aria-checked', 'true');
+  });
+});
