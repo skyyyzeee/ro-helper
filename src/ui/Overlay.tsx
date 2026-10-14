@@ -19,7 +19,7 @@ import {
   type ServerPack,
 } from '../core';
 import { serverMeta } from '../data';
-import type { PinCard, PinGroup, Toast } from '../platform/types';
+import type { PinCard, Toast } from '../platform/types';
 import { usePlatform } from '../platform/PlatformContext';
 import type { QuickRequest } from '../platform/types';
 import type { AppearanceControl } from './appearance';
@@ -54,7 +54,8 @@ import { PinSurface } from './PinSurface';
 import { PrivacyView } from './PrivacyView';
 import { ReleaseNotesView } from './ReleaseNotesView';
 import { aiPinCard, articlePinCard, calculatorPinCard, notePinCard, phrasesPinCard, timerPinCard } from './pinCards';
-import { CALCULATOR_ID, MIN_WIDTH, NOTE_ID, PHRASES_ID, TIMER_ID, hasCard, keepableGroups, pinCard, placeOf, restoreGroups, surfaceNow, unpinCard, updateCard, type Place } from './pinLayout';
+import { CALCULATOR_ID, MIN_WIDTH, NOTE_ID, PHRASES_ID, TIMER_ID, hasCard, pinCard, placeOf, unpinCard, updateCard, type Place } from './pinLayout';
+import { usePins } from './usePins';
 import { applyPreset, cardCount, deletePreset, nextPresetName, presetsKey, readPresets, savePreset, type PinPreset } from './pinPresets';
 import { formatDate } from './lawBits';
 import { ResizeEdges } from './ResizeEdges';
@@ -104,8 +105,6 @@ const CHANGED_DAYS = 14;
 /** How far back «Что изменилось» from the settings goes. */
 const LIST_DAYS = 60;
 
-/** What is pinned over the game, per server: blocks of cards where the user put them. */
-const pinsKey = (server: string) => `pins:${server}`;
 /** Where the calculator's card was last left over the game, and how big it was made (issue #22). */
 const CALCULATOR_PLACE_KEY = 'pins.calculator';
 
@@ -425,38 +424,9 @@ export function Overlay({
     setPriority(1);
   }, [calculatorOpen]);
 
-  // Pinned over the game: any number of cards, each where the user dragged it, kept for the next launch.
+  // Pinned over the game: any number of cards, each where the user dragged it, kept for the next launch (usePins).
   // Pinning an article leaves the overlay open for the next search; pinning the calculator hides it.
-  const [groups, setGroups] = useState<PinGroup[]>([]);
-  const [pinsReady, setPinsReady] = useState(false);
-  const pins = pinsKey(pack.server.id);
-  const surface = () => surfaceNow(platform.kind === 'browser');
-  const groupsNow = useRef(groups);
-  groupsNow.current = groups;
-  useEffect(() => {
-    let active = true;
-    setPinsReady(false);
-    // What is on screen now is of the server before; what gets pinned while the saved ones are read is not.
-    const before = new Set(groupsNow.current.map((group) => group.id));
-    void platform.readSetting<PinGroup[]>(pins).then((saved) => {
-      if (!active) return;
-      // The calculator's card belongs to a detention that is long over.
-      const restored = Array.isArray(saved) ? keepableGroups(restoreGroups(saved)) : [];
-      // The quick search can pin the calculator before the saved cards are read: it stays, beside them.
-      setGroups((now) => [...restored, ...now.filter((group) => !before.has(group.id) && !restored.some((r) => r.id === group.id))]);
-      setPinsReady(true);
-    });
-    return () => {
-      active = false;
-    };
-  }, [platform, pins]);
-  useEffect(() => {
-    if (!pinsReady) return;
-    void platform.setPins(groups);
-    void platform.writeSetting(pins, keepableGroups(groups));
-  }, [pinsReady, groups, platform, pins]);
-  // Moving, joining and closing happen on the cards themselves.
-  useEffect(() => platform.onPinsChanged(setGroups), [platform]);
+  const { groups, setGroups, surface } = usePins(platform, pack.server.id);
 
   // Sets of pinned cards saved under a name, per server, to put back over the game at once.
   const [presets, setPresets] = useState<PinPreset[]>([]);
