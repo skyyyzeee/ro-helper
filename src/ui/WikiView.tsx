@@ -6,7 +6,7 @@ import { FRESH, type Gender, type WikiCatalogId, type WikiData, type WikiEntry }
 import { Dropdown } from './Dropdown';
 import { BackIcon, ExternalIcon, SearchIcon } from './icons';
 import { useWiki } from './wiki';
-import { Blocks, ChangeCounts, MapView, PostsView, UpdatesView, WikiHome, readingTime, useWikiRecent } from './WikiHome';
+import { Blocks, ChangeCounts, PostsView, UpdatesView, WikiHome, readingTime, useWikiRecent } from './WikiHome';
 
 /**
  * How many cards at a time: the rest on «Показать ещё». The wiki's pictures are big — a flat's is 2560×1440 and
@@ -164,8 +164,6 @@ export function WikiView() {
   const { data, failed } = useWiki();
   // The wiki opens on its home: the articles, the updates, the catalogs in groups, the pages opened last.
   const [catalog, setCatalog] = useState<WikiCatalogId | 'home'>('home');
-  // The wiki's own map page: a section of its own, beside the home — the home is the game's information.
-  const [mapOpen, setMapOpen] = useState(false);
   const [group, setGroup] = useState<string | undefined>();
   const [gender, setGender] = useState<Gender>('male');
   const [tags, setTags] = useState<string[]>([]);
@@ -205,7 +203,6 @@ export function WikiView() {
   // The tab lights up at once; the cards of the new one follow as soon as they are ready.
   const choose = (id: WikiCatalogId | 'home') =>
     startTransition(() => {
-      setMapOpen(false);
       setCatalog(id);
       setGroup(undefined);
       setTags([]);
@@ -217,15 +214,8 @@ export function WikiView() {
   return (
     <section className="wiki" aria-label="Вики">
       <nav className="wiki__nav" aria-label="Разделы вики">
-        <button type="button" className={catalog === 'home' && !searching && !mapOpen ? 'wiki__navitem wiki__navitem--on' : 'wiki__navitem'} aria-current={catalog === 'home' && !searching && !mapOpen ? 'page' : undefined} onClick={() => choose('home')}>
+        <button type="button" className={catalog === 'home' && !searching ? 'wiki__navitem wiki__navitem--on' : 'wiki__navitem'} aria-current={catalog === 'home' && !searching ? 'page' : undefined} onClick={() => choose('home')}>
           <span>Главная</span>
-        </button>
-        <button type="button" className={mapOpen && !searching ? 'wiki__navitem wiki__navitem--on' : 'wiki__navitem'} aria-current={mapOpen && !searching ? 'page' : undefined} onClick={() => {
-          setEntry(null);
-          setEverywhere('');
-          setMapOpen(true);
-        }}>
-          <span>Карта</span>
         </button>
         {data.catalogs.map((c) => (
           <button key={c.id} type="button" className={c.id === catalog && !searching ? 'wiki__navitem wiki__navitem--on' : 'wiki__navitem'} aria-current={c.id === catalog && !searching ? 'page' : undefined} onClick={() => choose(c.id)}>
@@ -257,11 +247,6 @@ export function WikiView() {
               ))}
             </div>
             {!list.length && <p className="empty">Ничего не нашлось.</p>}
-          </>
-        ) : mapOpen ? (
-          <>
-            <h2 className="wiki__heading">Карта</h2>
-            <MapView />
           </>
         ) : catalog === 'home' ? (
           <WikiHome data={data} recent={recent} onCatalog={choose} onOpen={open} picture={picture} />
@@ -339,7 +324,7 @@ export function WikiView() {
             Показать ещё ({(list.length - shown).toLocaleString('ru-RU')})
           </button>
         )}
-        {!entry && !mapOpen && <Source url={data.source} />}
+        {!entry && <Source url={data.source} />}
       </div>
     </section>
   );
