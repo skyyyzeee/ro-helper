@@ -73,3 +73,41 @@ export function useStoredKeys(platform: PlatformAdapter, settingKey: string): [s
   );
   return [list, update];
 }
+
+export interface Saved {
+  /** A hit for what a key stands for, in this server's laws. */
+  lookup: (key: string) => SearchHit | undefined;
+  favoriteKeys: string[];
+  recentKeys: string[];
+  /** The favourites, then the recent articles without them: what an empty search shows. */
+  favorites: SearchHit[];
+  recent: SearchHit[];
+  /** An opened article to the top of the recent ones, the oldest past the limit dropped. */
+  remember: (hit: SearchHit) => void;
+  toggleFavorite: (hit: SearchHit) => void;
+  updateRecent: (update: (list: string[]) => string[]) => void;
+}
+
+/**
+ * The favourites and the recent articles (roadmap 2А, out of Overlay.tsx), per server, kept in the settings. Articles
+ * the laws no longer have are left out of the lists.
+ */
+export function useSaved(platform: PlatformAdapter, pack: ServerPack): Saved {
+  const lookup = useHitLookup(pack);
+  const [favoriteKeys, updateFavorites] = useStoredKeys(platform, favoritesKey(pack.server.id));
+  const [recentKeys, updateRecent] = useStoredKeys(platform, recentKey(pack.server.id));
+  const favorites = useMemo(() => favoriteKeys.map(lookup).filter((hit) => hit !== undefined), [favoriteKeys, lookup]);
+  const recent = useMemo(
+    () => recentKeys.filter((key) => !favoriteKeys.includes(key)).map(lookup).filter((hit) => hit !== undefined),
+    [recentKeys, favoriteKeys, lookup],
+  );
+  const remember = (hit: SearchHit) => {
+    const key = hitKey(hit);
+    updateRecent((list) => [key, ...list.filter((k) => k !== key)].slice(0, RECENT_LIMIT));
+  };
+  const toggleFavorite = (hit: SearchHit) => {
+    const key = hitKey(hit);
+    updateFavorites((list) => (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]));
+  };
+  return { lookup, favoriteKeys, recentKeys, favorites, recent, remember, toggleFavorite, updateRecent };
+}
