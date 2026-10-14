@@ -5,7 +5,7 @@ import {
   chapterHeading,
   documentContents, explainEmpty,
   recentChanges,
-  searchArticles,
+  searchUnderstood,
   type ChangeEntry,
   type Stage,
   type Part,
@@ -51,6 +51,7 @@ import { CALCULATOR_ID, MIN_WIDTH, NOTE_ID, PHRASES_ID, TIMER_ID, hasCard, pinCa
 import { usePins } from './usePins';
 import { typedNumber, useCharges } from './useCharges';
 import { useQuickBridge } from './useQuickBridge';
+import { intentWhere } from './intent';
 import { TARGET_NEEDS } from './quickCommands';
 import { applyPreset, cardCount, deletePreset, nextPresetName, presetsKey, readPresets, savePreset, type PinPreset } from './pinPresets';
 import { formatDate } from './lawBits';
@@ -180,9 +181,12 @@ export function Overlay({
   // A document picked in the menu narrows the search; with no query it shows as a table of contents.
   const [scopeId, setScopeId] = useState<string | null>(null);
   const scope = scopeId ? pack.documents.find((d) => d.id === scopeId) : undefined;
-  const hits = useMemo(
-    () => searchArticles(pack, query, { boostDocuments, document: scope?.id }),
-    [pack, query, boostDocuments, scope],
+  // What the query asks narrows where it looks (roadmap 2Б): «что ему впаяют за кражу» — the punishments.
+  // «Искать везде» turns that off for the query as typed.
+  const [everywhereFor, setEverywhereFor] = useState<string | null>(null);
+  const { hits, intent } = useMemo(
+    () => searchUnderstood(pack, query, { boostDocuments, document: scope?.id, everywhere: everywhereFor === query }),
+    [pack, query, boostDocuments, scope, everywhereFor],
   );
   // Found nothing: where it looked and what to try (roadmap 1В), only then worked out.
   const noResults = useMemo(
@@ -1768,8 +1772,18 @@ export function Overlay({
           <>
             <div className="meta">
               <span>{plural(hits.length, ['результат', 'результата', 'результатов'])}</span>
-              <span>{scope ? scope.title : 'все документы'}</span>
+              <span>{scope ? scope.title : intent ? intentWhere(pack, intent) : 'все документы'}</span>
             </div>
+            {intent && (
+              <div className="intent" role="note" aria-label="Как понят запрос">
+                <span>
+                  Понял как: <b>{intent.label}</b>
+                </span>
+                <button className="link-btn" type="button" onClick={() => setEverywhereFor(query)}>
+                  Искать везде
+                </button>
+              </div>
+            )}
             <div className="list" role="list" aria-label="Результаты поиска">
               {hits.map((hit, i) => rowFor(hit, i))}
             </div>

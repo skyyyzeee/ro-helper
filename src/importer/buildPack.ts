@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { PACK_FORMAT, type CalculatorRules, type ChangeEntry, type DocumentCategory, type DocumentKind, type LawDocument, type Organization, type ServerPack } from '../core/model';
+import { PACK_FORMAT, type CalculatorRules, type ChangeEntry, type Dictionary, type DocumentCategory, type DocumentKind, type LawDocument, type Organization, type ServerPack } from '../core/model';
 import { parseLawText, type LawFormat, type ParseIssue } from './lawText';
 import { applyOverrides, type Overrides } from './overrides';
 
@@ -52,6 +52,8 @@ export function buildPack(serverDir: string, server: ServerSources): BuildResult
   const overrides = readJson<Overrides>(join(serverDir, 'overrides.json'), {});
   const synonyms = readJson<Record<string, string[]>>(join(serverDir, 'synonyms.json'), {});
   const organizations = readJson<Organization[]>(join(serverDir, 'organizations.json'), []);
+  // The intents of queries are the players' words, the same on every server (ADR 0004).
+  const dictionary = readJson<Dictionary | undefined>(join(serverDir, '..', 'intents.json'), undefined);
   // A server whose codes have not been described yet is searched without a calculator.
   const calculatorFile = join(serverDir, 'calculator.json');
   const calculator = existsSync(calculatorFile) ? (JSON.parse(readFileSync(calculatorFile, 'utf8')) as CalculatorRules) : undefined;
@@ -99,5 +101,5 @@ export function buildPack(serverDir: string, server: ServerSources): BuildResult
     [...documents.map((d) => d.source.lastEdited), ...changes.map((c) => c.version)].sort((a, b) => Date.parse(a) - Date.parse(b)).at(-1) ??
     '0000-00-00';
   const info = { id: server.id, name: server.name, status: server.status };
-  return { pack: { format: PACK_FORMAT, server: info, ...(calculator ? { calculator } : {}), organizations, version, changes, documents, synonyms }, issues };
+  return { pack: { format: PACK_FORMAT, server: info, ...(calculator ? { calculator } : {}), organizations, version, changes, documents, synonyms, ...(dictionary ? { dictionary } : {}) }, issues };
 }

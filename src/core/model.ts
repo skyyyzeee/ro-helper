@@ -205,6 +205,31 @@ export interface ChangeEntry {
 }
 
 /**
+ * What a query asks, told by its everyday words (roadmap 2Б, ADR 0004): «что ему впаяют» asks the punishment,
+ * «чела приняли» the detention. It narrows the search to where the answer is.
+ */
+export interface Intent {
+  id: string;
+  /** How it reads above the results: «Наказание». */
+  label: string;
+  /** Words that say what is asked, in the forms players type them: «впаяют», «дадут», «положено». */
+  words: string[];
+  /** Where the answer is: documents of these kinds, and these documents by id. */
+  kinds?: DocumentKind[];
+  documents?: string[];
+  /** What is searched when nothing but the intent was typed («чела приняли» → «задержание»). */
+  alone?: string;
+  /** Only articles with a punishment answer it. */
+  punished?: boolean;
+}
+
+/** The dictionary of a pack: the intents, and the everyday words that say nothing about the law («ему», «чела»). */
+export interface Dictionary {
+  intents: Intent[];
+  fillers: string[];
+}
+
+/**
  * The shape of a pack the app reads. Installed copies take newer laws from GitHub only in the shape they
  * know: bump it whenever a pack changes in a way an older app would misread.
  */
@@ -227,4 +252,6 @@ export interface ServerPack {
   documents: LawDocument[];
   /** Words players use → phrases the law uses for the same thing: «ствол» → «огнестрельное оружие». */
   synonyms: Record<string, string[]>;
+  /** The intents of queries; an older pack has none, and an older app reads past it. */
+  dictionary?: Dictionary;
 }

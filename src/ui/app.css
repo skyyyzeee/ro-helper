@@ -4754,6 +4754,31 @@ select option {
   padding-top: 6px;
 }
 
+/* How a query was understood (roadmap 2Б): its intent, where it looked, and a way out of it. */
+.intent,
+.quick__intent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.intent {
+  padding: 0 12px 6px;
+}
+
+.quick__intent {
+  padding: 6px 10px 0;
+}
+
+.intent b,
+.quick__intent b {
+  color: var(--text);
+}
+
 /* A command of the quick search (roadmap 2В): a row like an article's, marked as a command. */
 .quick__cmd {
   width: 100%;
