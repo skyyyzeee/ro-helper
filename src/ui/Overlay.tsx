@@ -15,7 +15,6 @@ import {
 import { serverMeta } from '../data';
 import type { PinCard, Toast } from '../platform/types';
 import { usePlatform } from '../platform/PlatformContext';
-import type { QuickRequest } from '../platform/types';
 import type { AppearanceControl } from './appearance';
 import { ArticleView } from './ArticleView';
 import { CalculatorPanel, type CopyState } from './CalculatorPanel';
@@ -41,7 +40,7 @@ import { CasesView } from './CasesView';
 import { BackIcon, BookIcon, CalculatorIcon, ChevronDownIcon, CloseIcon, DocumentsIcon, NewsIcon, MemoIcon, MicIcon, OrganizationIcon, PinIcon, ProfileIcon, SearchIcon, ServerIcon, SettingsIcon, SparkIcon } from './icons';
 import { SideRail } from './SideRail';
 import { canRecord, startRecording, type Recording } from './voice';
-import { DEFAULT_OPACITY, DEFAULT_QUICK_HOTKEY, DEFAULT_TIMER_HOTKEY, DEFAULT_VOICE_HOTKEY, NOTE_HOTKEY_KEY, NOTE_KEY, OPACITY_KEY, QUICK_HOTKEY_KEY, TIMER_HOTKEY_KEY, VOICE_HOTKEY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
+import { DEFAULT_OPACITY, DEFAULT_TIMER_HOTKEY, DEFAULT_VOICE_HOTKEY, NOTE_HOTKEY_KEY, NOTE_KEY, OPACITY_KEY, TIMER_HOTKEY_KEY, VOICE_HOTKEY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
 import { formatHotkey, type Profile } from './profile';
 import { OrganizationChoice } from './OrganizationChoice';
 import { PinSurface } from './PinSurface';
@@ -51,6 +50,7 @@ import { aiPinCard, articlePinCard, calculatorPinCard, notePinCard, phrasesPinCa
 import { CALCULATOR_ID, MIN_WIDTH, NOTE_ID, PHRASES_ID, TIMER_ID, hasCard, pinCard, placeOf, unpinCard, updateCard, type Place } from './pinLayout';
 import { usePins } from './usePins';
 import { typedNumber, useCharges } from './useCharges';
+import { useQuickBridge } from './useQuickBridge';
 import { applyPreset, cardCount, deletePreset, nextPresetName, presetsKey, readPresets, savePreset, type PinPreset } from './pinPresets';
 import { formatDate } from './lawBits';
 import { ResizeEdges } from './ResizeEdges';
@@ -509,70 +509,32 @@ export function Overlay({
   }, [platform, voiceHotkey, capturing, profile.hotkey]);
   useEffect(() => () => talk.current.recording?.cancel(), []);
 
-  // The quick search (ticket 27): its own key shows its bar over the game; what the bar asks — an article
-  // into the calculator, a question to the AI — is done here, where the calculator and the AI are.
-  const [quickHotkey, setQuickHotkey] = useState(DEFAULT_QUICK_HOTKEY);
-  useEffect(() => {
-    void platform.readSetting<string>(QUICK_HOTKEY_KEY).then((saved) => setQuickHotkey(saved ?? DEFAULT_QUICK_HOTKEY));
-  }, [platform]);
-  const changeQuickHotkey = (accelerator: string) => {
-    setQuickHotkey(accelerator);
-    void platform.writeSetting(QUICK_HOTKEY_KEY, accelerator);
-  };
-  // Not while a key is being recorded, and never on a key the overlay or the voice already use.
-  useEffect(() => {
-    if (capturing || !quickHotkey || quickHotkey === profile.hotkey || quickHotkey === voiceHotkey) return;
-    trackHotkey(platform, 'quick', quickHotkey, platform.registerQuickHotkey(quickHotkey), 'Быстрый поиск по ней не откроется.');
-    return () => {
-      forgetHotkey('quick');
-      void platform.unregisterQuickHotkey();
-    };
-  }, [platform, quickHotkey, capturing, profile.hotkey, voiceHotkey]);
   /** An article came into the calculator from the bar: the calculator is pinned over the game, to see it there (issue #20). */
   const [pinFromQuick, setPinFromQuick] = useState(false);
-  const onQuick = useRef<(request: QuickRequest) => void>(() => {});
-  onQuick.current = (request) => {
-    switch (request.kind) {
-      case 'charge': {
-        const hit = lookup(request.key);
+  // The quick search (ticket 27): its own key shows its bar over the game; what the bar asks is done here (useQuickBridge).
+  const { quickHotkey, changeQuickHotkey } = useQuickBridge(platform, {
+    capturing,
+    taken: [profile.hotkey, voiceHotkey],
+    state: { charges: charges.map((c) => c.key), recent: recentKeys },
+    actions: {
+      charge: (key) => {
+        const hit = lookup(key);
         if (hit && !inCalculator(hit)) {
           toggleCharge(hit);
           setPinFromQuick(true);
         }
-        return;
-      }
-      case 'remember': {
-        const hit = lookup(request.key);
+      },
+      remember: (key) => {
+        const hit = lookup(key);
         if (hit) remember(hit);
-        return;
-      }
-      case 'clear-recent':
-        updateRecent(() => []);
-        return;
-      case 'clear-charges':
-        setCharges([]);
-        return;
-      case 'open-calculator':
-        void platform.showOverlay();
-        window.setTimeout(() => document.querySelector<HTMLElement>('.calc button, .calc input')?.focus(), 100);
-        return;
-      case 'ask':
-        void platform.showOverlay();
-        openAi(request.question);
-        return;
-      case 'hello':
-        void platform.sendQuickState({ charges: charges.map((c) => c.key), recent: recentKeys });
-        return;
-    }
-  };
-  useEffect(() => platform.onQuickRequest((request) => onQuick.current(request)), [platform]);
+      },
+      clearRecent: () => updateRecent(() => []),
+      clearCharges: () => setCharges([]),
+      ask: (question) => openAi(question),
+    },
+  });
   // «Очистить» on the calculator's card over the game empties the calculator, and the card goes with it (issue #23).
   useEffect(() => platform.onCalculatorCleared(() => setCharges([])), [platform]);
-  // The bar is told what is in the calculator and the recent articles whenever they change.
-  const quickState = JSON.stringify({ charges: charges.map((c) => c.key), recent: recentKeys });
-  useEffect(() => {
-    void platform.sendQuickState(JSON.parse(quickState));
-  }, [platform, quickState]);
 
   const pinnedArticle = open ? hasCard(groups, hitKey(open)) : false;
   const pinnedCalculator = hasCard(groups, CALCULATOR_ID);
