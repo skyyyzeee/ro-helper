@@ -654,6 +654,33 @@
       "expect": [
         "КоАП 23.1.4"
       ]
+    },
+    {
+      "group": "fresh",
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "situation": "за выращивание кустов грин на ферме какая статья?",
+      "expect": [
+        "УК 13.1"
+      ]
+    },
+    {
+      "group": "fresh",
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "situation": "взятка",
+      "expect": [
+        "УК 15.4|УК 15.5"
+      ]
+    },
+    {
+      "group": "fresh",
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "situation": "Человек стоит в общественном месте с оружием в руках",
+      "expect": [
+        "ФЗ 11"
+      ]
     }
   ]
 }
