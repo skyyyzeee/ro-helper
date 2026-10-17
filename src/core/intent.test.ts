@@ -61,4 +61,16 @@ describe('the intents of queries (roadmap 2Б, ADR 0004): query → intent → f
     const old: ServerPack = { ...TVERSKOI_PACK, dictionary: undefined };
     expect(searchUnderstood(old, 'что ему впаяют за кражу ')).toEqual({ hits: searchArticles(old, 'что ему впаяют за кражу ') });
   });
+
+  it('searches without the everyday words when the query as typed finds nothing, intent or not', () => {
+    expect(understand(ARBATSKIY_PACK, 'что будет за кражу')).toBeNull();
+    expect(ask(ARBATSKIY_PACK, 'что будет за кражу')).toEqual({ intent: undefined, first: ['УК ст. 10.5 ч. 1'] });
+  });
+
+  it('Арбатский: ст. 10.5 is «Кража» by its text (the forum repeats the title of 10.4 over it)', () => {
+    expect(ask(ARBATSKIY_PACK, 'кража', 2).first).toEqual(['УК ст. 10.5 ч. 1', 'УК ст. 10.5 ч. 2']);
+    const article = ARBATSKIY_PACK.documents.find((d) => d.id === 'uk')!.articles.find((a) => a.number === '10.5')!;
+    expect(article.title).toBe('Кража');
+    expect(article.parts[0].text).toMatch(/^Кража, то есть тайное хищение/);
+  });
 });
