@@ -116,6 +116,18 @@ export function searchUnderstood(pack: ServerPack, raw: string, options: SearchO
     if (hits.length) return { hits, intent };
   }
   const hits = searchArticles(pack, raw, search);
-  if (hits.length || !understood?.rest) return { hits };
-  return { hits: searchArticles(pack, understood.rest + ending, search) };
+  // Without its everyday words, with or without an intent: «что будет за кражу» is «кражу».
+  const plain = understood?.rest ?? withoutFillers(pack, raw);
+  if (hits.length || !plain) return { hits };
+  return { hits: searchArticles(pack, plain + ending, search) };
+}
+
+/** A query without the dictionary's everyday words, or null when it has none of them or nothing else. */
+function withoutFillers(pack: ServerPack, raw: string): string | null {
+  const fillers = pack.dictionary?.fillers;
+  if (!fillers?.length || parseQuery(pack, raw).number) return null;
+  const forms = formsOf(fillers);
+  const list = tokens(raw);
+  const rest = list.filter((token) => !has(forms, token));
+  return rest.length && rest.length < list.length ? rest.join(' ') : null;
 }

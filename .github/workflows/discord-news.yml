@@ -1,0 +1,45 @@
+# A published release is told in the «📣 новости» channel of the Discord server: the version, «Что нового» and
+# where to download it. The channel's webhook is the repository secret DISCORD_RELEASES_WEBHOOK; without it the
+# step does nothing. Drafts are not told — only what players can download.
+name: Discord news
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  tell:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post the release to Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_RELEASES_WEBHOOK }}
+          TAG: ${{ github.event.release.tag_name }}
+          URL: ${{ github.event.release.html_url }}
+          BODY: ${{ github.event.release.body }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "DISCORD_RELEASES_WEBHOOK is not set: nothing posted."
+            exit 0
+          fi
+          node -e '
+            const version = process.env.TAG.replace(/^v/, "");
+            // «Что нового» without its heading and without «Установка»: the download link stands for it.
+            const notes = process.env.BODY.split(/^## Установка/m)[0].replace(/^## Что нового\s*/m, "").trim();
+            const description = notes.length > 3900 ? `${notes.slice(0, 3900)}…\n\nЦеликом — на странице выпуска.` : notes;
+            const message = {
+              username: "Кремлёвский Ассистент",
+              allowed_mentions: { parse: [] },
+              embeds: [{
+                title: `Вышла версия ${version}`,
+                url: process.env.URL,
+                description: `${description}\n\n**[Скачать для Windows](https://github.com/skyyyzeee/ro-helper/releases/latest)** · программа предложит обновиться сама`,
+                color: 0xa34f40,
+              }],
+            };
+            fetch(process.env.WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(message) })
+              .then(async (r) => { if (!r.ok) { console.error(r.status, await r.text()); process.exit(1); } console.log("Posted to Discord."); });
+          '
