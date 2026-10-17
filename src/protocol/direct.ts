@@ -1,4 +1,4 @@
-import { searchArticles, type SearchHit, type ServerPack } from '../core';
+import { searchArticles, understand, type SearchHit, type ServerPack } from '../core';
 import { cachedStem, wordIndex, words } from '../core/wordIndex';
 
 /**
@@ -28,13 +28,32 @@ export function punishmentSubject(message: string): string | null {
   return subject;
 }
 
+/** A deed named alone, «взятка», «превышение скорости»: one or two words and nothing else. */
+const BARE = /^[а-я]+(?: [а-я]+)?$/;
+
+/**
+ * The deed of a question that is only its name («взятка», marks of 18.10), or null. Not a word an intent of the
+ * dictionary knows: «задержание», «права» ask a procedure, «штраф», «срок» ask nothing in particular.
+ */
+export function bareSubject(pack: ServerPack, message: string): string | null {
+  const text = message.trim().replace(/\s+/g, ' ').replace(/[?!.]+$/, '').toLowerCase().replace(/ё/g, 'е');
+  if (!BARE.test(text)) return null;
+  const intent = understand(pack, text)?.intent.id;
+  return intent ? null : text;
+}
+
 /**
  * The articles of the penal codes that answer «что будет за …» by themselves: an article named by its number, or
  * the few whose title holds a word of the deed. Null when the base cannot answer it alone.
  */
 export function directPunishment(pack: ServerPack, message: string, boostDocuments?: string[]): { subject: string; hits: SearchHit[] } | null {
-  const subject = punishmentSubject(message);
+  const asked = punishmentSubject(message);
+  const subject = asked ?? bareSubject(pack, message);
   if (!subject) return null;
+  // A name alone answers only when every title holding it opens with it: «Кража», «Получение взятки». A title
+  // holding it further on — «…зафиксированное сотрудниками полиции» for «мент», «Незаконное кустарное
+  // производство… наркотических» beside «Пропаганда наркотических» — and the AI weighs which is meant.
+  const bare = !asked;
   const codes = (hit: SearchHit) => hit.document.kind === 'penal-code' && punished(hit);
   const found = searchArticles(pack, `${subject} `, { boostDocuments, limit: 40 }).filter(codes);
   const seen = new Set<string>();
@@ -57,9 +76,10 @@ export function directPunishment(pack: ServerPack, message: string, boostDocumen
       const positions = alternatives.map((alts) => Math.max(...alts.map((phrase) => at(title, phrase))));
       // The deed heads the title — «Убийство…», «Мелкое хулиганство» — not «Угроза убийством».
       const head = positions[0] === 0 || (positions[0] === 1 && ADJECTIVE.test(first));
-      return { hit, found: positions.every((p) => p >= 0), head };
+      return { hit, found: positions.every((p) => p >= 0), opens: positions[0] <= 1, head };
     })
     .filter((x) => x.found);
+  if (bare && !placed.every((x) => x.opens)) return null;
   const headed = placed.filter((x) => x.head);
   const titled = (headed.length ? headed : placed).map((x) => x.hit);
   if (!titled.length || titled.length > MOST) return null;

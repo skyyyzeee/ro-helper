@@ -37,4 +37,21 @@ describe('«что будет за …», answered by the base alone', () => {
     expect(titles(TVERSKOI_PACK, 'что будет за уход от погони')).toBeNull();
     expect(titles(ARBATSKIY_PACK, 'что будет за ук 104')).toBeNull();
   });
+
+  it('answers a deed named alone, «взятка» (marks of 18.10), when every title holding it opens with it', () => {
+    expect(titles(KUTUZOVSKIY_PACK, 'взятка')).toEqual(['УК 15.4', 'УК 15.5']);
+    expect(titles(TVERSKOI_PACK, 'Кража?')).toEqual(['УК 65']);
+    expect(titles(ARBATSKIY_PACK, 'превышение скорости')).toEqual(['КоАП 24.1']);
+  });
+
+  it('leaves to the AI a word alone that is no deed, or one titles hold further on', () => {
+    // Words of procedure or of nothing in particular: the dictionary's intents.
+    for (const word of ['задержание', 'права', 'штраф', 'срок']) expect(titles(TVERSKOI_PACK, word)).toBeNull();
+    // «…зафиксированное сотрудниками полиции»: «мент» is in it, but no title is about him.
+    expect(titles(ARBATSKIY_PACK, 'мент')).toBeNull();
+    // «Пропаганда наркотических…» opens with it, «Незаконное кустарное производство… наркотических» does not.
+    expect(titles(KUTUZOVSKIY_PACK, 'наркотики')).toBeNull();
+    // Three words and more tell a situation.
+    expect(titles(KUTUZOVSKIY_PACK, 'взятка от гаишника')).toBeNull();
+  });
 });
