@@ -19,6 +19,7 @@ import { isNewer, readPack } from '../ui/laws';
 import { PROFILE_KEY, type Profile } from '../ui/profile';
 import { entryPart, favoritesKey, hitKey, recentKey, useHitLookup } from '../ui/saved';
 import { HOME_ICONS } from './icons';
+import './fonts.css';
 import './home.css';
 
 type Section = 'today' | 'laws' | 'ai' | 'duty' | 'wiki' | 'settings';
@@ -31,8 +32,9 @@ const SECTIONS: { id: Section; label: string }[] = [
   { id: 'settings', label: 'Настройки' },
 ];
 
-/** The fonts the preview offers; Inter waits for the team's choice (a download). */
-const FONTS = ['Onest', 'Segoe UI Variable'] as const;
+/** The fonts the preview offers: the team's choice first (Inter, digits in Manrope), the others to compare. */
+const FONTS = ['Kremlin', 'Onest', 'Segoe UI Variable'] as const;
+const FONT_NAMES: Record<Font, string> = { Kremlin: 'Inter + Manrope', Onest: 'Onest', 'Segoe UI Variable': 'Segoe UI' };
 type Font = (typeof FONTS)[number];
 const FONT_KEY = 'home.font';
 const SURVEY_KEY = 'home.survey';
@@ -77,7 +79,7 @@ export function HomeWindow({ bridge }: { bridge: HomeBridge }) {
   const laws = useHomeLaws(bridge);
   const [section, setSection] = useState<Section>('today');
   const [mica, setMica] = useState(false);
-  const [font, setFont] = useState<Font>('Onest');
+  const [font, setFont] = useState<Font>('Kremlin');
   useEffect(() => {
     void bridge.mica().then(setMica);
     void bridge.readSetting<Font>(FONT_KEY).then((saved) => saved && FONTS.includes(saved) && setFont(saved));
@@ -549,11 +551,11 @@ function SettingsView({ bridge, font, onFont, mica }: { bridge: HomeBridge; font
         <div className="home-segments" role="radiogroup" aria-label="Шрифт">
           {FONTS.map((f) => (
             <button key={f} type="button" role="radio" aria-checked={font === f} style={{ fontFamily: `'${f}', system-ui` }} onClick={() => onFont(f)}>
-              {f}
+              {FONT_NAMES[f]}
             </button>
           ))}
         </div>
-        <p className="home-note">Inter — как в прототипе — подключим, если команда его выберет.</p>
+        <p className="home-note">Inter + Manrope — выбор команды: текст Inter, цифры Manrope. Остальные — для сравнения.</p>
       </Card>
       <Card title="Приватность" wide>
         <div className="home-toggle">

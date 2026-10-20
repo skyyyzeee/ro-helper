@@ -15,7 +15,8 @@
   --h-gold: #a8770e;
   --h-green: #248a3d;
   --h-ease: cubic-bezier(0.32, 0.72, 0, 1);
-  --h-font: var(--home-font, 'Onest'), 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  --h-font: var(--home-font, 'Kremlin'), 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
   position: fixed;
   inset: 0;
   display: grid;
