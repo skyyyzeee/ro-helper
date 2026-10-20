@@ -32,11 +32,6 @@ const SECTIONS: { id: Section; label: string }[] = [
   { id: 'settings', label: 'Настройки' },
 ];
 
-/** The fonts the preview offers: the team's choice first (Inter, digits in Manrope), the others to compare. */
-const FONTS = ['Kremlin', 'Onest', 'Segoe UI Variable'] as const;
-const FONT_NAMES: Record<Font, string> = { Kremlin: 'Inter + Manrope', Onest: 'Onest', 'Segoe UI Variable': 'Segoe UI' };
-type Font = (typeof FONTS)[number];
-const FONT_KEY = 'home.font';
 const SURVEY_KEY = 'home.survey';
 const REPORTS_KEY = 'home.reports';
 
@@ -79,15 +74,9 @@ export function HomeWindow({ bridge }: { bridge: HomeBridge }) {
   const laws = useHomeLaws(bridge);
   const [section, setSection] = useState<Section>('today');
   const [mica, setMica] = useState(false);
-  const [font, setFont] = useState<Font>('Kremlin');
   useEffect(() => {
     void bridge.mica().then(setMica);
-    void bridge.readSetting<Font>(FONT_KEY).then((saved) => saved && FONTS.includes(saved) && setFont(saved));
   }, [bridge]);
-  const chooseFont = (next: Font) => {
-    setFont(next);
-    void bridge.writeSetting(FONT_KEY, next);
-  };
 
   // The selection's pill glides to the section chosen.
   const nav = useRef<HTMLDivElement>(null);
@@ -101,7 +90,7 @@ export function HomeWindow({ bridge }: { bridge: HomeBridge }) {
   const can = useMemo(() => aiCapabilitiesOf({ admin: false, organization }), [organization]);
 
   return (
-    <div className={mica ? 'home home--mica' : 'home'} style={{ '--home-font': `'${font}'` } as React.CSSProperties}>
+    <div className={mica ? 'home home--mica' : 'home'}>
       <Edges bridge={bridge} />
       <aside className="home__side">
         <div className="home__titlebar" data-tauri-drag-region>
@@ -152,7 +141,7 @@ export function HomeWindow({ bridge }: { bridge: HomeBridge }) {
               {section === 'ai' && <AiView bridge={bridge} />}
               {section === 'duty' && <DutyView bridge={bridge} can={can} />}
               {section === 'wiki' && <WikiView bridge={bridge} />}
-              {section === 'settings' && <SettingsView bridge={bridge} font={font} onFont={chooseFont} mica={mica} />}
+              {section === 'settings' && <SettingsView bridge={bridge} mica={mica} />}
             </div>
           )}
         </div>
@@ -535,7 +524,7 @@ function WikiView({ bridge }: { bridge: HomeBridge }) {
 
 // ——— Настройки ———
 
-function SettingsView({ bridge, font, onFont, mica }: { bridge: HomeBridge; font: Font; onFont: (font: Font) => void; mica: boolean }) {
+function SettingsView({ bridge, mica }: { bridge: HomeBridge; mica: boolean }) {
   const [reports, setReports] = useState(true);
   useEffect(() => {
     void bridge.readSetting<boolean>(REPORTS_KEY).then((saved) => saved !== undefined && setReports(saved));
@@ -547,16 +536,6 @@ function SettingsView({ bridge, font, onFont, mica }: { bridge: HomeBridge; font
   return (
     <>
       <Title note="Превью: настройки нового облика">Настройки</Title>
-      <Card title="Шрифт" wide>
-        <div className="home-segments" role="radiogroup" aria-label="Шрифт">
-          {FONTS.map((f) => (
-            <button key={f} type="button" role="radio" aria-checked={font === f} style={{ fontFamily: `'${f}', system-ui` }} onClick={() => onFont(f)}>
-              {FONT_NAMES[f]}
-            </button>
-          ))}
-        </div>
-        <p className="home-note">Inter + Manrope — выбор команды: текст Inter, цифры Manrope. Остальные — для сравнения.</p>
-      </Card>
       <Card title="Приватность" wide>
         <div className="home-toggle">
           <div>

@@ -15,7 +15,8 @@
   --h-gold: #a8770e;
   --h-green: #248a3d;
   --h-ease: cubic-bezier(0.32, 0.72, 0, 1);
-  --h-font: var(--home-font, 'Kremlin'), 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  /* Inter for text, Manrope for the digits (fonts.css). */
+  --h-font: 'Kremlin', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   position: fixed;
   inset: 0;
@@ -494,7 +495,6 @@ body:has(.home) {
 
 .home-btn:focus-visible,
 .home-options button:focus-visible,
-.home-segments button:focus-visible,
 .home-switch:focus-visible,
 .home-link:focus-visible {
   outline: 2px solid var(--h-accent);
@@ -664,28 +664,6 @@ body:has(.home) {
   font-size: 13px;
 }
 
-.home-segments {
-  display: inline-flex;
-  justify-self: start;
-  gap: 2px;
-  padding: 3px;
-  border-radius: 10px;
-  background: var(--h-fill);
-}
-
-.home-segments button {
-  border: 0;
-  border-radius: 7px;
-  padding: 6px 14px;
-  background: none;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.home-segments button[aria-checked='true'] {
-  background: var(--h-card);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-}
 
 .home-toggle {
   display: flex;
