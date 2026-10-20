@@ -5957,3 +5957,38 @@ select option {
 /* The one hint to mark answers (MarkBar): once, under the third answer of a conversation. */
 .mark__hint { display: flex; align-items: center; gap: 8px; margin: 6px 0 0; padding: 8px 10px; border-radius: 10px; background: oklch(0.78 0.1 var(--accent-hue) / 0.12); color: var(--text); font-size: 13px; line-height: 1.4; }
 .mark__hint span { flex: 1; }
+
+/* The app's own tooltip (nativeFeel.ts) in place of the system's, and selected text in the accent. */
+.tip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 10000;
+  max-width: 280px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  background: rgba(28, 28, 33, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.tip--on {
+  opacity: 1;
+}
+
+::selection {
+  background: color-mix(in oklch, var(--accent) 45%, transparent);
+  color: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tip {
+    transition: none;
+  }
+}
