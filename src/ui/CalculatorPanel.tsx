@@ -140,6 +140,9 @@ function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, fineInp
   const amount = Number(fineInput.replace(/\D/g, ''));
   const fits = !fineInput || !criminal.fineLimit || fineFits(amount, criminal.fineLimit);
   const stars = result.stars;
+  // One jurisdiction for every charge goes once, by the section's title; different ones stay with each charge.
+  const jurisdictionOf = (r: (typeof items)[number]) => r.item.part.jurisdiction?.join('/') ?? '';
+  const shared = items.every((r) => jurisdictionOf(r) === jurisdictionOf(items[0])) ? items[0]?.item.part.jurisdiction : undefined;
 
   return (
     <>
@@ -154,12 +157,19 @@ function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, fineInp
       {noFine.length > 0 && <p className="calc__hint">Штраф недоступен: у {noFine.map((r) => chargeLabel(r.item)).join(', ')} нет штрафа</p>}
       {noCustody && <p className="calc__hint">КПЗ недоступен: ни у одной статьи нет лишения свободы</p>}
 
-      <div className="sec-t">УК · {criminal.combine === 'sum' ? 'сложение' : 'поглощение'}</div>
+      <div className="sec-row">
+        <span className="sec-t">УК · {criminal.combine === 'sum' ? 'сложение' : 'поглощение'}</span>
+        <span className="sp" />
+        {shared && <JurisdictionPill jurisdiction={shared} />}
+      </div>
       <ul className="calc__items" aria-label="Статьи в калькуляторе">
         {items.map((r) => {
           const label = chargeLabel(r.item);
           const byStars = r.item.part.punishment?.alternatives.some((s) => s.kind === 'imprisonment-by-stars');
           const partStars = r.item.part.stars;
+          const ownJurisdiction = !shared && r.item.part.jurisdiction;
+          // Nothing chosen and nothing to tell in the second line: it shows on pointing at the charge or tabbing into it.
+          const quiet = r.item.stage === 'done' && !(byStars && partStars) && !ownJurisdiction;
           return (
             <li key={`${r.item.article.id}#${r.item.part.number ?? ''}`} className={r.absorbed ? 'ci ci--absorbed' : r.stacked ? 'ci ci--stacked' : 'ci'}>
               <div className="ci__row">
@@ -171,7 +181,7 @@ function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, fineInp
                   <CloseIcon size={14} />
                 </button>
               </div>
-              <div className="ci__mods">
+              <div className={quiet ? 'ci__mods ci__mods--quiet' : 'ci__mods'}>
                 {(['attempt', 'preparation'] as const).map((stage) => (
                   <button
                     key={stage}
@@ -199,7 +209,7 @@ function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, fineInp
                   </span>
                 )}
                 <span className="sp" />
-                {r.item.part.jurisdiction && <JurisdictionPill jurisdiction={r.item.part.jurisdiction} />}
+                {ownJurisdiction && <JurisdictionPill jurisdiction={ownJurisdiction} />}
               </div>
             </li>
           );
