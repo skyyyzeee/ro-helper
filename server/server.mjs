@@ -66,6 +66,21 @@ const CONFIG = {
   feedbackPerDevice: num('FEEDBACK_PER_DEVICE', 30),
   /** Past this size the file takes no more until the admins have read and moved it. */
   feedbackMaxBytes: num('FEEDBACK_MAX_MB', 50) * 1024 * 1024,
+  /**
+   * The players' answers to the app's short polls (one question, ready answers, never required): the poll, the
+   * answer, the version and the server — no id of the player or the computer. One answer a poll on a computer is the
+   * app's to keep; here only a few a day per computer.
+   */
+  surveyFile: env('SURVEY_FILE', './survey.jsonl'),
+  surveyPerDevice: num('SURVEY_PER_DEVICE', 10),
+  /**
+   * The app's reports of its own errors (what broke and where: the version, Windows, the part of the app, the
+   * message and where in the code) — nothing the player typed. On by default, off in the settings.
+   */
+  crashFile: env('CRASH_FILE', './crashes.jsonl'),
+  crashPerDevice: num('CRASH_PER_DEVICE', 20),
+  /** Past this size each of the two files takes no more until the admins have read and moved it. */
+  reportsMaxBytes: num('REPORTS_MAX_MB', 20) * 1024 * 1024,
   /** The admins' reviews of the marks: approved, rejected, to check again — with the normal form they gave. */
   reviewsFile: env('REVIEWS_FILE', './reviews.json'),
   /**
@@ -467,6 +482,78 @@ function keepMark(device, mark) {
   dirty = true;
 }
 
+// ——— The players' poll answers and the app's error reports ———
+
+/** A poll answer as it is kept: the poll, the answer, when, the version and the server. Null when it is none. */
+function answerOf(input) {
+  const survey = clip(input?.survey, 40);
+  const answer = clip(input?.answer, 80);
+  if (!survey || !answer) return null;
+  return { at: new Date().toISOString().slice(0, 16), survey, answer, app: clip(input?.app, 20), server: clip(input?.server, 40) };
+}
+
+/** An error report as it is kept: what broke and where, cut to length; a random id for the admins. Null when none. */
+function crashOf(input) {
+  const message = clip(input?.message, 300);
+  if (!message) return null;
+  // The stack keeps its lines: where in the code. The app has taken the player's own paths out of it.
+  const stack = typeof input?.stack === 'string' ? input.stack.slice(0, 2000) : '';
+  return {
+    id: randomUUID(),
+    at: new Date().toISOString().slice(0, 16),
+    app: clip(input?.app, 20),
+    os: clip(input?.os, 60),
+    area: clip(input?.area, 40),
+    message,
+    ...(stack ? { stack } : {}),
+  };
+}
+
+/** Keeps a line in one of the two files, or says why not: too many today from this computer, or the file is full. */
+function keepReport(device, kind, file, perDevice, line) {
+  rollDay();
+  const used = (state.devices[device] ??= { questions: 0 });
+  if ((used[kind] ?? 0) >= perDevice) return 'На сегодня достаточно — спасибо!';
+  if (existsSync(file) && statSync(file).size >= CONFIG.reportsMaxBytes) return 'Сейчас не принимается — попробуйте позже.';
+  appendFileSync(file, `${JSON.stringify(line)}\n`, { mode: 0o600 });
+  used[kind] = (used[kind] ?? 0) + 1;
+  dirty = true;
+  return null;
+}
+
+/** Each poll's answers counted, for the admins. */
+function surveySummary() {
+  const polls = {};
+  if (!existsSync(CONFIG.surveyFile)) return polls;
+  for (const line of readFileSync(CONFIG.surveyFile, 'utf8').split('\n')) {
+    if (!line.trim()) continue;
+    try {
+      const { survey, answer } = JSON.parse(line);
+      polls[survey] ??= {};
+      polls[survey][answer] = (polls[survey][answer] ?? 0) + 1;
+    } catch {
+      // A broken line is skipped.
+    }
+  }
+  return polls;
+}
+
+/** The latest error reports, newest first. */
+function latestCrashes(limit) {
+  if (!existsSync(CONFIG.crashFile)) return [];
+  const crashes = [];
+  for (const line of readFileSync(CONFIG.crashFile, 'utf8').split('\n').reverse()) {
+    if (crashes.length >= limit) break;
+    if (!line.trim()) continue;
+    try {
+      crashes.push(JSON.parse(line));
+    } catch {
+      // A broken line is skipped.
+    }
+  }
+  return crashes;
+}
+
 // ——— The admins' reviews: raw → approved / rejected / to check again ———
 
 const REVIEW = new Set(['approved', 'rejected', 'recheck']);
@@ -620,7 +707,7 @@ async function leaderOf(account, request) {
 // ——— HTTP ———
 
 /** A question with a dozen articles is some 60 KB. Text only: no speech is taken — it is recognised on the players' computers. */
-const LIMITS = { '/v1/chat': 200_000, '/v1/feedback': 8_000 };
+const LIMITS = { '/v1/chat': 200_000, '/v1/feedback': 8_000, '/v1/survey': 2_000, '/v1/crash': 8_000 };
 
 function readBody(request, limit) {
   return new Promise((resolve, reject) => {
@@ -663,6 +750,15 @@ const server = createServer(async (request, response) => {
     const filter = ['down', 'fixed', 'raw', 'approved', 'rejected', 'recheck'].includes(params.get('filter')) ? params.get('filter') : 'all';
     const count = Math.min(Math.max(Number(params.get('limit')) || 100, 1), 500);
     return send(response, 200, { marks: latestMarks(filter, count), today: state.marks ?? 0 });
+  }
+  if (request.method === 'GET' && request.url === '/v1/survey') {
+    if (!isAdmin(request)) return send(response, 403, { error: 'Нужен ключ администратора.' });
+    return send(response, 200, { polls: surveySummary() });
+  }
+  if (request.method === 'GET' && request.url.startsWith('/v1/crashes')) {
+    if (!isAdmin(request)) return send(response, 403, { error: 'Нужен ключ администратора.' });
+    const count = Math.min(Math.max(Number(new URL(request.url, 'http://local').searchParams.get('limit')) || 100, 1), 500);
+    return send(response, 200, { crashes: latestCrashes(count) });
   }
   if (request.method === 'GET' && request.url === '/v1/aliases') {
     response.setHeader('Cache-Control', 'public, max-age=3600');
@@ -716,6 +812,21 @@ const server = createServer(async (request, response) => {
     } catch (error) {
       console.error(new Date().toISOString(), 'feedback:', error);
       return send(response, 500, { error: 'Не удалось сохранить отзыв — попробуйте позже.' });
+    }
+  }
+
+  if (request.url === '/v1/survey' || request.url === '/v1/crash') {
+    const survey = request.url === '/v1/survey';
+    const line = survey ? answerOf(input) : crashOf(input);
+    if (!line) return send(response, 400, { error: survey ? 'Нет ответа.' : 'Пустой отчёт.' });
+    try {
+      const why = survey
+        ? keepReport(device, 'answers', CONFIG.surveyFile, CONFIG.surveyPerDevice, line)
+        : keepReport(device, 'crashes', CONFIG.crashFile, CONFIG.crashPerDevice, line);
+      return why ? send(response, 429, { error: why }) : send(response, 200, { ok: true });
+    } catch (error) {
+      console.error(new Date().toISOString(), request.url, error);
+      return send(response, 500, { error: 'Не удалось сохранить — попробуйте позже.' });
     }
   }
 

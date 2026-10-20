@@ -17,6 +17,8 @@ import { createBrowserPlatform } from './platform/browser';
 import { PlatformProvider } from './platform/PlatformContext';
 import { createPinBridge, createQuickBridge, createTauriPlatform, isPinWindow, isQuickWindow, isTauri } from './platform/tauri';
 import { installNativeFeel } from './ui/nativeFeel';
+import { installReports } from './ui/reports';
+import { ReportBoundary } from './ui/ReportBoundary';
 import { PinWindow } from './ui/PinSurface';
 import { QuickSearch } from './ui/QuickSearch';
 
@@ -65,19 +67,23 @@ async function start() {
   const platform = isTauri() ? await createTauriPlatform() : createBrowserPlatform();
   // In the preview nothing listens for the browser coming back: signing in says it works in the app only.
   const accounts = createSupabaseAccounts(platform);
+  // The overlay's errors are reported, unless turned off; a screen that fails shows a way back (reports.ts).
+  if (isTauri()) installReports(platform, 'Оверлей');
   root.render(
     <StrictMode>
-      <PlatformProvider platform={platform}>
-        <AccountProvider accounts={accounts}>
-          <SyncProvider accounts={accounts} rules={SYNC_RULES}>
-            <RolesProvider accounts={accounts}>
-              <MemosProvider>
-                <App />
-              </MemosProvider>
-            </RolesProvider>
-          </SyncProvider>
-        </AccountProvider>
-      </PlatformProvider>
+      <ReportBoundary platform={platform} area="Оверлей">
+        <PlatformProvider platform={platform}>
+          <AccountProvider accounts={accounts}>
+            <SyncProvider accounts={accounts} rules={SYNC_RULES}>
+              <RolesProvider accounts={accounts}>
+                <MemosProvider>
+                  <App />
+                </MemosProvider>
+              </RolesProvider>
+            </SyncProvider>
+          </AccountProvider>
+        </PlatformProvider>
+      </ReportBoundary>
     </StrictMode>,
   );
 }

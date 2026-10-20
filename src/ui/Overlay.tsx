@@ -70,6 +70,7 @@ import { reportText } from './report';
 import { aiCapabilitiesOf, isFaction } from '../account/capabilities';
 import { useStats } from './stats';
 import { useAnnouncements } from './announcements';
+import { useSurvey } from './surveys';
 import { useMemos } from './memos';
 import { MemosView, memoDay } from './MemosView';
 import { WikiView } from './WikiView';
@@ -340,6 +341,8 @@ export function Overlay({
   const count = useStats(platform, pack.server.id);
   // The author's notice to every player, from GitHub (ticket 26).
   const announcements = useAnnouncements(pack.server.id);
+  // A short poll of the team's, never required: one question, ready answers, asked once.
+  const survey = useSurvey(pack.server.id);
   const [side, setSide] = useState<'left' | 'right'>('left');
   const toggleCharge = (hit: SearchHit) => {
     const key = hitKey(hit);
@@ -1671,6 +1674,28 @@ export function Overlay({
                 </b>
                 <span className="memo__text">{memoPlain(memos.active[0].text)}</span>
               </button>
+            )}
+            {survey.answered ? (
+              <section className="home__poll" aria-label="Опрос">
+                <p className="home__poll-thanks">Спасибо! Ваш ответ: «{survey.answered}».</p>
+              </section>
+            ) : (
+              survey.current && (
+                <section className="home__poll" aria-label="Опрос">
+                  <span className="home__poll-label">Короткий вопрос · необязательно</span>
+                  <b>{survey.current.question}</b>
+                  <div className="home__poll-answers">
+                    {survey.current.answers.map((answer) => (
+                      <button key={answer} type="button" onClick={() => survey.answer(answer)}>
+                        {answer}
+                      </button>
+                    ))}
+                    <button type="button" className="home__poll-skip" onClick={survey.skip}>
+                      Не сейчас
+                    </button>
+                  </div>
+                </section>
+              )
             )}
             {announcements.current && (
               <section className="home__news" aria-label="Объявление">
