@@ -5971,6 +5971,102 @@ select option {
 .mark__hint { display: flex; align-items: center; gap: 8px; margin: 6px 0 0; padding: 8px 10px; border-radius: 10px; background: oklch(0.78 0.1 var(--accent-hue) / 0.12); color: var(--text); font-size: 13px; line-height: 1.4; }
 .mark__hint span { flex: 1; }
 
+/* ——— An article with less noise (skyze): one line of header, parts apart by air, each fact once ——— */
+.art__top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.art__top .art__crumb {
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.art__more {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.art__more:hover,
+.art__more--on {
+  background: rgb(255 255 255 / calc(0.08 * var(--tint-scale)));
+  color: var(--text);
+}
+
+.art__top + .art__chapter {
+  margin-top: -8px;
+}
+
+.art__parts .part-card {
+  gap: 10px;
+  padding: 12px 14px;
+  background: transparent;
+  box-shadow: none;
+  cursor: default;
+}
+
+.art__parts .part-card--focus {
+  background: rgb(255 255 255 / calc(0.06 * var(--tint-scale)));
+}
+
+.part-card__row {
+  display: flex;
+  gap: 10px;
+}
+
+.part-card__row .part-card__num {
+  flex: none;
+  font-size: 15.5px;
+  line-height: 1.6;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.part-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.part-card__stars {
+  display: inline-flex;
+  vertical-align: -1px;
+  margin-right: 8px;
+}
+
+.part-card__meta {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.part-card__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn--sm {
+  height: 34px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+
+.btn--sm.btn--primary {
+  min-width: 0;
+}
+
+.part-card__added {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  color: var(--text-muted);
 /* The app's own tooltip (nativeFeel.ts) in place of the system's, and selected text in the accent. */
 .tip {
   position: fixed;

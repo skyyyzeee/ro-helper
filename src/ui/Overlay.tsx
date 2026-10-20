@@ -1513,6 +1513,7 @@ export function Overlay({
             }
             favorite={favoriteKeys.includes(hitKey(open))}
             onFavorite={() => toggleFavorite(open)}
+            onFocusPart={(part) => setOpen({ ...open, part })}
             pinned={pinnedArticle}
             onPin={() => togglePin(articlePinCard(open, rules))}
           />

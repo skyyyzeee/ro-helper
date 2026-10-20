@@ -18,42 +18,54 @@ async function openFromSearch(user: User, query: string) {
 }
 
 describe('an open article', () => {
-  it('spells out the jurisdiction and the term the stars stand for', async () => {
+  it('says the punishment once, with its stars; the jurisdiction and what the stars stand for under «Подробнее»', async () => {
     const { user } = await renderApp();
     await openFromSearch(user, 'ук 65 ч 1');
-    const part = within(article()).getByRole('region', { name: 'Часть 1' });
-    expect(part).toHaveTextContent('Р/Фрегиональная или федеральная');
-    expect(part).toHaveTextContent('= 30 мес');
+    const part = () => within(article()).getByRole('region', { name: 'Часть 1' });
+    expect(part()).toHaveTextContent('штраф до 50 000 ₽ либо 30 мес');
+    expect(part()).not.toHaveTextContent('= 30 мес');
+    expect(part()).not.toHaveTextContent('региональная или федеральная');
+
+    await user.click(within(article()).getByRole('button', { name: 'Подробнее' }));
+    expect(part()).toHaveTextContent('Р/Фрегиональная или федеральная');
+    expect(part()).toHaveTextContent('= 30 мес');
+    expect(article()).toHaveTextContent('Глава 14');
 
     await openFromSearch(user, 'ук 80 ч 1');
+    await user.click(within(article()).getByRole('button', { name: 'Подробнее' }));
     expect(within(article()).getByRole('region', { name: 'Часть 1' })).toHaveTextContent('федеральная (ФСБ)');
   });
 
   it('calls КоАП stars the wanted level for an arrest, not a term in months', async () => {
     const { user } = await renderApp();
     await openFromSearch(user, 'коап 5.4 ч 1');
+    await user.click(within(article()).getByRole('button', { name: 'Подробнее' }));
     const koap = within(article()).getByRole('region', { name: 'Часть 1' });
     expect(koap).toHaveTextContent('уровень розыска');
     expect(koap).not.toHaveTextContent('мес');
   });
 
-  it('adds the part it was opened on, each part with its own «+», and Enter does the same', async () => {
+  it('has the calculator’s button on the chosen part only; a click chooses another, and Enter acts on it', async () => {
     const { user } = await renderApp();
     await user.type(search(), 'ук 65');
     await user.keyboard('{ArrowDown}{ArrowRight}');
     expect(within(article()).getByRole('region', { name: 'Часть 2' })).toHaveAttribute('aria-current', 'true');
 
     const part = (n: number) => within(article()).getByRole('region', { name: `Часть ${n}` });
-    await user.click(within(article()).getByText('Добавить ч. 2 в калькулятор'));
+    expect(within(part(1)).queryByRole('button', { name: /калькулятор/ })).not.toBeInTheDocument();
+    await user.click(within(part(2)).getByRole('button', { name: 'Добавить ч. 2 в калькулятор' }));
     expect(inCalculator()[0]).toHaveTextContent('ст. 65 ч. 2');
     expect(within(part(2)).getByRole('button', { name: 'Убрать ч. 2 из калькулятора' })).toHaveAttribute('aria-pressed', 'true');
 
+    await user.click(part(1));
     await user.click(within(part(1)).getByRole('button', { name: 'Добавить ч. 1 в калькулятор' }));
     expect(inCalculator()).toHaveLength(2);
+    // The part not chosen says it is in the calculator, with no button of its own.
+    expect(part(2)).toHaveTextContent('в калькуляторе');
 
     await user.keyboard('{Enter}');
     expect(inCalculator()).toHaveLength(1);
-    expect(inCalculator()[0]).toHaveTextContent('ст. 65 ч. 1');
+    expect(inCalculator()[0]).toHaveTextContent('ст. 65 ч. 2');
   });
 
   it('has no calculator button for a law without punishments', async () => {
