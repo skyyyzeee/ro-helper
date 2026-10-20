@@ -6067,6 +6067,8 @@ select option {
   gap: 5px;
   font-size: 12.5px;
   color: var(--text-muted);
+}
+
 /* The app's own tooltip (nativeFeel.ts) in place of the system's, and selected text in the accent. */
 .tip {
   position: fixed;
