@@ -10,7 +10,7 @@ describe('articles for a situation told in free words (real Тверской dat
   });
 
   it('finds more with the situation retold in the words of the law', () => {
-    const lawTerms = ['ношение оружия', 'электрошоковое устройство', 'сокрытие лица маска', 'здание органов внутренних дел'];
+    const lawTerms = ['использование оружия', 'электрошоковое устройство', 'сокрытие лица маска', 'здание органов внутренних дел'];
     const hits = findForSituation(TVERSKOI_PACK, 'человек в маске с электродубинкой возле здания МВД', { lawTerms, limit: 8 });
     expect(hits.map(sourceLabel).join('\n')).toMatch(/УК ст\. 74 /);
   });

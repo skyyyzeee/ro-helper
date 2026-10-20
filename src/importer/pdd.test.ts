@@ -13,9 +13,9 @@ const article = (number: string) => {
 };
 
 describe('ПДД Тверского (real forum text)', () => {
-  it('reads 15 chapters in Roman numerals and 116 untitled articles, without sanctions', () => {
+  it('reads 15 chapters in Roman numerals and 123 untitled articles, without sanctions', () => {
     expect(pdd.chapters.map((c) => c.number)).toEqual(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV']);
-    expect(pdd.articles).toHaveLength(116);
+    expect(pdd.articles).toHaveLength(123);
     expect(pdd.articles[0].number).toBe('1.1');
     expect(pdd.articles.at(-1)?.number).toBe('15.19');
     expect(pdd.articles.every((a) => a.title === '')).toBe(true);
@@ -42,11 +42,8 @@ describe('ПДД Тверского (real forum text)', () => {
   });
 
   it('leaves the appendix reference and adoption lines out of the last article', () => {
-    expect(pdd.footer).toEqual([
-      // A decree of the government since 21 September: signed, not passed by the Duma.
-      'Приложение к ПДД - дорожные знаки, разметка и пр.',
-      'Подписано Премьер-Министром РО 27 августа 2026 года',
-    ]);
+    // The adoption lines (a decree of the government, signed in August) are gone from the text since 19 October.
+    expect(pdd.footer).toEqual(['Приложение к ПДД - дорожные знаки, разметка и пр.']);
     expect(article('15.19').parts).toHaveLength(1);
   });
 });

@@ -4,8 +4,14 @@
     "parts": {
       "#1": {
         "punishment": {
-          "alternatives": [{ "kind": "evacuation" }],
-          "additional": ["оплата повышенного штрафа по тарифам спецстоянки"]
+          "alternatives": [
+            {
+              "kind": "evacuation"
+            }
+          ],
+          "additional": [
+            "оплата повышенного штрафа по тарифам спецстоянки"
+          ]
         }
       }
     }
@@ -15,7 +21,148 @@
     "parts": {
       "1": {
         "punishment": {
-          "alternatives": [{ "kind": "fine", "max": 200000 }, { "kind": "imprisonment", "months": 50 }],
+          "alternatives": [
+            {
+              "kind": "fine",
+              "max": 200000
+            },
+            {
+              "kind": "imprisonment",
+              "months": 50
+            }
+          ],
+          "additional": []
+        }
+      }
+    }
+  },
+  "koap-8.19": {
+    "reason": "Санкция записана в той же строке, что и состав («…, - влечет …»); разборщик читает только «влечет» с новой строки.",
+    "parts": {
+      "1": {
+        "punishment": {
+          "alternatives": [
+            {
+              "kind": "fine",
+              "min": 10000,
+              "max": 30000
+            },
+            {
+              "kind": "license-revocation"
+            }
+          ],
+          "additional": []
+        }
+      }
+    }
+  },
+  "koap-8.27": {
+    "reason": "Часть 3: штраф или арест, и в обоих случаях лишение права управления; разборщик такую форму не читает.",
+    "parts": {
+      "3": {
+        "punishment": {
+          "alternatives": [
+            {
+              "kind": "fine",
+              "min": 20000,
+              "max": 30000
+            },
+            {
+              "kind": "arrest",
+              "max": 20
+            }
+          ],
+          "additional": [
+            "лишение права управления ТС"
+          ]
+        }
+      }
+    }
+  },
+  "koap-8.28": {
+    "reason": "Санкция записана в той же строке, что и состав («…, - влечет …»); разборщик читает только «влечет» с новой строки.",
+    "parts": {
+      "1": {
+        "punishment": {
+          "alternatives": [
+            {
+              "kind": "fine",
+              "min": 20000,
+              "max": 50000
+            },
+            {
+              "kind": "license-revocation"
+            }
+          ],
+          "additional": []
+        }
+      },
+      "2": {
+        "punishment": {
+          "alternatives": [
+            {
+              "kind": "fine",
+              "min": 30000,
+              "max": 60000
+            },
+            {
+              "kind": "arrest",
+              "max": 20
+            }
+          ],
+          "additional": []
+        }
+      }
+    }
+  },
+  "koap-8.29": {
+    "reason": "Санкция записана в той же строке, что и состав («…, - влечет …»); разборщик читает только «влечет» с новой строки.",
+    "parts": {
+      "1": {
+        "punishment": {
+          "alternatives": [
+            {
+              "kind": "fine",
+              "min": 5000,
+              "max": 5000
+            }
+          ],
+          "additional": []
+        }
+      }
+    }
+  },
+  "uk-101.1": {
+    "reason": "Штраф «в двукратном размере суммы неуплаченного административного штрафа, но не менее трех тысяч рублей» записан словами; в части 2 ещё принудительные работы, которых в модели наказаний нет.",
+    "parts": {
+      "1": {
+        "punishment": {
+          "alternatives": [
+            {
+              "kind": "imprisonment",
+              "months": 30
+            },
+            {
+              "kind": "fine-multiple",
+              "multiplier": 2,
+              "min": 3000
+            }
+          ],
+          "additional": []
+        }
+      },
+      "2": {
+        "punishment": {
+          "alternatives": [
+            {
+              "kind": "imprisonment",
+              "months": 30
+            },
+            {
+              "kind": "fine-multiple",
+              "multiplier": 2
+            }
+          ],
           "additional": []
         }
       }

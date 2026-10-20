@@ -25,7 +25,7 @@ describe('an open article', () => {
     expect(part).toHaveTextContent('Р/Фрегиональная или федеральная');
     expect(part).toHaveTextContent('= 30 мес');
 
-    await openFromSearch(user, 'ук 88 ч 1');
+    await openFromSearch(user, 'ук 80 ч 1');
     expect(within(article()).getByRole('region', { name: 'Часть 1' })).toHaveTextContent('федеральная (ФСБ)');
   });
 
@@ -66,22 +66,22 @@ describe('an open article', () => {
 
   it('pins its part with the punishment, the text and the jurisdiction warning', async () => {
     const { platform, user } = await renderApp();
-    await openFromSearch(user, 'ук 88 ч 1');
+    await openFromSearch(user, 'ук 80 ч 1');
     await user.click(within(article()).getByRole('button', { name: 'Закрепить' }));
 
     expect(pinnedCards(platform)[0]).toMatchObject({
       kind: 'article',
-      heading: 'УК ст. 88 ч. 1. Халатность',
-      punishment: [{ text: 'штраф от 60 000 до 80 000 ₽ либо 40 мес' }],
+      heading: 'УК ст. 80. Разглашение государственной тайны',
+      punishment: [{ text: '40 мес' }],
       warning: 'федеральная подследственность — дело ФСБ',
     });
-    expect(pinnedCards(platform)[0].lines).toEqual([expect.stringMatching(/^1. Халатность, то есть/), expect.stringMatching(/^2. То же деяние/)]);
+    expect(pinnedCards(platform)[0].lines).toEqual([expect.stringMatching(/^Разглашение сведений, составляющих государственную тайну/)]);
 
     // Another article is pinned beside the first, not instead of it.
     await openFromSearch(user, 'ук 104');
     await user.click(within(article()).getByRole('button', { name: 'Закрепить' }));
     expect(pinnedCards(platform).map((card) => card.heading)).toEqual([
-      'УК ст. 88 ч. 1. Халатность',
+      'УК ст. 80. Разглашение государственной тайны',
       expect.stringMatching(/^УК ст\. 104\. /),
     ]);
     expect(pinnedCards(platform)[1].warning).toBeUndefined();
@@ -89,7 +89,7 @@ describe('an open article', () => {
     // The same article again unpins it: the button says so.
     expect(within(article()).queryByRole('button', { name: 'Закрепить' })).not.toBeInTheDocument();
     await user.click(within(article()).getByRole('button', { name: 'Открепить' }));
-    expect(pinnedCards(platform).map((card) => card.heading)).toEqual(['УК ст. 88 ч. 1. Халатность']);
+    expect(pinnedCards(platform).map((card) => card.heading)).toEqual(['УК ст. 80. Разглашение государственной тайны']);
   });
 
   it('opens with → only once the caret is at the end, and Esc goes back to the results', async () => {
