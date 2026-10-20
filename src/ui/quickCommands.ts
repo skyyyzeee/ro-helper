@@ -23,6 +23,7 @@ const open = (to: QuickTarget): { request: QuickRequest } => ({ request: { kind:
 export const TARGET_NEEDS: Partial<Record<QuickTarget, Capability>> = {
   memos: 'memos.read',
   history: 'ai.analysis',
+  ai: 'ai.analysis',
   document: 'ai.documents',
   lawyer: 'ai.check',
   detention: 'ai.check',

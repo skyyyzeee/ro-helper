@@ -102,7 +102,7 @@ export type QuickRequest =
   | { kind: 'hello' };
 
 /** What a command of the quick search opens in the assistant (roadmap 2В). */
-export type QuickTarget = 'favorites' | 'pinned' | 'memos' | 'wiki' | 'settings' | 'rules' | 'history' | 'document' | 'lawyer' | 'detention' | 'trainer';
+export type QuickTarget = 'favorites' | 'pinned' | 'memos' | 'wiki' | 'settings' | 'rules' | 'history' | 'ai' | 'document' | 'lawyer' | 'detention' | 'trainer';
 
 /**
  * What the overlay tells the quick search: what is in its calculator and the recent articles, by key, and what the
@@ -127,6 +127,23 @@ export interface QuickBridge {
   onState(listener: (state: QuickState) => void): () => void;
   /** The window's height to what the bar shows, in CSS pixels: no invisible window over the game below it. */
   fit?(height: number): void;
+}
+
+/**
+ * What the main window (preview of the redesign) needs of the app: the settings and the laws kept by the overlay,
+ * the overlay to ask (the same requests as the quick search's), and its own window.
+ */
+export interface HomeBridge {
+  readSetting<T>(key: string): Promise<T | undefined>;
+  writeSetting(key: string, value: unknown): Promise<void>;
+  readLaws(server: string): Promise<string | undefined>;
+  request(request: QuickRequest): Promise<void>;
+  /** The system draws the window's background (Mica, Windows 11): the page leaves it see-through. */
+  mica(): Promise<boolean>;
+  minimize(): void;
+  toggleMaximize(): void;
+  hide(): void;
+  startResize(edge: ResizeEdge): void;
 }
 
 /** How the pinned cards look: a theme id («glass», «dense», «minimal») and the accent hue. */

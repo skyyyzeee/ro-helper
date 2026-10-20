@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "What the overlay and the pinned card windows may do",
-  "windows": ["main", "pin", "quick"],
+  "windows": ["main", "pin", "quick", "home"],
   "permissions": [
     "core:default",
     "core:window:allow-show",
@@ -16,6 +16,8 @@
     "core:window:allow-set-size",
     "core:window:allow-start-dragging",
     "core:window:allow-start-resize-dragging",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
     "core:window:allow-set-ignore-cursor-events",
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",

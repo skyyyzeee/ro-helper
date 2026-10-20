@@ -15,7 +15,8 @@ import { RolesProvider } from './ui/roles';
 import { MemosProvider } from './ui/memos';
 import { createBrowserPlatform } from './platform/browser';
 import { PlatformProvider } from './platform/PlatformContext';
-import { createPinBridge, createQuickBridge, createTauriPlatform, isPinWindow, isQuickWindow, isTauri } from './platform/tauri';
+import { createHomeBridge, createPinBridge, createQuickBridge, createTauriPlatform, isHomeWindow, isPinWindow, isQuickWindow, isTauri } from './platform/tauri';
+import { HomeWindow } from './home/HomeWindow';
 import { PinWindow } from './ui/PinSurface';
 import { QuickSearch } from './ui/QuickSearch';
 
@@ -44,6 +45,32 @@ async function start() {
                     );
                     return () => {};
                   },
+                }
+          }
+        />
+      </StrictMode>,
+    );
+    return;
+  }
+  // The main window (preview of the redesign); in the browser preview, «?home».
+  if (isHomeWindow() || (!isTauri() && new URLSearchParams(location.search).has('home'))) {
+    const preview = createBrowserPlatform();
+    root.render(
+      <StrictMode>
+        <HomeWindow
+          bridge={
+            isTauri()
+              ? createHomeBridge()
+              : {
+                  readSetting: preview.readSetting,
+                  writeSetting: preview.writeSetting,
+                  readLaws: async () => undefined,
+                  request: async (request) => console.info('home asks', request),
+                  mica: async () => false,
+                  minimize: () => console.info('home: minimize'),
+                  toggleMaximize: () => console.info('home: maximize'),
+                  hide: () => console.info('home: hide'),
+                  startResize: () => {},
                 }
           }
         />
