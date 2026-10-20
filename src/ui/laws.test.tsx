@@ -5,6 +5,7 @@ import { TVERSKOI_PACK } from '../data/bundled';
 import { renderApp } from '../test/renderApp';
 import { MANIFEST_URL, isNewer, packUrl, readPack } from './laws';
 import { ANNOUNCEMENTS_URL } from './announcements';
+import { SURVEYS_URL } from './surveys';
 
 const search = () => screen.getByRole('searchbox', { name: 'Поиск по законам' });
 
@@ -78,8 +79,8 @@ describe('laws from GitHub, without a new version of the app', () => {
   it('leaves laws written in a shape this app does not read for a newer app', async () => {
     const { platform } = await renderApp({ platform: { remote: remote(newerPack(), PACK_FORMAT + 1) } });
     await checked(platform);
-    // The manifest only — no pack (the announcements, fetched beside the laws, are no pack).
-    expect(platform.calls.filter((c) => c.method === 'download' && c.args[0] !== ANNOUNCEMENTS_URL).map((c) => c.args[0])).toEqual([MANIFEST_URL]);
+    // The manifest only — no pack (the announcements and the polls, fetched beside the laws, are no pack).
+    expect(platform.calls.filter((c) => c.method === 'download' && c.args[0] !== ANNOUNCEMENTS_URL && c.args[0] !== SURVEYS_URL).map((c) => c.args[0])).toEqual([MANIFEST_URL]);
     expect(platform.state.laws.size).toBe(0);
   });
 

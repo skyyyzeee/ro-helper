@@ -70,6 +70,7 @@ import { reportText } from './report';
 import { aiCapabilitiesOf, isFaction } from '../account/capabilities';
 import { useStats } from './stats';
 import { useAnnouncements } from './announcements';
+import { useSurvey } from './surveys';
 import { useMemos } from './memos';
 import { MemosView, memoDay } from './MemosView';
 import { WikiView } from './WikiView';
@@ -82,6 +83,11 @@ import { WhatsNewView } from './WhatsNewView';
 import { CHANGELOG, SEEN_VERSION_KEY, compareVersions, notesSince, type VersionNotes } from './whatsNew';
 import { UpdateBanner } from './UpdateBanner';
 import { DISMISSED_KEY, TOASTED_KEY, useUpdates } from './updates';
+
+/** How many times the overlay was started: its key hints show everywhere for the first few. */
+const HINT_LAUNCHES_KEY = 'hints.launches';
+/** Starts with the key hints everywhere; after them, only on the empty search (skyze: less noise). */
+const HINT_LAUNCHES = 5;
 
 /** Put off with «Позже», the notice that signing in will be required is not shown again. */
 const LOGIN_NOTICE_KEY = 'login.notice';
@@ -335,6 +341,8 @@ export function Overlay({
   const count = useStats(platform, pack.server.id);
   // The author's notice to every player, from GitHub (ticket 26).
   const announcements = useAnnouncements(pack.server.id);
+  // A short poll of the team's, never required: one question, ready answers, asked once.
+  const survey = useSurvey(pack.server.id);
   const [side, setSide] = useState<'left' | 'right'>('left');
   const toggleCharge = (hit: SearchHit) => {
     const key = hitKey(hit);
@@ -985,6 +993,17 @@ export function Overlay({
     if (!inner) searchRef.current?.focus();
   }, [inner]);
 
+  // The key hints: everywhere for the first starts, then only on the empty search, where there is nothing else.
+  const [launches, setLaunches] = useState<number | null>(null);
+  useEffect(() => {
+    void platform.readSetting<number>(HINT_LAUNCHES_KEY).then((saved) => {
+      const count = (saved ?? 0) + 1;
+      setLaunches(count);
+      void platform.writeSetting(HINT_LAUNCHES_KEY, count);
+    });
+  }, [platform]);
+  const showHints = launches !== null && (launches <= HINT_LAUNCHES || (!inner && !aiMode && !open && !scope && !query.trim()));
+
   const onList = !whatsNew && !settingsOpen && !memosOpen && !wikiOpen && !department && !switchOpen && !organizationOpen && !serverOpen && !notesFor && !privacyOpen && !diff && !open && !changesView && !aiOpen;
   const wasOnList = useRef(onList);
   useLayoutEffect(() => {
@@ -1513,6 +1532,7 @@ export function Overlay({
             }
             favorite={favoriteKeys.includes(hitKey(open))}
             onFavorite={() => toggleFavorite(open)}
+            onFocusPart={(part) => setOpen({ ...open, part })}
             pinned={pinnedArticle}
             onPin={() => togglePin(articlePinCard(open, rules))}
           />
@@ -1654,6 +1674,28 @@ export function Overlay({
                 </b>
                 <span className="memo__text">{memoPlain(memos.active[0].text)}</span>
               </button>
+            )}
+            {survey.answered ? (
+              <section className="home__poll" aria-label="Опрос">
+                <p className="home__poll-thanks">Спасибо! Ваш ответ: «{survey.answered}».</p>
+              </section>
+            ) : (
+              survey.current && (
+                <section className="home__poll" aria-label="Опрос">
+                  <span className="home__poll-label">Короткий вопрос · необязательно</span>
+                  <b>{survey.current.question}</b>
+                  <div className="home__poll-answers">
+                    {survey.current.answers.map((answer) => (
+                      <button key={answer} type="button" onClick={() => survey.answer(answer)}>
+                        {answer}
+                      </button>
+                    ))}
+                    <button type="button" className="home__poll-skip" onClick={survey.skip}>
+                      Не сейчас
+                    </button>
+                  </div>
+                </section>
+              )
             )}
             {announcements.current && (
               <section className="home__news" aria-label="Объявление">
@@ -1844,42 +1886,44 @@ export function Overlay({
 
       {!inner && aiMode && searchField}
 
-      <div className="overlay__foot">
-        {aiMode ? (
-          <>
-            <span>
-              <b>Enter</b> {aiTab === 'document' ? 'составить документ' : aiTab === 'trainer' ? 'ответить' : aiTab === 'lawyer' ? 'проверить требования' : aiTab === 'detention' ? 'разобрать задержание' : 'спросить ИИ'}
-            </span>
-            <span>клик по статье — открыть</span>
-            <span>
-              <b>Esc</b> к поиску
-            </span>
-          </>
-        ) : (department || wikiOpen) && !open ? (
-          // A page of tiles and cards: no list to walk with the arrows, nothing to put in the calculator.
-          <>
-            <span>клик — открыть</span>
-            <span>
-              <b>Esc</b> назад
-            </span>
-          </>
-        ) : (
-          <>
-            <span>
-              <b>↑↓</b> выбор
-            </span>
-            <span>
-              <b>Enter</b> в калькулятор
-            </span>
-            <span>
-              <b>→</b> открыть
-            </span>
-            <span>
-              <b>Esc</b> назад
-            </span>
-          </>
-        )}
-      </div>
+      {showHints && (
+        <div className="overlay__foot">
+          {aiMode ? (
+            <>
+              <span>
+                <b>Enter</b> {aiTab === 'document' ? 'составить документ' : aiTab === 'trainer' ? 'ответить' : aiTab === 'lawyer' ? 'проверить требования' : aiTab === 'detention' ? 'разобрать задержание' : 'спросить ИИ'}
+              </span>
+              <span>клик по статье — открыть</span>
+              <span>
+                <b>Esc</b> к поиску
+              </span>
+            </>
+          ) : (department || wikiOpen) && !open ? (
+            // A page of tiles and cards: no list to walk with the arrows, nothing to put in the calculator.
+            <>
+              <span>клик — открыть</span>
+              <span>
+                <b>Esc</b> назад
+              </span>
+            </>
+          ) : (
+            <>
+              <span>
+                <b>↑↓</b> выбор
+              </span>
+              <span>
+                <b>Enter</b> в калькулятор
+              </span>
+              <span>
+                <b>→</b> открыть
+              </span>
+              <span>
+                <b>Esc</b> назад
+              </span>
+            </>
+          )}
+        </div>
+      )}
 
       {menuOpen && (
         <DocumentsMenu

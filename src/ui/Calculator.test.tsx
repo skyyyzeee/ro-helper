@@ -67,13 +67,13 @@ describe('criminal calculator', () => {
     const { user } = await renderApp();
     await find(user, 'ук 65 ч 1');
     await user.keyboard('{Enter}');
-    await find(user, 'ук 88 ч 1');
+    await find(user, 'ук 80 ч 1');
     await user.keyboard('{Enter}');
 
     expect(total()).toHaveTextContent('40 мес');
     expect(within(total()).getByRole('img', { name: 'Звёзд розыска: 4' })).toBeInTheDocument();
-    expect(panel()).toHaveTextContent('ст. 88 ч. 1 поглощает ст. 65 ч. 1 — УК ст. 41 ч. 2');
-    expect(within(panel()).getByRole('alert')).toHaveTextContent('ст. 88 ч. 1 — федеральная подследственность — дело ФСБ');
+    expect(panel()).toHaveTextContent('ст. 80 поглощает ст. 65 ч. 1 — УК ст. 41 ч. 2');
+    expect(within(panel()).getByRole('alert')).toHaveTextContent('ст. 80 — федеральная подследственность — дело ФСБ');
     expect(panel()).toHaveTextContent('Залог(тяжкое)не предусмотрен');
     expect(inCalculator()[0]).toHaveClass('ci--absorbed');
 

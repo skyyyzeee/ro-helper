@@ -50,7 +50,7 @@ export interface CriminalResult {
   /** Fine mode: what the officer may write. */
   fineLimit: FineRange | null;
   /** Custody: bail by the most serious crime or by the wanted priority; null when there is none. */
-  bail: { category: string; amount: number | null } | null;
+  bail: { category: string; amount: number | null; denied?: { reason: string; basis: string } } | null;
   /** One line per rule that shaped the result, each ending with its article. */
   explanation: string[];
   warnings: string[];
@@ -87,6 +87,10 @@ export function crimeCategory(item: ChargeItem, rules: CalculatorRules): { name:
 export const chargeLabel = (item: Pick<ChargeItem, 'article' | 'part'>) =>
   articleLabel(item.article, item.article.parts.filter((p) => p.punishment).length > 1 ? item.part : undefined);
 const labelOf = chargeLabel;
+
+/** A part that brings a criminal record: marked with `minStars` stars or more, or adding «запись о судимости». */
+export const bringsRecord = (part: Part, minStars: number) =>
+  (part.stars?.max ?? 0) >= minStars || !!part.punishment?.additional?.some((extra) => /судимост/i.test(extra));
 
 /**
  * Combines criminal charges by the server's rules: either the strictest punishment absorbs the rest
@@ -172,6 +176,13 @@ export function calculateCriminal(charges: ChargeItem[], wanted: Mode, rules: Ca
     } else {
       const category = crimeCategory(strictest.item, rules);
       bail = { category: category.label, amount: rules.bail.amounts[category.name] ?? null };
+    }
+    // No bail where a charge brings a criminal record: its sum stays on show, struck through (a player's ask).
+    const record = rules.bail.withoutRecord;
+    const withRecord = record ? items.filter((r) => bringsRecord(r.item.part, record.minStars)) : [];
+    if (bail && record && withRecord.length) {
+      const which = withRecord.map((r) => labelOf(r.item)).join(', ');
+      bail = { ...bail, denied: { reason: `${which} ${withRecord.length > 1 ? 'влекут' : 'влечёт'} судимость`, basis: record.basis } };
     }
   } else if (mode === 'fine' && strictest?.fine) {
     fineLimit = sum

@@ -24,7 +24,7 @@ function criminalLine({ criminal }: DetentionResult, fineTyped?: number): string
     return [
       `лишение свободы на ${criminal.term} мес`,
       criminal.stars > 0 && `розыск ${'★'.repeat(criminal.stars)}`,
-      criminal.bail?.amount && `залог ${formatRubles(criminal.bail.amount)}`,
+      !criminal.bail?.denied && criminal.bail?.amount && `залог ${formatRubles(criminal.bail.amount)}`,
     ]
       .filter(Boolean)
       .join(' · ');

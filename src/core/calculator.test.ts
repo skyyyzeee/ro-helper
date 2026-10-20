@@ -95,7 +95,7 @@ describe('criminal calculator (real Тверской УК and rules)', () => {
   });
 
   it('warns about federal and military jurisdiction, not about shared jurisdiction', () => {
-    expect(calc(['88 ч1', '65 ч1']).warnings).toEqual(['ст. 88 ч. 1 — федеральная подследственность — дело ФСБ']);
+    expect(calc(['80 ч1', '65 ч1']).warnings).toEqual(['ст. 80 — федеральная подследственность — дело ФСБ']);
     expect(calc(['108']).warnings).toEqual(['ст. 108 — военная подследственность — дело военной полиции']);
     expect(calc(['65 ч1']).warnings).toEqual([]);
   });

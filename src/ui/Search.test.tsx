@@ -34,11 +34,14 @@ describe('finding an article by number', () => {
 
     const view = screen.getByRole('article', { name: 'Статья 65. Кража' });
     expect(within(view).getByRole('heading', { name: 'Статья 65. Кража' })).toBeInTheDocument();
+    // The chapter is short in the header, whole under «Подробнее».
+    expect(view).toHaveTextContent('гл. 14');
+    await user.click(within(view).getByRole('button', { name: 'Подробнее' }));
     expect(view).toHaveTextContent('Глава 14. Преступления против собственности');
     expect(within(view).getByRole('region', { name: 'Часть 2' })).toHaveAttribute('aria-current', 'true');
     expect(within(view).getByRole('region', { name: 'Часть 1' })).not.toHaveAttribute('aria-current');
     expect(view).toHaveTextContent('Примечание');
-    expect(view).toHaveTextContent('Актуально на 08.10.2026');
+    expect(view).toHaveTextContent('Актуально на 20.10.2026');
 
     await user.click(within(view).getByRole('button', { name: /Тема на форуме/ }));
     expect(platform.calls.at(-1)).toEqual({ method: 'openExternal', args: ['https://forum.russia.online/threads/ugolovnyi-kodeks.1176/'] });
@@ -76,7 +79,7 @@ describe('finding an article by number', () => {
     await user.click(within(only).getByRole('button', { name: /^ПДД/ }));
     const view = screen.getByRole('article', { name: 'Статья 8.2' });
     expect(view).toHaveTextContent('Глава VIII. Скорость движения');
-    expect(view).toHaveTextContent('не более 60 км/ч');
+    expect(view).toHaveTextContent('не более 100 км/ч');
   });
 
   it('finds an article by a word in any form', async () => {

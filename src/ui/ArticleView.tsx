@@ -1,18 +1,24 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SUBJECT_LABELS, articleHeading, chapterHeading, isPenaltyNote, penalParts, pointLabel, punishmentBySubject, type Article, type LawDocument, type Part } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
-import { BackIcon, CheckIcon, ExternalIcon, FavoriteIcon, PinIcon, PlusIcon } from './icons';
+import { BackIcon, CheckIcon, ExternalIcon, FavoriteIcon, PinIcon } from './icons';
 import { DocBadge, JurisdictionPill, Stars, formatDate, jurisdictionText, starsHint } from './lawBits';
 import { entryPart } from './saved';
 
+/** The punishment in one line with its stars: «★★★ штраф до 50 000 ₽ либо 30 мес» — each fact once. */
 function PunishmentLines({ part }: { part: Part }) {
   if (!part.punishment) return null;
   const lines = punishmentBySubject(part.punishment);
   const labelled = lines.some((line) => line.subject !== null);
   return (
     <div className="part-card__pen">
-      {lines.map((line) => (
+      {lines.map((line, i) => (
         <p key={line.subject ?? 'all'}>
+          {i === 0 && part.stars && (
+            <span className="part-card__stars">
+              <Stars stars={part.stars} size={13} />
+            </span>
+          )}
           {labelled && line.subject && <span className="part-card__who">{SUBJECT_LABELS[line.subject]}: </span>}
           {line.text}
         </p>
@@ -45,6 +51,8 @@ export interface ArticleViewProps {
   onPin: () => void;
   /** When a recent update changed the article: its date, and the «было → стало» view. */
   changed?: { date: string; onOpen: () => void };
+  /** A part chosen by a click: the calculator's button and Enter act on it. */
+  onFocusPart?: (part: Part) => void;
 }
 
 export function ArticleView({
@@ -60,16 +68,17 @@ export function ArticleView({
   pinned,
   onPin,
   changed,
+  onFocusPart,
 }: ArticleViewProps) {
   const platform = usePlatform();
   const focusRef = useRef<HTMLElement>(null);
   const chapter = document.chapters.find((c) => c.number === article.chapter);
   const heading = articleHeading(article, document.unit);
-  // The part the buttons act on; each punished part has its own «+» when there are several.
-  const main = entryPart(article, focusPart);
-  const perPart = penalParts(article).length > 1;
-  const mainAdded = calculator?.has(main) ?? false;
-  const mainLabel = main?.number ? `ч. ${main.number} ` : '';
+  // The part the calculator's button is on: the one chosen, or the article's only punished one.
+  const punished = penalParts(article);
+  const chosen = entryPart(article, focusPart) ?? (punished.length === 1 ? punished[0] : undefined);
+  // «Подробнее»: the chapter, who investigates each part, what its stars stand for — not needed on every look.
+  const [details, setDetails] = useState(false);
 
   useEffect(() => {
     focusRef.current?.scrollIntoView?.({ block: 'nearest' });
@@ -77,17 +86,25 @@ export function ArticleView({
 
   return (
     <article className="art" aria-label={heading}>
-      <button className="back" type="button" onClick={onBack}>
-        <BackIcon />
-        <span>{backLabel}</span>
-      </button>
-      <div className="art__crumb">
-        <DocBadge document={document} />
-        <span>{document.title}</span>
+      <div className="art__top">
+        <button className="back" type="button" onClick={onBack}>
+          <BackIcon />
+          <span>{backLabel}</span>
+        </button>
+        <span className="art__crumb" title={document.title}>
+          <DocBadge document={document} />
+          {/* A point with no title of its own (ПДД) is told by its chapter: there the chapter stays whole. */}
+          {chapter && <span>{article.title ? `гл. ${chapter.number}` : chapterHeading(chapter)}</span>}
+        </span>
+        <span className="sp" />
+        <button className={details ? 'art__more art__more--on' : 'art__more'} type="button" aria-pressed={details} onClick={() => setDetails(!details)}>
+          Подробнее
+        </button>
       </div>
-      {chapter && (
+      {details && (
         <div className="art__chapter">
-          {chapterHeading(chapter)}
+          {document.title}
+          {chapter && ` · ${chapterHeading(chapter)}`}
           {article.group && ` · ${article.group}`}
         </div>
       )}
@@ -118,48 +135,68 @@ export function ArticleView({
             );
           }
           const added = calculator?.has(part) ?? false;
+          const on = part === chosen;
+          const partName = part.number ? `ч. ${part.number} ` : '';
           return (
             <section
               key={i}
               ref={focused ? focusRef : undefined}
-              className={focused ? 'part-card part-card--focus' : 'part-card'}
+              className={on ? 'part-card part-card--focus' : 'part-card'}
               aria-current={focused ? 'true' : undefined}
               aria-label={part.number ? `Часть ${part.number}` : undefined}
+              onClick={() => part.punishment && part !== chosen && onFocusPart?.(part)}
             >
-              <div className="part-card__head">
-                {part.number && <span className="part-card__num">ч. {part.number}</span>}
-                <span className="sp" />
-                {calculator && perPart && part.punishment && (
-                  <button
-                    className={added ? 'add add--sm add--on' : 'add add--sm'}
-                    type="button"
-                    aria-pressed={added}
-                    aria-label={added ? `Убрать ч. ${part.number} из калькулятора` : `Добавить ч. ${part.number} в калькулятор`}
-                    title={added ? 'Убрать из калькулятора' : 'Добавить в калькулятор'}
-                    onClick={() => calculator.toggle(part)}
-                  >
-                    {added ? <CheckIcon size={16} /> : <PlusIcon size={16} />}
-                  </button>
-                )}
-              </div>
-              {(part.jurisdiction || part.stars) && (
-                <div className="part-card__tags">
-                  {part.jurisdiction && (
-                    <span className="tag-group">
-                      <JurisdictionPill jurisdiction={part.jurisdiction} />
-                      <span>{jurisdictionText(part.jurisdiction)}</span>
-                    </span>
+              <div className="part-card__row">
+                {part.number && <span className="part-card__num">{part.number}.</span>}
+                <div className="part-card__body">
+                  <p className="part-card__text">{part.text}</p>
+                  {part.points.map((point, j) => (
+                    <p key={j} className="part__point">
+                      <span className="part__marker">{pointLabel(point)}</span> {point.text}
+                    </p>
+                  ))}
+                  <PunishmentLines part={part} />
+                  {!part.punishment && part.stars && <p className="part-card__meta">{starsHint(part.stars, monthsPerStar)}</p>}
+                  {details && (part.jurisdiction || (part.stars && part.punishment)) && (
+                    <div className="part-card__tags">
+                      {part.jurisdiction && (
+                        <span className="tag-group">
+                          <JurisdictionPill jurisdiction={part.jurisdiction} />
+                          <span>{jurisdictionText(part.jurisdiction)}</span>
+                        </span>
+                      )}
+                      {part.stars && part.punishment && (
+                        <span className="tag-group">
+                          <Stars stars={part.stars} size={14} />
+                          <span>{starsHint(part.stars, monthsPerStar)}</span>
+                        </span>
+                      )}
+                    </div>
                   )}
-                  {part.stars && (
-                    <span className="tag-group">
-                      <Stars stars={part.stars} size={14} />
-                      <span>{starsHint(part.stars, monthsPerStar)}</span>
+                </div>
+              </div>
+              {calculator && part.punishment && (on || added) && (
+                <div className="part-card__actions">
+                  {on ? (
+                    <button
+                      className={added ? 'btn btn--sm' : 'btn btn--sm btn--primary'}
+                      type="button"
+                      aria-pressed={added}
+                      aria-label={added ? `Убрать ${partName}из калькулятора` : `Добавить ${partName}в калькулятор`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        calculator.toggle(part);
+                      }}
+                    >
+                      {added ? 'Убрать из калькулятора' : 'В калькулятор'}
+                    </button>
+                  ) : (
+                    <span className="part-card__added">
+                      <CheckIcon size={14} /> в калькуляторе
                     </span>
                   )}
                 </div>
               )}
-              <p className="part-card__text">{part.text}</p>
-              <PunishmentLines part={part} />
             </section>
           );
         })}
@@ -182,12 +219,7 @@ export function ArticleView({
       </div>
 
       <div className="art__actions">
-        {calculator && (
-          <button className={mainAdded ? 'btn art__grow' : 'btn btn--primary art__grow'} type="button" onClick={() => calculator.toggle(main)}>
-            {mainAdded ? `Убрать ${mainLabel}из калькулятора` : `Добавить ${mainLabel}в калькулятор`}
-          </button>
-        )}
-        <button className={pinned ? 'btn btn--on' : 'btn'} type="button" aria-pressed={pinned} onClick={onPin}>
+        <button className={pinned ? 'btn btn--on art__grow' : 'btn art__grow'} type="button" aria-pressed={pinned} onClick={onPin}>
           <PinIcon />
           <span>{pinned ? 'Открепить' : 'Закрепить'}</span>
         </button>

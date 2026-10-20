@@ -47,12 +47,13 @@ describe('administrative charges (real Тверской КоАП and rules)', ()
   });
 
   it('keeps each fine within the limit for the offender (КоАП ст. 3.5 ч. 1), not the total', () => {
-    const citizen = admin(['koap 9.6 ч1']);
-    expect(citizen.items[0].fine!.limit).toEqual({ min: 20000, max: 100000 });
-    expect(citizen.explanation).toEqual(['ст. 9.6 ч. 1: гражданину не более 100 000 ₽ — КоАП ст. 3.5']);
-    expect(admin(['koap 9.6 ч1'], 'official').items[0].fine!.limit).toEqual({ min: 20000, max: 150000 });
+    // КоАП 9.6 ч. 1 no longer goes over the cap since 20 October (its maximum came down to 100 000): ст. 5.4 ч. 3 does.
+    const citizen = admin(['koap 5.4 ч3']);
+    expect(citizen.items[0].fine!.limit).toEqual({ min: 90000, max: 100000 });
+    expect(citizen.explanation).toEqual(['ст. 5.4 ч. 3: гражданину не более 100 000 ₽ — КоАП ст. 3.5']);
+    expect(admin(['koap 5.4 ч3'], 'official').items[0].fine!.limit).toEqual({ min: 90000, max: 130000 });
     // Two fines together may be more than one fine may.
-    expect(admin(['koap 9.6 ч1', 'koap 9.6 ч2']).fineTotal).toBe(200000);
+    expect(admin(['koap 5.4 ч3', 'koap 9.6 ч1']).fineTotal).toBe(200000);
   });
 
   it('takes the limits the article sets for the chosen offender', () => {
@@ -105,12 +106,11 @@ describe('administrative charges (real Тверской КоАП and rules)', ()
     expect(result.fineTotal).toBe(0);
   });
 
-  it('doubles an unpaid fine for КоАП 10.2, but not below 3 000', () => {
-    const fine = (unpaid?: number) => admin([charge('koap 10.2', { unpaid })]).items[0].fine!;
-    expect(fine(5000)).toMatchObject({ amount: 10000, multiplier: 2 });
-    expect(fine(1000).amount).toBe(3000);
-    expect(fine().amount).toBe(3000);
-    expect(fine(80000).amount).toBe(100000); // still one fine of КоАП ст. 3.5
+  it('has no unpaid-fine multiple in the КоАП: ст. 10.2 is repealed, the multiple moved to УК ст. 101.1', () => {
+    const koap = doc('koap');
+    expect(koap.articles.find((a) => a.number === '10.2')!.parts).toEqual([]);
+    expect(koap.articles.flatMap((a) => a.parts).some((p) => p.punishment?.alternatives.some((alt) => alt.kind === 'fine-multiple'))).toBe(false);
+    expect(doc('uk').articles.find((a) => a.number === '101.1')!.parts[0].punishment?.alternatives).toContainEqual({ kind: 'fine-multiple', multiplier: 2, min: 3000 });
   });
 });
 

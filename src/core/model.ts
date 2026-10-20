@@ -158,7 +158,13 @@ export interface CalculatorRules {
    * for every full year of it (Кутузовский).
    */
   bail: Based &
-    ({ by: 'category' | 'wanted'; amounts: Record<string, number> } | { by: 'term'; per: { months: number; amount: number } });
+    ({ by: 'category' | 'wanted'; amounts: Record<string, number> } | { by: 'term'; per: { months: number; amount: number } }) & {
+      /**
+       * Bail only for crimes that bring no criminal record (Кутузовский, УК ст. 5.10): a charge marked with this many
+       * stars or more, or whose punishment adds «запись о судимости», brings one (УК ст. 5.8 ч. 1).
+       */
+      withoutRecord?: Based & { minStars: number };
+    };
   /** Jurisdiction tag → what the officer should know when a charge has only that tag. */
   jurisdictionWarnings: Partial<Record<Jurisdiction, string>>;
   administrative: AdministrativeRules;
