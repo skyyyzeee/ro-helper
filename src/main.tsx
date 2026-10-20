@@ -16,11 +16,14 @@ import { MemosProvider } from './ui/memos';
 import { createBrowserPlatform } from './platform/browser';
 import { PlatformProvider } from './platform/PlatformContext';
 import { createPinBridge, createQuickBridge, createTauriPlatform, isPinWindow, isQuickWindow, isTauri } from './platform/tauri';
+import { installNativeFeel } from './ui/nativeFeel';
 import { PinWindow } from './ui/PinSurface';
 import { QuickSearch } from './ui/QuickSearch';
 
 async function start() {
   const root = createRoot(document.getElementById('root')!);
+  // In the app, every window behaves as an app, not a web page: no browser menu, keys or tooltips.
+  if (isTauri()) installNativeFeel();
   // The app has three windows on the same page: the overlay, what is pinned over the game, and the quick search.
   // In the preview, «?quick» shows the quick search's bar on its own, on the preview's settings.
   if (isQuickWindow() || (!isTauri() && new URLSearchParams(location.search).has('quick'))) {
