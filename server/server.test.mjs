@@ -60,7 +60,7 @@ async function aiServer(env) {
   const port = 20000 + Math.floor(Math.random() * 20000);
   const dir = mkdtempSync(join(tmpdir(), 'ai-'));
   const child = spawn(process.execPath, [join(import.meta.dirname, 'server.mjs')], {
-    env: { ...process.env, PORT: String(port), STATE_FILE: join(dir, 'state.json'), FEEDBACK_FILE: join(dir, 'feedback.jsonl'), REVIEWS_FILE: join(dir, 'reviews.json'), CACHE_FILE: join(dir, 'cache.json'), ...env },
+    env: { ...process.env, PORT: String(port), STATE_FILE: join(dir, 'state.json'), FEEDBACK_FILE: join(dir, 'feedback.jsonl'), REVIEWS_FILE: join(dir, 'reviews.json'), CACHE_FILE: join(dir, 'cache.json'), SURVEY_FILE: join(dir, 'survey.jsonl'), CRASH_FILE: join(dir, 'crashes.jsonl'), ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   await new Promise((resolve, reject) => {
@@ -86,7 +86,12 @@ async function aiServer(env) {
     return { status: response.status, body: await response.json() };
   };
   const marks = () => readFileSync(join(dir, 'feedback.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
-  return { ask, status, mark, marks, base: `http://127.0.0.1:${port}`, stop: () => child.kill() };
+  const post = async (path, body, { device = 'device-0001' } = {}) => {
+    const response = await fetch(`http://127.0.0.1:${port}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Device': device }, body: JSON.stringify(body) });
+    return { status: response.status, body: await response.json() };
+  };
+  const lines = (name) => readFileSync(join(dir, name), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  return { ask, status, mark, marks, post, lines, base: `http://127.0.0.1:${port}`, stop: () => child.kill() };
 }
 
 const gigaEnv = (giga) => ({ GIGACHAT_AUTH_KEY: 'Basic Z2lnYTprZXk=\n', GIGACHAT_OAUTH_URL: `${giga.url}/oauth`, GIGACHAT_API_URL: giga.url });
@@ -471,5 +476,37 @@ test('a faction\'s leader or deputy asks more a day: their role read with their 
     ai.stop();
     giga.server.close();
     supabase.server.close();
+  }
+});
+
+test('keeps poll answers and error reports with no id of the player or the computer; a few a day; the admins read them', async () => {
+  const giga = await fakeGigachat();
+  const token = 'a'.repeat(40);
+  const ai = await aiServer({ ...gigaEnv(giga), ADMIN_TOKEN: token, SURVEY_PER_DEVICE: '2', CRASH_PER_DEVICE: '1' });
+  const admin = (path) => fetch(`${ai.base}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+  try {
+    const answer = { survey: 'fps-2026-10', answer: 'Иногда, при открытии', app: '2.20.0', server: 'tverskoi', nick: 'skyze' };
+    assert.equal((await ai.post('/v1/survey', answer)).status, 200);
+    assert.equal((await ai.post('/v1/survey', { ...answer, answer: 'Да, заметно' })).status, 200);
+    assert.equal((await ai.post('/v1/survey', answer)).status, 429);
+    assert.equal((await ai.post('/v1/survey', { survey: 'fps-2026-10' }, { device: 'device-0002' })).status, 400);
+    assert.deepEqual(Object.keys(ai.lines('survey.jsonl')[0]).sort(), ['answer', 'app', 'at', 'server', 'survey']);
+
+    const crash = { app: '2.20.0', os: 'Windows 10.0.26100', area: 'Калькулятор', message: 'Cannot read properties of undefined', stack: 'at calc (app.js:1:2)', query: 'что будет за кражу' };
+    assert.equal((await ai.post('/v1/crash', crash)).status, 200);
+    assert.equal((await ai.post('/v1/crash', crash)).status, 429);
+    assert.equal((await ai.post('/v1/crash', { app: '2.20.0' }, { device: 'device-0002' })).status, 400);
+    const [kept] = ai.lines('crashes.jsonl');
+    assert.deepEqual(Object.keys(kept).sort(), ['app', 'area', 'at', 'id', 'message', 'os', 'stack']);
+    // Whatever the request carried besides — a nick, what was searched — is not kept.
+    assert.doesNotMatch(JSON.stringify([...ai.lines('survey.jsonl'), kept]), /skyze|кражу|device-0001/);
+
+    assert.equal((await fetch(`${ai.base}/v1/survey`)).status, 403);
+    assert.deepEqual((await (await admin('/v1/survey')).json()).polls, { 'fps-2026-10': { 'Иногда, при открытии': 1, 'Да, заметно': 1 } });
+    assert.equal((await fetch(`${ai.base}/v1/crashes`)).status, 403);
+    assert.deepEqual((await (await admin('/v1/crashes?limit=5')).json()).crashes.map((c) => c.area), ['Калькулятор']);
+  } finally {
+    ai.stop();
+    giga.server.close();
   }
 });

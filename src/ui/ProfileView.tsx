@@ -14,6 +14,7 @@ import type { Account, Provider } from '../account/types';
 
 const PROVIDER_NAME: Record<Provider, string> = { discord: 'Discord', telegram: 'Telegram' };
 import { DiscordIcon, ProfileIcon, ServerIcon, TelegramIcon } from './icons';
+import { REPORTS_HINT, REPORTS_LABEL, useReportsChoice } from './reports';
 
 /**
  * The player's Discord avatar; without one, or when it can't be loaded (offline), their initials on a
@@ -198,6 +199,20 @@ const WAITING: Record<Provider, string> = {
   telegram: 'Нажмите «Запустить» у бота в Telegram — он открылся сам.',
 };
 
+/** The reports' box at the sign-in (skyze): ticked, the player sees it and may untick it. */
+function ReportsCheck() {
+  const [on, setOn] = useReportsChoice();
+  return (
+    <label className="set__row settings__check login__reports">
+      <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} />
+      <span>
+        {REPORTS_LABEL}
+        <small className="set__hint">{REPORTS_HINT}</small>
+      </span>
+    </label>
+  );
+}
+
 /**
  * The account, first in the settings. Signed in: the player's card of the mockup (avatar, name,
  * server · faction, how they signed in), joining Telegram to a Discord account, and signing out. Signed
@@ -315,6 +330,7 @@ export function AccountSection({ pack, organization, onMemos }: { pack: ServerPa
             <TelegramIcon size={20} />
             Войти через Telegram
           </button>
+          <ReportsCheck />
         </>
       )}
       <small className="login__note">

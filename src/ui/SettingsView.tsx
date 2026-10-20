@@ -13,6 +13,7 @@ import { AI_SERVER, APP_VERSION, AUTHORS, LINKS } from './about';
 import { AI_CUSTOM_SETTING, AI_KEY_SETTING, AI_KEY_URL, AI_PROVIDER_SETTING, AI_SERVER_SETTING, type AiProvider } from './ai';
 import type { CustomAi } from '../protocol';
 import { AdminIcon, BookIcon, CloseIcon, DiscordIcon, GitHubIcon, HelpIcon, InfoIcon, KeyboardIcon, PaletteIcon, PinIcon, SparkIcon, TuneIcon, WarnIcon } from './icons';
+import { REPORTS_HINT, REPORTS_LABEL, useReportsChoice } from './reports';
 import { formatDate } from './lawBits';
 import { DEFAULT_NOTE_HOTKEY, DEFAULT_QUICK_HOTKEY, DEFAULT_TIMER_HOTKEY, DEFAULT_VOICE_HOTKEY, MAX_OPACITY, MIN_OPACITY, NOTE_MAX, STREAMER_KEY } from './overlaySettings';
 import { captureHotkey, hasModifier, hotkeyKeys } from './profile';
@@ -781,6 +782,8 @@ export function SettingsView({
   }, []);
   // The author's anonymous counts: on unless turned off.
   const [share, setShare] = useState(true);
+  // The app's error reports: on unless turned off (reports.ts).
+  const [reports, setReports] = useReportsChoice();
   useEffect(() => {
     void platform.readSetting<boolean>(USAGE_SHARE_KEY).then((saved) => setShare(saved !== false));
   }, [platform]);
@@ -1060,6 +1063,11 @@ export function SettingsView({
           Сколько за день открыли статей, сделали поисков и расчётов на каждом сервере — без аккаунта, компьютера и самих статей.
           Помогает понять, чем пользуются.
         </p>
+        <label className="set__row settings__check">
+          <input type="checkbox" checked={reports} onChange={(e) => setReports(e.target.checked)} />
+          <span>{REPORTS_LABEL}</span>
+        </label>
+        <p className="set__hint">{REPORTS_HINT}</p>
         <p className="set__hint">
           Законы, уставы, правила и данные вики принадлежат Russia Online. Ассистент — неофициальная бесплатная программа, её делают
           игроки добровольно: в неё попадает только то, что опубликовано открыто на форуме и вики, — никакой закрытой или служебной
