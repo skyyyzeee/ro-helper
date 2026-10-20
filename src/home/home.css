@@ -1,0 +1,707 @@
+/* The main window (preview of the redesign), on the rules of the team's Shapeshift (WinUI 3): the window's title row,
+   a side navigation with labels, one column of at most 760 px, the card as the only container (radius 8, padding 20),
+   rows as in the Windows settings, one accent — the brick red of the icon — and nothing coloured besides. The
+   measures and colours follow Windows 11's own (Fluent); light or dark with Windows; Mica behind on Windows 11. */
+
+.home {
+  --h-bg: #f3f3f3;
+  --h-card: rgba(255, 255, 255, 0.7);
+  --h-card-line: rgba(0, 0, 0, 0.0578);
+  --h-ink: rgba(0, 0, 0, 0.896);
+  --h-muted: rgba(0, 0, 0, 0.606);
+  --h-faint: rgba(0, 0, 0, 0.45);
+  --h-fill: rgba(0, 0, 0, 0.0373);
+  --h-fill-strong: rgba(0, 0, 0, 0.0578);
+  --h-line: rgba(0, 0, 0, 0.0803);
+  --h-accent: #b8483c;
+  --h-on-accent: #ffffff;
+  --h-gold: #9d6c00;
+  --h-green: #0f7b0f;
+  --h-ease: cubic-bezier(0.1, 0.9, 0.2, 1);
+  /* Inter for text, Manrope for the digits (fonts.css). */
+  --h-font: 'Kremlin', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: 48px minmax(0, 1fr);
+  background: var(--h-bg);
+  color: var(--h-ink);
+  font: 14px/20px var(--h-font);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  user-select: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .home {
+    --h-bg: #202020;
+    --h-card: rgba(255, 255, 255, 0.0512);
+    --h-card-line: rgba(0, 0, 0, 0.1);
+    --h-ink: #ffffff;
+    --h-muted: rgba(255, 255, 255, 0.786);
+    --h-faint: rgba(255, 255, 255, 0.545);
+    --h-fill: rgba(255, 255, 255, 0.0605);
+    --h-fill-strong: rgba(255, 255, 255, 0.0837);
+    --h-line: rgba(255, 255, 255, 0.0837);
+    --h-accent: #e8796b;
+    --h-on-accent: #1a0d0b;
+    --h-gold: #ffd166;
+    --h-green: #6ccb5f;
+    color-scheme: dark;
+  }
+}
+
+/* Windows draws Mica behind: the page lets it through. */
+.home--mica {
+  --h-bg: transparent;
+}
+
+html:has(.home),
+body:has(.home) {
+  background: transparent;
+}
+
+.home ::selection {
+  background: var(--h-accent);
+  color: var(--h-on-accent);
+}
+
+.home button {
+  font: inherit;
+  color: inherit;
+}
+
+.home button:focus-visible,
+.home [tabindex]:focus-visible {
+  outline: 2px solid var(--h-ink);
+  outline-offset: 1px;
+}
+
+/* ——— The title row ——— */
+
+.home__titlebar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 16px;
+}
+
+.home__mark {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: linear-gradient(160deg, #a8584e, #7a3c35);
+  color: #f3d38a;
+  font-size: 10px;
+}
+
+.home__appname {
+  font-size: 12px;
+}
+
+.home__place {
+  font-size: 12px;
+  color: var(--h-faint);
+}
+
+.home__badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 7px;
+  border-radius: 4px;
+  background: var(--h-fill-strong);
+  color: var(--h-muted);
+}
+
+.home__controls {
+  display: flex;
+  align-self: stretch;
+  margin-left: auto;
+}
+
+.home__controls button {
+  width: 46px;
+  border: 0;
+  background: none;
+  display: grid;
+  place-items: center;
+  cursor: default;
+}
+
+.home__controls svg {
+  width: 14px;
+  height: 14px;
+}
+
+.home__controls button:hover {
+  background: var(--h-fill);
+}
+
+.home__controls .home__close:hover {
+  background: #c42b1c;
+  color: #fff;
+}
+
+/* ——— The navigation ——— */
+
+.home__body {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.home__pane {
+  padding: 4px 4px 8px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.home__nav {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.home__nav > button {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 36px;
+  padding: 0 12px 0 14px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  text-align: left;
+  cursor: default;
+  transition: background 0.1s;
+}
+
+.home__nav > button:hover {
+  background: var(--h-fill);
+}
+
+.home__nav > button[aria-current='page'] {
+  background: var(--h-fill-strong);
+}
+
+.home__nav svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.home__indicator {
+  position: absolute;
+  top: 0;
+  left: 4px;
+  width: 3px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--h-accent);
+  transition: transform 0.25s var(--h-ease);
+  pointer-events: none;
+}
+
+.home__grow {
+  flex: 1;
+}
+
+.home__detail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px 8px 14px;
+  margin-bottom: 4px;
+}
+
+.home__detail span {
+  display: grid;
+}
+
+.home__detail small {
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--h-faint);
+}
+
+/* ——— The content ——— */
+
+.home__content {
+  overflow: auto;
+  padding: 28px 40px 32px;
+  border-top-left-radius: 8px;
+  background: var(--h-fill);
+  border-top: 1px solid var(--h-line);
+  border-left: 1px solid var(--h-line);
+  user-select: text;
+}
+
+.home__view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 760px;
+  animation: home-enter 0.25s var(--h-ease);
+}
+
+@keyframes home-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.home-page {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.home-page h1 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.home-page p {
+  margin: 0;
+  color: var(--h-muted);
+  max-width: 64ch;
+}
+
+.home-crumbs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--h-muted);
+  margin-bottom: -8px;
+}
+
+/* The one container. */
+.home-card {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 20px;
+  border: 1px solid var(--h-card-line);
+  border-radius: 8px;
+  background: var(--h-card);
+}
+
+.home-card > h2 {
+  margin: 12px 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.home-card > .home-muted,
+.home-card > .home-note,
+.home-card > .home-thanks,
+.home-card > .home-question {
+  margin: 12px 0;
+}
+
+/* A row as in the Windows settings. */
+.home-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 56px;
+  padding: 8px 0;
+  border: 0;
+  border-top: 1px solid var(--h-line);
+  text-align: left;
+}
+
+.home-card > h2 + .home-row,
+.home-card > .home-row:first-child {
+  border-top: 0;
+}
+
+.home-row--action {
+  width: calc(100% + 40px);
+  margin: 0 -20px;
+  padding: 8px 20px;
+  background: none;
+  cursor: default;
+  transition: background 0.1s;
+}
+
+.home-row--action:hover {
+  background: var(--h-fill);
+}
+
+.home-row__text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.home-row__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-row__hint {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--h-muted);
+}
+
+.home-row__chevron {
+  font-size: 18px;
+  color: var(--h-faint);
+}
+
+.home-stars {
+  flex: none;
+  color: var(--h-gold);
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.home-muted {
+  margin: 0;
+  color: var(--h-muted);
+}
+
+.home-note {
+  margin: 0;
+  color: var(--h-faint);
+  font-size: 12px;
+}
+
+.home-thanks {
+  color: var(--h-green);
+  font-weight: 600;
+}
+
+.home-question {
+  font-weight: 600;
+}
+
+.home-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.home-options button,
+.home-btn--plain {
+  border: 1px solid var(--h-line);
+  border-radius: 4px;
+  padding: 5px 12px;
+  background: var(--h-card);
+  cursor: default;
+}
+
+.home-options button:hover,
+.home-btn--plain:hover {
+  background: var(--h-fill-strong);
+}
+
+.home-options__skip {
+  border-color: transparent !important;
+  background: none !important;
+  color: var(--h-muted) !important;
+}
+
+.home-btn {
+  border: 0;
+  border-radius: 4px;
+  padding: 5px 14px;
+  min-width: 120px;
+  background: var(--h-accent);
+  color: var(--h-on-accent) !important;
+  cursor: default;
+}
+
+.home-btn:hover {
+  filter: brightness(1.08);
+}
+
+.home-btn:disabled {
+  opacity: 0.4;
+}
+
+.home-btn--plain {
+  color: var(--h-ink) !important;
+}
+
+.home-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.home-link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--h-accent) !important;
+  cursor: pointer;
+}
+
+.home-search {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 0 12px;
+  height: 36px;
+  border: 1px solid var(--h-line);
+  border-bottom-color: var(--h-faint);
+  border-radius: 4px;
+  background: var(--h-card);
+}
+
+.home-search:focus-within {
+  border-bottom: 2px solid var(--h-accent);
+}
+
+.home-search svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--h-muted);
+}
+
+.home-search input,
+.home-textarea {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--h-ink);
+  font: 14px var(--h-font);
+}
+
+.home-search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.home-textarea {
+  width: 100%;
+  margin-top: 12px;
+  resize: vertical;
+  padding: 8px 12px;
+  border: 1px solid var(--h-line);
+  border-bottom-color: var(--h-faint);
+  border-radius: 4px;
+  background: var(--h-card);
+}
+
+.home-textarea:focus {
+  border-bottom: 2px solid var(--h-accent);
+}
+
+.home-understood {
+  margin: -8px 0 0;
+  color: var(--h-muted);
+  font-size: 12px;
+}
+
+.home-understood b {
+  color: var(--h-ink);
+  font-weight: 600;
+}
+
+/* An article's parts: separated by air, the chosen one tinted, its action on it alone. */
+.home-part {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  margin: 4px -12px;
+  padding: 12px;
+  border-radius: 6px;
+  cursor: default;
+}
+
+.home-part:first-child {
+  margin-top: 12px;
+}
+
+.home-part:last-child {
+  margin-bottom: 12px;
+}
+
+.home-part--on {
+  background: var(--h-fill);
+}
+
+.home-part__num {
+  color: var(--h-faint);
+  font-weight: 600;
+}
+
+.home-part__body {
+  display: grid;
+  gap: 6px;
+}
+
+.home-part__body p {
+  margin: 0;
+  line-height: 22px;
+}
+
+.home-part__point {
+  padding-left: 14px;
+}
+
+.home-part__pen {
+  color: var(--h-muted);
+}
+
+.home-part__meta {
+  margin: 0;
+  color: var(--h-faint);
+  font-size: 12px;
+  line-height: 16px !important;
+}
+
+.home-card > .home-part__meta {
+  margin: 4px 0 12px;
+}
+
+.home-switch {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 20px;
+  border: 1px solid var(--h-muted);
+  border-radius: 999px;
+  background: transparent;
+  cursor: default;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.home-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--h-muted);
+  transition: transform 0.2s var(--h-ease), background 0.15s;
+}
+
+.home-switch[aria-checked='true'] {
+  background: var(--h-accent);
+  border-color: var(--h-accent);
+}
+
+.home-switch[aria-checked='true']::after {
+  transform: translateX(20px);
+  background: var(--h-on-accent);
+}
+
+/* The frameless window's resize strips. */
+.home__edge {
+  position: fixed;
+  z-index: 10;
+}
+
+.home__edge--n,
+.home__edge--s {
+  left: 8px;
+  right: 8px;
+  height: 5px;
+  cursor: ns-resize;
+}
+
+.home__edge--n {
+  top: 0;
+}
+
+.home__edge--s {
+  bottom: 0;
+}
+
+.home__edge--e,
+.home__edge--w {
+  top: 8px;
+  bottom: 8px;
+  width: 5px;
+  cursor: ew-resize;
+}
+
+.home__edge--e {
+  right: 0;
+}
+
+.home__edge--w {
+  left: 0;
+}
+
+.home__edge--nw,
+.home__edge--ne,
+.home__edge--sw,
+.home__edge--se {
+  width: 10px;
+  height: 10px;
+}
+
+.home__edge--nw {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+}
+
+.home__edge--se {
+  bottom: 0;
+  right: 0;
+  cursor: nwse-resize;
+}
+
+.home__edge--ne {
+  top: 0;
+  right: 0;
+  cursor: nesw-resize;
+}
+
+.home__edge--sw {
+  bottom: 0;
+  left: 0;
+  cursor: nesw-resize;
+}
+
+@media (max-width: 760px) {
+  .home__body {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+
+  .home__nav > button span,
+  .home__detail {
+    display: none;
+  }
+
+  .home__content {
+    padding: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home *,
+  .home *::before,
+  .home *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

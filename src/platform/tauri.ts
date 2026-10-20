@@ -8,7 +8,7 @@ import { isRegistered, register, unregister } from '@tauri-apps/plugin-global-sh
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { load } from '@tauri-apps/plugin-store';
 import { check, type Update } from '@tauri-apps/plugin-updater';
-import type { PinArea, PinGroup, PinLook, PlatformAdapter, QuickBridge, QuickRequest, QuickState, Toast, WindowBounds } from './types';
+import type { HomeBridge, PinArea, PinGroup, PinLook, PlatformAdapter, QuickBridge, QuickRequest, QuickState, Toast, WindowBounds } from './types';
 
 /** True inside the Tauri app, false in a plain browser. */
 export function isTauri(): boolean {
@@ -94,6 +94,31 @@ export function createQuickBridge(): QuickBridge {
       };
     },
     fit: (height) => void invoke('quick_fit', { height }),
+  };
+}
+
+/** The main window (preview of the redesign). */
+const HOME_LABEL = 'home';
+
+/** True in the main window, which renders the new home instead of the overlay. */
+export function isHomeWindow(): boolean {
+  return isTauri() && getCurrentWindow().label === HOME_LABEL;
+}
+
+/** What the main window needs: the overlay's settings and laws, the overlay to ask, and its own frame. */
+export function createHomeBridge(): HomeBridge {
+  const store = load('settings.json', { defaults: {}, autoSave: 300 });
+  const win = getCurrentWindow();
+  return {
+    readSetting: async <T,>(key: string) => (await store).get<T>(key),
+    writeSetting: async (key, value) => (await store).set(key, value),
+    readLaws: async (server) => (await invoke<string | null>('laws_read', { server })) ?? undefined,
+    request: (request) => emitTo('main', QUICK_REQUEST_EVENT, request),
+    mica: () => invoke<boolean>('home_mica'),
+    minimize: () => void win.minimize(),
+    toggleMaximize: () => void win.toggleMaximize(),
+    hide: () => void win.hide(),
+    startResize: (edge) => void win.startResizeDragging(edge),
   };
 }
 
@@ -462,6 +487,6 @@ export async function createTauriPlatform(): Promise<PlatformAdapter> {
   };
 
   // Started with Windows, the app waits in the tray for the hotkey; started by the player, it shows itself.
-  if (!(await invoke<boolean>('launched_at_startup'))) await showOverlay();
+  if (!(await invoke<boolean>('launched_at_startup'))) await invoke('home_show');
   return platform;
 }

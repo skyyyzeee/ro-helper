@@ -966,6 +966,9 @@ export function Overlay({
         openAi();
         setHistoryOpen(true);
         return;
+      case 'ai':
+        openAi();
+        return;
       default:
         openAi();
         setAiTab(to);

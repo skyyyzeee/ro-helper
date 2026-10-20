@@ -21,6 +21,8 @@
     "laws:check": "node scripts/laws-check.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/manrope": "^5.3.0",
     "@fontsource/onest": "^5.3.1",
     "@supabase/supabase-js": "^2.117.2",
     "@tauri-apps/api": "^2.11.1",

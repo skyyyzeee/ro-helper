@@ -1,3 +1,4 @@
+mod home;
 mod quick;
 mod sign_in;
 
@@ -394,7 +395,7 @@ pub fn run() {
   tauri::Builder::default()
     // A second launch toggles the running overlay instead of starting another one with a clashing hotkey.
     .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-      let _ = app.emit(TOGGLE_EVENT, ());
+      let _ = home::home_show(app.clone());
     }))
     .plugin(tauri_plugin_global_shortcut::Builder::new().build())
     .plugin(tauri_plugin_store::Builder::default().build())
@@ -405,6 +406,7 @@ pub fn run() {
     // «Запускать вместе с Windows»: the entry Windows starts at logon carries AUTOSTART_FLAG.
     .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec![AUTOSTART_FLAG])))
     .manage(PreviousForeground::default())
+    .manage(home::HomeMica::default())
     .manage(Pin::default())
     .invoke_handler(tauri::generate_handler![
       remember_foreground,
@@ -424,7 +426,9 @@ pub fn run() {
       sign_in::sign_in_cancel,
       quick::quick_show,
       quick::quick_hide,
-      quick::quick_fit
+      quick::quick_fit,
+      home::home_show,
+      home::home_mica
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {
@@ -437,6 +441,7 @@ pub fn run() {
 
       create_pin_window(app.handle())?;
       quick::create_quick_window(app.handle())?;
+      home::create_home_window(app.handle())?;
       #[cfg(windows)]
       for label in ["main", PIN_LABEL, quick::QUICK_LABEL] {
         if let Some(window) = app.get_webview_window(label) {
@@ -445,9 +450,10 @@ pub fn run() {
       }
 
       // The overlay has no frame and no taskbar button, so the tray is how to reach it and quit.
-      let toggle = MenuItem::with_id(app, "toggle", "Показать / скрыть", true, None::<&str>)?;
+      let home_item = MenuItem::with_id(app, "home", "Главное окно", true, None::<&str>)?;
+      let toggle = MenuItem::with_id(app, "toggle", "Поверх игры: показать / скрыть", true, None::<&str>)?;
       let quit = MenuItem::with_id(app, "quit", "Выход", true, None::<&str>)?;
-      let menu = Menu::with_items(app, &[&toggle, &quit])?;
+      let menu = Menu::with_items(app, &[&home_item, &toggle, &quit])?;
       TrayIconBuilder::with_id("main")
         .icon(app.default_window_icon().cloned().expect("app icon"))
         .tooltip("Кремлёвский Ассистент")
@@ -456,6 +462,9 @@ pub fn run() {
         .on_menu_event(|app, event| match event.id.as_ref() {
           "toggle" => {
             let _ = app.emit(TOGGLE_EVENT, ());
+          }
+          "home" => {
+            let _ = home::home_show(app.clone());
           }
           "quit" => app.exit(0),
           _ => {}
