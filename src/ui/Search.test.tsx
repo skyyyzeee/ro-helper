@@ -34,6 +34,9 @@ describe('finding an article by number', () => {
 
     const view = screen.getByRole('article', { name: 'Статья 65. Кража' });
     expect(within(view).getByRole('heading', { name: 'Статья 65. Кража' })).toBeInTheDocument();
+    // The chapter is short in the header, whole under «Подробнее».
+    expect(view).toHaveTextContent('гл. 14');
+    await user.click(within(view).getByRole('button', { name: 'Подробнее' }));
     expect(view).toHaveTextContent('Глава 14. Преступления против собственности');
     expect(within(view).getByRole('region', { name: 'Часть 2' })).toHaveAttribute('aria-current', 'true');
     expect(within(view).getByRole('region', { name: 'Часть 1' })).not.toHaveAttribute('aria-current');
