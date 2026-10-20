@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { aiCapabilitiesOf } from '../account/capabilities';
 import {
   articleHeading,
+  chapterHeading,
   formatPunishment,
   recentChanges,
   searchUnderstood,
@@ -15,6 +16,7 @@ import {
 import { loadPack } from '../data';
 import type { HomeBridge, QuickRequest, ResizeEdge } from '../platform/types';
 import { historyKey } from '../ui/ai';
+import { jurisdictionText } from '../ui/lawBits';
 import { isNewer, readPack } from '../ui/laws';
 import { PROFILE_KEY, type Profile } from '../ui/profile';
 import { entryPart, favoritesKey, hitKey, recentKey, useHitLookup } from '../ui/saved';
@@ -23,23 +25,25 @@ import './fonts.css';
 import './home.css';
 
 type Section = 'today' | 'laws' | 'ai' | 'duty' | 'wiki' | 'settings';
-const SECTIONS: { id: Section; label: string }[] = [
+const SECTIONS: { id: Exclude<Section, 'settings'>; label: string }[] = [
   { id: 'today', label: 'Сегодня' },
   { id: 'laws', label: 'Законы' },
   { id: 'ai', label: 'ИИ' },
   { id: 'duty', label: 'Служба' },
   { id: 'wiki', label: 'Вики' },
-  { id: 'settings', label: 'Настройки' },
 ];
 
 const SURVEY_KEY = 'home.survey';
 const REPORTS_KEY = 'home.reports';
+/** «Подробно» (Shapeshift's «advanced mode»): the chapter, who investigates each part, the notes. Off by default. */
+const DETAILED_KEY = 'home.detailed';
 
 const SURVEY_ANSWERS = ['Нет, не замечаю', 'Иногда, при открытии', 'Да, заметно', 'Не играю с ним открытым'];
 
-/** The articles a key stands for, or nothing when the laws no longer have it. */
 const starsOf = (part?: Part) => (part?.stars ? '★'.repeat(part.stars.max) : '');
 const dateOf = (iso: string) => new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+const hitTitle = (hit: { article: Article; document: LawDocument; part?: Part }) =>
+  `${hit.document.short} ст. ${hit.article.number}${hit.part?.number ? ` ч. ${hit.part.number}` : ''}`;
 
 interface Laws {
   pack: ServerPack;
@@ -65,87 +69,115 @@ function useHomeLaws(bridge: HomeBridge): Laws | null | undefined {
   return laws;
 }
 
+/** A setting of the main window kept in the app's settings: its value, and a setter that saves it. */
+function useStored<T>(bridge: HomeBridge, key: string, initial: T): [T, (value: T) => void] {
+  const [value, setValue] = useState(initial);
+  useEffect(() => {
+    void bridge.readSetting<T>(key).then((saved) => saved !== undefined && setValue(saved));
+  }, [bridge, key]);
+  return [
+    value,
+    (next) => {
+      setValue(next);
+      void bridge.writeSetting(key, next);
+    },
+  ];
+}
+
 /**
- * The main window (preview of the redesign): an ordinary window, away from the game, in the look of the prototype —
- * a translucent side column, large titles, calm cards. What acts on the game (the calculator, the AI, the sections
- * of the overlay) is asked of the overlay, as the quick search asks it.
+ * The main window (preview of the redesign), on the rules of the team's Shapeshift: the window's title row, a side
+ * navigation with labels and the settings at its foot, one narrow column of content, one kind of container (the
+ * card), rows «as in the Windows settings», one accent, and «Подробно» for what most do not need. What acts on the
+ * game (the calculator, the AI, the overlay's sections) is asked of the overlay, as the quick search asks it.
  */
 export function HomeWindow({ bridge }: { bridge: HomeBridge }) {
   const laws = useHomeLaws(bridge);
   const [section, setSection] = useState<Section>('today');
   const [mica, setMica] = useState(false);
+  const [detailed, setDetailed] = useStored(bridge, DETAILED_KEY, false);
   useEffect(() => {
     void bridge.mica().then(setMica);
   }, [bridge]);
 
-  // The selection's pill glides to the section chosen.
+  // The selection's mark glides to the section chosen.
   const nav = useRef<HTMLDivElement>(null);
-  const [pill, setPill] = useState(0);
+  const [mark, setMark] = useState<number | null>(null);
   useEffect(() => {
     const on = nav.current?.querySelector<HTMLElement>(`[data-section="${section}"]`);
-    if (on) setPill(on.offsetTop);
-  }, [section]);
+    setMark(on ? on.offsetTop + on.offsetHeight / 2 - 8 : null);
+  }, [section, laws]);
 
   const organization = laws ? laws.pack.organizations.find((o) => o.id === laws.profile.organization) : undefined;
   const can = useMemo(() => aiCapabilitiesOf({ admin: false, organization }), [organization]);
+  const place = laws ? [laws.pack.server.name, organization?.kind ? organization.name : null].filter(Boolean).join(' · ') : '';
+  const navItem = (id: Section, label: string) => (
+    <button key={id} type="button" data-section={id} aria-current={section === id ? 'page' : undefined} onClick={() => setSection(id)}>
+      {HOME_ICONS[id]}
+      <span>{label}</span>
+    </button>
+  );
 
   return (
     <div className={mica ? 'home home--mica' : 'home'}>
       <Edges bridge={bridge} />
-      <aside className="home__side">
-        <div className="home__titlebar" data-tauri-drag-region>
-          <span className="home__mark" aria-hidden="true">
-            ★
+      <header className="home__titlebar" data-tauri-drag-region>
+        <span className="home__mark" aria-hidden="true">
+          ★
+        </span>
+        <span className="home__appname" data-tauri-drag-region>
+          Кремлёвский Ассистент
+        </span>
+        {place && (
+          <span className="home__place" data-tauri-drag-region>
+            {place}
           </span>
-          <div data-tauri-drag-region>
-            <b>Кремлёвский Ассистент</b>
-            <small>{laws ? [laws.pack.server.name, organization?.kind ? organization.name : null].filter(Boolean).join(' · ') : 'Превью нового облика'}</small>
-          </div>
+        )}
+        <span className="home__badge">Превью</span>
+        <div className="home__controls">
+          <button type="button" aria-label="Свернуть" onClick={bridge.minimize}>
+            {HOME_ICONS.minimize}
+          </button>
+          <button type="button" aria-label="Развернуть" onClick={bridge.toggleMaximize}>
+            {HOME_ICONS.maximize}
+          </button>
+          <button type="button" className="home__close" aria-label="Закрыть" onClick={bridge.hide}>
+            {HOME_ICONS.close}
+          </button>
         </div>
-        <nav className="home__nav" ref={nav} aria-label="Разделы">
-          <span className="home__pill" style={{ transform: `translateY(${pill}px)` }} aria-hidden="true" />
-          {SECTIONS.filter((s) => s.id !== 'duty' || can.has('ai.practice') || can.has('ai.check')).map((s) => (
-            <button key={s.id} type="button" data-section={s.id} aria-current={section === s.id ? 'page' : undefined} onClick={() => setSection(s.id)}>
-              {HOME_ICONS[s.id]}
-              <span>{s.label}</span>
-            </button>
-          ))}
+      </header>
+
+      <div className="home__body">
+        <nav className="home__pane" aria-label="Разделы">
+          <div className="home__nav" ref={nav}>
+            {mark !== null && <span className="home__indicator" style={{ transform: `translateY(${mark}px)` }} aria-hidden="true" />}
+            {SECTIONS.filter((s) => s.id !== 'duty' || can.has('ai.practice') || can.has('ai.check')).map((s) => navItem(s.id, s.label))}
+            <span className="home__grow" />
+            <label className="home__detail">
+              <span>
+                Подробно
+                <small>главы, подследственность, примечания</small>
+              </span>
+              <Switch on={detailed} label="Подробно" onChange={setDetailed} />
+            </label>
+            {navItem('settings', 'Настройки')}
+          </div>
         </nav>
-        <div className="home__grow" data-tauri-drag-region />
-        <p className="home__hint">
-          <kbd>Alt</kbd> <kbd>Q</kbd> — поверх игры · <kbd>Alt</kbd> <kbd>S</kbd> — быстрый поиск
-        </p>
-      </aside>
-      <main className="home__main">
-        <div className="home__bar" data-tauri-drag-region>
-          <span className="home__badge">Превью</span>
-          <div className="home__controls">
-            <button type="button" aria-label="Свернуть" onClick={bridge.minimize}>
-              {HOME_ICONS.minimize}
-            </button>
-            <button type="button" aria-label="Развернуть" onClick={bridge.toggleMaximize}>
-              {HOME_ICONS.maximize}
-            </button>
-            <button type="button" className="home__close" aria-label="Закрыть" onClick={bridge.hide}>
-              {HOME_ICONS.close}
-            </button>
-          </div>
-        </div>
-        <div className="home__scroll">
+
+        <main className="home__content">
           {laws === undefined ? null : laws === null ? (
-            <Empty title="Сначала выберите сервер" text="Откройте ассистента поверх игры (Alt+Q) и выберите сервер и организацию — главное окно возьмёт их оттуда." />
+            <Page title="Сначала выберите сервер" subtitle="Откройте ассистента поверх игры (Alt+Q) и выберите сервер и организацию — главное окно возьмёт их оттуда." />
           ) : (
             <div className="home__view" key={section}>
               {section === 'today' && <Today bridge={bridge} laws={laws} go={setSection} />}
-              {section === 'laws' && <LawsView bridge={bridge} laws={laws} />}
+              {section === 'laws' && <LawsView bridge={bridge} laws={laws} detailed={detailed} />}
               {section === 'ai' && <AiView bridge={bridge} />}
               {section === 'duty' && <DutyView bridge={bridge} can={can} />}
               {section === 'wiki' && <WikiView bridge={bridge} />}
-              {section === 'settings' && <SettingsView bridge={bridge} mica={mica} />}
+              {section === 'settings' && <SettingsView bridge={bridge} mica={mica} detailed={detailed} onDetailed={setDetailed} />}
             </div>
           )}
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
@@ -171,30 +203,53 @@ function Edges({ bridge }: { bridge: HomeBridge }) {
   );
 }
 
-function Title({ children, note }: { children: ReactNode; note?: ReactNode }) {
+function Switch({ on, label, onChange }: { on: boolean; label: string; onChange: (on: boolean) => void }) {
+  return <button type="button" role="switch" aria-checked={on} aria-label={label} className="home-switch" onClick={() => onChange(!on)} />;
+}
+
+/** A page: its title and one line under it, then its cards. */
+function Page({ title, subtitle, children }: { title: string; subtitle?: ReactNode; children?: ReactNode }) {
   return (
-    <header className="home__title">
-      <h1>{children}</h1>
-      {note && <small>{note}</small>}
-    </header>
+    <>
+      <header className="home-page">
+        <h1>{title}</h1>
+        {subtitle && <p>{subtitle}</p>}
+      </header>
+      {children}
+    </>
   );
 }
 
-function Card({ title, children, wide }: { title: string; children: ReactNode; wide?: boolean }) {
+/** The one container of the interface. */
+function Card({ title, children }: { title?: string; children: ReactNode }) {
   return (
-    <section className={wide ? 'home-card home-card--wide' : 'home-card'} aria-label={title}>
-      <h2>{title}</h2>
+    <section className="home-card" aria-label={title}>
+      {title && <h2>{title}</h2>}
       {children}
     </section>
   );
 }
 
-function Empty({ title, text }: { title: string; text: string }) {
-  return (
-    <div className="home__empty">
-      <b>{title}</b>
-      <p>{text}</p>
-    </div>
+/** A row as in the Windows settings: what and why on the left, the control on the right. */
+function Row({ title, hint, children, onClick }: { title: ReactNode; hint?: ReactNode; children?: ReactNode; onClick?: () => void }) {
+  const body = (
+    <>
+      <span className="home-row__text">
+        <span className="home-row__title">{title}</span>
+        {hint && <span className="home-row__hint">{hint}</span>}
+      </span>
+      {children}
+    </>
+  );
+  return onClick ? (
+    <button type="button" className="home-row home-row--action" onClick={onClick}>
+      {body}
+      <span className="home-row__chevron" aria-hidden="true">
+        ›
+      </span>
+    </button>
+  ) : (
+    <div className="home-row">{body}</div>
   );
 }
 
@@ -216,80 +271,65 @@ function Today({ bridge, laws, go }: { bridge: HomeBridge; laws: Laws; go: (sect
   }, [bridge, pack, lookup]);
   const changes = useMemo(() => recentChanges(pack, new Date(), 14), [pack]);
   const today = new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+  const articles = [...favorites, ...recent.filter((r) => !favorites.some((f) => hitKey(f) === hitKey(r)))].slice(0, 5);
 
   return (
-    <>
-      <Title note={today}>Сегодня</Title>
-      <div className="home__grid">
-        <Card title="Изменилось в законах за две недели">
-          {changes.length ? (
-            <ul className="home-list">
-              {changes.slice(0, 4).flatMap((entry) =>
-                entry.documents.slice(0, 2).map((d) => (
-                  <li key={`${entry.version}-${d.documentId}`}>
-                    <div>
-                      <b>{d.title}</b>
-                      <small>
-                        {dateOf(entry.version)} · {d.kind === 'added' ? 'добавлен' : d.kind === 'removed' ? 'убран' : `изменено статей: ${d.articles.length}`}
-                      </small>
-                    </div>
-                    <span className="home-tag">{d.short}</span>
-                  </li>
-                )),
-              )}
-            </ul>
-          ) : (
-            <p className="home-muted">За две недели законы вашего сервера не менялись.</p>
-          )}
-        </Card>
-        <Survey bridge={bridge} />
-        <Card title="Избранное">
-          {favorites.length ? <HitList hits={favorites} /> : <p className="home-muted">Отмечайте статьи звёздочкой — они появятся здесь.</p>}
-        </Card>
-        <Card title="Недавние статьи">{recent.length ? <HitList hits={recent} /> : <p className="home-muted">Здесь будут статьи, которые вы открывали.</p>}</Card>
-        <Card title="Дела и разговоры с ИИ">
-          {cases.length ? (
-            <ul className="home-list">
-              {cases.map((c) => (
-                <li key={c.id}>
-                  <div>
-                    <b>{c.title || 'Без названия'}</b>
-                    <small>{dateOf(c.updated)}</small>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="home-muted">Разборы ИИ сохранятся здесь.</p>
-          )}
-          <button className="home-btn home-btn--ghost" type="button" onClick={() => go('ai')}>
-            Открыть ИИ
-          </button>
-        </Card>
-      </div>
-    </>
+    <Page title="Сегодня" subtitle={`${today[0].toUpperCase()}${today.slice(1)} · что изменилось и что под рукой`}>
+      <Card title="Изменилось в законах за две недели">
+        {changes.length ? (
+          changes.slice(0, 3).flatMap((entry) =>
+            entry.documents.slice(0, 2).map((d) => (
+              <Row
+                key={`${entry.version}-${d.documentId}`}
+                title={d.title}
+                hint={`${dateOf(entry.version)} · ${d.kind === 'added' ? 'добавлен' : d.kind === 'removed' ? 'убран' : `изменено статей: ${d.articles.length}`}`}
+              />
+            )),
+          )
+        ) : (
+          <p className="home-muted">За две недели законы вашего сервера не менялись.</p>
+        )}
+      </Card>
+      <Survey bridge={bridge} />
+      <Card title="Ваши статьи">
+        {articles.length ? (
+          articles.map((hit) => <HitRow key={hitKey(hit)} hit={hit} />)
+        ) : (
+          <p className="home-muted">Избранные и недавние статьи появятся здесь.</p>
+        )}
+      </Card>
+      <Card title="Дела и разговоры с ИИ">
+        {cases.map((c) => (
+          <Row key={c.id} title={c.title || 'Без названия'} hint={dateOf(c.updated)} />
+        ))}
+        <Row title="Открыть ИИ" hint="Новый разбор или продолжить прошлый" onClick={() => go('ai')} />
+      </Card>
+    </Page>
   );
 }
 
-function HitList({ hits }: { hits: SearchHit[] }) {
-  return (
-    <ul className="home-list">
-      {hits.map((hit) => {
-        const part = entryPart(hit.article, hit.part) ?? hit.article.parts.find((p) => p.punishment);
-        return (
-          <li key={hitKey(hit)}>
-            <div>
-              <b>
-                {hit.document.short} ст. {hit.article.number}
-                {hit.part?.number ? ` ч. ${hit.part.number}` : ''} · {hit.article.title}
-              </b>
-              {part?.punishment && <small className="home-pen">{formatPunishment(part.punishment)}</small>}
-            </div>
-            <span className="home-stars">{starsOf(part)}</span>
-          </li>
-        );
-      })}
-    </ul>
+function HitRow({ hit, onClick, current }: { hit: SearchHit; onClick?: () => void; current?: boolean }) {
+  const part = entryPart(hit.article, hit.part) ?? hit.part ?? hit.article.parts.find((p) => p.punishment);
+  const body = (
+    <>
+      <span className="home-row__text">
+        <span className="home-row__title">
+          {hitTitle(hit)} · {hit.article.title || 'без названия'}
+        </span>
+        {part?.punishment && <span className="home-row__hint">{formatPunishment(part.punishment)}</span>}
+      </span>
+      <span className="home-stars">{starsOf(part)}</span>
+    </>
+  );
+  return onClick ? (
+    <button type="button" className="home-row home-row--action" aria-current={current ? 'true' : undefined} onClick={onClick}>
+      {body}
+      <span className="home-row__chevron" aria-hidden="true">
+        ›
+      </span>
+    </button>
+  ) : (
+    <div className="home-row">{body}</div>
   );
 }
 
@@ -310,17 +350,17 @@ function Survey({ bridge }: { bridge: HomeBridge }) {
         <p className="home-thanks">Спасибо! Ваш ответ: «{answer}».</p>
       ) : (
         <>
-          <b className="home-question">Чувствуете ли просадки FPS, когда Ассистент открыт поверх игры?</b>
+          <p className="home-question">Чувствуете ли просадки FPS, когда Ассистент открыт поверх игры?</p>
           <div className="home-options">
             {SURVEY_ANSWERS.map((value) => (
               <button key={value} type="button" onClick={() => choose(value)}>
                 {value}
               </button>
             ))}
+            <button type="button" className="home-options__skip" onClick={() => choose('Не спрашивать')}>
+              Не спрашивать
+            </button>
           </div>
-          <button className="home-btn home-btn--ghost" type="button" onClick={() => choose('Не спрашивать')}>
-            Не спрашивать
-          </button>
         </>
       )}
       <p className="home-note">В превью ответ остаётся на этом компьютере.</p>
@@ -330,10 +370,10 @@ function Survey({ bridge }: { bridge: HomeBridge }) {
 
 // ——— Законы ———
 
-function LawsView({ bridge, laws }: { bridge: HomeBridge; laws: Laws }) {
+function LawsView({ bridge, laws, detailed }: { bridge: HomeBridge; laws: Laws; detailed: boolean }) {
   const { pack } = laws;
   const [query, setQuery] = useState('');
-  const [open, setOpen] = useState<{ article: Article; document: LawDocument; part?: Part } | null>(null);
+  const [open, setOpen] = useState<SearchHit | null>(null);
   const [everywhereFor, setEverywhereFor] = useState<string | null>(null);
   const boostDocuments = pack.organizations.find((o) => o.id === laws.profile.organization)?.documents;
   const found = useMemo<{ hits: SearchHit[]; intent?: Intent }>(
@@ -341,23 +381,22 @@ function LawsView({ bridge, laws }: { bridge: HomeBridge; laws: Laws }) {
     [pack, query, boostDocuments, everywhereFor],
   );
   const input = useRef<HTMLInputElement>(null);
-  useEffect(() => input.current?.focus(), []);
+  useEffect(() => {
+    if (!open) input.current?.focus();
+  }, [open]);
 
+  if (open) return <ArticlePage hit={open} bridge={bridge} detailed={detailed} onBack={() => setOpen(null)} />;
   return (
-    <>
-      <Title note={`${pack.documents.length} документов · ${pack.server.name}`}>Законы</Title>
+    <Page title="Законы" subtitle={`${pack.documents.length} документов сервера ${pack.server.name}. Номер, слова или вопрос своими словами.`}>
       <label className="home-search">
         {HOME_ICONS.search}
         <input
           ref={input}
           type="search"
           value={query}
-          placeholder="Номер или слова: 65, коап 8.6, что будет за угон"
+          placeholder="65, коап 8.6, что будет за угон"
           aria-label="Поиск по законам"
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setOpen(null);
-          }}
+          onChange={(e) => setQuery(e.target.value)}
         />
       </label>
       {found.intent && (
@@ -368,83 +407,87 @@ function LawsView({ bridge, laws }: { bridge: HomeBridge; laws: Laws }) {
           </button>
         </p>
       )}
-      <div className={open ? 'home-split home-split--open' : 'home-split'}>
-        <div className="home-card home-card--list">
-          {query.trim() ? (
-            found.hits.length ? (
-              <ul className="home-list home-list--click">
-                {found.hits.slice(0, 30).map((hit) => {
-                  const part = hit.part ?? hit.article.parts.find((p) => p.punishment);
-                  return (
-                    <li key={hitKey(hit)}>
-                      <button type="button" aria-current={open?.article === hit.article && open.part === hit.part ? 'true' : undefined} onClick={() => setOpen(hit)}>
-                        <div>
-                          <b>
-                            {hit.document.short} ст. {hit.article.number}
-                            {hit.part?.number ? ` ч. ${hit.part.number}` : ''} · {hit.article.title || 'без названия'}
-                          </b>
-                          {part?.punishment && <small className="home-pen">{formatPunishment(part.punishment)}</small>}
-                        </div>
-                        <span className="home-stars">{starsOf(part)}</span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="home-muted">Ничего не нашлось. Попробуйте другое слово или спросите ИИ.</p>
-            )
+      {query.trim() && (
+        <Card>
+          {found.hits.length ? (
+            found.hits.slice(0, 30).map((hit) => <HitRow key={hitKey(hit)} hit={hit} onClick={() => setOpen(hit)} />)
           ) : (
-            <p className="home-muted">Начните вводить — результаты появятся сразу. Поиск понимает «что будет за кражу», номера и жаргон.</p>
+            <p className="home-muted">Ничего не нашлось. Попробуйте другое слово или спросите ИИ.</p>
           )}
-        </div>
-        {open && <ArticlePane hit={open} bridge={bridge} onClose={() => setOpen(null)} />}
-      </div>
-    </>
+        </Card>
+      )}
+    </Page>
   );
 }
 
-function ArticlePane({ hit, bridge, onClose }: { hit: { article: Article; document: LawDocument; part?: Part }; bridge: HomeBridge; onClose: () => void }) {
+function ArticlePage({ hit, bridge, detailed, onBack }: { hit: SearchHit; bridge: HomeBridge; detailed: boolean; onBack: () => void }) {
   const { article, document } = hit;
+  const [selected, setSelected] = useState<Part | undefined>(hit.part ?? article.parts.find((p) => p.punishment));
   const [sent, setSent] = useState<string | null>(null);
+  const chapter = article.chapter ? document.chapters.find((c) => c.number === article.chapter) : undefined;
   const charge = (part: Part) => {
     const key = hitKey({ article, document, part });
     void bridge.request({ kind: 'charge', key });
     setSent(key);
   };
   return (
-    <article className="home-card home-article" aria-label={articleHeading(article, document.unit)}>
-      <header>
-        <span className="home-tag">{document.short}</span>
-        <button type="button" className="home-link" onClick={onClose}>
-          Закрыть
+    <>
+      <nav className="home-crumbs" aria-label="Путь">
+        <button type="button" className="home-link" onClick={onBack}>
+          Законы
         </button>
-      </header>
-      <h2 className="home-article__title">{articleHeading(article, document.unit)}</h2>
-      {article.parts.map((part, i) => (
-        <section key={part.number ?? i} className={part === hit.part ? 'home-part home-part--focus' : 'home-part'}>
-          <p>
-            {part.number && <b>{part.number}. </b>}
-            {part.text}
-          </p>
-          {part.points.map((point) => (
-            <p key={point.marker} className="home-point">
-              {point.marker}) {point.text}
+        <span aria-hidden="true">›</span>
+        <span>{hitTitle({ article, document })}</span>
+      </nav>
+      <Page title={articleHeading(article, document.unit)} subtitle={detailed && chapter ? `${document.title} · ${chapterHeading(chapter)}` : document.title} />
+      <Card>
+        {article.parts.map((part, i) => {
+          const key = hitKey({ article, document, part });
+          const on = part === selected;
+          return (
+            <div
+              key={part.number ?? i}
+              className={on ? 'home-part home-part--on' : 'home-part'}
+              tabIndex={0}
+              aria-current={on ? 'true' : undefined}
+              onClick={() => setSelected(part)}
+              onKeyDown={(e) => e.key === 'Enter' && e.target === e.currentTarget && setSelected(part)}
+            >
+              <span className="home-part__num">{part.number ?? ''}</span>
+              <div className="home-part__body">
+                <p>{part.text}</p>
+                {part.points.map((point) => (
+                  <p key={point.marker} className="home-part__point">
+                    {point.marker}) {point.text}
+                  </p>
+                ))}
+                {part.punishment && (
+                  <p className="home-part__pen">
+                    <span className="home-stars">{starsOf(part)}</span> {formatPunishment(part.punishment)}
+                  </p>
+                )}
+                {detailed && part.jurisdiction?.length ? <p className="home-part__meta">Подследственность: {jurisdictionText(part.jurisdiction)}</p> : null}
+              </div>
+              {on && part.punishment && (
+                <button className="home-btn" type="button" onClick={() => charge(part)}>
+                  {sent === key ? 'В калькуляторе ✓' : 'В калькулятор'}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </Card>
+      {detailed && article.notes.length > 0 && (
+        <Card title="Примечание">
+          {article.notes.map((note, i) => (
+            <p key={i} className="home-part__meta">
+              {note.text}
             </p>
           ))}
-          {part.punishment && (
-            <div className="home-part__pen">
-              <span className="home-stars">{starsOf(part)}</span>
-              <span>{formatPunishment(part.punishment)}</span>
-              <button className="home-btn" type="button" onClick={() => charge(part)}>
-                {sent === hitKey({ article, document, part }) ? 'В калькуляторе ✓' : 'В калькулятор'}
-              </button>
-            </div>
-          )}
-        </section>
-      ))}
+        </Card>
+      )}
       {sent && <p className="home-note">Статья в калькуляторе поверх игры — откройте его клавишей Alt+Q.</p>}
-    </article>
+    </>
   );
 }
 
@@ -454,9 +497,8 @@ function AiView({ bridge }: { bridge: HomeBridge }) {
   const [question, setQuestion] = useState('');
   const ask = () => question.trim() && void bridge.request({ kind: 'ask', question: question.trim() });
   return (
-    <>
-      <Title note="Разбор · Проверка · Практика">ИИ</Title>
-      <Card title="Опишите ситуацию" wide>
+    <Page title="ИИ" subtitle="Опишите ситуацию — ИИ найдёт статьи вашего сервера. Ответ откроется в ассистенте поверх игры.">
+      <Card>
         <textarea
           className="home-textarea"
           value={question}
@@ -468,89 +510,71 @@ function AiView({ bridge }: { bridge: HomeBridge }) {
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) ask();
           }}
         />
-        <div className="home-row">
+        <div className="home-actions">
+          <button className="home-btn home-btn--plain" type="button" onClick={() => void bridge.request({ kind: 'open', to: 'history' })}>
+            История разборов
+          </button>
           <button className="home-btn" type="button" disabled={!question.trim()} onClick={ask}>
             Спросить ИИ
           </button>
-          <button className="home-btn home-btn--ghost" type="button" onClick={() => void bridge.request({ kind: 'open', to: 'history' })}>
-            История разборов
-          </button>
-          <span className="home-note">Ответ откроется в ассистенте поверх игры · Ctrl+Enter</span>
         </div>
       </Card>
-    </>
+    </Page>
   );
 }
 
 function DutyView({ bridge, can }: { bridge: HomeBridge; can: ReadonlySet<string> }) {
   const open = (request: QuickRequest) => void bridge.request(request);
-  const items: { title: string; text: string; request: QuickRequest; show: boolean }[] = [
-    { title: 'Тренажёр', text: 'Быстрые задания по законам вашего сервера и экзамен с ИИ.', request: { kind: 'open', to: 'trainer' }, show: can.has('ai.practice') },
-    { title: 'Проверка задержания', text: 'Расскажите, как прошло задержание, — ИИ сверит каждый шаг с законом.', request: { kind: 'open', to: 'detention' }, show: can.has('ai.check') },
-    { title: 'Требования адвоката', text: 'Законны ли требования защитника.', request: { kind: 'open', to: 'lawyer' }, show: can.has('ai.check') },
-    { title: 'Документы', text: 'Рапорт, протокол, заявление — с вашими данными и статьями.', request: { kind: 'open', to: 'document' }, show: true },
-    { title: 'Памятки фракции', text: 'От лидера и заместителей.', request: { kind: 'open', to: 'memos' }, show: true },
+  const items: { title: string; hint: string; request: QuickRequest; show: boolean }[] = [
+    { title: 'Тренажёр', hint: 'Быстрые задания по законам вашего сервера и экзамен с ИИ', request: { kind: 'open', to: 'trainer' }, show: can.has('ai.practice') },
+    { title: 'Проверка задержания', hint: 'ИИ сверит каждый шаг с законом', request: { kind: 'open', to: 'detention' }, show: can.has('ai.check') },
+    { title: 'Требования адвоката', hint: 'Законны ли требования защитника', request: { kind: 'open', to: 'lawyer' }, show: can.has('ai.check') },
+    { title: 'Документы', hint: 'Рапорт, протокол, заявление — с вашими данными и статьями', request: { kind: 'open', to: 'document' }, show: true },
+    { title: 'Памятки фракции', hint: 'От лидера и заместителей', request: { kind: 'open', to: 'memos' }, show: true },
   ];
   return (
-    <>
-      <Title note="Открывается в ассистенте поверх игры">Служба</Title>
-      <div className="home__grid">
+    <Page title="Служба" subtitle="Инструменты сотрудника. Открываются в ассистенте поверх игры.">
+      <Card>
         {items
           .filter((item) => item.show)
           .map((item) => (
-            <button key={item.title} type="button" className="home-card home-card--action" onClick={() => open(item.request)}>
-              <h2>{item.title}</h2>
-              <p className="home-muted">{item.text}</p>
-            </button>
+            <Row key={item.title} title={item.title} hint={item.hint} onClick={() => open(item.request)} />
           ))}
-      </div>
-    </>
+      </Card>
+    </Page>
   );
 }
 
 function WikiView({ bridge }: { bridge: HomeBridge }) {
   return (
-    <>
-      <Title note="Данные: вики Russia Online">Вики</Title>
-      <Card title="Транспорт, персонаж, имущество, предметы и крафт" wide>
-        <p className="home-muted">В превью вики открывается в ассистенте поверх игры. В новом облике она переедет сюда, в главное окно, — места для плиток и картинок здесь больше.</p>
-        <button className="home-btn" type="button" onClick={() => void bridge.request({ kind: 'open', to: 'wiki' })}>
-          Открыть вики
-        </button>
+    <Page title="Вики" subtitle="Транспорт, персонаж, имущество, предметы и крафт. Данные: вики Russia Online.">
+      <Card>
+        <Row title="Открыть вики" hint="В превью — в ассистенте поверх игры; в новом облике переедет сюда" onClick={() => void bridge.request({ kind: 'open', to: 'wiki' })} />
       </Card>
-    </>
+    </Page>
   );
 }
 
 // ——— Настройки ———
 
-function SettingsView({ bridge, mica }: { bridge: HomeBridge; mica: boolean }) {
-  const [reports, setReports] = useState(true);
-  useEffect(() => {
-    void bridge.readSetting<boolean>(REPORTS_KEY).then((saved) => saved !== undefined && setReports(saved));
-  }, [bridge]);
-  const toggle = () => {
-    setReports(!reports);
-    void bridge.writeSetting(REPORTS_KEY, !reports);
-  };
+function SettingsView({ bridge, mica, detailed, onDetailed }: { bridge: HomeBridge; mica: boolean; detailed: boolean; onDetailed: (on: boolean) => void }) {
+  const [reports, setReports] = useStored(bridge, REPORTS_KEY, true);
   return (
-    <>
-      <Title note="Превью: настройки нового облика">Настройки</Title>
-      <Card title="Приватность" wide>
-        <div className="home-toggle">
-          <div>
-            <b>Отправлять отчёты об ошибках</b>
-            <small>Версия, Windows, где и что сломалось. Без ваших текстов, запросов и скриншотов. В превью ничего не отправляется.</small>
-          </div>
-          <button type="button" role="switch" aria-checked={reports} aria-label="Отправлять отчёты об ошибках" className="home-switch" onClick={toggle} />
-        </div>
+    <Page title="Настройки" subtitle="Превью: настройки нового облика. Остальные — в ассистенте поверх игры.">
+      <Card title="Вид">
+        <Row title="Подробно" hint="Глава, подследственность каждой части и примечания к статьям">
+          <Switch on={detailed} label="Подробно" onChange={onDetailed} />
+        </Row>
+        <Row title="Фон окна" hint={mica ? 'Системный Mica Windows 11 — слегка просвечивают обои' : 'Mica есть только в Windows 11 — здесь свой фон'} />
       </Card>
-      <Card title="Окно" wide>
-        <p className="home-muted">{mica ? 'Фон окна — системный Mica Windows 11: он слегка просвечивает обои.' : 'Системный фон Mica есть только в Windows 11 — здесь окно со своим фоном.'}</p>
-        <button className="home-btn home-btn--ghost" type="button" onClick={() => void bridge.request({ kind: 'open', to: 'settings' })}>
-          Все настройки ассистента
-        </button>
+      <Card title="Приватность">
+        <Row title="Отправлять отчёты об ошибках" hint="Версия, Windows, где и что сломалось. Без ваших текстов, запросов и скриншотов. В превью ничего не отправляется.">
+          <Switch on={reports} label="Отправлять отчёты об ошибках" onChange={setReports} />
+        </Row>
       </Card>
-    </>
+      <Card>
+        <Row title="Все настройки ассистента" hint="Сервер, клавиши, внешний вид оверлея, аккаунт" onClick={() => void bridge.request({ kind: 'open', to: 'settings' })} />
+      </Card>
+    </Page>
   );
 }
