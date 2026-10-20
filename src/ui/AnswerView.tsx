@@ -13,7 +13,7 @@ export function calculationLine(result: DetentionResult): string {
   const criminal = result.criminal;
   if (criminal?.mode === 'custody') {
     parts.push(`${criminal.term} мес${criminal.capped ? ' (предел)' : ''}`);
-    if (criminal.bail?.amount) parts.push(`залог ${formatRubles(criminal.bail.amount)}`);
+    if (criminal.bail?.amount && !criminal.bail.denied) parts.push(`залог ${formatRubles(criminal.bail.amount)}`);
   } else if (criminal?.fineLimit) {
     parts.push(`штраф ${criminal.fineLimit.min ? `от ${formatRubles(criminal.fineLimit.min)} ` : ''}до ${formatRubles(criminal.fineLimit.max)}`);
   }

@@ -254,7 +254,7 @@ function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, fineInp
         </p>
       ))}
       {mode === 'custody' && criminal.bail && (
-        <div className="bail">
+        <div className={criminal.bail.denied ? 'bail bail--denied' : 'bail'}>
           <span>Залог</span>
           {priority ? (
             <span className="bail__levels" role="radiogroup" aria-label="Приоритет розыска">
@@ -277,6 +277,12 @@ function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, fineInp
           )}
           <span className="sp" />
           <span className="val">{criminal.bail.amount ? formatRubles(criminal.bail.amount) : 'не предусмотрен'}</span>
+          {/* Counted, but not due: a charge brings a criminal record (Кутузовский, УК ст. 5.10). */}
+          {criminal.bail.denied && (
+            <span className="bail__denied">
+              Не положен: {criminal.bail.denied.reason} — {criminal.bail.denied.basis}
+            </span>
+          )}
         </div>
       )}
       {criminal.warnings.map((warning) => (

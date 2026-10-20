@@ -2559,10 +2559,23 @@ input {
 
 .bail {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   font-size: 14px;
   color: rgba(255, 255, 255, 0.78);
+}
+
+/* Counted but not due (a charge brings a criminal record): struck through, as absorbed charges are. */
+.bail--denied > span:not(.bail__denied) {
+  color: rgba(255, 255, 255, 0.42);
+  text-decoration: line-through;
+}
+
+.bail__denied {
+  flex-basis: 100%;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 /* Calculator: administrative charges */
