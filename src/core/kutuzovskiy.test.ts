@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { KUTUZOVSKIY_PACK } from '../data/bundled';
-import { calculateCriminal, type ChargeItem, type Mode, type Stage } from './calculator';
+import { bringsRecord, calculateCriminal, type ChargeItem, type Mode, type Stage } from './calculator';
 import { formatRubles } from './format';
 import { calculateDetention } from './detention';
 
@@ -58,6 +58,19 @@ describe('the Кутузовский calculator', () => {
     const per = formatRubles(25000);
     expect(calc(['10.3']).bail).toEqual({ category: `2 × ${per}`, amount: 50000 }); // 30 мес → 2 года
     expect(calc(['10.1']).bail).toEqual({ category: `0 × ${per}`, amount: 0 }); // 10 мес — меньше года
+  });
+
+  it('strikes the bail out where a charge brings a criminal record (УК ст. 5.10, 5.8 ч. 1; a player of Кутузовский)', () => {
+    // «Запись о судимости» in the punishment.
+    const robbery = calc(['10.6']).bail!;
+    expect(robbery.amount).toBeGreaterThan(0);
+    expect(robbery.denied).toEqual({ reason: 'ст. 10.6 влечёт судимость', basis: 'УК ст. 5.10, ст. 5.8 ч. 1' });
+    // ★★★★ and more with no such words in the punishment (ст. 12.15.1) brings one too.
+    expect(bringsRecord(charge('12.15.1').part, 4)).toBe(true);
+    // Absorbed by a crime with no record, the one with a record still bars the bail.
+    expect(calc(['10.3', '10.6']).bail?.denied?.reason).toContain('10.6');
+    // A crime with no record keeps its bail.
+    expect(calc(['10.3']).bail?.denied).toBeUndefined();
   });
 
   it('knows the Следственный комитет among the jurisdictions, and says nothing about a shared one', () => {

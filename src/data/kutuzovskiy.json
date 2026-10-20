@@ -56,6 +56,10 @@
       "per": {
         "months": 12,
         "amount": 25000
+      },
+      "withoutRecord": {
+        "minStars": 4,
+        "basis": "УК ст. 5.10, ст. 5.8 ч. 1"
       }
     },
     "jurisdictionWarnings": {
@@ -132661,5 +132665,5 @@
       "гражданина"
     ]
   },
-  "built": "2026-10-20T12:26:03.569Z"
+  "built": "2026-10-20T21:27:06.828Z"
 }

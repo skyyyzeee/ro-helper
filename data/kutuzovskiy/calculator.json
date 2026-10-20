@@ -24,7 +24,8 @@
   "bail": {
     "by": "term",
     "basis": "УК ст. 5.10",
-    "per": { "months": 12, "amount": 25000 }
+    "per": { "months": 12, "amount": 25000 },
+    "withoutRecord": { "minStars": 4, "basis": "УК ст. 5.10, ст. 5.8 ч. 1" }
   },
   "jurisdictionWarnings": {
     "Ф": "федеральная подследственность — дело ФСБ",
