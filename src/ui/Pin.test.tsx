@@ -154,11 +154,11 @@ describe('pinning the calculator', () => {
       },
     ]);
 
-    await add(user, 'ук 88 ч 1');
+    await add(user, 'ук 80 ч 1');
     expect(pinnedCards(platform)[0]).toMatchObject({
       heading: '40 мес',
       stars: 4,
-      warning: 'ст. 88 ч. 1 — федеральная подследственность — дело ФСБ',
+      warning: 'ст. 80 — федеральная подследственность — дело ФСБ',
     });
 
     await user.click(within(panel()).getByRole('button', { name: 'Очистить' }));

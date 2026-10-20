@@ -21,21 +21,22 @@ const part = (number: string, partNumber?: string) => {
 describe('КоАП Тверского (real forum text)', () => {
   it('reads every chapter and article; every «влечет» line becomes a sanction', () => {
     expect(koap.chapters).toHaveLength(19);
-    expect(koap.articles).toHaveLength(139);
+    expect(koap.articles).toHaveLength(150);
     const sanctionLines = text.split('\n').filter((line) => /^\s*(влеч[её]т|влекут)\s/.test(line)).length;
     expect(koap.articles.flatMap((a) => a.parts.filter((p) => p.punishment))).toHaveLength(sanctionLines);
     expect(koap.header).toEqual(['КОДЕКС РО', 'ОБ АДМИНИСТРАТИВНЫХ ПРАВОНАРУШЕНИЯХ']);
     expect(koap.footer).toHaveLength(2);
   });
 
-  it('reports only КоАП 8.17, the one sanction the parser cannot read (fixed by hand in overrides.json)', () => {
-    expect(koap.issues).toHaveLength(1);
+  it('reports only КоАП 8.17 and 8.27 ч. 3, the sanctions the parser cannot read (fixed by hand in overrides.json)', () => {
+    expect(new Set(koap.issues.map((i) => i.article))).toEqual(new Set(['koap-8.17', 'koap-8.27']));
     expect(koap.issues[0]).toMatchObject({ article: 'koap-8.17', partIndex: 1 });
+    expect(koap.issues.slice(1).every((i) => i.article === 'koap-8.27' && i.partIndex === 3)).toBe(true);
   });
 
   it('parses ст. 8.6 speeding: three numbered parts with growing fines', () => {
     expect(article('8.6').parts.map((p) => p.number)).toEqual(['1', '2', '3']);
-    expect(part('8.6', '1').text).toBe('Превышение установленной скорости движения транспортного средства на величину более 15 км/ч');
+    expect(part('8.6', '1').text).toBe('Превышение установленной скорости движения транспортного средства на величину более 20 км/ч');
     expect(part('8.6', '1').punishment).toEqual({ alternatives: [{ kind: 'fine', max: 10000 }], additional: [] });
     expect(part('8.6', '3').punishment?.alternatives).toEqual([{ kind: 'fine', max: 35000 }, { kind: 'license-revocation' }]);
   });
@@ -54,12 +55,15 @@ describe('КоАП Тверского (real forum text)', () => {
       { kind: 'fine', min: 25000, max: 75000, subject: 'official' },
     ]);
     // Subject at the end of the line.
-    expect(part('10.6', '2').punishment?.alternatives).toEqual([{ kind: 'fine', max: 500000, subject: 'legal' }]);
+    expect(part('10.6', '2').punishment?.alternatives).toEqual([
+      { kind: 'fine', min: 20000, max: 40000, subject: 'official' },
+      { kind: 'fine', min: 50000, max: 500000, subject: 'legal' },
+    ]);
   });
 
   it('reads the other sanction forms', () => {
     // Arrest written in words, stars before the part number.
-    expect(part('8.5', '2')).toMatchObject({ stars: { min: 2, max: 2 }, punishment: { alternatives: [{ kind: 'fine', min: 30000, max: 50000 }, { kind: 'arrest', max: 15 }] } });
+    expect(part('8.5', '2')).toMatchObject({ stars: { min: 2, max: 2 }, punishment: { alternatives: [{ kind: 'fine', min: 30000, max: 50000 }, { kind: 'arrest', max: 20 }] } });
     // A fixed arrest term, warning first.
     expect(part('11.6').punishment?.alternatives).toEqual([
       { kind: 'warning' },
@@ -68,17 +72,17 @@ describe('КоАП Тверского (real forum text)', () => {
     ]);
     // Arrest named before the fine.
     expect(part('11.4', '1').punishment?.alternatives).toEqual([{ kind: 'arrest', max: 20 }, { kind: 'fine', max: 20000 }]);
-    // A multiple of the unpaid fine.
-    expect(part('10.2').punishment?.alternatives[0]).toEqual({ kind: 'fine-multiple', multiplier: 2, min: 3000 });
-    // «и/или эвакуацию» (a suspension of the business: see sanctions.test).
-    expect(part('8.21').punishment?.alternatives).toEqual([{ kind: 'fine', min: 1500, max: 10000 }, { kind: 'evacuation' }]);
+    // КоАП 10.2 (a multiple of the unpaid fine) is repealed: the multiple lives in УК 101.1 since 20 October.
+    expect(article('10.2').parts).toEqual([]);
+    // 8.21 no longer has the evacuation: it is a note now.
+    expect(part('8.21').punishment?.alternatives).toEqual([{ kind: 'fine', min: 1500, max: 10000 }]);
   });
 
   it('keeps offence text clean and notes numbered', () => {
     expect(part('6.1').text.endsWith('если эти действия не содержат уголовно наказуемого деяния')).toBe(true);
     expect(part('6.1').stars).toEqual({ min: 2, max: 2 });
     expect(article('8.17').title).toBe('Неуплата штрафов, выданных на автотранспортное средство');
-    expect(article('11.5').notes.map((n) => n.label)).toEqual(['Примечание 1']);
-    expect(article('16.2.1').parts[0].points.map((p) => p.marker)).toEqual(['а', 'б', 'в', 'г', 'д', 'е', 'ж', 'з', 'з']);
+    expect(article('8.21').notes.map((n) => n.label)).toEqual(['Примечание 1']);
+    expect(article('16.2.1').parts[0].points.map((p) => p.marker)).toEqual(['а', 'б', 'в', 'г', 'д', 'е', 'ж', 'з', 'и']);
   });
 });

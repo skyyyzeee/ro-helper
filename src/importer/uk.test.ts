@@ -15,10 +15,10 @@ const article = (number: string) => {
 describe('Уголовный кодекс Тверского (real forum text)', () => {
   it('reads every chapter and article, and reports nothing unparsed', () => {
     expect(uk.chapters).toHaveLength(22);
-    expect(uk.articles).toHaveLength(122);
+    expect(uk.articles).toHaveLength(124);
     expect(uk.articles.filter((a) => a.parts.some((p) => p.punishment))).toHaveLength(69);
-    // Only ст. 85.1, whose fine is written in words: the server's manual fix (overrides.json) gives its punishment.
-    expect(new Set(uk.issues.map((i) => i.article))).toEqual(new Set(['uk-85.1']));
+    // Only ст. 85.1 and 101.1, whose fines are written in words: the server's manual fixes (overrides.json) give their punishments.
+    expect(new Set(uk.issues.map((i) => i.article))).toEqual(new Set(['uk-85.1', 'uk-101.1']));
   });
 
   it('keeps dotted article numbers and chapter placement', () => {
@@ -57,9 +57,8 @@ describe('Уголовный кодекс Тверского (real forum text)',
     // Fine only, no stars.
     expect(article('60').parts[0]).toMatchObject({ jurisdiction: ['Р'], punishment: { alternatives: [{ kind: 'fine', min: 5000, max: 30000 }] } });
     expect(article('60').parts[0].stars).toBeUndefined();
-    // Stars without a jurisdiction tag.
-    expect(article('51').parts[1]).toMatchObject({ number: '2', stars: { min: 5, max: 5 } });
-    expect(article('51').parts[1].jurisdiction).toBeUndefined();
+    // Both parts of ст. 51 carry the jurisdiction tag since the 20 October edition.
+    expect(article('51').parts[1]).toMatchObject({ number: '2', stars: { min: 5, max: 5 }, jurisdiction: ['Р', 'Ф'] });
     // Star range and a term set by the wanted level.
     expect(article('100.1').parts[0]).toMatchObject({
       stars: { min: 1, max: 5 },
@@ -68,8 +67,8 @@ describe('Уголовный кодекс Тверского (real forum text)',
     // Military: mandatory add-on; ст. 112 has no «наказывается».
     expect(article('108').parts[0].punishment?.additional).toEqual(['лишение воинского звания']);
     expect(article('112').parts[0].punishment?.alternatives).toEqual([{ kind: 'imprisonment', months: 40 }]);
-    // Explicit part numbers after the tag.
-    expect(article('113').parts.map((p) => p.number)).toEqual(['1', '2']);
+    // Explicit part numbers after the tag (ч. 1 of ст. 113 is repealed: «Утратила силу.» — a plain paragraph without a number).
+    expect(article('113').parts.map((p) => p.number)).toEqual([undefined, '2']);
   });
 
   it('keeps general-part structure: numbered parts with lettered points', () => {

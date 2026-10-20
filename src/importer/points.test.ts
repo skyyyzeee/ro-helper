@@ -32,10 +32,10 @@ const OLD_GIBDD = [
 ].join('\n');
 
 const COUNTS: [string, LawFormat, number][] = [
-  ['ch-mvd', 'points', 250], ['ch-gibdd', 'points', 88], ['ch-fso', 'points', 97], ['ch-hospital', 'points', 222], ['ch-news', 'points', 157],
+  ['ch-mvd', 'points', 241], ['ch-gibdd', 'points', 88], ['ch-fso', 'points', 97], ['ch-hospital', 'points', 223], ['ch-news', 'points', 157],
   ['sk-main', 'points', 39], ['sk-gsu', 'points', 51], ['sk-inspections', 'points', 20], ['sk-ranks', 'points', 12],
-  ['rules-main', 'points', 98], ['rules-gov', 'points', 117], ['rules-crime', 'points', 52],
-  ['ch-army', 'law', 65], ['ch-army-discipline', 'law', 43], ['ch-army-guard', 'law', 44],
+  ['rules-main', 'points', 98], ['rules-gov', 'points', 119], ['rules-crime', 'points', 52],
+  ['ch-army', 'law', 65], ['ch-army-discipline', 'law', 45], ['ch-army-guard', 'law', 44],
   ['sk-uniform', 'law', 11], ['sk-ethics', 'law', 10], ['sk-kso', 'law', 10], ['sk-appeals', 'law', 14],
 ];
 
@@ -69,8 +69,8 @@ describe('charters, regulations and project rules (real Тверской forum t
     expect(at('15.2').group).toBe('Субординация');
     expect(at('7.4').group).toBe('Часть 1. Отдел собственной безопасности (ОСБ)');
     expect(mvd.chapters.every((c) => !c.preface.length)).toBe(true);
-    // A row of a table reads as a line.
-    expect(at('6.8.2').parts.map((p) => p.text).slice(1, 3)).toEqual(['Специальное звание — Должность', 'Генерал-майор — Начальник отдела']);
+    // A row of a table reads as a line (the cells come tab-separated since the 20 October snapshot, so a space joins them).
+    expect(at('6.8.2').parts.map((p) => p.text).slice(1, 3)).toEqual(['Специальное звание Должность', 'Генерал-майор Начальник отдела']);
   });
 
   it('without the option a title after a sentence stays the point’s own (больница: «Строгий выговор 2/3»)', () => {
@@ -177,7 +177,7 @@ describe('charters of Арбатский and Кутузовский (real forum 
   const CHARTERS: [string, string, LawFormat, number][] = [
     ['arbatskiy', 'ch-mvd', 'law', 85], ['arbatskiy', 'ch-gibdd', 'law', 33],
     ['arbatskiy', 'ch-army', 'law', 78], ['arbatskiy', 'sk-charter', 'law', 88],
-    ['arbatskiy', 'ch-hospital', 'points', 143], ['arbatskiy', 'ch-news', 'points', 219],
+    ['arbatskiy', 'ch-hospital', 'points', 143], ['arbatskiy', 'ch-news', 'points', 220],
     ['kutuzovskiy', 'ch-mvd', 'points', 336], ['kutuzovskiy', 'ch-gibdd', 'law', 33], ['kutuzovskiy', 'ch-army-discipline', 'points', 103],
     ['kutuzovskiy', 'ch-hospital', 'points', 165], ['kutuzovskiy', 'ch-news', 'points', 138], ['kutuzovskiy', 'sk-appeals', 'law', 29],
   ];
@@ -212,8 +212,8 @@ describe('charters of Арбатский and Кутузовский (real forum 
 
 describe('the other rules of the project (real forum text, the same on every server)', () => {
   const RULES: [string, number, number][] = [
-    ['rules-leaders', 40, 26], ['rules-martial', 20, 11], ['rules-supply', 63, 52], ['rules-robbery', 51, 39], ['rules-business', 14, 11],
-    ['rules-bank', 19, 14], ['rules-workshops', 15, 14], ['rules-fort', 36, 31], ['rules-software', 14, 6], ['rules-forum', 37, 26],
+    ['rules-leaders', 40, 26], ['rules-martial', 20, 11], ['rules-supply', 63, 52], ['rules-robbery', 52, 40], ['rules-business', 14, 11],
+    ['rules-bank', 19, 14], ['rules-workshops', 15, 14], ['rules-fort', 35, 30], ['rules-software', 14, 6], ['rules-forum', 37, 26],
   ];
 
   it('reads every point, and every punishment after «|»', () => {
