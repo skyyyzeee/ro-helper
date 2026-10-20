@@ -28,14 +28,15 @@
       StrCpy $R6 "$LOCALAPPDATA\${OLDPRODUCTNAME}"
     ${EndIf}
 
-    ; An update skips the shortcuts (they are expected to exist under this name): make the ones the old copy had.
+    ; An update skips the shortcuts (they are expected to exist under this name): make the ones the old copy had,
+    ; with the icon named — without it a new shortcut on a OneDrive desktop showed a blank one.
     ${IfNot} ${FileExists} "$SMPROGRAMS\${PRODUCTNAME}.lnk"
-      CreateShortcut "$SMPROGRAMS\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+      CreateShortcut "$SMPROGRAMS\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe" "" "$INSTDIR\${MAINBINARYNAME}.exe" 0
       !insertmacro SetLnkAppUserModelId "$SMPROGRAMS\${PRODUCTNAME}.lnk"
     ${EndIf}
     ${If} ${FileExists} "$DESKTOP\${OLDPRODUCTNAME}.lnk"
     ${AndIfNot} ${FileExists} "$DESKTOP\${PRODUCTNAME}.lnk"
-      CreateShortcut "$DESKTOP\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+      CreateShortcut "$DESKTOP\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe" "" "$INSTDIR\${MAINBINARYNAME}.exe" 0
       !insertmacro SetLnkAppUserModelId "$DESKTOP\${PRODUCTNAME}.lnk"
     ${EndIf}
 
