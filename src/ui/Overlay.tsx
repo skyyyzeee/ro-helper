@@ -83,6 +83,11 @@ import { CHANGELOG, SEEN_VERSION_KEY, compareVersions, notesSince, type VersionN
 import { UpdateBanner } from './UpdateBanner';
 import { DISMISSED_KEY, TOASTED_KEY, useUpdates } from './updates';
 
+/** How many times the overlay was started: its key hints show everywhere for the first few. */
+const HINT_LAUNCHES_KEY = 'hints.launches';
+/** Starts with the key hints everywhere; after them, only on the empty search (skyze: less noise). */
+const HINT_LAUNCHES = 5;
+
 /** Put off with «Позже», the notice that signing in will be required is not shown again. */
 const LOGIN_NOTICE_KEY = 'login.notice';
 
@@ -985,6 +990,17 @@ export function Overlay({
     if (!inner) searchRef.current?.focus();
   }, [inner]);
 
+  // The key hints: everywhere for the first starts, then only on the empty search, where there is nothing else.
+  const [launches, setLaunches] = useState<number | null>(null);
+  useEffect(() => {
+    void platform.readSetting<number>(HINT_LAUNCHES_KEY).then((saved) => {
+      const count = (saved ?? 0) + 1;
+      setLaunches(count);
+      void platform.writeSetting(HINT_LAUNCHES_KEY, count);
+    });
+  }, [platform]);
+  const showHints = launches !== null && (launches <= HINT_LAUNCHES || (!inner && !aiMode && !open && !scope && !query.trim()));
+
   const onList = !whatsNew && !settingsOpen && !memosOpen && !wikiOpen && !department && !switchOpen && !organizationOpen && !serverOpen && !notesFor && !privacyOpen && !diff && !open && !changesView && !aiOpen;
   const wasOnList = useRef(onList);
   useLayoutEffect(() => {
@@ -1845,42 +1861,44 @@ export function Overlay({
 
       {!inner && aiMode && searchField}
 
-      <div className="overlay__foot">
-        {aiMode ? (
-          <>
-            <span>
-              <b>Enter</b> {aiTab === 'document' ? 'составить документ' : aiTab === 'trainer' ? 'ответить' : aiTab === 'lawyer' ? 'проверить требования' : aiTab === 'detention' ? 'разобрать задержание' : 'спросить ИИ'}
-            </span>
-            <span>клик по статье — открыть</span>
-            <span>
-              <b>Esc</b> к поиску
-            </span>
-          </>
-        ) : (department || wikiOpen) && !open ? (
-          // A page of tiles and cards: no list to walk with the arrows, nothing to put in the calculator.
-          <>
-            <span>клик — открыть</span>
-            <span>
-              <b>Esc</b> назад
-            </span>
-          </>
-        ) : (
-          <>
-            <span>
-              <b>↑↓</b> выбор
-            </span>
-            <span>
-              <b>Enter</b> в калькулятор
-            </span>
-            <span>
-              <b>→</b> открыть
-            </span>
-            <span>
-              <b>Esc</b> назад
-            </span>
-          </>
-        )}
-      </div>
+      {showHints && (
+        <div className="overlay__foot">
+          {aiMode ? (
+            <>
+              <span>
+                <b>Enter</b> {aiTab === 'document' ? 'составить документ' : aiTab === 'trainer' ? 'ответить' : aiTab === 'lawyer' ? 'проверить требования' : aiTab === 'detention' ? 'разобрать задержание' : 'спросить ИИ'}
+              </span>
+              <span>клик по статье — открыть</span>
+              <span>
+                <b>Esc</b> к поиску
+              </span>
+            </>
+          ) : (department || wikiOpen) && !open ? (
+            // A page of tiles and cards: no list to walk with the arrows, nothing to put in the calculator.
+            <>
+              <span>клик — открыть</span>
+              <span>
+                <b>Esc</b> назад
+              </span>
+            </>
+          ) : (
+            <>
+              <span>
+                <b>↑↓</b> выбор
+              </span>
+              <span>
+                <b>Enter</b> в калькулятор
+              </span>
+              <span>
+                <b>→</b> открыть
+              </span>
+              <span>
+                <b>Esc</b> назад
+              </span>
+            </>
+          )}
+        </div>
+      )}
 
       {menuOpen && (
         <DocumentsMenu
