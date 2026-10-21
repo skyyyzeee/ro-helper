@@ -9,7 +9,7 @@ const settings = () => within(screen.getByRole('group', { name: 'Настрой�
 describe('the note over the game (issue #40)', () => {
   it('is written in «Закреплённое», kept on this computer, and pinned as a card that follows the text', async () => {
     const { platform, user } = await renderApp();
-    await user.click(screen.getByRole('button', { name: 'Закреплённое' }));
+    await user.click(screen.getByRole('button', { name: 'Над игрой: закреплённое, заметка' }));
     const field = settings().getByRole('textbox', { name: 'Заметка' });
     expect(settings().getByRole('button', { name: 'Закрепить поверх игры' })).toBeDisabled();
 
@@ -28,7 +28,7 @@ describe('the note over the game (issue #40)', () => {
 
   it('is there again at the next start', async () => {
     const { user } = await renderApp({ settings: { 'note.text': 'План: окружить банк' } });
-    await user.click(screen.getByRole('button', { name: 'Закреплённое' }));
+    await user.click(screen.getByRole('button', { name: 'Над игрой: закреплённое, заметка' }));
     expect(settings().getByRole('textbox', { name: 'Заметка' })).toHaveValue('План: окружить банк');
   });
 
@@ -43,7 +43,7 @@ describe('the note over the game (issue #40)', () => {
     expect(platform.settings.get('note.hotkey')).toBe('Ctrl+Shift+N');
     await vi.waitFor(() => expect(platform.state.shortcuts.note).toBe('Ctrl+Shift+N'));
 
-    await user.click(screen.getByRole('button', { name: 'Поиск' }));
+    await user.click(screen.getByRole('button', { name: 'Законы: поиск, документы, калькулятор' }));
     act(() => platform.pressShortcut('note'));
     await vi.waitFor(() => expect(settings().getByRole('textbox', { name: 'Заметка' })).toHaveFocus());
     expect(platform.calls.map((call) => call.method)).toContain('showOverlay');

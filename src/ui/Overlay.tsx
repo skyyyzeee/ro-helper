@@ -37,8 +37,8 @@ import { useDetentionReview } from './detention';
 import { useTrainer } from './trainer';
 import { useDocumentWriter } from './documents';
 import { CasesView } from './CasesView';
-import { BackIcon, BookIcon, CalculatorIcon, ChevronDownIcon, CloseIcon, DocumentsIcon, NewsIcon, MemoIcon, MicIcon, OrganizationIcon, PinIcon, ProfileIcon, SearchIcon, ServerIcon, SettingsIcon, SparkIcon } from './icons';
-import { SideRail } from './SideRail';
+import { BackIcon, BookIcon, CalculatorIcon, ChevronDownIcon, CloseIcon, DocumentsIcon, LawsIcon, NewsIcon, MemoIcon, MicIcon, OrganizationIcon, PinIcon, ProfileIcon, SearchIcon, ServerIcon, SettingsIcon, SparkIcon } from './icons';
+import { SectionTabs, SideRail, type RailItem } from './SideRail';
 import { canRecord, startRecording, type Recording } from './voice';
 import { DEFAULT_OPACITY, DEFAULT_TIMER_HOTKEY, DEFAULT_VOICE_HOTKEY, NOTE_HOTKEY_KEY, NOTE_KEY, OPACITY_KEY, TIMER_HOTKEY_KEY, VOICE_HOTKEY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
 import { formatHotkey, type Profile } from './profile';
@@ -986,6 +986,40 @@ export function Overlay({
     setNoteFocusAt(Date.now());
   };
 
+  /** The section of the side column on screen; the settings' «Закреплённое» is «Над игрой», their account «Я». */
+  const railSection = switchOpen
+    ? undefined
+    : settingsOpen
+      ? settingsFocus?.section === 'pinned'
+        ? 'pinned'
+        : settingsFocus?.section === 'account'
+          ? 'profile'
+          : 'settings'
+      : memosOpen || department
+        ? 'service'
+        : wikiOpen
+          ? 'wiki'
+          : aiOpen
+            ? 'ai'
+            : 'laws';
+  const lawTabs: RailItem[] = [
+    { id: 'search', label: 'Поиск', icon: <SearchIcon />, shortcut: 1, onSelect: () => openSection('search') },
+    { id: 'documents', label: 'Документы', ariaLabel: 'Все документы', icon: <DocumentsIcon />, expanded: menuOpen, shortcut: 2, onSelect: () => openSection(menuOpen ? 'search' : 'documents') },
+    {
+      id: 'calculator',
+      label: 'Калькулятор',
+      icon: <CalculatorIcon />,
+      shortcut: 3,
+      disabled: !calculatorOpen,
+      hint: calculatorOpen ? undefined : 'Калькулятор появится, когда вы добавите статью кнопкой «+»',
+      onSelect: () => document.querySelector<HTMLElement>('.calc button, .calc input')?.focus(),
+    },
+  ];
+  const serviceTabs: RailItem[] = [
+    { id: 'department', label: 'Отдел', ariaLabel: 'Отдел: порядок действий по закону', icon: <OrganizationIcon id={organization?.id ?? 'none'} size={18} />, onSelect: () => openSection('department') },
+    { id: 'memos', label: 'Памятки', icon: <MemoIcon />, onSelect: () => openSection('memos') },
+  ];
+
   /** The settings are a page of their own (direction C): their name in the header, no search. */
   const inner = settingsOpen ? 'Настройки' : memosOpen ? 'Памятки' : wikiOpen ? 'Вики' : department && !open ? 'Отдел' : null;
   // Back from them the search is there again, with the focus.
@@ -1206,28 +1240,10 @@ export function Overlay({
             <ServerIcon id={pack.server.id} size={24} />
           </button>
         }
-        current={settingsOpen ? 'settings' : memosOpen ? 'memos' : wikiOpen ? 'wiki' : department ? 'department' : menuOpen ? 'documents' : switchOpen ? undefined : aiOpen ? 'ai' : 'search'}
+        current={railSection}
+        keys={[...lawTabs, ...serviceTabs]}
         items={[
-          { id: 'search', label: 'Поиск', icon: <SearchIcon />, shortcut: 1, onSelect: () => openSection('search') },
-          {
-            id: 'documents',
-            label: 'Документы',
-            ariaLabel: 'Все документы',
-            expanded: menuOpen,
-            icon: <DocumentsIcon />,
-            shortcut: 2,
-            onSelect: () => openSection(menuOpen ? 'search' : 'documents'),
-          },
-          {
-            id: 'calculator',
-            label: 'Калькулятор',
-            icon: <CalculatorIcon />,
-            shortcut: 3,
-            disabled: !calculatorOpen,
-            hint: calculatorOpen ? undefined : 'Калькулятор появится, когда вы добавите статью кнопкой «+»',
-            onSelect: () => document.querySelector<HTMLElement>('.calc button, .calc input')?.focus(),
-          },
-          { id: 'pinned', label: 'Закреплённое', icon: <PinIcon />, shortcut: 4, onSelect: () => openSection('pinned') },
+          { id: 'laws', label: 'Законы', ariaLabel: 'Законы: поиск, документы, калькулятор', icon: <LawsIcon />, shortcut: 1, onSelect: () => openSection('search') },
           {
             id: 'ai',
             label: 'ИИ',
@@ -1237,12 +1253,12 @@ export function Overlay({
             onSelect: () => (aiOpen ? openSection('search') : openAi()),
           },
           {
-            id: 'department',
-            label: 'Отдел',
-            ariaLabel: 'Отдел: порядок действий по закону',
+            id: 'service',
+            label: 'Служба',
+            ariaLabel: 'Служба: отдел и памятки',
             icon: <OrganizationIcon id={organization?.id ?? 'none'} size={20} />,
-            expanded: !!department,
-            onSelect: () => openSection(department ? 'search' : 'department'),
+            expanded: !!department || memosOpen,
+            onSelect: () => openSection(department || memosOpen ? 'search' : 'department'),
           },
           {
             id: 'wiki',
@@ -1252,26 +1268,20 @@ export function Overlay({
             expanded: wikiOpen,
             onSelect: () => openSection(wikiOpen ? 'search' : 'wiki'),
           },
-          {
-            id: 'memos',
-            label: 'Памятки',
-            icon: <MemoIcon />,
-            expanded: memosOpen,
-            onSelect: () => openSection(memosOpen ? 'search' : 'memos'),
-          },
+          { id: 'pinned', label: 'Над игрой', ariaLabel: 'Над игрой: закреплённое, заметка', icon: <PinIcon />, shortcut: 4, onSelect: () => openSection('pinned') },
           {
             id: 'settings',
             label: 'Настройки',
-            expanded: settingsOpen,
+            expanded: settingsOpen && railSection === 'settings',
             icon: <SettingsIcon />,
             shortcut: 5,
             bottom: true,
-            onSelect: () => openSection(settingsOpen ? 'search' : 'settings'),
+            onSelect: () => openSection(settingsOpen && railSection === 'settings' ? 'search' : 'settings'),
           },
           {
             id: 'profile',
-            label: 'Профиль',
-            ariaLabel: account ? `Профиль: ${account.name}` : undefined,
+            label: 'Я',
+            ariaLabel: account ? `Профиль: ${account.name}` : 'Профиль',
             icon: account ? <Avatar account={account} size={26} /> : <ProfileIcon />,
             shortcut: 6,
             bottom: true,
@@ -1309,6 +1319,8 @@ export function Overlay({
           <CloseIcon />
         </button>
       </div>
+      {railSection === 'laws' && <SectionTabs label="Законы" tabs={lawTabs} current={menuOpen ? 'documents' : 'search'} />}
+      {railSection === 'service' && <SectionTabs label="Служба" tabs={serviceTabs} current={memosOpen ? 'memos' : 'department'} />}
 
       {switchOpen && (
         <>

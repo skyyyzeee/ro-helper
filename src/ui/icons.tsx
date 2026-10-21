@@ -39,6 +39,7 @@ export const PagesIcon = icon('view_carousel', 14);
 /** Short form of a card: the lines drawn together. */
 export const CompactIcon = icon('unfold_less', 14);
 export const DocumentsIcon = icon('description', 20);
+export const LawsIcon = icon('balance', 20);
 export const CalculatorIcon = icon('calculate', 20);
 export const MemoIcon = icon('sticky_note_2', 20);
 export const ProfileIcon = icon('account_circle', 20);

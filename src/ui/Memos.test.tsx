@@ -62,7 +62,8 @@ describe('deputies (ticket 16)', () => {
 describe('memos (ticket 17)', () => {
   it('lets the leader write one, for as long as they choose', async () => {
     const { accounts, user } = await renderApp({ account: LEADER, profile: MVD, server: faction });
-    await user.click(within(rail()).getByRole('button', { name: 'Памятки' }));
+    await user.click(within(rail()).getByRole('button', { name: 'Служба: отдел и памятки' }));
+    await user.click(within(screen.getByRole('group', { name: 'Служба' })).getByRole('button', { name: 'Памятки' }));
     const page = await screen.findByRole('group', { name: 'Памятки' });
     const form = await within(page).findByRole('form', { name: 'Новая памятка' });
     await user.type(within(form).getByRole('textbox', { name: 'Текст памятки' }), 'Завтра в 18:00 общее построение.');
@@ -78,7 +79,8 @@ describe('memos (ticket 17)', () => {
 
   it('lets the leader lay one out like a document, or paste one from Google Docs, and shows it laid out', async () => {
     const { accounts, user } = await renderApp({ account: LEADER, profile: MVD, server: faction });
-    await user.click(within(rail()).getByRole('button', { name: 'Памятки' }));
+    await user.click(within(rail()).getByRole('button', { name: 'Служба: отдел и памятки' }));
+    await user.click(within(screen.getByRole('group', { name: 'Служба' })).getByRole('button', { name: 'Памятки' }));
     const page = await screen.findByRole('group', { name: 'Памятки' });
     const form = await within(page).findByRole('form', { name: 'Новая памятка' });
     const field = within(form).getByRole('textbox', { name: 'Текст памятки' });
@@ -142,7 +144,8 @@ describe('memos (ticket 17)', () => {
         server.memos.push(memo({ id: 2, text: 'Старая памятка', createdAt: new Date(Date.now() - 5 * DAY).toISOString(), until: new Date(Date.now() - DAY).toISOString() }));
       },
     });
-    await user.click(within(rail()).getByRole('button', { name: 'Памятки' }));
+    await user.click(within(rail()).getByRole('button', { name: 'Служба: отдел и памятки' }));
+    await user.click(within(screen.getByRole('group', { name: 'Служба' })).getByRole('button', { name: 'Памятки' }));
     const page = await screen.findByRole('group', { name: 'Памятки' });
     expect(await within(page).findByText('Действующих памяток нет.')).toBeInTheDocument();
     expect(within(page).getByText('Архив · 1')).toBeInTheDocument();
@@ -152,7 +155,8 @@ describe('memos (ticket 17)', () => {
 
   it('asks a player signed out to sign in', async () => {
     const { user } = await renderApp({ profile: MVD });
-    await user.click(within(rail()).getByRole('button', { name: 'Памятки' }));
+    await user.click(within(rail()).getByRole('button', { name: 'Служба: отдел и памятки' }));
+    await user.click(within(screen.getByRole('group', { name: 'Служба' })).getByRole('button', { name: 'Памятки' }));
     expect(screen.getByText(/Памятки от лидера видят игроки фракции, вошедшие в аккаунт/)).toBeInTheDocument();
   });
 });

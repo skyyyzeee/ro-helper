@@ -8,7 +8,7 @@ const rail = () => screen.getByRole('navigation', { name: 'Разделы' });
 
 async function openDepartment(options: Parameters<typeof renderApp>[0] = OFFICER) {
   const app = await renderApp(options);
-  await app.user.click(within(rail()).getByRole('button', { name: 'Отдел: порядок действий по закону' }));
+  await app.user.click(within(rail()).getByRole('button', { name: 'Служба: отдел и памятки' }));
   return { ...app, block: () => screen.getByRole('region', { name: 'Заготовки для чата' }) };
 }
 

@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { renderApp } from '../test/renderApp';
 
-const DEPARTMENT = 'Отдел: порядок действий по закону';
+const DEPARTMENT = 'Служба: отдел и памятки';
 
 describe('the department', () => {
   it('shows a force its topics of the law: a topic lists the articles, an article opens and Esc steps back', async () => {

@@ -46,7 +46,7 @@ describe('the detention timer (issue #40)', () => {
 
   it('is started from the faction’s page too', async () => {
     const { platform, user } = await officer();
-    await user.click(within(screen.getByRole('navigation', { name: 'Разделы' })).getByRole('button', { name: 'Отдел: порядок действий по закону' }));
+    await user.click(within(screen.getByRole('navigation', { name: 'Разделы' })).getByRole('button', { name: 'Служба: отдел и памятки' }));
     await user.click(screen.getByRole('button', { name: 'Запустить таймер задержания' }));
     await vi.waitFor(() => expect(timerCard(platform)).toBeDefined());
     await user.click(screen.getByRole('button', { name: 'Остановить таймер задержания' }));

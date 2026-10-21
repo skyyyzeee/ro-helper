@@ -1,11 +1,11 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 
-/** A section of the app in the side column. */
+/** A section of the app in the side column, or a tab of one over its page. */
 export interface RailItem {
   id: string;
-  /** Its name: the tip over the icon and what a screen reader says. */
+  /** Its name, under the icon in the column and on the tab. */
   label: string;
-  icon: ReactNode;
+  icon?: ReactNode;
   /** What a screen reader names it, when it is more than its label («Все документы»). */
   ariaLabel?: string;
   /** For a section that opens over the search and closes again: whether it is open. */
@@ -20,14 +20,10 @@ export interface RailItem {
   onSelect: () => void;
 }
 
-/**
- * The side column (direction C): icons only, always on screen, the server's mark on top, the sections under it and the
- * settings and the profile at its foot. Ctrl and a section's number opens it from the keyboard.
- */
-export function SideRail({ top, items, current }: { top?: ReactNode; items: RailItem[]; current?: string }) {
+/** Ctrl and a number opens the section or the tab that has it, wherever it is on screen. */
+function useShortcuts(items: RailItem[]) {
   const latest = useRef(items);
   latest.current = items;
-
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const digit = /^Digit([1-9])$/.exec(e.code);
@@ -40,6 +36,17 @@ export function SideRail({ top, items, current }: { top?: ReactNode; items: Rail
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+}
+
+const tip = (item: RailItem) => item.hint ?? (item.shortcut ? `${item.label} · Ctrl+${item.shortcut}` : item.label);
+
+/**
+ * The side column (variant Б of the column's sketches): five sections with their names — Законы, ИИ, Служба, Вики,
+ * Над игрой — the server's mark on top, the settings and the player at its foot. A section of several pages
+ * has them as tabs over the page (`SectionTabs`); `keys` are those tabs, for Ctrl and their number.
+ */
+export function SideRail({ top, items, current, keys = [] }: { top?: ReactNode; items: RailItem[]; current?: string; keys?: RailItem[] }) {
+  useShortcuts([...items, ...keys]);
 
   const button = (item: RailItem) => (
     <button
@@ -50,10 +57,13 @@ export function SideRail({ top, items, current }: { top?: ReactNode; items: Rail
       aria-current={current === item.id ? 'page' : undefined}
       aria-expanded={item.expanded}
       disabled={item.disabled}
-      title={item.hint ?? (item.shortcut ? `${item.label} · Ctrl+${item.shortcut}` : item.label)}
+      title={tip(item)}
       onClick={item.onSelect}
     >
       {item.icon}
+      <span className="rail__label" aria-hidden="true">
+        {item.label}
+      </span>
     </button>
   );
 
@@ -64,5 +74,29 @@ export function SideRail({ top, items, current }: { top?: ReactNode; items: Rail
       <span className="sp" data-tauri-drag-region />
       {items.filter((item) => item.bottom).map(button)}
     </nav>
+  );
+}
+
+/** The pages of the section open: «Поиск · Документы · Калькулятор» under the head of «Законы». */
+export function SectionTabs({ label, tabs, current }: { label: string; tabs: RailItem[]; current?: string }) {
+  return (
+    <div className="section-tabs" role="group" aria-label={label}>
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          className="section-tabs__tab"
+          aria-label={tab.ariaLabel}
+          aria-current={current === tab.id ? 'page' : undefined}
+          aria-expanded={tab.expanded}
+          disabled={tab.disabled}
+          title={tip(tab)}
+          onClick={tab.onSelect}
+        >
+          {tab.icon}
+          <span>{tab.label}</span>
+        </button>
+      ))}
+    </div>
   );
 }
