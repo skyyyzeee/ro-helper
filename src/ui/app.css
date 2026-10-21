@@ -2389,6 +2389,23 @@ input {
   min-width: 0;
 }
 
+/* The stage and the jurisdiction of a charge when nothing is chosen there: out of sight until the charge is
+   pointed at or tabbed into, so a list of charges reads as a list. */
+.ci__mods--quiet {
+  max-height: 0;
+  margin-top: -8px;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.15s, margin-top 0.15s, opacity 0.15s;
+}
+
+.ci:hover .ci__mods--quiet,
+.ci:focus-within .ci__mods--quiet {
+  max-height: 40px;
+  margin-top: 0;
+  opacity: 1;
+}
+
 .ci .num {
   font-size: 15px;
 }
