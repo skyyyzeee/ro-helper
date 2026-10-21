@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PinCard, PinGroup } from '../platform/types';
-import { CALCULATOR_ID, CARD_WIDTH, MIN_HEIGHT, MIN_WIDTH, detachCard, hasCard, joinGroups, keepableGroups, moveGroup, nextPlace, pinCard, placeOf, resizeGroup, unpinCard, unpinGroup, updateCard } from './pinLayout';
+import { CALCULATOR_ID, CARD_WIDTH, MIN_HEIGHT, MIN_WIDTH, detachCard, hasCard, joinGroups, keepOnScreen, keepableGroups, moveGroup, nextPlace, pinCard, placeOf, resizeGroup, unpinCard, unpinGroup, updateCard } from './pinLayout';
 
 const SURFACE = { width: 1920, height: 1080 };
 const card = (id: string, heading = id): PinCard => ({ id, kind: 'article', heading, lines: [] });
@@ -89,5 +89,18 @@ describe('what is pinned', () => {
   it('keeps the articles for the next launch, but not the total of a detention long over', () => {
     const groups = pinCard(pinCard([], card('a'), SURFACE), total, SURFACE);
     expect(keepableGroups(groups).flatMap((g) => g.cards.map((c) => c.id))).toEqual(['a']);
+  });
+});
+
+describe('a monitor unplugged (backlog 05)', () => {
+  it('brings a block left beyond the screen back within reach, and leaves the rest where they are', () => {
+    const groups: PinGroup[] = [
+      { id: 'here', x: 100, y: 200, cards: [card('here')] },
+      { id: 'gone', x: 2500, y: 300, cards: [card('gone')] },
+    ];
+    const kept = keepOnScreen(groups, SURFACE);
+    expect(kept[0]).toBe(groups[0]);
+    expect(kept[1]).toMatchObject({ x: SURFACE.width - CARD_WIDTH, y: 300 });
+    expect(keepOnScreen(kept, SURFACE)).toBe(kept);
   });
 });

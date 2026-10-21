@@ -54,6 +54,21 @@ export function clampTo(x: number, y: number, surface: Surface, box = { width: C
   return { x: Math.min(Math.max(0, Math.round(x)), maxX), y: Math.min(Math.max(0, Math.round(y)), maxY) };
 }
 
+/**
+ * Every block brought back within the screen: one saved on a monitor since unplugged would stay out of reach
+ * (backlog 05). The same list when nothing moved.
+ */
+export function keepOnScreen(groups: PinGroup[], surface: Surface): PinGroup[] {
+  let moved = false;
+  const next = groups.map((group) => {
+    const at = clampTo(group.x, group.y, surface, size(group));
+    if (at.x === group.x && at.y === group.y) return group;
+    moved = true;
+    return { ...group, ...at };
+  });
+  return moved ? next : groups;
+}
+
 /** A free spot for a new block: under the ones already there, then beside them. */
 export function nextPlace(groups: PinGroup[], surface: Surface): { x: number; y: number } {
   const first = { x: FIRST_X, y: Math.round(surface.height * FIRST_Y) };
