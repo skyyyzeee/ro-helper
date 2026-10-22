@@ -70,6 +70,41 @@ export interface WikiEntry {
   /** Its page on the wiki: the source said on screen. */
   url: string;
   createdAt?: string;
+  /** A recipe or a craft: what one batch takes and gives — the calculator multiplies it. Older apps show `facts`. */
+  make?: WikiMake;
+  /** An article of «Работы»: the job it tells of (src/wiki/jobs.ts). */
+  job?: WikiJob;
+}
+
+/** One batch of a recipe or a craft. */
+export interface WikiMake {
+  /** How long one batch takes. */
+  minutes?: number;
+  /** How many one batch gives. */
+  output: number;
+  parts: { name: string; count: number; image?: string }[];
+  /** How it is cooked: «нарезка», «жарка»… */
+  steps?: string[];
+}
+
+/** A bonus hour of a job: «Работа с 07:00 до 15:00 увеличивает заработок на 15%». */
+export interface WikiJobBonus {
+  /** «07:00», Moscow time, as the game's clock. */
+  from: string;
+  to: string;
+  percent: number;
+  /** The wiki's sentence, said as it is. */
+  text: string;
+}
+
+/** A job as its article tells of it. */
+export interface WikiJob {
+  /** The character's level it opens at. */
+  level?: number;
+  /** Or the rank of the job before it. */
+  rank?: number;
+  legality?: 'legal' | 'semi' | 'illegal';
+  bonuses: WikiJobBonus[];
 }
 
 export interface WikiGroup {

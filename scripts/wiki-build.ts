@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import type { Gender, WikiCatalog, WikiCatalogId, WikiData, WikiEntry, WikiManifest } from '../src/wiki/model';
 import { FRESH, STATE_ALLOWED, WIKI_FORMAT } from '../src/wiki/model';
 import { changeCounts, docBlocks } from '../src/wiki/doc';
+import { JOBS_GROUP, JOBS_OVERVIEW, jobOf } from '../src/wiki/jobs';
 
 const root = join(import.meta.dirname, '..');
 const WIKI = 'https://wiki.russia.online/ru';
@@ -268,8 +269,17 @@ for (const r of raw('realties').items) {
 
 // ——— Recipes, crafts ———
 const items = new Map(raw('items').items.map((i: Raw) => [i.id, i]));
+/** How a dish is cooked, in words: the wiki lists the methods beside the ingredients. */
+const METHODS: Record<string, string> = { cutting: 'нарезка', frying: 'жарка', mixing: 'смешивание', boiling: 'варка', baking: 'выпечка' };
 for (const r of raw('recipes').items) {
   const out = items.get(r.itemId) as Raw | undefined;
+  // The ingredients are the items; the cooking methods among them are steps, not things to buy.
+  const parts = (r.ingredients ?? []).filter((g: Raw) => g.type === 'item' && g.name).map((g: Raw) => ({
+    name: g.name as string,
+    count: Number(g.amount) || 1,
+    ...((items.get(g.itemId) as Raw | undefined)?.imageUrl ? { image: (items.get(g.itemId) as Raw).imageUrl as string } : {}),
+  }));
+  const steps = (r.ingredients ?? []).filter((g: Raw) => g.type === 'cookingMethod').map((g: Raw) => METHODS[g.cookingMethod] ?? g.cookingMethod);
   add({
     id: `recipes:${r.itemId}`,
     catalog: 'recipes',
@@ -277,13 +287,17 @@ for (const r of raw('recipes').items) {
     subtitle: `Уровень кухни ${r.kitchenLvl} · готовка ${r.cookingLvl}`,
     group: String(r.cookingLvl),
     image: out?.imageUrl,
-    facts: [...fact('Время', r.cookDurationMinutes, ' мин'), ...fact('Выход', r.outputCount, ' шт.'), ...(r.ingredients ?? []).map((g: Raw) => [g.name, `× ${g.amount}`] as [string, string])],
+    facts: [...fact('Время', r.cookDurationMinutes, ' мин'), ...fact('Выход', r.outputCount, ' шт.'), ...parts.map((p: { name: string; count: number }) => [p.name, `× ${p.count}`] as [string, string])],
+    make: { ...(r.cookDurationMinutes ? { minutes: Number(r.cookDurationMinutes) } : {}), output: Number(r.outputCount) || 1, parts, ...(steps.length ? { steps } : {}) },
     tags: [],
     sources: [],
     url: `${WIKI}/recipes`,
   });
 }
+/** The materials a craft takes, in the wiki's words: «Медицинские материалы»… */
+const MATERIALS = (M.itemPage as Raw | undefined)?.materialTypes as Raw | undefined;
 for (const r of raw('crafts').items) {
+  const material = r.item?.materials ? { name: word(r.item.materialType, MATERIALS) || 'Материалы', count: Number(r.item.materials) } : undefined;
   add({
     id: `crafts:${r.fraction}:${r.item?.id}`,
     catalog: 'crafts',
@@ -291,7 +305,8 @@ for (const r of raw('crafts').items) {
     subtitle: r.item?.typeName,
     group: r.fraction,
     image: r.item?.imageUrl,
-    facts: [...fact('Фракция', r.fraction), ...(r.requirements ?? r.ingredients ?? []).map((g: Raw) => [g.name ?? g.item?.name ?? '—', `× ${g.amount ?? g.count ?? 1}`] as [string, string])],
+    facts: [...fact('Фракция', r.fraction), ...(material ? [[material.name, `× ${material.count}`] as [string, string]] : [])],
+    ...(material ? { make: { output: 1, parts: [material] } } : {}),
     tags: [],
     sources: [],
     text: r.item?.description,
@@ -322,8 +337,11 @@ for (const r of raw('updates').items) {
 const posts = raw('posts').items as Raw[];
 const sectionNames = new Map<string, string>();
 // In the wiki's own order: the import keeps its sections and their articles as the wiki lists them.
+// The jobs' levels and lawfulness are listed in the overview; each job's own article has its hours.
+const overview = (posts.find((r) => r.title === JOBS_OVERVIEW)?.plainText as string | undefined) ?? '';
 for (const r of posts) {
   if (r.section?.slug) sectionNames.set(r.section.slug, r.section.name);
+  const job = r.section?.slug === JOBS_GROUP && r.title !== JOBS_OVERVIEW ? jobOf(r.title, r.plainText ?? '', overview) : undefined;
   add({
     id: `posts:${r.id}`,
     catalog: 'posts',
@@ -338,6 +356,7 @@ for (const r of posts) {
     blocks: docBlocks(r.content),
     url: `${WIKI}/posts/${r.slug}`,
     createdAt: r.updatedAt ?? r.createdAt,
+    ...(job ? { job } : {}),
   });
 }
 

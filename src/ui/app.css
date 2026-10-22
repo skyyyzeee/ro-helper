@@ -5694,6 +5694,45 @@ select option {
 .wiki__fact dd { margin: 2px 0 0; font-size: 14px; font-weight: 600; }
 .wiki__text { margin: 0; font-size: 13.5px; line-height: 1.55; color: rgba(255, 255, 255, 0.85); white-space: pre-line; }
 .wiki__h3 { margin: 4px 0 0; font-size: 15px; }
+/* A recipe's or a craft's calculator: how many wanted, then every ingredient counted (WikiTools.tsx). */
+.wiki__make { display: grid; gap: 10px; padding: 12px; border-radius: 12px; background: var(--surface); }
+.wiki__make-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.wiki__make-want { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; }
+.wiki__make-want input { width: 72px; text-align: right; font-variant-numeric: tabular-nums; }
+.wiki__make-sum { font-size: 13px; color: var(--text-muted); }
+.wiki__make-parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
+.wiki__make-parts li { display: flex; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 10px; background: rgb(255 255 255 / calc(0.05 * var(--tint-scale))); font-size: 13.5px; }
+.wiki__make-parts b { font-variant-numeric: tabular-nums; }
+.wiki__make-steps { margin: 0; font-size: 12.5px; color: var(--text-muted); }
+/* A job: its level, lawfulness and bonus hours, the one on now lit. */
+.wiki__job { display: grid; gap: 8px; }
+.wiki__job-line { margin: 0; font-size: 13.5px; }
+.wiki__job-bonuses { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.wiki__job-bonus { padding: 5px 10px; border-radius: 99px; font-size: 12.5px; background: var(--surface); }
+.wiki__job-bonus--on { background: var(--now-bg); color: var(--now-text); }
+/* «Работы для меня» on the wiki's home. */
+.wiki__jobs { display: grid; gap: 8px; padding: 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
+.wiki__jobs-level { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); }
+.wiki__jobs-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 4px; margin: 0; padding: 0; list-style: none; }
+.wiki__jobs-row { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 10px; border-radius: 10px; font-size: 13.5px; text-align: left; }
+.wiki__jobs-row:hover { background: var(--surface-hover); }
+.wiki__jobs-name { font-weight: 600; }
+.wiki__jobs-law { padding: 1px 7px; border-radius: 99px; font-size: 11px; background: var(--warn-bg); color: var(--warn-text); }
+.wiki__jobs-law--illegal { background: var(--gone-bg); color: var(--gone-text); }
+.wiki__jobs-bonus { padding: 2px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; background: var(--now-bg); color: var(--now-text); white-space: nowrap; }
+.wiki__jobs-later { font-size: 12px; color: var(--text-faint); white-space: nowrap; }
+.wiki__jobs-next,
+.wiki__jobs-note { margin: 0; font-size: 12px; color: var(--text-muted); }
+.wiki__jobs-rate { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* A shift going on (shifts.ts): its job and time, and finishing it with the sum earned. */
+.wiki__shift { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0; padding: 8px 10px; border-radius: 10px; font-size: 13.5px; background: oklch(0.78 0.1 var(--accent-hue) / 0.14); }
+.wiki__shift--done { background: var(--now-bg); color: var(--now-text); }
+.wiki__shift-end { display: inline-flex; align-items: center; gap: 8px; }
+.wiki__shift-end input { width: 140px; }
+.wiki__shift-start { justify-self: start; }
+.wiki__rates { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; font-size: 13px; color: var(--text-muted); }
+.wiki__rates b { color: var(--text); font-variant-numeric: tabular-nums; }
+.wiki__share { font-size: 12.5px; }
 @media (max-width: 700px) {
   .wiki { flex-direction: column; }
   .wiki__nav { position: static; width: auto; flex-direction: row; overflow-x: auto; }

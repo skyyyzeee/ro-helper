@@ -1,5 +1,5 @@
 import { screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../test/renderApp';
 import { WIKI_FORMAT, type WikiData } from '../wiki/model';
 import { AUTO_KEY } from './updates';
@@ -89,5 +89,87 @@ describe('a newer wiki without a new version of the app', () => {
     expect(readWiki(text.replace('"tags":[', '"tags":null,"x":['))).toBeUndefined();
     expect(readWiki(JSON.stringify({ ...JSON.parse(text), format: 99 }))).toBeUndefined();
     expect(readWiki('not json')).toBeUndefined();
+  });
+});
+
+describe('earning on the wiki: the jobs and the calculators (data of the wiki)', () => {
+  const openWiki = async () => {
+    const app = await renderApp();
+    await app.user.click(screen.getByRole('button', { name: 'Вики Russia Online' }));
+    return { ...app, wiki: await screen.findByRole('region', { name: 'Вики' }, { timeout: 5000 }) };
+  };
+
+  it('lists the jobs a level opens, filters them by the law, and keeps the level', async () => {
+    const { user, wiki, platform } = await openWiki();
+    const jobs = within(wiki).getByRole('region', { name: 'Работы' });
+    const open = () => within(within(jobs).getByRole('list', { name: 'Доступно' })).getAllByRole('button').map((b) => b.querySelector('.wiki__jobs-name')?.textContent);
+    expect(open()).toEqual(expect.arrayContaining(['Шахтёр', 'Строитель', 'Собиратель']));
+    expect(open()).not.toContain('Дальнобойщик');
+    await user.click(within(jobs).getByRole('combobox', { name: 'Мой уровень' }));
+    await user.click(screen.getByRole('option', { name: '10+' }));
+    expect(open()).toContain('Дальнобойщик');
+    expect(platform.settings.get('wiki.level')).toBe(10);
+    await user.click(within(jobs).getByRole('radio', { name: 'Нелегальные' }));
+    expect(open().sort()).toEqual(['Грабитель', 'Закладчик', 'Угонщик']);
+  });
+
+  it('counts a recipe for as many as wanted: the batches, every ingredient, the time', async () => {
+    const { user, wiki } = await openWiki();
+    await user.type(within(wiki).getByRole('searchbox', { name: 'Поиск по вики' }), 'картофель фри');
+    // The dish is an item too: the recipe's card is the one under «Рецепты».
+    await user.click((await within(wiki).findAllByRole('button', { name: 'Картофель Фри' })).find((card) => card.textContent?.includes('Рецепты'))!);
+    const calc = within(wiki).getByRole('region', { name: 'Калькулятор' });
+    const wanted = within(calc).getByRole('textbox', { name: 'Сколько нужно' });
+    await user.clear(wanted);
+    await user.type(wanted, '35');
+    expect(calc).toHaveTextContent('4 раза · выйдет 40 шт. · 12 ч');
+    expect(within(within(calc).getByRole('list', { name: 'Понадобится' })).getByText('Картошка').parentElement).toHaveTextContent('× 12');
+  });
+});
+
+describe('the shifts at a job (earning, part two)', () => {
+  const openMiner = async (settings: Record<string, unknown> = {}) => {
+    const app = await renderApp({ settings });
+    await app.user.click(screen.getByRole('button', { name: 'Вики Russia Online' }));
+    const wiki = await screen.findByRole('region', { name: 'Вики' }, { timeout: 5000 });
+    const jobs = within(wiki).getByRole('region', { name: 'Работы' });
+    await app.user.click(within(jobs).getByText('Шахтёр'));
+    return { ...app, wiki };
+  };
+  afterEach(() => vi.restoreAllMocks());
+
+  it('times a shift and says what it paid an hour; kept on this computer, sent nowhere unless sharing is on', async () => {
+    const sent = vi.fn(async (_url: string) => new Response('{"jobs":{}}'));
+    vi.stubGlobal('fetch', sent);
+    const { user, wiki, platform } = await openMiner();
+    const start = Date.now();
+    await user.click(within(wiki).getByRole('button', { name: 'Начать смену' }));
+    vi.spyOn(Date, 'now').mockReturnValue(start + 90 * 60_000);
+    await user.click(within(wiki).getByRole('button', { name: 'Закончить смену' }));
+    await user.type(within(wiki).getByRole('textbox', { name: 'Заработано за смену, ₽' }), '60000{Enter}');
+    expect(within(wiki).getByRole('status')).toHaveTextContent('Смена записана: Шахтёр — 40 000 ₽/ч');
+    expect(platform.settings.get('earn.shifts')).toEqual([expect.objectContaining({ job: 'Шахтёр', server: 'tverskoi', earned: 60000 })]);
+    expect(within(wiki).getByText(/У меня:/).parentElement).toHaveTextContent('У меня: 40 000 ₽/ч (1 смена)');
+    expect(sent.mock.calls.some(([url]) => String(url).endsWith('/v1/earnings'))).toBe(false);
+    vi.unstubAllGlobals();
+  });
+
+  it('shares a finished shift when the player turned it on: the server, the job, minutes and sum — no nick', async () => {
+    const bodies: unknown[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') bodies.push(JSON.parse(String(init.body)));
+      return new Response(String(url).includes('/v1/earnings?') ? '{"jobs":{"Шахтёр":{"median":42000,"low":30000,"high":50000,"shifts":130}}}' : '{"ok":true}');
+    }));
+    const { user, wiki } = await openMiner({ 'earn.share': true });
+    expect(await within(wiki).findByText(/На сервере:/)).toHaveTextContent('На сервере: ≈ 42 000 ₽/ч (по 130 сменам)');
+    const start = Date.now();
+    await user.click(within(wiki).getByRole('button', { name: 'Начать смену' }));
+    vi.spyOn(Date, 'now').mockReturnValue(start + 60 * 60_000);
+    await user.click(within(wiki).getByRole('button', { name: 'Закончить смену' }));
+    await user.type(within(wiki).getByRole('textbox', { name: 'Заработано за смену, ₽' }), '50000{Enter}');
+    await vi.waitFor(() => expect(bodies).toHaveLength(1));
+    expect(Object.keys(bodies[0] as object).sort()).toEqual(['app', 'bonus', 'earned', 'job', 'minutes', 'server']);
+    expect(bodies[0]).toMatchObject({ server: 'tverskoi', job: 'Шахтёр', minutes: 60, earned: 50000 });
+    vi.unstubAllGlobals();
   });
 });

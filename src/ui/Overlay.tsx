@@ -1465,7 +1465,7 @@ export function Overlay({
             }
           />
         ) : wikiOpen ? (
-          <WikiView />
+          <WikiView server={pack.server.id} />
         ) : memosOpen ? (
           <div className="settings settings--single">
             <MemosView signedIn={!!account} />
