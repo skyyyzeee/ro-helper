@@ -60,7 +60,7 @@ async function aiServer(env) {
   const port = 20000 + Math.floor(Math.random() * 20000);
   const dir = mkdtempSync(join(tmpdir(), 'ai-'));
   const child = spawn(process.execPath, [join(import.meta.dirname, 'server.mjs')], {
-    env: { ...process.env, PORT: String(port), STATE_FILE: join(dir, 'state.json'), FEEDBACK_FILE: join(dir, 'feedback.jsonl'), REVIEWS_FILE: join(dir, 'reviews.json'), CACHE_FILE: join(dir, 'cache.json'), SURVEY_FILE: join(dir, 'survey.jsonl'), CRASH_FILE: join(dir, 'crashes.jsonl'), ...env },
+    env: { ...process.env, PORT: String(port), STATE_FILE: join(dir, 'state.json'), FEEDBACK_FILE: join(dir, 'feedback.jsonl'), REVIEWS_FILE: join(dir, 'reviews.json'), CACHE_FILE: join(dir, 'cache.json'), SURVEY_FILE: join(dir, 'survey.jsonl'), CRASH_FILE: join(dir, 'crashes.jsonl'), EARNINGS_FILE: join(dir, 'earnings.jsonl'), ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   await new Promise((resolve, reject) => {
@@ -505,6 +505,35 @@ test('keeps poll answers and error reports with no id of the player or the compu
     assert.deepEqual((await (await admin('/v1/survey')).json()).polls, { 'fps-2026-10': { 'Иногда, при открытии': 1, 'Да, заметно': 1 } });
     assert.equal((await fetch(`${ai.base}/v1/crashes`)).status, 403);
     assert.deepEqual((await (await admin('/v1/crashes?limit=5')).json()).crashes.map((c) => c.area), ['Калькулятор']);
+  } finally {
+    ai.stop();
+    giga.server.close();
+  }
+});
+
+test('sums up the shifts shared by players: the median a job pays an hour on a server, only once enough, with no id', async () => {
+  const giga = await fakeGigachat();
+  const ai = await aiServer({ ...gigaEnv(giga), EARNINGS_PER_DEVICE: '3', EARNINGS_MIN: '3' });
+  const summary = async (server) => (await (await fetch(`${ai.base}/v1/earnings?server=${server}`)).json()).jobs;
+  try {
+    const shift = { server: 'tverskoi', job: 'Шахтёр', minutes: 60, earned: 40_000, bonus: true, app: '2.21.0', nick: 'skyze' };
+    assert.equal((await ai.post('/v1/earnings', shift)).status, 200);
+    assert.equal((await ai.post('/v1/earnings', { ...shift, minutes: 30, earned: 25_000 })).status, 200);
+    // Too few: nothing said of the job yet.
+    assert.deepEqual(await summary('tverskoi'), {});
+    assert.equal((await ai.post('/v1/earnings', { ...shift, earned: 10_000_000 })).status, 200);
+    assert.equal((await ai.post('/v1/earnings', shift)).status, 429);
+    // The median: one shift of ten million an hour does not move it.
+    assert.deepEqual(await summary('tverskoi'), { Шахтёр: { median: 50_000, low: 40_000, high: 10_000_000, shifts: 3 } });
+    assert.deepEqual(await summary('arbatskiy'), {});
+
+    for (const wrong of [{ ...shift, minutes: 5 }, { ...shift, minutes: 800 }, { ...shift, earned: 0 }, { ...shift, server: 'moscow' }, { ...shift, job: '' }]) {
+      assert.equal((await ai.post('/v1/earnings', wrong, { device: 'device-0002' })).status, 400);
+    }
+    assert.equal((await fetch(`${ai.base}/v1/earnings?server=moscow`)).status, 400);
+    const [kept] = ai.lines('earnings.jsonl');
+    assert.deepEqual(Object.keys(kept).sort(), ['app', 'at', 'bonus', 'job', 'minutes', 'perHour', 'server']);
+    assert.doesNotMatch(JSON.stringify(ai.lines('earnings.jsonl')), /skyze|device-0001/);
   } finally {
     ai.stop();
     giga.server.close();

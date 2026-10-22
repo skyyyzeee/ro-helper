@@ -79,6 +79,15 @@ const CONFIG = {
    */
   crashFile: env('CRASH_FILE', './crashes.jsonl'),
   crashPerDevice: num('CRASH_PER_DEVICE', 20),
+  /**
+   * The players' shifts, shared by their choice (off unless turned on): the server of the game, the job, how long, the
+   * rubles an hour and whether a bonus hour was on — no id of the player or the computer. Summed up for everyone as
+   * the median a job pays on a server, over the last days, once enough shifts are in.
+   */
+  earningsFile: env('EARNINGS_FILE', './earnings.jsonl'),
+  earningsPerDevice: num('EARNINGS_PER_DEVICE', 20),
+  earningsDays: num('EARNINGS_DAYS', 14),
+  earningsMin: num('EARNINGS_MIN', 5),
   /** Past this size each of the two files takes no more until the admins have read and moved it. */
   reportsMaxBytes: num('REPORTS_MAX_MB', 20) * 1024 * 1024,
   /** The admins' reviews of the marks: approved, rejected, to check again — with the normal form they gave. */
@@ -521,6 +530,53 @@ function keepReport(device, kind, file, perDevice, line) {
   return null;
 }
 
+// ——— The players' shifts: rubles an hour by job and server ———
+
+const GAME_SERVERS = new Set(['tverskoi', 'arbatskiy', 'kutuzovskiy']);
+
+/** A shift as it is kept: when (to the minute), the server, the job, its length and pay an hour. Null when it is none. */
+function shiftOf(input) {
+  const server = clip(input?.server, 40);
+  const job = clip(input?.job, 40);
+  const minutes = Math.round(Number(input?.minutes));
+  const earned = Math.round(Number(input?.earned));
+  // Ten minutes to twelve hours, and a sum a shift can bring: anything else is a mistake, not a shift.
+  if (!GAME_SERVERS.has(server) || !job || !(minutes >= 10 && minutes <= 720) || !(earned > 0 && earned <= 50_000_000)) return null;
+  return { at: new Date().toISOString().slice(0, 16), server, job, minutes, perHour: Math.round((earned / minutes) * 60), bonus: input?.bonus === true, app: clip(input?.app, 20) };
+}
+
+/** The summary, kept until a shift is added: read from the file at most once between two shifts. */
+let earningsCache = null;
+
+/** What each job pays an hour on a server: the median and the middle half, of the last days' shifts, when enough. */
+function earningsSummary(server) {
+  if (!earningsCache) {
+    earningsCache = new Map();
+    const since = new Date(Date.now() - CONFIG.earningsDays * 86_400_000).toISOString().slice(0, 16);
+    if (existsSync(CONFIG.earningsFile)) {
+      for (const line of readFileSync(CONFIG.earningsFile, 'utf8').split('\n')) {
+        if (!line.trim()) continue;
+        try {
+          const shift = JSON.parse(line);
+          if (shift.at < since) continue;
+          const byJob = earningsCache.get(shift.server) ?? new Map();
+          earningsCache.set(shift.server, byJob.set(shift.job, [...(byJob.get(shift.job) ?? []), shift.perHour]));
+        } catch {
+          // A broken line is skipped.
+        }
+      }
+    }
+  }
+  const jobs = {};
+  for (const [job, rates] of earningsCache.get(server) ?? []) {
+    if (rates.length < CONFIG.earningsMin) continue;
+    const sorted = [...rates].sort((a, b) => a - b);
+    const at = (q) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
+    jobs[job] = { median: at(0.5), low: at(0.25), high: at(0.75), shifts: sorted.length };
+  }
+  return jobs;
+}
+
 /** Each poll's answers counted, for the admins. */
 function surveySummary() {
   const polls = {};
@@ -707,7 +763,7 @@ async function leaderOf(account, request) {
 // ——— HTTP ———
 
 /** A question with a dozen articles is some 60 KB. Text only: no speech is taken — it is recognised on the players' computers. */
-const LIMITS = { '/v1/chat': 200_000, '/v1/feedback': 8_000, '/v1/survey': 2_000, '/v1/crash': 8_000 };
+const LIMITS = { '/v1/chat': 200_000, '/v1/feedback': 8_000, '/v1/survey': 2_000, '/v1/crash': 8_000, '/v1/earnings': 2_000 };
 
 function readBody(request, limit) {
   return new Promise((resolve, reject) => {
@@ -750,6 +806,13 @@ const server = createServer(async (request, response) => {
     const filter = ['down', 'fixed', 'raw', 'approved', 'rejected', 'recheck'].includes(params.get('filter')) ? params.get('filter') : 'all';
     const count = Math.min(Math.max(Number(params.get('limit')) || 100, 1), 500);
     return send(response, 200, { marks: latestMarks(filter, count), today: state.marks ?? 0 });
+  }
+  if (request.method === 'GET' && request.url.startsWith('/v1/earnings')) {
+    // Open to all: medians of many shifts, no line of anyone's.
+    const server = new URL(request.url, 'http://local').searchParams.get('server') ?? '';
+    if (!GAME_SERVERS.has(server)) return send(response, 400, { error: 'Нет такого сервера.' });
+    response.setHeader('Cache-Control', 'public, max-age=600');
+    return send(response, 200, { server, days: CONFIG.earningsDays, jobs: earningsSummary(server) });
   }
   if (request.method === 'GET' && request.url === '/v1/survey') {
     if (!isAdmin(request)) return send(response, 403, { error: 'Нужен ключ администратора.' });
@@ -812,6 +875,19 @@ const server = createServer(async (request, response) => {
     } catch (error) {
       console.error(new Date().toISOString(), 'feedback:', error);
       return send(response, 500, { error: 'Не удалось сохранить отзыв — попробуйте позже.' });
+    }
+  }
+
+  if (request.url === '/v1/earnings') {
+    const line = shiftOf(input);
+    if (!line) return send(response, 400, { error: 'Смена не подходит: от 10 минут до 12 часов и сумма больше нуля.' });
+    try {
+      const why = keepReport(device, 'shifts', CONFIG.earningsFile, CONFIG.earningsPerDevice, line);
+      if (!why) earningsCache = null;
+      return why ? send(response, 429, { error: why }) : send(response, 200, { ok: true });
+    } catch (error) {
+      console.error(new Date().toISOString(), request.url, error);
+      return send(response, 500, { error: 'Не удалось сохранить — попробуйте позже.' });
     }
   }
 
