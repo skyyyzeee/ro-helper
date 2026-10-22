@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { usePlatform } from '../platform/PlatformContext';
 import { FRESH, type WikiBlock, type WikiCatalogId, type WikiChange, type WikiData, type WikiEntry } from '../wiki/model';
+import { JobsBlock } from './WikiTools';
 
 /** The wiki's pages the player opened last, newest first: on this computer only, never sent or synced. */
 export const WIKI_RECENT_KEY = 'wiki.recent';
@@ -43,7 +44,7 @@ function pictureOf(data: WikiData, catalogs: WikiCatalogId[]): string | undefine
   return (newest(fresh) ?? newest(own))?.image;
 }
 
-const plural = (n: number, one: string, few: string, many: string) => {
+export const plural = (n: number, one: string, few: string, many: string) => {
   const ten = n % 10;
   const hundred = n % 100;
   return ten === 1 && hundred !== 11 ? one : ten >= 2 && ten <= 4 && (hundred < 12 || hundred > 14) ? few : many;
@@ -83,6 +84,7 @@ export function WikiHome({ data, recent, onCatalog, onOpen, picture }: { data: W
   const posts = titleOf('posts');
   return (
     <div className="wiki__home">
+      <JobsBlock data={data} onOpen={onOpen} />
       <div className="wiki__links" role="group" aria-label="Статьи и обновления">
         {posts && posts.count > 0 && (
           <button type="button" className="wiki__link" onClick={() => onCatalog('posts')}>

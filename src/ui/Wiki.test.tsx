@@ -91,3 +91,38 @@ describe('a newer wiki without a new version of the app', () => {
     expect(readWiki('not json')).toBeUndefined();
   });
 });
+
+describe('earning on the wiki: the jobs and the calculators (data of the wiki)', () => {
+  const openWiki = async () => {
+    const app = await renderApp();
+    await app.user.click(screen.getByRole('button', { name: 'Вики Russia Online' }));
+    return { ...app, wiki: await screen.findByRole('region', { name: 'Вики' }, { timeout: 5000 }) };
+  };
+
+  it('lists the jobs a level opens, filters them by the law, and keeps the level', async () => {
+    const { user, wiki, platform } = await openWiki();
+    const jobs = within(wiki).getByRole('region', { name: 'Работы' });
+    const open = () => within(within(jobs).getByRole('list', { name: 'Доступно' })).getAllByRole('button').map((b) => b.querySelector('.wiki__jobs-name')?.textContent);
+    expect(open()).toEqual(expect.arrayContaining(['Шахтёр', 'Строитель', 'Собиратель']));
+    expect(open()).not.toContain('Дальнобойщик');
+    await user.click(within(jobs).getByRole('combobox', { name: 'Мой уровень' }));
+    await user.click(screen.getByRole('option', { name: '10+' }));
+    expect(open()).toContain('Дальнобойщик');
+    expect(platform.settings.get('wiki.level')).toBe(10);
+    await user.click(within(jobs).getByRole('radio', { name: 'Нелегальные' }));
+    expect(open().sort()).toEqual(['Грабитель', 'Закладчик', 'Угонщик']);
+  });
+
+  it('counts a recipe for as many as wanted: the batches, every ingredient, the time', async () => {
+    const { user, wiki } = await openWiki();
+    await user.type(within(wiki).getByRole('searchbox', { name: 'Поиск по вики' }), 'картофель фри');
+    // The dish is an item too: the recipe's card is the one under «Рецепты».
+    await user.click((await within(wiki).findAllByRole('button', { name: 'Картофель Фри' })).find((card) => card.textContent?.includes('Рецепты'))!);
+    const calc = within(wiki).getByRole('region', { name: 'Калькулятор' });
+    const wanted = within(calc).getByRole('textbox', { name: 'Сколько нужно' });
+    await user.clear(wanted);
+    await user.type(wanted, '35');
+    expect(calc).toHaveTextContent('4 раза · выйдет 40 шт. · 12 ч');
+    expect(within(within(calc).getByRole('list', { name: 'Понадобится' })).getByText('Картошка').parentElement).toHaveTextContent('× 12');
+  });
+});
