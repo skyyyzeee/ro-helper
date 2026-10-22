@@ -1,7 +1,7 @@
 import { cleanup, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../test/renderApp';
-import { ACCENT_KEY, THEME_KEY, accentHue, organizationHue } from './appearance';
+import { ACCENT_KEY, SCALE_KEY, THEME_KEY, accentHue, organizationHue } from './appearance';
 
 const root = () => document.documentElement;
 const hue = () => root().style.getPropertyValue('--accent-hue');
@@ -9,6 +9,7 @@ const hue = () => root().style.getPropertyValue('--accent-hue');
 afterEach(() => {
   delete root().dataset.theme;
   root().style.removeProperty('--accent-hue');
+  root().style.removeProperty('zoom');
 });
 
 async function openLook(user: Awaited<ReturnType<typeof renderApp>>['user']) {
@@ -60,5 +61,20 @@ describe('the look: a theme and an accent', () => {
     expect(accentHue('organization', 'fsb')).toBe(organizationHue('fsb'));
     expect(accentHue(25, 'fsb')).toBe(25);
     expect(organizationHue('somebody')).toBe(245);
+  });
+});
+
+describe('the size of the text (an idea borrowed from LEX)', () => {
+  it('zooms the overlay to the size chosen, keeps it, and back to 100% leaves the page as it was', async () => {
+    const { platform, user } = await renderApp();
+    await openLook(user);
+    const sizes = screen.getByRole('radiogroup', { name: 'Размер текста' });
+    expect(within(sizes).getAllByRole('radio').map((r) => r.textContent)).toEqual(['90%', '100%', '115%', '130%']);
+    expect(within(sizes).getByRole('radio', { name: '100%' })).toBeChecked();
+    await user.click(within(sizes).getByRole('radio', { name: '130%' }));
+    expect(root().style.getPropertyValue('zoom')).toBe('1.3');
+    expect(platform.settings.get(SCALE_KEY)).toBe(1.3);
+    await user.click(within(sizes).getByRole('radio', { name: '100%' }));
+    expect(root().style.getPropertyValue('zoom')).toBe('');
   });
 });

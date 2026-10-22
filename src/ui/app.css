@@ -2607,6 +2607,11 @@ input {
   padding-top: 0;
 }
 
+/* Four choices side by side: the text size. */
+.seg--four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .seg--sm {
   padding: 3px;
   gap: 2px;
@@ -4438,6 +4443,23 @@ select option {
 .status--clarify { background: var(--warn-bg); color: var(--warn-text); }
 .status--not-found,
 .status--review { background: var(--gone-bg); color: var(--gone-text); }
+
+/* «Да.» / «Нет.» first, to a question asked so (verdict.ts): read at a glance, the details under it. */
+.ai__verdict {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.45;
+}
+
+.ai__verdict b {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.ai__verdict--yes b { color: var(--now-text); }
+.ai__verdict--no b { color: var(--gone-text); }
+.ai__verdict--depends b,
+.ai__verdict--clarify b { color: var(--warn-text); }
 
 .answer {
   display: flex;

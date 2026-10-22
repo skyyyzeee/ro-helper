@@ -8,6 +8,16 @@ import type { PlatformAdapter } from '../platform/types';
 
 export const THEME_KEY = 'appearance.theme';
 export const ACCENT_KEY = 'appearance.accent';
+export const SCALE_KEY = 'appearance.scale';
+
+/** How big the overlay's text and controls are, for 2K and 4K screens; the cards over the game keep theirs. */
+export const SCALES = [0.9, 1, 1.15, 1.3];
+export const isScale = (value: unknown): value is number => SCALES.includes(value as number);
+
+/** The overlay's size: its window zoomed as a whole, so every block keeps its proportions. */
+export function applyScale(scale: number, root: HTMLElement = document.documentElement): void {
+  root.style.setProperty('zoom', scale === 1 ? '' : String(scale));
+}
 
 export type Theme = 'glass' | 'dense' | 'minimal';
 /** The organisation's hue, or a hue the player chose. */
@@ -68,6 +78,8 @@ export interface AppearanceControl {
   accent: Accent;
   setTheme: (theme: Theme) => void;
   setAccent: (accent: Accent) => void;
+  scale: number;
+  setScale: (scale: number) => void;
 }
 
 /**
@@ -77,12 +89,16 @@ export interface AppearanceControl {
 export function useAppearance(platform: Pick<PlatformAdapter, 'readSetting' | 'writeSetting' | 'setPinLook'>, organization: string): AppearanceControl {
   const [theme, setThemeState] = useState<Theme>('glass');
   const [accent, setAccentState] = useState<Accent>('organization');
+  const [scale, setScaleState] = useState(1);
 
   useEffect(() => {
-    void Promise.all([platform.readSetting<unknown>(THEME_KEY), platform.readSetting<unknown>(ACCENT_KEY)]).then(([savedTheme, savedAccent]) => {
-      if (isTheme(savedTheme)) setThemeState(savedTheme);
-      if (isAccent(savedAccent)) setAccentState(savedAccent);
-    });
+    void Promise.all([platform.readSetting<unknown>(THEME_KEY), platform.readSetting<unknown>(ACCENT_KEY), platform.readSetting<unknown>(SCALE_KEY)]).then(
+      ([savedTheme, savedAccent, savedScale]) => {
+        if (isTheme(savedTheme)) setThemeState(savedTheme);
+        if (isAccent(savedAccent)) setAccentState(savedAccent);
+        if (isScale(savedScale)) setScaleState(savedScale);
+      },
+    );
   }, [platform]);
 
   // The page, and the pinned cards in their own window.
@@ -91,6 +107,7 @@ export function useAppearance(platform: Pick<PlatformAdapter, 'readSetting' | 'w
     applyAppearance(theme, hue);
     void platform.setPinLook({ theme, hue });
   }, [platform, theme, accent, organization]);
+  useEffect(() => applyScale(scale), [scale]);
 
   const setTheme = useCallback(
     (next: Theme) => {
@@ -106,5 +123,12 @@ export function useAppearance(platform: Pick<PlatformAdapter, 'readSetting' | 'w
     },
     [platform],
   );
-  return { theme, accent, setTheme, setAccent };
+  const setScale = useCallback(
+    (next: number) => {
+      setScaleState(next);
+      void platform.writeSetting(SCALE_KEY, next);
+    },
+    [platform],
+  );
+  return { theme, accent, setTheme, setAccent, scale, setScale };
 }

@@ -1,6 +1,8 @@
 // The AI's analysis as data: blocks the app lays out and checks, not a text it has to trust. Every statement about
 // the norms carries the ids of the sources it stands on, so the checks can hold each one to its own sources.
 
+import type { VerdictAnswer } from './verdict';
+
 /** How far the act went, as the calculator takes it. */
 export type Stage = 'done' | 'attempt' | 'preparation';
 
@@ -32,6 +34,11 @@ export interface GuideItem extends Claim {
   mark?: 'ok' | 'violated' | 'unknown';
 }
 
+/** «Да», «нет» or «зависит» to a question asked so («Обязан ли…»), in a sentence, on its sources. */
+export interface Verdict extends Claim {
+  answer: VerdictAnswer;
+}
+
 /** A question whose answer would change the analysis, with the likely answers as buttons. */
 export interface Clarification {
   question: string;
@@ -46,6 +53,8 @@ export interface LegalAnswer {
   reply?: string;
   /** What happened, as the AI understood it — the player's story, not a statement of the norms. */
   situation: string;
+  /** To a question answered yes or no: the answer first (verdict.ts). */
+  verdict?: Verdict;
   /** The facts of the case: what was said, and what the player corrected since. */
   facts: string[];
   /** What the AI took for granted to answer; a clarification may overturn it. */
@@ -102,6 +111,14 @@ const guide = (value: unknown): GuideItem[] =>
     .filter((g): g is GuideItem => !!g)
     .slice(0, 8);
 
+const VERDICTS = new Set<VerdictAnswer>(['yes', 'no', 'depends']);
+/** The verdict, when the model gave one of the three answers and a sentence. */
+function verdict(value: unknown): { verdict?: Verdict } {
+  const said = claim(value, /^(?:да|нет)\s*[.,:—–-]\s*/i);
+  const answer = value && typeof value === 'object' ? (value as Record<string, unknown>).answer : undefined;
+  return said && VERDICTS.has(answer as VerdictAnswer) ? { verdict: { ...said, answer: answer as VerdictAnswer } } : {};
+}
+
 const claims = (value: unknown): Claim[] => (Array.isArray(value) ? value.map((item) => claim(item)).filter((c): c is Claim => !!c).slice(0, 8) : []);
 
 /**
@@ -152,6 +169,7 @@ export function readAnswer(o: Record<string, unknown>): LegalAnswer {
   return {
     ...(text(o.reply) ? { reply: text(o.reply) } : {}),
     situation: text(o.situation),
+    ...verdict(o.verdict),
     facts: texts(o.facts, 12),
     assumptions: texts(o.assumptions),
     norms,
