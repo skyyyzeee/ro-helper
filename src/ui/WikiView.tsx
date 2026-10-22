@@ -6,6 +6,7 @@ import { FRESH, type Gender, type WikiCatalogId, type WikiData, type WikiEntry }
 import { Dropdown } from './Dropdown';
 import { BackIcon, ExternalIcon, SearchIcon } from './icons';
 import { useWiki } from './wiki';
+import { JobInfo, MakeCalculator } from './WikiTools';
 import { Blocks, ChangeCounts, PostsView, UpdatesView, WikiHome, readingTime, useWikiRecent } from './WikiHome';
 
 /**
@@ -71,6 +72,8 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel }: { data: WikiData;
   useEffect(() => setView(0), [entry.id]);
   const shown = views[view];
   const more = neighbours(data, entry);
+  // A recipe's ingredients are in its calculator, counted: not twice on the page.
+  const facts = entry.make ? entry.facts.filter(([label]) => !entry.make!.parts.some((p) => p.name === label)) : entry.facts;
   return (
     <article className={`wiki__entry wiki__entry--${entry.catalog}`} aria-label={entry.title}>
       <button className="back" type="button" onClick={onBack}>
@@ -124,9 +127,9 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel }: { data: WikiData;
         </div>
       )}
       {shown?.name && views.length > 1 && <p className="wiki__viewname">{shown.name}</p>}
-      {entry.facts.length > 0 && (
+      {facts.length > 0 && (
         <dl className="wiki__facts">
-          {entry.facts.map(([label, value], i) => (
+          {facts.map(([label, value], i) => (
             <div key={`${label}-${i}`} className="wiki__fact">
               <dt>{label}</dt>
               <dd>{value}</dd>
@@ -134,6 +137,8 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel }: { data: WikiData;
           ))}
         </dl>
       )}
+      {entry.make && <MakeCalculator key={entry.id} make={entry.make} />}
+      {entry.job && <JobInfo job={entry.job} />}
       {entry.counts && <ChangeCounts entry={entry} />}
       {entry.blocks?.length ? (
         <Blocks blocks={entry.blocks} picture={(src, className) => <Picture src={src} alt="" className={className} />} />
