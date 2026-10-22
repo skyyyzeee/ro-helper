@@ -8,7 +8,7 @@ import { AiMarksAdmin } from './AiMarksAdmin';
 import { FaqSection } from './Faq';
 import { useCapabilities } from './roles';
 import { useTakenHotkey } from './hotkeys';
-import { ACCENT_HUES, THEMES, organizationHue, type AppearanceControl } from './appearance';
+import { ACCENT_HUES, SCALES, THEMES, organizationHue, type AppearanceControl } from './appearance';
 import { AI_SERVER, APP_VERSION, AUTHORS, LINKS } from './about';
 import { AI_CUSTOM_SETTING, AI_KEY_SETTING, AI_KEY_URL, AI_PROVIDER_SETTING, AI_SERVER_SETTING, type AiProvider } from './ai';
 import type { CustomAi } from '../protocol';
@@ -183,7 +183,7 @@ function HotkeyField({
 
 /** The theme, and the accent: the organisation's, or one of a few hues. */
 function AppearancePicker({ appearance, organization }: { appearance: AppearanceControl; organization: string }) {
-  const { theme, accent, setTheme, setAccent } = appearance;
+  const { theme, accent, setTheme, setAccent, scale, setScale } = appearance;
   return (
     <>
       <div className="themes" role="radiogroup" aria-label="Тема">
@@ -227,6 +227,16 @@ function AppearancePicker({ appearance, organization }: { appearance: Appearance
             onClick={() => setAccent(hue)}
           />
         ))}
+      </div>
+      <div className="set__row">
+        <span className="set__label">Размер текста</span>
+        <div className="seg seg--sm seg--four" role="radiogroup" aria-label="Размер текста">
+          {SCALES.map((option) => (
+            <button key={option} type="button" role="radio" aria-checked={scale === option} onClick={() => setScale(option)}>
+              {Math.round(option * 100)}%
+            </button>
+          ))}
+        </div>
       </div>
     </>
   );

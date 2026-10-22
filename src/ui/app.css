@@ -2607,6 +2607,11 @@ input {
   padding-top: 0;
 }
 
+/* Four choices side by side: the text size. */
+.seg--four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .seg--sm {
   padding: 3px;
   gap: 2px;

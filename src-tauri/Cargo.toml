@@ -31,3 +31,8 @@ tauri-plugin-autostart = "2.5"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging"] }
+
+# The installed app: optimised across crates (link-time) and with one unit of code, for a smaller and quicker exe.
+[profile.release]
+lto = true
+codegen-units = 1
