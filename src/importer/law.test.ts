@@ -120,3 +120,30 @@ describe('an article written with no title (backlog 01)', () => {
     expect(titled.title).toBe('Порядок вступления в силу');
   });
 });
+
+describe('a chapter named on the line under it, and an empty note (backlog 02, 07)', () => {
+  it('takes the chapter’s name from under «Глава», past the ornaments, and leaves an empty note out', () => {
+    const law = parseLawText(
+      [
+        'Глава 1.',
+        '▰ ◆ ▰',
+        'Общие положения.',
+        'Статья 1. Предмет закона',
+        'Закон определяет порядок.',
+        'Примечание:',
+        'Глава 2.',
+        'Настоящая глава описывает права граждан: право на жизнь, право на труд.',
+        'Статья 2. Права',
+        'Граждане имеют права.',
+      ].join('\n'),
+      'fz',
+      'law',
+    );
+    expect(law.chapters.map((c) => [c.number, c.title, c.preface])).toEqual([
+      ['1', 'Общие положения', []],
+      // A sentence stays the chapter's preface.
+      ['2', '', ['Настоящая глава описывает права граждан: право на жизнь, право на труд.']],
+    ]);
+    expect(law.articles[0].notes).toEqual([]);
+  });
+});
