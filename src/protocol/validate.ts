@@ -6,6 +6,7 @@ import { articleLabel, articleText, calculateDetention, leadPart, type Article, 
 import { cachedStem, words } from '../core/wordIndex';
 import type { AnswerNorm, Claim, GuideItem, LegalAnswer } from './answer';
 import { SOURCE_TYPE_LABELS, inScope, type Scope, type Source, type SourceType } from './sources';
+import type { ShownVerdict } from './verdict';
 
 /**
  * How firm the answer is, from the sources and the checks — never the model's own opinion of itself:
@@ -40,6 +41,8 @@ export interface Validation {
   status: Status;
   /** Something failed: the answer is shown as one to check against the sources. */
   needsReview: boolean;
+  /** To a question answered yes or no: «да» or «нет» only where the verdict stands on the sources, else «нужно уточнение». */
+  verdict?: ShownVerdict;
 }
 
 /** «УК ст. 65 ч. 2» → the document's short name and the article number: «УК», «65». */
@@ -164,11 +167,13 @@ export function validateAnswer(pack: ServerPack, sources: Source[], answer: Lega
   if (answer.violation) issues.push(...checkClaim(answer.violation, 'Нарушение', byId, scope, fallback));
   if (answer.punishment) issues.push(...checkClaim(answer.punishment, 'Наказание', byId, scope, fallback));
   answer.procedure.forEach((step, i) => issues.push(...checkClaim(step, `Порядок, шаг ${i + 1}`, byId, scope, fallback)));
+  const verdictIssues = answer.verdict ? checkClaim(answer.verdict, 'Ответ', byId, scope, fallback) : [];
+  issues.push(...verdictIssues);
 
   // An article the answer mentions must be one of its sources: a number the player suggested («это же 777») or the
   // model remembered is not a source.
   const numbers = new Set(sources.map((s) => s.hit.article.number));
-  const prose = [answer.situation, ...answer.uncertainty, ...answer.norms.map((n) => n.why), answer.violation?.text ?? '', answer.punishment?.text ?? '', ...answer.procedure.map((s) => s.text)];
+  const prose = [answer.situation, answer.verdict?.text ?? '', ...answer.uncertainty, ...answer.norms.map((n) => n.why), answer.violation?.text ?? '', answer.punishment?.text ?? '', ...answer.procedure.map((s) => s.text)];
   const stray = [...new Set(prose.flatMap(namedArticles).filter((n) => !numbers.has(n)))];
   if (stray.length) issues.push(`Упомянута статья ${stray.join(', ')}, которой нет среди найденных источников`);
 
@@ -179,7 +184,13 @@ export function validateAnswer(pack: ServerPack, sources: Source[], answer: Lega
   else if (!issues.length && !answer.assumptions.length && valid.every((n) => n.norm.fit === 'direct')) status = 'confirmed';
   else status = 'likely';
 
-  return { norms, issues, status, needsReview: issues.length > 0 };
+  // «Да» or «нет» is shown only over an answer that stands: on its own sources, with a norm that holds.
+  const verdict: ShownVerdict | undefined = !answer.verdict
+    ? undefined
+    : verdictIssues.length || status === 'clarify' || status === 'not-found'
+      ? 'clarify'
+      : answer.verdict.answer;
+  return { norms, issues, status, needsReview: issues.length > 0, ...(verdict ? { verdict } : {}) };
 }
 
 /**

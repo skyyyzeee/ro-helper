@@ -29,6 +29,8 @@ export function analysisOf(context: string, patch: Partial<LegalAnswer> = {}, gu
     // Asked for the player's side: one point, on the article found.
     ...(guide && found ? { guide: [{ text: 'Потребуйте объяснения и составьте протокол', sources: cited }] } : {}),
     ...patch,
+    // A verdict «on the found article» names it as FOUND: the id is known only here.
+    ...(patch.verdict ? { verdict: { ...patch.verdict, sources: patch.verdict.sources.flatMap((id) => (id === 'FOUND' ? cited : [id])) } } : {}),
   };
   return JSON.stringify(answer);
 }
