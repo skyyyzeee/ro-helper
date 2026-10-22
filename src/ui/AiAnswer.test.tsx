@@ -41,6 +41,20 @@ describe('the analysis on screen', () => {
     expect(within(reply).queryByText('Калькулятор:')).not.toBeInTheDocument();
   });
 
+  it('answers a question asked «да или нет» with «Да.» first, and only on the sources', async () => {
+    const { bodies } = await ask('Обязан ли вор вернуть телефон?', { verdict: { answer: 'yes', text: 'Да, кража наказывается по УК.', sources: ['FOUND'] } });
+    const reply = screen.getByRole('log');
+    const verdict = reply.querySelector('.ai__verdict')!;
+    expect(verdict).toHaveTextContent('Да. кража наказывается по УК.');
+    expect(verdict.compareDocumentPosition(within(reply).getByText('Ситуация')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(bodies.some((b) => b.includes('ВОПРОС ЗАКРЫТЫЙ'))).toBe(true);
+  });
+
+  it('shows «Нужно уточнение» instead of a verdict that names no source', async () => {
+    await ask('Можно ли украсть телефон?', { verdict: { answer: 'no', text: 'нельзя', sources: [] } });
+    expect(screen.getByRole('log').querySelector('.ai__verdict')).toHaveTextContent(/^Нужно уточнение.$/);
+  });
+
   it('puts the found charges into the calculator with a press', async () => {
     const { user } = await ask('у меня украли телефон');
     await user.click(screen.getByRole('button', { name: 'Открыть в калькуляторе' }));

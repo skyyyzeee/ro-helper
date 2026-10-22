@@ -12,6 +12,7 @@ import { directPunishment } from './direct';
 import { hintTerms } from './hints';
 import { PERSPECTIVE_TERMS, buildContext, type CaseState, type Perspective } from './context';
 import { analysisPrompt, type Depth } from './prompt';
+import { isClosedQuestion } from './verdict';
 import { AiError, type AiProvider } from './provider';
 import { labelSources, packInScope, type Scope, type ScopeChoice, type Source } from './sources';
 import { calculateCharges, groundedGuide, sortGuide, validateAnswer, type HiddenPoint, type Validation } from './validate';
@@ -159,7 +160,7 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
   const sources = labelSources([...found.slice(0, SOURCES - extra.length), ...extra.map(({ article, document }) => ({ article, document }))]);
   const context = buildContext({ pack, organization, message, sources, perspective, previous });
   // A first question may be answered again to anyone who asks it with the same laws (ADR 0007); a follow-up is its own case.
-  const request = { system: analysisPrompt(pack, depth, scope, perspective), turns: [{ role: 'user' as const, parts: [{ text: context }] }], json: true, think: depth === 'full', ...(previous ? {} : { cache: message }) };
+  const request = { system: analysisPrompt(pack, depth, scope, perspective, isClosedQuestion(message)), turns: [{ role: 'user' as const, parts: [{ text: context }] }], json: true, think: depth === 'full', ...(previous ? {} : { cache: message }) };
 
   let answer: LegalAnswer;
   try {

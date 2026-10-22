@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { articleText, articleTitle, formatPunishment, formatRubles, leadPart, type DetentionResult, type SearchHit, type Stage } from '../core';
-import { SOURCE_TYPE_LABELS, STATUS_LABELS, type Analysis, type CheckedNorm, type Claim, type GuideItem, type Perspective, type Source, type SourceType, type Status } from '../protocol';
+import { SOURCE_TYPE_LABELS, STATUS_LABELS, VERDICT_LABELS, type Analysis, type CheckedNorm, type Claim, type GuideItem, type Perspective, type Source, type SourceType, type Status } from '../protocol';
 import { shortLabel } from './AiView';
 import { answerText } from './ai';
 import { CheckIcon, ExternalIcon, PinIcon, PlusIcon, WarnIcon } from './icons';
@@ -34,6 +34,7 @@ export function cardText(analysis: Analysis): string {
   if (answer.reply) return answer.reply;
   const norms = validation.norms.filter((n) => n.hit && !n.issues.length).slice(0, 2);
   return [
+    validation.verdict && `${VERDICT_LABELS[validation.verdict]}.${validation.verdict !== 'clarify' && answer.verdict ? ` ${answer.verdict.text}` : ''}`,
     answer.situation && `Суть: ${answer.situation}`,
     ...norms.map(({ hit }) => {
       const part = hit!.part ?? leadPart(hit!.article);
@@ -268,6 +269,13 @@ export function AnswerView({
 
   return (
     <div className="answer">
+      {/* A question asked «да или нет» is answered so first: the details follow for whoever reads on. */}
+      {validation.verdict && (
+        <p className={`ai__verdict ai__verdict--${validation.verdict}`}>
+          <b>{VERDICT_LABELS[validation.verdict]}.</b>
+          {validation.verdict !== 'clarify' && answer.verdict && <span> {answer.verdict.text}</span>}
+        </p>
+      )}
       <StatusBadge status={validation.status} review={validation.needsReview} />
       {validation.needsReview && (
         <div className="warn" role="alert">
