@@ -8,6 +8,7 @@ import { factionName } from './AdminView';
 import { PROFILE_KEY, type Profile } from './profile';
 import { memoPlain } from './memoText';
 import { useRoles } from './roles';
+import { MEMOS } from './features';
 
 /** The memos already told over the game, by id: a memo is told once. */
 const SEEN_KEY = 'memos.seen';
@@ -54,7 +55,8 @@ export function MemosProvider({ children }: { children: ReactNode }) {
   placeRef.current = place;
 
   const refresh = useCallback(async () => {
-    if (!account) {
+    // Turned off (features.ts): nothing asked, so nothing shown or told over the game.
+    if (!MEMOS || !account) {
       setPlace(null);
       setMemos([]);
       return;

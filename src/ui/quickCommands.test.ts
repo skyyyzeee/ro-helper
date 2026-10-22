@@ -23,7 +23,8 @@ describe('the commands of the quick search (roadmap 2В)', () => {
   it('lists every usable one for «/»', () => {
     const all = ids('/', ['ai.analysis', 'memos.read']);
     expect(all).toContain('ask');
-    expect(all).toContain('memos');
+    // The memos are off for now (features.ts): no command for them.
+    expect(all).not.toContain('memos');
     expect(all).not.toContain('detention');
   });
 });
