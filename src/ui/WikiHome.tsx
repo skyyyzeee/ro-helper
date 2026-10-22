@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { usePlatform } from '../platform/PlatformContext';
 import { FRESH, type WikiBlock, type WikiCatalogId, type WikiChange, type WikiData, type WikiEntry } from '../wiki/model';
-import { JobsBlock } from './WikiTools';
+import { JobsBlock, type Earn } from './WikiTools';
 
 /** The wiki's pages the player opened last, newest first: on this computer only, never sent or synced. */
 export const WIKI_RECENT_KEY = 'wiki.recent';
@@ -78,13 +78,13 @@ export function ChangeCounts({ entry }: { entry: WikiEntry }) {
 }
 
 /** The home of the wiki: the articles and the updates, the catalogs in four groups, the pages opened last. */
-export function WikiHome({ data, recent, onCatalog, onOpen, picture }: { data: WikiData; recent: WikiEntry[]; onCatalog: (id: WikiCatalogId) => void; onOpen: (entry: WikiEntry) => void; picture: (src: string | undefined, className: string) => ReactNode }) {
+export function WikiHome({ data, recent, onCatalog, onOpen, picture, earn }: { data: WikiData; recent: WikiEntry[]; onCatalog: (id: WikiCatalogId) => void; onOpen: (entry: WikiEntry) => void; picture: (src: string | undefined, className: string) => ReactNode; earn?: Earn }) {
   const titleOf = (id: WikiCatalogId) => data.catalogs.find((c) => c.id === id);
   const latest = data.entries.filter((e) => e.catalog === 'updates').sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))[0];
   const posts = titleOf('posts');
   return (
     <div className="wiki__home">
-      <JobsBlock data={data} onOpen={onOpen} />
+      <JobsBlock data={data} onOpen={onOpen} earn={earn} />
       <div className="wiki__links" role="group" aria-label="Статьи и обновления">
         {posts && posts.count > 0 && (
           <button type="button" className="wiki__link" onClick={() => onCatalog('posts')}>

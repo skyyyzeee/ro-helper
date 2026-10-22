@@ -3,6 +3,7 @@ import { usePlatform } from '../platform/PlatformContext';
 import { bonusNow, jobsOf, moscowMinutes, timeLeft } from '../wiki/jobs';
 import type { WikiData, WikiEntry, WikiJob, WikiMake } from '../wiki/model';
 import { Dropdown } from './Dropdown';
+import { minutesOf, myRate, perHour, rateText, type JobRate, type Shift, type useShifts } from './shifts';
 import { plural } from './WikiHome';
 
 /** The player's level, kept for «Работы для меня». */
@@ -67,11 +68,18 @@ export function MakeCalculator({ make }: { make: WikiMake }) {
 }
 
 /** A job's article: from what level, lawful or not, its bonus hours — and the one on now. */
-export function JobInfo({ job }: { job: WikiJob }) {
+export function JobInfo({ job, title, earn, jobs }: { job: WikiJob; title: string; earn?: Earn; jobs?: (WikiEntry & { job: WikiJob })[] }) {
   const now = useMoscowClock();
   const on = bonusNow(job, now);
   return (
     <section className="wiki__job" aria-label="О работе">
+      {earn && jobs && <ShiftBar earn={earn} jobs={jobs} />}
+      {earn && !earn.active && (
+        <button className="btn btn--primary btn--sm wiki__shift-start" type="button" onClick={() => earn.start(title, earn.server)}>
+          Начать смену
+        </button>
+      )}
+      {earn && <JobRates earn={earn} job={title} />}
       <p className="wiki__job-line">
         {job.level ? `С ${job.level} уровня` : 'Уровень не указан'}
         {job.rank ? ` или со ${job.rank} ранга предыдущей работы` : ''}
@@ -97,7 +105,7 @@ export function JobInfo({ job }: { job: WikiJob }) {
  * «Работы» on the wiki's home: the jobs the player's level opens, the ones with a bonus on now first, and what opens
  * next. All from the wiki's articles; the time is Moscow's, as the game's.
  */
-export function JobsBlock({ data, onOpen }: { data: WikiData; onOpen: (entry: WikiEntry) => void }) {
+export function JobsBlock({ data, onOpen, earn }: { data: WikiData; onOpen: (entry: WikiEntry) => void; earn?: Earn }) {
   const platform = usePlatform();
   const [level, setLevel] = useState(1);
   const [lawful, setLawful] = useState<Lawful>('all');
@@ -130,6 +138,7 @@ export function JobsBlock({ data, onOpen }: { data: WikiData; onOpen: (entry: Wi
           <Dropdown variant="pill" label="Мой уровень" value={String(level)} onChange={(v) => chooseLevel(Number(v))} options={LEVELS.map((l) => ({ value: String(l), label: l === 10 ? '10+' : String(l) }))} />
         </span>
       </div>
+      {earn && <ShiftBar earn={earn} jobs={jobs} />}
       <div className="wiki__groups" role="radiogroup" aria-label="Законность">
         {LAWFUL.map((l) => (
           <button key={l.id} type="button" role="radio" aria-checked={lawful === l.id} className={lawful === l.id ? 'wiki__group wiki__group--on' : 'wiki__group'} onClick={() => setLawful(l.id)}>
@@ -144,6 +153,7 @@ export function JobsBlock({ data, onOpen }: { data: WikiData; onOpen: (entry: Wi
               <span className="wiki__jobs-name">{entry.title}</span>
               {entry.job.legality && entry.job.legality !== 'legal' && <span className={`wiki__jobs-law wiki__jobs-law--${entry.job.legality}`}>{LEGALITY[entry.job.legality]}</span>}
               <span className="sp" />
+              {earn?.rates[entry.title] && <span className="wiki__jobs-rate">≈ {rateText(earn.rates[entry.title].median)}</span>}
               {on ? (
                 <span className="wiki__jobs-bonus">
                   +{on.bonus.percent}% ещё {timeLeft(on.left)}
@@ -165,7 +175,113 @@ export function JobsBlock({ data, onOpen }: { data: WikiData; onOpen: (entry: Wi
           Дальше: {next.map((j) => `${j.title} (${j.job.level} ур.)`).join(', ')}
         </p>
       )}
+      {earn && <ShareChoice earn={earn} />}
       <p className="wiki__jobs-note">Бонусы — по московскому времени, как в игре. Ранги работы открывают следующие раньше уровня — см. статью о работе.</p>
     </section>
+  );
+}
+
+/** The shifts and the server's rates, handed down from the wiki's page to its parts. */
+export interface Earn extends ReturnType<typeof useShifts> {
+  server: string;
+  rates: Record<string, JobRate>;
+}
+
+/** Now, kept fresh every half minute: a shift's time running. */
+function useNow(): number {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const tick = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(tick);
+  }, []);
+  return now;
+}
+
+/**
+ * The shift going on, over the jobs and on the job's page: how long, and finishing it with the sum earned — then what
+ * that made an hour. A bonus hour of the job on at its start or end is noted with it.
+ */
+export function ShiftBar({ earn, jobs }: { earn: Earn; jobs: (WikiEntry & { job: WikiJob })[] }) {
+  const now = useNow();
+  const [ending, setEnding] = useState(false);
+  const [sum, setSum] = useState('');
+  const [done, setDone] = useState<Shift | null>(null);
+  const { active } = earn;
+  if (!active) {
+    return done ? (
+      <p className="wiki__shift wiki__shift--done" role="status">
+        Смена записана: {done.job} — {perHour(done) ? <b>{rateText(perHour(done))}</b> : 'меньше минуты, в час не посчитать'}
+        {earn.share && minutesOf(done.startedAt, done.endedAt) >= 10 ? ' · отправлено в общую статистику' : ''}
+      </p>
+    ) : null;
+  }
+  const job = jobs.find((j) => j.title === active.job)?.job;
+  const finish = () => {
+    const earned = Number(sum.replace(/\D/g, ''));
+    if (!earned) return;
+    const bonus = !!job && (!!bonusNow(job, moscowMinutes(new Date(active.startedAt))) || !!bonusNow(job, moscowMinutes()));
+    setDone(earn.finish(earned, bonus));
+    setEnding(false);
+    setSum('');
+  };
+  return (
+    <section className="wiki__shift" aria-label="Смена">
+      <span>
+        Смена: <b>{active.job}</b> · {timeLeft(minutesOf(active.startedAt, now))}
+      </span>
+      <span className="sp" />
+      {ending ? (
+        <form
+          className="wiki__shift-end"
+          onSubmit={(e) => {
+            e.preventDefault();
+            finish();
+          }}
+        >
+          <input className="presets__input" inputMode="numeric" aria-label="Заработано за смену, ₽" placeholder="Заработано, ₽" value={sum} autoFocus onChange={(e) => setSum(e.target.value.replace(/[^\d\s]/g, ''))} />
+          <button className="btn btn--primary btn--sm" type="submit" disabled={!Number(sum.replace(/\D/g, ''))}>
+            Записать
+          </button>
+          <button className="link-btn" type="button" onClick={earn.cancel}>
+            Отменить смену
+          </button>
+        </form>
+      ) : (
+        <button className="btn btn--sm" type="button" onClick={() => setEnding(true)}>
+          Закончить смену
+        </button>
+      )}
+    </section>
+  );
+}
+
+/** A job's pay an hour: this player's own shifts, and the server's median when enough players shared theirs. */
+export function JobRates({ earn, job }: { earn: Earn; job: string }) {
+  const mine = myRate(earn.shifts, job, earn.server);
+  const all = earn.rates[job];
+  if (!mine && !all) return null;
+  return (
+    <p className="wiki__rates">
+      {mine && (
+        <span>
+          У меня: <b>{rateText(mine.perHour)}</b> ({mine.shifts} {plural(mine.shifts, 'смена', 'смены', 'смен')})
+        </span>
+      )}
+      {all && (
+        <span>
+          На сервере: <b>≈ {rateText(all.median)}</b> (по {all.shifts} {plural(all.shifts, 'смене', 'сменам', 'сменам')})
+        </span>
+      )}
+    </p>
+  );
+}
+
+/** Sharing the rubles an hour with everyone's summary: what goes, and that it is off unless turned on. */
+export function ShareChoice({ earn }: { earn: Earn }) {
+  return (
+    <label className="set__check wiki__share">
+      <input type="checkbox" checked={earn.share} onChange={(e) => earn.setShare(e.target.checked)} />
+      <span>Делиться заработком анонимно — сервер игры, работа, время смены и сумма, без ника. Из этого складывается «На сервере».</span>
+    </label>
   );
 }

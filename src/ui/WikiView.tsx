@@ -6,7 +6,9 @@ import { FRESH, type Gender, type WikiCatalogId, type WikiData, type WikiEntry }
 import { Dropdown } from './Dropdown';
 import { BackIcon, ExternalIcon, SearchIcon } from './icons';
 import { useWiki } from './wiki';
-import { JobInfo, MakeCalculator } from './WikiTools';
+import { JobInfo, MakeCalculator, type Earn } from './WikiTools';
+import { useServerRates, useShifts } from './shifts';
+import { jobsOf } from '../wiki/jobs';
 import { Blocks, ChangeCounts, PostsView, UpdatesView, WikiHome, readingTime, useWikiRecent } from './WikiHome';
 
 /**
@@ -66,7 +68,7 @@ function Source({ url }: { url: string }) {
   );
 }
 
-function EntryPage({ data, entry, onOpen, onBack, backLabel }: { data: WikiData; entry: WikiEntry; onOpen: (entry: WikiEntry) => void; onBack: () => void; backLabel: string }) {
+function EntryPage({ data, entry, onOpen, onBack, backLabel, earn }: { data: WikiData; entry: WikiEntry; onOpen: (entry: WikiEntry) => void; onBack: () => void; backLabel: string; earn?: Earn }) {
   const views = entry.views ?? [];
   const [view, setView] = useState(0);
   useEffect(() => setView(0), [entry.id]);
@@ -138,7 +140,7 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel }: { data: WikiData;
         </dl>
       )}
       {entry.make && <MakeCalculator key={entry.id} make={entry.make} />}
-      {entry.job && <JobInfo job={entry.job} />}
+      {entry.job && <JobInfo job={entry.job} title={entry.title} earn={earn} jobs={jobsOf(data)} />}
       {entry.counts && <ChangeCounts entry={entry} />}
       {entry.blocks?.length ? (
         <Blocks blocks={entry.blocks} picture={(src, className) => <Picture src={src} alt="" className={className} />} />
@@ -165,8 +167,12 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel }: { data: WikiData;
  * and women's, filters, search and order, and a page for each thing. The data is the wiki's (scripts/wiki-import.ts),
  * said on every page; the pictures come from its CDN.
  */
-export function WikiView() {
+/** `server`: the game's server the player is on, for the shifts and what the jobs pay there. */
+export function WikiView({ server = 'tverskoi' }: { server?: string }) {
   const { data, failed } = useWiki();
+  const shifts = useShifts();
+  const rates = useServerRates(server);
+  const earn: Earn = { ...shifts, server, rates };
   // The wiki opens on its home: the articles, the updates, the catalogs in groups, the pages opened last.
   const [catalog, setCatalog] = useState<WikiCatalogId | 'home'>('home');
   const [group, setGroup] = useState<string | undefined>();
@@ -240,7 +246,7 @@ export function WikiView() {
         </label>
 
         {entry ? (
-          <EntryPage data={data} entry={entry} onOpen={open} onBack={() => setEntry(null)} backLabel={searching ? 'Результаты' : (current?.title ?? 'Главная')} />
+          <EntryPage data={data} entry={entry} onOpen={open} onBack={() => setEntry(null)} backLabel={searching ? 'Результаты' : (current?.title ?? 'Главная')} earn={earn} />
         ) : searching ? (
           <>
             <h2 className="wiki__heading">
@@ -254,7 +260,7 @@ export function WikiView() {
             {!list.length && <p className="empty">Ничего не нашлось.</p>}
           </>
         ) : catalog === 'home' ? (
-          <WikiHome data={data} recent={recent} onCatalog={choose} onOpen={open} picture={picture} />
+          <WikiHome data={data} recent={recent} onCatalog={choose} onOpen={open} picture={picture} earn={earn} />
         ) : catalog === 'posts' ? (
           <>
             <h2 className="wiki__heading">Статьи</h2>
