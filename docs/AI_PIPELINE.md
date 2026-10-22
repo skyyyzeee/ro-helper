@@ -14,6 +14,8 @@ question
                          still unclear → «закон или правила?»
   → scope               sources.ts: laws+charters, rules of the server, or both — the pack is narrowed BEFORE the search
   → search              findForSituation over the scope's documents only (deterministic; AI phrases are only words)
+  → own charter         charters.ts: an officer of the state keeps the charter of their own service; another's only
+                        when the question names it (a citizen, the defence, a gang keep all)
   → sources             labelSources: S… law, C… charter, R… rule of the server, O… other — type from the document
   → context             buildContext: blocks per type, the player's words fenced as data (playerData)
   → analysis            AI call 2: one JSON object, each statement with the ids of its sources (answer.ts)

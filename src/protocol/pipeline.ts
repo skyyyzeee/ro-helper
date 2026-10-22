@@ -11,6 +11,7 @@ import { AI_INTENTS, classify, type Classification, type QuestionType } from './
 import { directPunishment } from './direct';
 import { hintTerms } from './hints';
 import { PERSPECTIVE_TERMS, buildContext, type CaseState, type Perspective } from './context';
+import { ownCharters } from './charters';
 import { analysisPrompt, type Depth } from './prompt';
 import { isClosedQuestion } from './verdict';
 import { AiError, type AiProvider } from './provider';
@@ -148,12 +149,14 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
   }
   // The law's words for what the player told in everyday ones (hints.ts), beside the AI's: its miss is not the search's.
   const phrases = [...new Set([...hintTerms(searchText), ...terms])];
-  const search = (text: string) => findForSituation(inScope, text, { boostDocuments: organization?.documents, lawTerms: phrases, limit: SOURCES });
+  // An officer's answer rests on their own service's charter (charters.ts): a few more are found to make up for the ones left out.
+  const search = (text: string) =>
+    ownCharters(findForSituation(inScope, text, { boostDocuments: organization?.documents, lawTerms: phrases, limit: SOURCES + 4 }), pack, organization, searchText);
   const found = previous ? followUpHits(inScope, previous, search(rerun ? searchText : message), search(searchText)) : search(message);
   // The side's own law — the rights of a detainee for the defence, an officer's duties — after the case's, never in
   // its place: a few articles that hold the side's words whole.
   const side = (perspective ? PERSPECTIVE_TERMS[perspective] : []).flatMap((words) =>
-    searchArticles(inScope, `${words} `, { boostDocuments: organization?.documents, limit: 2 }).filter((hit) => hit.document.kind !== 'penal-code'),
+    ownCharters(searchArticles(inScope, `${words} `, { boostDocuments: organization?.documents, limit: 2 }), pack, organization, searchText).filter((hit) => hit.document.kind !== 'penal-code'),
   );
   const own = new Set(found.map((hit) => hit.article.id));
   const extra = side.filter((hit, i) => !own.has(hit.article.id) && side.findIndex((h) => h.article.id === hit.article.id) === i).slice(0, SIDE_SOURCES);
