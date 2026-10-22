@@ -4,7 +4,7 @@ import type { PinBridge, ShownToast } from '../platform/tauri';
 import type { PinArea, PinCard, PinGroup, PinLook } from '../platform/types';
 import { applyAppearance, isTheme } from './appearance';
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, CompactIcon, DownloadIcon, GripIcon, PagesIcon, PinIcon, ResizeIcon, StarIcon } from './icons';
-import { CARD_WIDTH, MIN_HEIGHT, compactGroup, detachCard, dropSide, joinGroups, moveGroup, pageGroup, resizeGroup, unpinCard, unpinGroup, type DropSide } from './pinLayout';
+import { CARD_WIDTH, MIN_HEIGHT, compactGroup, detachCard, dropSide, joinGroups, keepOnScreen, moveGroup, pageGroup, resizeGroup, unpinCard, unpinGroup, type DropSide } from './pinLayout';
 
 /**
  * What a card pinned over the game shows: an article's part, or the calculator's total. Compact, only the
@@ -214,6 +214,24 @@ export function PinSurface({ groups: incoming, live, onChange, onClearCalculator
     setGroups(next);
     onChange(next);
   };
+
+  // A block saved on a monitor since unplugged comes back within reach (backlog 05): when the cards come, and
+  // when the window is fitted to the monitors again. A window not laid out yet — smaller than the screen — is left be.
+  const [fitted, setFitted] = useState(0);
+  useEffect(() => {
+    const refit = () => setFitted((n) => n + 1);
+    window.addEventListener('resize', refit);
+    return () => window.removeEventListener('resize', refit);
+  }, []);
+  useEffect(() => {
+    if (drag) return;
+    const room = surface();
+    if (room.width < (window.screen?.width ?? 0) || room.height < (window.screen?.height ?? 0)) return;
+    // Not dragging, the blocks on show are the ones that came.
+    const kept = keepOnScreen(incoming, room);
+    if (kept !== incoming) commit(kept);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incoming, fitted, drag, surface]);
 
   /**
    * The block under the mouse, if it is not the one being dragged: dropping there joins them, on the
