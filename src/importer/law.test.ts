@@ -98,3 +98,52 @@ describe('laws without punishments (real Тверской forum text)', () => {
     expect(parse('msk-property').footer).toEqual(['Закон принят Мосгордумой', 'Подписан Мэром г. Москвы']);
   });
 });
+
+describe('an article written with no title (backlog 01)', () => {
+  it('reads a long heading with nothing under it as the article’s text', () => {
+    const law = parseLawText(
+      [
+        'Статья 1.1. Задачами законодательства об административных правонарушениях являются защита личности, охрана прав и свобод человека.',
+        'Статья 2.1 Направления деятельности сотрудников Больницы, утверждённые Министерством здравоохранения.',
+        'Статья 2.1.1 Производить выезд на поступающие вызовы.',
+        'Статья 3. Порядок вступления в силу',
+        'Настоящий закон вступает в силу со дня опубликования.',
+      ].join('\n'),
+      'koap',
+      'law',
+    );
+    const [defined, heading, , titled] = law.articles;
+    expect(defined.title).toBe('');
+    expect(defined.parts[0].text).toMatch(/^Задачами законодательства .* человека\.$/);
+    // A heading over articles of its own stays a title, however long; so does a short one.
+    expect(heading.title).toMatch(/^Направления деятельности/);
+    expect(titled.title).toBe('Порядок вступления в силу');
+  });
+});
+
+describe('a chapter named on the line under it, and an empty note (backlog 02, 07)', () => {
+  it('takes the chapter’s name from under «Глава», past the ornaments, and leaves an empty note out', () => {
+    const law = parseLawText(
+      [
+        'Глава 1.',
+        '▰ ◆ ▰',
+        'Общие положения.',
+        'Статья 1. Предмет закона',
+        'Закон определяет порядок.',
+        'Примечание:',
+        'Глава 2.',
+        'Настоящая глава описывает права граждан: право на жизнь, право на труд.',
+        'Статья 2. Права',
+        'Граждане имеют права.',
+      ].join('\n'),
+      'fz',
+      'law',
+    );
+    expect(law.chapters.map((c) => [c.number, c.title, c.preface])).toEqual([
+      ['1', 'Общие положения', []],
+      // A sentence stays the chapter's preface.
+      ['2', '', ['Настоящая глава описывает права граждан: право на жизнь, право на труд.']],
+    ]);
+    expect(law.articles[0].notes).toEqual([]);
+  });
+});

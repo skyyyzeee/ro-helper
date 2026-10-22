@@ -91,6 +91,22 @@ describe('criminal calculator', () => {
     expect(panel()).toHaveTextContent('ст. 65 ч. 1: покушение — не более ¾ наказания, УК ст. 45 ч. 3');
   });
 
+  it('says a jurisdiction shared by the charges once, and keeps the stage out of sight until one is chosen', async () => {
+    const { user } = await renderApp();
+    await find(user, 'ук 65 ч 1');
+    await user.keyboard('{Enter}');
+    await find(user, 'ук 73');
+    await user.keyboard('{Enter}');
+    const [theft] = inCalculator();
+    expect(within(panel()).getAllByText('Р/Ф')).toHaveLength(1);
+    expect(within(theft).queryByText('Р/Ф')).not.toBeInTheDocument();
+
+    const stage = () => within(theft).getByRole('button', { name: 'покушение' }).parentElement!;
+    expect(stage()).toHaveClass('ci__mods--quiet');
+    await user.click(within(theft).getByRole('button', { name: 'покушение' }));
+    expect(stage()).not.toHaveClass('ci__mods--quiet');
+  });
+
   it('switches to a fine, checks the amount against the limit, and refuses a fine when a charge has none', async () => {
     const { user } = await renderApp();
     await find(user, 'ук 57');

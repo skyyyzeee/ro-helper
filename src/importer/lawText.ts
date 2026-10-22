@@ -85,9 +85,54 @@ function stripTrailingDash(text: string): string {
   return text.replace(/[\s,]*[-—–]$/, '').trim();
 }
 
+/** Longer than a title reads: the article's text written after its number with no title, «Статья 1.1. Задачами … являются …». */
+const TEXT_AS_HEADING = 60;
+
+/**
+ * An article with nothing but a long heading — no text, points or punishment — has its text where the title goes
+ * (КоАП, ТК and the federal laws of Арбатский, the УК of Кутузовский): the heading becomes its text, and the title is
+ * left to the start of it. A heading over articles of its own («Статья 2.1 …», then «Статья 2.1.1 …») stays a title.
+ */
+function headingsAsText(articles: Article[]): void {
+  articles.forEach((article, i) => {
+    if (article.title.length <= TEXT_AS_HEADING) return;
+    if (article.parts.some((part) => part.text || part.punishment || part.points.length)) return;
+    if (articles[i + 1]?.number.startsWith(`${article.number}.`)) return;
+    // The title lost its full stop; the text keeps one.
+    const text = /[.!?:;…]$/.test(article.title) ? article.title : `${article.title}.`;
+    if (article.parts[0]) article.parts[0].text = text;
+    else article.parts.push({ text, points: [] });
+    article.title = '';
+  });
+}
+
+/** A line of ornament only, «▰ ◆ ▰», «* * *». */
+const ORNAMENT = /^[^\p{L}\p{N}]+$/u;
+/** A chapter's name on its own line: capitalised, one phrase — no stop, colon or semicolon but one full stop at the end. */
+const CHAPTER_NAME = /^[\p{Lu}«"][^.;:]{0,98}[^.;:,]\.?$/u;
+
+/**
+ * «Глава 1» with its name on the next line (Арбатский, the army's charters of Кутузовский): the name went into
+ * the chapter's preface, ornaments and all, and the contents said only «Глава 1» (backlog 02). The first line of
+ * the preface that reads as a name becomes the chapter's title; the ornaments over it go.
+ * And a note with no text — «Примечание к п.3.13:» over lines read as the article's own — is left out (backlog 07).
+ */
+function tidied<T extends { chapters: Chapter[]; articles: Article[] }>(parsed: T): T {
+  for (const article of parsed.articles) article.notes = article.notes.filter((note) => note.text.trim());
+  for (const chapter of parsed.chapters) {
+    if (chapter.title) continue;
+    const at = chapter.preface.findIndex((line) => !ORNAMENT.test(line));
+    if (at < 0 || !CHAPTER_NAME.test(chapter.preface[at])) continue;
+    // «Общие положения.», «"Возбуждение … дела"»: as a title, without the full stop and the quotes.
+    chapter.title = chapter.preface[at].replace(/\.$/, '').replace(/^"(.*)"$/, '$1');
+    chapter.preface = chapter.preface.slice(at + 1);
+  }
+  return parsed;
+}
+
 export function parseLawText(text: string, documentId: string, format: LawFormat, options: PointsOptions & SectionsOptions = {}): ParsedLaw {
-  if (format === 'points') return parsePointsText(text, documentId, options);
-  if (format === 'sections') return parseSectionsText(text, documentId, options);
+  if (format === 'points') return tidied(parsePointsText(text, documentId, options));
+  if (format === 'sections') return tidied(parseSectionsText(text, documentId, options));
   const lines = cleanLines(text);
   const chapters: Chapter[] = [];
   const articles: Article[] = [];
@@ -323,6 +368,7 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
       c.preface.length ||
       (i > firstFilled && !chapters.slice(i + 1).some((later) => later.number === c.number)),
   );
+  headingsAsText(articles);
   uniqueIds(articles, documentId, issues);
-  return { chapters: kept, articles, header, footer, issues };
+  return tidied({ chapters: kept, articles, header, footer, issues });
 }
