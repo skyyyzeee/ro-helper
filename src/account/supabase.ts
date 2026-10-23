@@ -319,6 +319,17 @@ export function createSupabaseAccounts(platform: PlatformAdapter, options: Supab
       if (error) throw new Error(error.message);
     },
 
+    async sendArticleCounts(counts) {
+      const { error } = await client.rpc('count_articles', { counts });
+      if (error) throw new Error(error.message);
+    },
+
+    async popularArticles(server) {
+      const { data, error } = await client.rpc('popular_articles', { target: server });
+      if (error) throw new Error(error.message);
+      return ((data ?? []) as { article: string; count: number | string }[]).map((row) => ({ article: row.article, count: Number(row.count) }));
+    },
+
     current: async () => (await platform.readSetting<Account | null>(ACCOUNT_KEY)) ?? null,
 
     signIn: (provider) => (provider === 'telegram' ? signInWithTelegram() : signInWithDiscord()),
