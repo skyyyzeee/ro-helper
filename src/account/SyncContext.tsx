@@ -4,7 +4,7 @@ import type { PlatformAdapter } from '../platform/types';
 import { useAccount } from './AccountContext';
 import { createSync, type SyncRules, type SyncStatus } from './sync';
 import type { Accounts } from './types';
-import { sendUsage } from './usage';
+import { sendArticleCounts, sendUsage } from './usage';
 
 const SyncContext = createContext<SyncStatus>({ kind: 'off' });
 
@@ -33,7 +33,10 @@ export function SyncProvider({ accounts, rules, children }: { accounts: Accounts
   useEffect(() => base.onOverlayShown(() => void engine.sync()), [base, engine]);
   // The author's anonymous counts: at start and when the helper is opened, at most once an hour.
   useEffect(() => {
-    const send = () => void sendUsage(base, (counts) => accounts.sendUsage(counts)).catch(() => undefined);
+    const send = () => {
+      void sendUsage(base, (counts) => accounts.sendUsage(counts)).catch(() => undefined);
+      void sendArticleCounts(base, (counts) => accounts.sendArticleCounts(counts)).catch(() => undefined);
+    };
     send();
     return base.onOverlayShown(send);
   }, [base, accounts]);

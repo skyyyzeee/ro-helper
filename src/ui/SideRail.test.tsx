@@ -9,8 +9,8 @@ describe('the side column', () => {
     await renderApp();
     const buttons = within(rail()).getAllByRole('button');
     expect(buttons[0]).toHaveAccessibleName('Сменить сервер или организацию');
-    expect(buttons.slice(1).map((b) => b.getAttribute('aria-label'))).toEqual(['Поиск', 'Все документы', 'Калькулятор', 'Закреплённое', 'ИИ-разбор ситуации', 'Отдел: порядок действий по закону', 'Вики Russia Online', 'Настройки', 'Профиль']);
-    expect(within(rail()).getByRole('button', { name: 'Поиск' })).toHaveAttribute('aria-current', 'page');
+    expect(buttons.slice(1).map((b) => b.getAttribute('aria-label'))).toEqual(['Главная', 'Все документы', 'Калькулятор', 'ИИ-разбор ситуации', 'Отдел: порядок действий по закону', 'Вики Russia Online', 'Настройки', 'Профиль']);
+    expect(within(rail()).getByRole('button', { name: 'Главная' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('opens and closes the documents and the settings, and marks the one open', async () => {
@@ -43,7 +43,9 @@ describe('the side column', () => {
   it('shows the calculator only once it has charges; the memos are off for now (features.ts)', async () => {
     await renderApp();
     expect(within(rail()).getByRole('button', { name: 'Калькулятор' })).toBeDisabled();
-    for (const name of ['Закреплённое', 'Профиль']) expect(within(rail()).getByRole('button', { name })).toBeEnabled();
+    for (const name of ['Профиль']) expect(within(rail()).getByRole('button', { name })).toBeEnabled();
     expect(within(rail()).queryByRole('button', { name: 'Памятки' })).not.toBeInTheDocument();
+    // What is pinned is in the settings, not the column (skyze).
+    expect(within(rail()).queryByRole('button', { name: 'Закреплённое' })).not.toBeInTheDocument();
   });
 });

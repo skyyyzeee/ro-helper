@@ -97,6 +97,12 @@ export interface WikiJobBonus {
   text: string;
 }
 
+/** A job with its article's id and title: src/data/jobs.json, for the home screen without loading the wiki. */
+export interface WikiJobEntry extends WikiJob {
+  id: string;
+  title: string;
+}
+
 /** A job as its article tells of it. */
 export interface WikiJob {
   /** The character's level it opens at. */

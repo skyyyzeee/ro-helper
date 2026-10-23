@@ -5,11 +5,16 @@ import { notePinCard } from './pinCards';
 
 const noteCard = (platform: Awaited<ReturnType<typeof renderApp>>['platform']) => pinnedCards(platform).find((card) => card.kind === 'note');
 const settings = () => within(screen.getByRole('group', { name: 'Настройки' }));
+/** What is pinned is in the settings: the side column no longer has it (skyze). */
+async function openPinned(user: Awaited<ReturnType<typeof renderApp>>['user']) {
+  await user.click(screen.getByRole('button', { name: 'Настройки' }));
+  await user.click(settings().getByRole('button', { name: 'Закреплённые' }));
+}
 
 describe('the note over the game (issue #40)', () => {
   it('is written in «Закреплённое», kept on this computer, and pinned as a card that follows the text', async () => {
     const { platform, user } = await renderApp();
-    await user.click(screen.getByRole('button', { name: 'Закреплённое' }));
+    await openPinned(user);
     const field = settings().getByRole('textbox', { name: 'Заметка' });
     expect(settings().getByRole('button', { name: 'Закрепить поверх игры' })).toBeDisabled();
 
@@ -28,7 +33,7 @@ describe('the note over the game (issue #40)', () => {
 
   it('is there again at the next start', async () => {
     const { user } = await renderApp({ settings: { 'note.text': 'План: окружить банк' } });
-    await user.click(screen.getByRole('button', { name: 'Закреплённое' }));
+    await openPinned(user);
     expect(settings().getByRole('textbox', { name: 'Заметка' })).toHaveValue('План: окружить банк');
   });
 
@@ -43,7 +48,7 @@ describe('the note over the game (issue #40)', () => {
     expect(platform.settings.get('note.hotkey')).toBe('Ctrl+Shift+N');
     await vi.waitFor(() => expect(platform.state.shortcuts.note).toBe('Ctrl+Shift+N'));
 
-    await user.click(screen.getByRole('button', { name: 'Поиск' }));
+    await user.click(screen.getByRole('button', { name: 'Главная' }));
     act(() => platform.pressShortcut('note'));
     await vi.waitFor(() => expect(settings().getByRole('textbox', { name: 'Заметка' })).toHaveFocus());
     expect(platform.calls.map((call) => call.method)).toContain('showOverlay');

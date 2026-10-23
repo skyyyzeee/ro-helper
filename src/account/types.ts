@@ -52,6 +52,10 @@ export interface Accounts {
   readonly settings: SyncBackend;
   /** Adds anonymous counts to the author's (signed in or not). Throws when offline. */
   sendUsage(counts: UsageCount[]): Promise<void>;
+  /** Adds anonymous counts of the articles opened (signed in or not). Throws when offline or the base lacks it. */
+  sendArticleCounts(counts: ArticleCount[]): Promise<void>;
+  /** The articles opened most on a server over the last week, by everyone: for the home screen. */
+  popularArticles(server: string): Promise<PopularArticle[]>;
   /** Roles, leader requests and the admin's tools, for the signed-in player. */
   readonly roles: RolesApi;
   /**
@@ -59,6 +63,20 @@ export interface Accounts {
    * when about to run out; null when nobody is signed in.
    */
   aiToken(): Promise<string | null>;
+}
+
+/** How many times an article («uk-65#1») was opened on a server in a day. Nothing of the player. */
+export interface ArticleCount {
+  day: string;
+  server: string;
+  article: string;
+  count: number;
+}
+
+/** An article and how many times everyone opened it over the last week. */
+export interface PopularArticle {
+  article: string;
+  count: number;
 }
 
 /** A count for the author: a day, a server, what was done, how many times. Nothing of the player. */

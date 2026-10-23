@@ -168,7 +168,8 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel, earn }: { data: Wik
  * said on every page; the pictures come from its CDN.
  */
 /** `server`: the game's server the player is on, for the shifts and what the jobs pay there. */
-export function WikiView({ server = 'tverskoi' }: { server?: string }) {
+/** `openId`: a page to open at once — a job pressed among the home screen's boosts. */
+export function WikiView({ server = 'tverskoi', openId }: { server?: string; openId?: string }) {
   const { data, failed } = useWiki();
   const shifts = useShifts();
   const rates = useServerRates(server);
@@ -190,6 +191,12 @@ export function WikiView({ server = 'tverskoi' }: { server?: string }) {
     setEntry(e);
   };
   const picture = (src: string | undefined, className: string) => <Picture src={src} alt="" className={className} />;
+
+  // A page asked for from outside the wiki: opened once the wiki is read.
+  useEffect(() => {
+    const asked = openId && data?.entries.find((e) => e.id === openId);
+    if (asked) setEntry(asked);
+  }, [openId, data]);
 
   // Another catalog, tab or filter: from the top.
   useEffect(() => setShown(PAGE), [catalog, group, gender, tags, words, everywhere, sort]);

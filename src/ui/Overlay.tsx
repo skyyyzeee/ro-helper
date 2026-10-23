@@ -37,7 +37,9 @@ import { useDetentionReview } from './detention';
 import { useTrainer } from './trainer';
 import { useDocumentWriter } from './documents';
 import { CasesView } from './CasesView';
-import { BackIcon, BookIcon, CalculatorIcon, ChevronDownIcon, CloseIcon, DocumentsIcon, NewsIcon, MemoIcon, MicIcon, OrganizationIcon, PinIcon, ProfileIcon, SearchIcon, ServerIcon, SettingsIcon, SparkIcon } from './icons';
+import { BackIcon, BookIcon, CalculatorIcon, ChevronDownIcon, CloseIcon, DocumentsIcon, HomeIcon, NewsIcon, MemoIcon, MicIcon, OrganizationIcon, ProfileIcon, SearchIcon, ServerIcon, SettingsIcon, SparkIcon } from './icons';
+import { HomeBoosts } from './HomeBoosts';
+import { usePopular } from './popular';
 import { SideRail } from './SideRail';
 import { canRecord, startRecording, type Recording } from './voice';
 import { DEFAULT_OPACITY, DEFAULT_TIMER_HOTKEY, DEFAULT_VOICE_HOTKEY, NOTE_HOTKEY_KEY, NOTE_KEY, OPACITY_KEY, TIMER_HOTKEY_KEY, VOICE_HOTKEY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
@@ -165,6 +167,8 @@ export function Overlay({
   const [settingsOpen, setSettingsOpen] = useState(false);
   /** The faction's memos (ticket 17): a page of their own, from the side column. */
   const [memosOpen, setMemosOpen] = useState(false);
+  /** A page of the wiki to open with it: a job pressed among the home screen's boosts. */
+  const [wikiEntry, setWikiEntry] = useState<string>();
   /** «Отдел»: what the organisation does by the law, a topic of it open or the whole page. */
   const [department, setDepartment] = useState<{ topic: string | null } | null>(null);
   // The wiki of Russia Online: a page of its own, like the memos.
@@ -229,12 +233,14 @@ export function Overlay({
   /** The field is the AI's, not the search's: an article opened from the answer gives it back to the search. */
   const aiMode = aiOpen && !open;
 
-  // An empty search shows the favourites, then the recent articles without them; ↑↓ go through both.
+  // An empty search is the home screen: what players open most, the favourites, then the recent articles without
+  // them; ↑↓ go through all three.
   const saved = useSaved(platform, pack);
   const { lookup, favoriteKeys, recentKeys, favorites, recent, toggleFavorite, updateRecent } = saved;
+  const popular = usePopular(pack.server.id, lookup);
   const view: 'home' | 'contents' | 'results' = query.trim() ? 'results' : scope ? 'contents' : 'home';
   const home = view === 'home';
-  const listed = home ? [...favorites, ...recent] : view === 'contents' ? contents.flatMap((group) => group.hits) : hits;
+  const listed = home ? [...popular, ...favorites, ...recent] : view === 'contents' ? contents.flatMap((group) => group.hits) : hits;
   const current = Math.min(selected, listed.length - 1);
   const remember = (hit: SearchHit) => {
     saved.remember(hit);
@@ -944,6 +950,7 @@ export function Overlay({
     setMemosOpen(section === 'memos');
     setDepartment(section === 'department' ? { topic: null } : null);
     setWikiOpen(section === 'wiki');
+    setWikiEntry(undefined);
     // The profile is the account at the top of the settings; the pin, what is pinned in them.
     setSettingsFocus(section === 'profile' ? { section: 'account', at: Date.now() } : section === 'pinned' ? { section: 'pinned', at: Date.now() } : undefined);
     searchRef.current?.focus();
@@ -1207,9 +1214,10 @@ export function Overlay({
             <ServerIcon id={pack.server.id} size={24} />
           </button>
         }
-        current={settingsOpen ? 'settings' : memosOpen ? 'memos' : wikiOpen ? 'wiki' : department ? 'department' : menuOpen ? 'documents' : switchOpen ? undefined : aiOpen ? 'ai' : 'search'}
+        current={settingsOpen ? 'settings' : memosOpen ? 'memos' : wikiOpen ? 'wiki' : department ? 'department' : menuOpen ? 'documents' : switchOpen ? undefined : aiOpen ? 'ai' : 'home'}
         items={[
-          { id: 'search', label: 'Поиск', icon: <SearchIcon />, shortcut: 1, onSelect: () => openSection('search') },
+          // The home screen (skyze): the search on top, the boosts, what players open most, the favourites, the recent.
+          { id: 'home', label: 'Главная', icon: <HomeIcon />, shortcut: 1, onSelect: () => openSection('search') },
           {
             id: 'documents',
             label: 'Документы',
@@ -1228,7 +1236,6 @@ export function Overlay({
             hint: calculatorOpen ? undefined : 'Калькулятор появится, когда вы добавите статью кнопкой «+»',
             onSelect: () => document.querySelector<HTMLElement>('.calc button, .calc input')?.focus(),
           },
-          { id: 'pinned', label: 'Закреплённое', icon: <PinIcon />, shortcut: 4, onSelect: () => openSection('pinned') },
           {
             id: 'ai',
             label: 'ИИ',
@@ -1470,7 +1477,7 @@ export function Overlay({
             }
           />
         ) : wikiOpen ? (
-          <WikiView server={pack.server.id} />
+          <WikiView server={pack.server.id} openId={wikiEntry} />
         ) : memosOpen ? (
           <div className="settings settings--single">
             <MemosView signedIn={!!account} />
@@ -1762,11 +1769,25 @@ export function Overlay({
                 </span>
               </section>
             )}
+            <HomeBoosts
+              onOpen={(id) => {
+                openSection('wiki');
+                setWikiEntry(id);
+              }}
+            />
+            {popular.length > 0 && (
+              <>
+                <div className="sec-t home__title">Популярное у игроков</div>
+                <div className="list" role="list" aria-label="Популярное у игроков">
+                  {popular.map((hit, i) => rowFor(hit, i))}
+                </div>
+              </>
+            )}
             {favorites.length > 0 && (
               <>
                 <div className="sec-t home__title">Избранное</div>
                 <div className="list list--tiles" role="list" aria-label="Избранное">
-                  {favorites.map((hit, i) => rowFor(hit, i, false, true))}
+                  {favorites.map((hit, i) => rowFor(hit, popular.length + i, false, true))}
                 </div>
               </>
             )}
@@ -1788,7 +1809,7 @@ export function Overlay({
                   </button>
                 </div>
                 <div className="list" role="list" aria-label="Недавние">
-                  {recent.map((hit, i) => rowFor(hit, favorites.length + i))}
+                  {recent.map((hit, i) => rowFor(hit, popular.length + favorites.length + i))}
                 </div>
               </>
             )}

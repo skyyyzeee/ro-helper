@@ -1,5 +1,5 @@
 import type { PlatformAdapter } from '../platform/types';
-import type { UsageCount } from './types';
+import type { ArticleCount, UsageCount } from './types';
 
 /** Anonymous counts for the author, not yet sent: `<day>|<server>|<event>` → how many (Q17). */
 export const USAGE_PENDING_KEY = 'usage.pending';
@@ -45,4 +45,45 @@ export async function sendUsage(
   for (const [key, n] of Object.entries(after)) if (!(n > 0) || key.split('|')[0] < oldest) delete after[key];
   await platform.writeSetting(USAGE_PENDING_KEY, after);
   await platform.writeSetting(USAGE_SENT_KEY, now.toISOString());
+}
+
+/**
+ * Which articles were opened, a day and a server — for everyone's «Популярное у игроков»: `<day>|<server>|<article>` →
+ * how many. Nothing of the player. On the same switch as the counts above, sent through their own call, so one that
+ * fails (the base not ready for it yet) never holds the others back.
+ */
+export const ARTICLES_PENDING_KEY = 'usage.articles';
+const ARTICLES_SENT_KEY = 'usage.articles.sent';
+/** The base takes so many at a time: the most opened first, the rest an hour later. */
+const MOST_AT_ONCE = 200;
+
+/** Sends the article counts gathered here, at most once an hour, as `sendUsage` does the others. Throws when offline. */
+export async function sendArticleCounts(
+  platform: Pick<PlatformAdapter, 'readSetting' | 'writeSetting'>,
+  send: (counts: ArticleCount[]) => Promise<void>,
+  now = new Date(),
+): Promise<void> {
+  if ((await platform.readSetting<boolean>(USAGE_SHARE_KEY)) === false) {
+    if (await platform.readSetting(ARTICLES_PENDING_KEY)) await platform.writeSetting(ARTICLES_PENDING_KEY, {});
+    return;
+  }
+  const last = await platform.readSetting<string>(ARTICLES_SENT_KEY);
+  if (last && now.getTime() - Date.parse(last) < EVERY_MS) return;
+  const oldest = dayOf(new Date(now.getTime() - KEPT_DAYS * 24 * 3600 * 1000));
+  const pending = (await platform.readSetting<Record<string, number>>(ARTICLES_PENDING_KEY)) ?? {};
+  const counts = Object.entries(pending)
+    .map(([key, count]) => {
+      const [day, server, article] = key.split('|');
+      return { day, server, article, count };
+    })
+    .filter((count) => count.day >= oldest && count.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, MOST_AT_ONCE);
+  if (counts.length) await send(counts);
+
+  const after = (await platform.readSetting<Record<string, number>>(ARTICLES_PENDING_KEY)) ?? {};
+  for (const count of counts) after[`${count.day}|${count.server}|${count.article}`] -= count.count;
+  for (const [key, n] of Object.entries(after)) if (!(n > 0) || key.split('|')[0] < oldest) delete after[key];
+  await platform.writeSetting(ARTICLES_PENDING_KEY, after);
+  await platform.writeSetting(ARTICLES_SENT_KEY, now.toISOString());
 }

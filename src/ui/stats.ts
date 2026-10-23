@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { USAGE_PENDING_KEY, USAGE_SHARE_KEY } from '../account/usage';
+import { ARTICLES_PENDING_KEY, USAGE_PENDING_KEY, USAGE_SHARE_KEY } from '../account/usage';
 import type { PlatformAdapter } from '../platform/types';
 
 /** What the player did in the helper: seen in their profile only (Q8). */
@@ -64,7 +64,8 @@ const today = () => {
 
 /**
  * Counts what the player does: into this computer's stats, and — unless turned off — into the anonymous
- * counts of the day for the author (the event and the server, nothing of the player or of the articles).
+ * counts of the day (nothing of the player): the event and the server for the author, and which articles were opened
+ * for everyone's «Популярное у игроков».
  */
 export function useStats(platform: Settings, server: string): (event: StatEvent) => void {
   const queue = useRef<Promise<unknown>>(Promise.resolve());
@@ -97,6 +98,11 @@ export function useStats(platform: Settings, server: string): (event: StatEvent)
         const counter = `${today()}|${server}|${event.kind}`;
         pending[counter] = (pending[counter] ?? 0) + 1;
         await platform.writeSetting(USAGE_PENDING_KEY, pending);
+        if (event.kind !== 'open') return;
+        const opened = (await platform.readSetting<Record<string, number>>(ARTICLES_PENDING_KEY)) ?? {};
+        const article = [today(), server, event.article].join('|');
+        opened[article] = (opened[article] ?? 0) + 1;
+        await platform.writeSetting(ARTICLES_PENDING_KEY, opened);
       }).catch(() => undefined);
     },
     [platform, server],

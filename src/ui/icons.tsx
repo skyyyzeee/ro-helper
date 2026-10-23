@@ -16,6 +16,7 @@ type Size = { size?: number };
 const icon = (name: SymbolName, fallback: number) => ({ size = fallback }: Size) => <Symbol name={name} size={size} />;
 
 export const SearchIcon = icon('search', 20);
+export const HomeIcon = icon('home', 20);
 export const MenuIcon = icon('menu', 20);
 export const SettingsIcon = icon('settings', 19);
 export const BackIcon = icon('arrow_back', 18);

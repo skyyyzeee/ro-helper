@@ -23,7 +23,7 @@ const LAWFUL: { id: Lawful; label: string }[] = [
 const duration = (minutes: number) => timeLeft(minutes);
 
 /** The time in Moscow, as the game's clock, kept fresh while the page is open. */
-function useMoscowClock(): number {
+export function useMoscowClock(): number {
   const [now, setNow] = useState(() => moscowMinutes());
   useEffect(() => {
     const tick = setInterval(() => setNow(moscowMinutes()), 30_000);
