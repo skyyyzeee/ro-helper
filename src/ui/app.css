@@ -5713,8 +5713,10 @@ select option {
 /* «Работы для меня» on the wiki's home. */
 .wiki__jobs { display: grid; gap: 8px; padding: 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
 .wiki__jobs-level { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); }
-.wiki__jobs-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 4px; margin: 0; padding: 0; list-style: none; }
-.wiki__jobs-row { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 10px; border-radius: 10px; font-size: 13.5px; text-align: left; }
+.wiki__jobs-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 4px; margin: 0; padding: 0; list-style: none; }
+/* A long name and its labels stay in their own column: what does not fit goes under the name, never over the next job. */
+.wiki__jobs-list > li { min-width: 0; }
+.wiki__jobs-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; width: 100%; min-width: 0; padding: 7px 10px; border-radius: 10px; font-size: 13.5px; text-align: left; }
 .wiki__jobs-row:hover { background: var(--surface-hover); }
 .wiki__jobs-name { font-weight: 600; }
 .wiki__jobs-law { padding: 1px 7px; border-radius: 99px; font-size: 11px; background: var(--warn-bg); color: var(--warn-text); }
