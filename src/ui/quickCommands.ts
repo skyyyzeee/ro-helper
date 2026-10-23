@@ -1,5 +1,6 @@
 import type { Capability } from '../account/capabilities';
 import type { QuickRequest, QuickState, QuickTarget } from '../platform/types';
+import { MEMOS } from './features';
 
 /**
  * A command of the quick search (roadmap 2В): typed instead of an article, it does something in the assistant. Shown
@@ -42,7 +43,7 @@ export const QUICK_COMMANDS: QuickCommand[] = [
   command('favorites', 'Открыть избранное', ['избранное', 'закладки'], open('favorites')),
   command('pinned', 'Закреплённое над игрой', ['закрепленное', 'заметка', 'таймер'], open('pinned')),
   command('rules', 'Правила сервера', ['правила сервера', 'правила проекта'], open('rules')),
-  command('memos', 'Памятки фракции', ['памятки', 'памятка'], open('memos')),
+  ...(MEMOS ? [command('memos', 'Памятки фракции', ['памятки', 'памятка'], open('memos'))] : []),
   command('wiki', 'Вики игры', ['вики', 'обновления игры', 'новости игры'], open('wiki')),
   command('settings', 'Настройки', ['настройки', 'горячие клавиши'], open('settings')),
   command('ask', 'Спросить ИИ', ['спросить ии', 'ии', 'нейросеть'], { bar: 'ai' }, { needs: 'ai.analysis' }),

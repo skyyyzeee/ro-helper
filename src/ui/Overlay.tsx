@@ -83,6 +83,7 @@ import { WhatsNewView } from './WhatsNewView';
 import { CHANGELOG, SEEN_VERSION_KEY, compareVersions, notesSince, type VersionNotes } from './whatsNew';
 import { UpdateBanner } from './UpdateBanner';
 import { DISMISSED_KEY, TOASTED_KEY, useUpdates } from './updates';
+import { MEMOS } from './features';
 
 /** How many times the overlay was started: its key hints show everywhere for the first few. */
 const HINT_LAUNCHES_KEY = 'hints.launches';
@@ -1252,13 +1253,17 @@ export function Overlay({
             expanded: wikiOpen,
             onSelect: () => openSection(wikiOpen ? 'search' : 'wiki'),
           },
-          {
-            id: 'memos',
-            label: 'Памятки',
-            icon: <MemoIcon />,
-            expanded: memosOpen,
-            onSelect: () => openSection(memosOpen ? 'search' : 'memos'),
-          },
+          ...(MEMOS
+            ? [
+                {
+                  id: 'memos',
+                  label: 'Памятки',
+                  icon: <MemoIcon />,
+                  expanded: memosOpen,
+                  onSelect: () => openSection(memosOpen ? 'search' : 'memos'),
+                },
+              ]
+            : []),
           {
             id: 'settings',
             label: 'Настройки',

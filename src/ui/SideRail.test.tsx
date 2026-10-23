@@ -9,7 +9,7 @@ describe('the side column', () => {
     await renderApp();
     const buttons = within(rail()).getAllByRole('button');
     expect(buttons[0]).toHaveAccessibleName('Сменить сервер или организацию');
-    expect(buttons.slice(1).map((b) => b.getAttribute('aria-label'))).toEqual(['Поиск', 'Все документы', 'Калькулятор', 'Закреплённое', 'ИИ-разбор ситуации', 'Отдел: порядок действий по закону', 'Вики Russia Online', 'Памятки', 'Настройки', 'Профиль']);
+    expect(buttons.slice(1).map((b) => b.getAttribute('aria-label'))).toEqual(['Поиск', 'Все документы', 'Калькулятор', 'Закреплённое', 'ИИ-разбор ситуации', 'Отдел: порядок действий по закону', 'Вики Russia Online', 'Настройки', 'Профиль']);
     expect(within(rail()).getByRole('button', { name: 'Поиск' })).toHaveAttribute('aria-current', 'page');
   });
 
@@ -40,9 +40,10 @@ describe('the side column', () => {
     expect(screen.getByRole('region', { name: 'Сервер и организация' })).toBeInTheDocument();
   });
 
-  it('shows the calculator only once it has charges; the memos are there', async () => {
+  it('shows the calculator only once it has charges; the memos are off for now (features.ts)', async () => {
     await renderApp();
     expect(within(rail()).getByRole('button', { name: 'Калькулятор' })).toBeDisabled();
-    for (const name of ['Закреплённое', 'Памятки', 'Профиль']) expect(within(rail()).getByRole('button', { name })).toBeEnabled();
+    for (const name of ['Закреплённое', 'Профиль']) expect(within(rail()).getByRole('button', { name })).toBeEnabled();
+    expect(within(rail()).queryByRole('button', { name: 'Памятки' })).not.toBeInTheDocument();
   });
 });

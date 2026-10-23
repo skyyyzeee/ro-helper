@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAccount } from '../account/AccountContext';
 import type { PlayerRecord } from '../account/roles';
 import { factionName } from './AdminView';
+import { MEMOS } from './features';
 import { useMemos } from './memos';
 import { useRoles } from './roles';
 
@@ -42,12 +43,15 @@ export function FactionPanel({ server, organization, onMemos }: { server: string
     <div className="faction" role="group" aria-label="Лидер фракции">
       <h4 className="set__sub">Лидер фракции · {factionName(server, organization)}</h4>
       <div className="tiles">
-        <button className="tile" type="button" onClick={onMemos}>
-          <span className="t">Памятки фракции</span>
-          <span className="s">
-            {active.length} действующих{members ? ` · игроков во фракции: ${members.length}` : ''}
-          </span>
-        </button>
+        {/* Memos are off for now (features.ts); the deputies stay — they ask the AI as leaders do. */}
+        {MEMOS && (
+          <button className="tile" type="button" onClick={onMemos}>
+            <span className="t">Памятки фракции</span>
+            <span className="s">
+              {active.length} действующих{members ? ` · игроков во фракции: ${members.length}` : ''}
+            </span>
+          </button>
+        )}
         <button className="tile" type="button" aria-expanded={open} onClick={() => setOpen((now) => !now)}>
           <span className="t">Заместители</span>
           <span className="s">{deputies.length ? `${deputies.length} назначено` : 'не назначены'}</span>
