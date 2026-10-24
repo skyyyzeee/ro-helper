@@ -22,9 +22,12 @@ the bot, README and PRIVACY; «хелпер» in players' texts became «асс�
 ### Talking and writing
 - Talk to the people in **Russian**, plainly and briefly. Everything players see — the UI, «Что нового» in
   `CHANGELOG.md`, `PRIVACY.md` — is Russian, written for players, not developers.
-- Code, comments, commit messages and PR descriptions are **English**. Comments say what a thing is for in plain
-  sentences, like the code around them; commit subjects say what changed («2.2.4: the favourite tiles as in
-  mockup C»), the body why.
+- **What the two of us read is Russian** (the owner, 24.10.2026): commit messages, pull request titles and
+  descriptions, review comments, `docs/FOR_AIDEN.md`, tickets in `.scratch/`. The commit subject says what changed
+  («2.24.0: несколько заметок и Alt+E»), the body why; a PR says what changed, why, what was checked and what was
+  not, and its line for «Что нового». Commits and PRs made before stay as they are.
+- **Code and comments stay English**, as all of it is now: names, comments, test names. Comments say what a thing
+  is for in plain sentences, like the code around them.
 
 ### Branches — nothing lands on `main` untested
 - **`main`** is what players get: releases are tagged from it, and installed copies download the laws from
