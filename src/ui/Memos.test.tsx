@@ -4,6 +4,9 @@ import type { FakeAccounts } from '../account/fake';
 import type { Memo } from '../account/roles';
 import { renderApp } from '../test/renderApp';
 
+// Memos are off for now (features.ts); their tests turn them on, so they work when they come back.
+vi.mock('./features', () => ({ MEMOS: true }));
+
 const LEADER = { id: 'user-1', name: 'Skyze', via: 'discord' as const };
 const PLAYER = { id: 'user-2', name: 'Ivan', via: 'discord' as const };
 const MVD = { organization: 'mvd' };

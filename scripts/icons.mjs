@@ -12,7 +12,7 @@ const NAMES = [
   // The interface.
   'search', 'menu', 'settings', 'arrow_back', 'arrow_forward', 'add', 'check', 'close', 'chevron_left', 'chevron_right',
   'keyboard_arrow_down', 'warning', 'open_in_new', 'download', 'keyboard', 'drag_indicator', 'resize', 'view_carousel',
-  'unfold_less', 'keep', 'star', 'star-fill', 'description', 'calculate', 'sticky_note_2', 'account_circle', 'palette',
+  'unfold_less', 'keep', 'star', 'star-fill', 'description', 'calculate', 'sticky_note_2', 'account_circle', 'palette', 'home',
   // The AI.
   'wand_stars', 'mic', 'history', 'school',
   'tune', 'menu_book', 'info', 'admin_panel_settings', 'help', 'campaign',

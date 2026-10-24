@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { setAiTokenSource } from './aiToken';
-import { SignInError, type Account, type Accounts, type Provider } from './types';
+import { SignInError, type Account, type Accounts, type PopularArticle, type Provider } from './types';
 
 type Failure = Exclude<SignInError['reason'], 'cancelled'>;
 
@@ -18,6 +18,8 @@ export interface AccountControl {
   linkTelegram(): void;
   cancelSignIn(): void;
   signOut(): void;
+  /** The articles opened most on a server over the last week, by everyone (signed in or not). */
+  popularArticles(server: string): Promise<PopularArticle[]>;
 }
 
 const AccountContext = createContext<AccountControl | null>(null);
@@ -70,9 +72,10 @@ export function AccountProvider({ accounts, children }: { accounts: Accounts; ch
     void accounts.signOut().then(() => setStatus({ kind: 'signed-out' }));
   }, [accounts]);
 
+  const popularArticles = useCallback((server: string) => accounts.popularArticles(server), [accounts]);
   const control = useMemo(
-    () => ({ status, signIn, linkTelegram, cancelSignIn, signOut }),
-    [status, signIn, linkTelegram, cancelSignIn, signOut],
+    () => ({ status, signIn, linkTelegram, cancelSignIn, signOut, popularArticles }),
+    [status, signIn, linkTelegram, cancelSignIn, signOut, popularArticles],
   );
   return <AccountContext.Provider value={control}>{children}</AccountContext.Provider>;
 }

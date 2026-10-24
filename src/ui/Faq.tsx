@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { MEMOS } from './features';
 
 /** A question players ask, and the answer, short. */
 interface Question {
@@ -121,7 +122,7 @@ const QUESTIONS: Question[] = [
       </>
     ),
   },
-  {
+  ...(MEMOS ? [{
     q: 'Что такое памятки?',
     a: (
       <>
@@ -130,7 +131,7 @@ const QUESTIONS: Question[] = [
         фракцию. Лидер назначает заместителей в «Аккаунте» → «Заместители».
       </>
     ),
-  },
+  }] : []),
   {
     q: 'Какие данные уходят в интернет?',
     a: (

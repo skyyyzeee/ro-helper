@@ -1,6 +1,6 @@
 import type { LeaderRequest, Memo, PlayerRecord, PublicCard, Role, RolesApi } from './roles';
 import type { RemoteSetting } from './sync';
-import { SignInError, type Account, type Accounts, type UsageCount } from './types';
+import { SignInError, type Account, type Accounts, type UsageCount, type ArticleCount, type PopularArticle } from './types';
 
 export interface FakeAccounts extends Accounts {
   /** The sign-in or the joining under way ends: signed in as this player, or failed for this reason. */
@@ -11,6 +11,9 @@ export interface FakeAccounts extends Accounts {
   readonly table: Map<string, RemoteSetting>;
   /** The anonymous counts sent, call by call. */
   readonly usage: UsageCount[][];
+  readonly articleCounts: ArticleCount[][];
+  /** What «popular» answers, by server: set by a test. */
+  readonly popular: Map<string, PopularArticle[]>;
   /** The server's roles, as its tables hold them: the players' cards, their roles, the leader requests. */
   readonly server: {
     admins: Set<string>;
@@ -28,6 +31,8 @@ export function createFakeAccounts(signedIn: Account | null = null): FakeAccount
   const calls: string[] = [];
   const table = new Map<string, RemoteSetting>();
   const usage: UsageCount[][] = [];
+  const articleCounts: ArticleCount[][] = [];
+  const popular = new Map<string, PopularArticle[]>();
   const server: FakeAccounts['server'] = { admins: new Set(), cards: new Map(), roles: new Map(), requests: [], memos: [] };
   const me = () => {
     if (!account) throw new Error('signed out');
@@ -129,11 +134,17 @@ export function createFakeAccounts(signedIn: Account | null = null): FakeAccount
     calls,
     table,
     usage,
+    articleCounts,
+    popular,
     server,
     roles,
     sendUsage: async (counts) => {
       usage.push(counts);
     },
+    sendArticleCounts: async (counts) => {
+      articleCounts.push(counts);
+    },
+    popularArticles: async (server) => popular.get(server) ?? [],
     settings: {
       pull: async (since) => [...table.values()].filter((row) => !since || row.updated_at > since),
       push: async (rows) => {
