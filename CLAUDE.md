@@ -30,7 +30,9 @@ the bot, README and PRIVACY; «хелпер» in players' texts became «асс�
 - **`main`** is what players get: releases are tagged from it, and installed copies download the laws from
   `src/data/*.json` on `main` — whatever is merged there reaches players. Only the owner merges into `main`.
 - **`dev`** is where work comes together and is tried: everyone else's changes go into `dev` by a pull request
-  (the owner's own, and their agent's, may go straight in); when
+  (the owner's own, and their agent's, go straight in, with no pull request but a note for AidenArokij in
+  `docs/FOR_AIDEN.md` — what was done and what it means for him, in Russian, newest on top; read it when you
+  start); when
   `dev` has been tried, a pull request `dev` → `main` and a release follow.
 - **Work branches** start from `dev` (`design-…`, `ai-…`, `ticket-15-…`) and end as a pull request into `dev`.
   Keep them to one thing; CI (types, tests, the native tests) runs on every pull request and must be green.
