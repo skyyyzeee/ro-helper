@@ -183,7 +183,7 @@ function HotkeyField({
 
 /** The theme, and the accent: the organisation's, or one of a few hues. */
 function AppearancePicker({ appearance, organization }: { appearance: AppearanceControl; organization: string }) {
-  const { theme, accent, setTheme, setAccent, scale, setScale } = appearance;
+  const { theme, accent, setTheme, setAccent, scale, setScale, blur, setBlur } = appearance;
   return (
     <>
       <div className="themes" role="radiogroup" aria-label="Тема">
@@ -238,6 +238,11 @@ function AppearancePicker({ appearance, organization }: { appearance: Appearance
           ))}
         </div>
       </div>
+      <label className="set__row settings__check">
+        <input type="checkbox" checked={blur} onChange={(e) => setBlur(e.target.checked)} />
+        <span>Размытие фона</span>
+      </label>
+      <p className="set__hint">Выключите, если игра проседает по FPS с открытым ассистентом: окно и карточки станут плотнее, а видеокарте — легче.</p>
     </>
   );
 }
