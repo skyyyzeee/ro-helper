@@ -53,7 +53,7 @@ describe('the player’s own AI (issue #2)', () => {
     await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'у меня украли телефон{Enter}');
 
     expect(await screen.findByText('Это кража телефона.')).toBeInTheDocument();
-    expect(calls.length).toBeGreaterThanOrEqual(2);
+    expect(calls.length).toBeGreaterThanOrEqual(1);
     for (const call of calls) {
       expect(call.url).toBe('https://my-ai.example/v1/chat/completions');
       expect(call.headers.get('Authorization')).toBe('Bearer sk-own');

@@ -183,6 +183,8 @@ export interface AiMessage {
   side?: Perspective;
   /** The side being asked for now, or why it could not be. */
   sideState?: { side: Perspective; pending?: boolean; error?: string };
+  /** How long the answer took, in seconds: shown under it, as the player waited it. */
+  seconds?: number;
 }
 
 export interface SendOptions {
@@ -347,8 +349,9 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
       changed.current = true;
       setMessages((list) => [...list, asked, { id: answerId, role: 'ai', text: '', pending: true }]);
       setBusy(true);
+      const started = Date.now();
       const finish = (patch: Partial<AiMessage>): AiMessage => {
-        const done: AiMessage = { id: answerId, role: 'ai', text: '', ...patch, pending: false };
+        const done: AiMessage = { id: answerId, role: 'ai', text: '', ...patch, pending: false, seconds: (Date.now() - started) / 1000 };
         setMessages((list) => list.map((m) => (m.id === answerId ? done : m)));
         return done;
       };
