@@ -14,6 +14,7 @@
 
 - Настройки: сервер, организация, горячая клавиша, прозрачность, положение окон.
 - Избранное и недавние статьи.
+- Ваши заметки («Настройки» → «Закреплённые»): заголовки и тексты. Они хранятся только на этом компьютере, не переносятся в аккаунт и никуда не отправляются; поверх игры их показывает только сама программа.
 - Заготовки для чата, если вы меняли набор своего отдела: названия и тексты фраз. Когда вы нажимаете заготовку или её клавишу, программа кладёт фразу в буфер обмена этого компьютера — в игру она ничего не печатает и никуда фразу не отправляет.
 - Последняя просмотренная версия законов (для экрана «Что изменилось»), последняя запущенная версия программы (для «Что нового») и версия обновления, отложенная кнопкой «Позже».
 - Законы и вики, скачанные с GitHub, — в папке `laws` рядом с настройками.
@@ -104,6 +105,7 @@
 
 Until you sign in, Kremlin Assistant does not collect or send any data about you and shows no ads. It sends the author only anonymous daily counts — articles opened (and which), searches and punishment calculations per game server, nothing about you — which can be turned off. Signing in with Discord or Telegram is optional.
 
+- **Notes:** your notes' headings and texts are stored locally only — not synced to the account, sent nowhere.
 - **Chat phrases:** the phrases you edit are stored locally only; pressing one puts it into this computer's clipboard — nothing is typed into the game or sent anywhere.
 - **Stored locally only:** settings (server, organisation, hotkey, transparency, window positions), favourite and recent articles, the last seen version of the laws and a postponed update version — in `%APPDATA%\com.skyze.rohelper\settings.json`; WebView2 files in `%LOCALAPPDATA%\com.skyze.rohelper`. The uninstaller removes both when "Delete the application data" is checked.
 - **Network:** the only automatic connection is the update check — at start and every 6 hours the app fetches `https://github.com/skyyyzeee/ro-helper/releases/latest/download/latest.json`, and downloads the new installer from the same place when you click "Update". No personal data is sent; GitHub sees your IP address and standard request headers ([GitHub Privacy Statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement)). Automatic checks can be turned off in the settings. Links (forum, release notes, GitHub, Discord) open in your browser only when you click them. With the laws, the app fetches the author's announcements file from the same place (`…/src/data/announcements.json`); it holds nothing about you and only shows a notice on the home screen. When you open «Вики» (at most every 6 hours) it fetches `…/src/data/wiki-manifest.json` likewise and, when the wiki there is newer than the built-in one, downloads it (`…/src/data/wiki.json`, a few megabytes) into the same folder.

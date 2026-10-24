@@ -16,6 +16,7 @@ import { AdminIcon, BookIcon, CloseIcon, DiscordIcon, GitHubIcon, HelpIcon, Info
 import { REPORTS_HINT, REPORTS_LABEL, useReportsChoice } from './reports';
 import { formatDate } from './lawBits';
 import { DEFAULT_NOTE_HOTKEY, DEFAULT_QUICK_HOTKEY, DEFAULT_TIMER_HOTKEY, DEFAULT_VOICE_HOTKEY, MAX_OPACITY, MIN_OPACITY, NOTE_MAX, STREAMER_KEY } from './overlaySettings';
+import { NOTES_MAX, NOTE_TITLE, newNote, type Note } from './notes';
 import { captureHotkey, hasModifier, hotkeyKeys } from './profile';
 import type { Laws, LawsStatus } from './laws';
 import type { Updates } from './updates';
@@ -451,34 +452,61 @@ function cardsLabel(n: number): string {
 }
 
 /**
- * The note: written here, kept on this computer only, pinned over the game as a card of its lines. The note's key
- * brings the cursor here.
+ * The notes: written here, each under a heading of its own («Заметка» unless the player calls it otherwise), kept on
+ * this computer only; pinned over the game as one block, a page a note. The key, with none written yet, brings the
+ * cursor to the first.
  */
-function NoteField({ note }: { note: NonNullable<SettingsViewProps['note']> }) {
-  const field = useRef<HTMLTextAreaElement>(null);
+function NotesField({ note }: { note: NonNullable<SettingsViewProps['note']> }) {
+  const first = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
-    if (note.focusAt) field.current?.focus();
+    if (note.focusAt) first.current?.focus();
   }, [note.focusAt]);
+  const change = (id: string, patch: Partial<Note>) => note.onNotes(note.notes.map((n) => (n.id === id ? { ...n, ...patch } : n)));
+  // The last one deleted, an empty one is there to write in.
+  const remove = (id: string) => note.onNotes(note.notes.length > 1 ? note.notes.filter((n) => n.id !== id) : [newNote()]);
+  const written = note.notes.some((n) => n.text.trim());
   return (
-    <>
-      <h4 className="set__sub">Заметка</h4>
-      <textarea
-        ref={field}
-        className="note__field"
-        aria-label="Заметка"
-        placeholder="Приметы, номера, план: «чёрный Skyline, А777АА, двое в масках»"
-        value={note.text}
-        maxLength={NOTE_MAX}
-        rows={4}
-        onChange={(e) => note.onText(e.target.value)}
-      />
+    <section aria-label="Заметки">
+      <h4 className="set__sub">Заметки</h4>
+      {note.notes.map((n, i) => (
+        <div key={n.id} className="notes__item">
+          <div className="set__row notes__head">
+            <input
+              className="notes__title"
+              aria-label={`Заголовок заметки ${i + 1}`}
+              placeholder={NOTE_TITLE}
+              value={n.title}
+              maxLength={60}
+              onChange={(e) => change(n.id, { title: e.target.value })}
+            />
+            <button className="x" type="button" aria-label={`Удалить заметку ${i + 1}`} title="Удалить заметку" onClick={() => remove(n.id)}>
+              <CloseIcon size={14} />
+            </button>
+          </div>
+          <textarea
+            ref={i === 0 ? first : undefined}
+            className="note__field"
+            aria-label={`Текст заметки ${i + 1}`}
+            placeholder="Приметы, номера, план, права при задержании: «чёрный Skyline, А777АА, двое в масках»"
+            value={n.text}
+            maxLength={NOTE_MAX}
+            rows={4}
+            onChange={(e) => change(n.id, { text: e.target.value })}
+          />
+        </div>
+      ))}
       <div className="set__row">
-        <button className="settings__button" type="button" disabled={!note.pinned && !note.text.trim()} onClick={() => note.onPin(!note.pinned)}>
-          {note.pinned ? 'Открепить заметку' : 'Закрепить поверх игры'}
+        <button className="settings__button" type="button" disabled={note.notes.length >= NOTES_MAX} onClick={() => note.onNotes([...note.notes, newNote()])}>
+          Добавить заметку
         </button>
-        <span className="set__label">Хранится только на этом компьютере</span>
+        <button className="settings__button" type="button" disabled={!note.pinned && !written} onClick={() => note.onPin(!note.pinned)}>
+          {note.pinned ? 'Открепить заметки' : 'Закрепить поверх игры'}
+        </button>
       </div>
-    </>
+      <p className="set__hint">
+        {note.hotkey ? `${note.hotkey} показывает и прячет их поверх игры, не открывая ассистента. ` : ''}Хранятся только на этом компьютере.
+      </p>
+    </section>
   );
 }
 
@@ -691,10 +719,11 @@ export interface SettingsViewProps {
   timerHotkey?: string;
   onTimerHotkey?: (accelerator: string) => void;
   /**
-   * The note pinned over the game (issue #40): its text, whether it is pinned, and its key — empty when off.
-   * `focusAt`: the key was pressed then — the field takes the cursor. Absent in a bare overlay of the tests.
+   * The notes pinned over the game (issue #40, `notes.ts`): the list, whether they are on show, and their key —
+   * empty when off. `focusAt`: the key was pressed with none written — the first takes the cursor. Absent in a bare
+   * overlay of the tests.
    */
-  note?: { text: string; pinned: boolean; onText: (text: string) => void; onPin: (on: boolean) => void; hotkey: string; onHotkey: (accelerator: string) => void; focusAt?: number };
+  note?: { notes: Note[]; pinned: boolean; onNotes: (notes: Note[]) => void; onPin: (on: boolean) => void; hotkey: string; onHotkey: (accelerator: string) => void; focusAt?: number };
   opacity: number;
   onOpacity: (value: number) => void;
   /** The theme and the accent; without it (a bare overlay in tests) the choice is not shown. */
@@ -923,7 +952,7 @@ export function SettingsView({
           )}
         </Row>
         <p className="set__hint">Карточки перетаскиваются за шапку; брошенная на другую встаёт к ней с той стороны, куда её бросили.</p>
-        {note && <NoteField note={note} />}
+        {note && <NotesField note={note} />}
 
         <h4 className="set__sub">Наборы</h4>
         {presets.length > 0 ? (
@@ -1007,18 +1036,18 @@ export function SettingsView({
       </Block>
 
       {note && (
-        <Block title="Заметка">
+        <Block title="Заметки поверх игры">
           <Switch
-            label="Клавиша заметки"
-            hint="Открывает ассистента на заметке: приметы, номера, план. Закреплённая заметка видна поверх игры."
+            label="Клавиша заметок"
+            hint="Нажали — ваши заметки появились поверх игры, ещё раз — спрятались. Ассистент не открывается. Писать их — в «Закреплённых»."
             on={!!note.hotkey}
             onChange={(on) => note.onHotkey(on ? DEFAULT_NOTE_HOTKEY : '')}
           />
-          {note.hotkey && <HotkeyField name="note" label="Открыть заметку" hotkey={note.hotkey} onHotkey={note.onHotkey} onCapturing={onCapturing} />}
+          {note.hotkey && <HotkeyField name="note" label="Показать и спрятать заметки" hotkey={note.hotkey} onHotkey={note.onHotkey} onCapturing={onCapturing} />}
           {note.hotkey && [hotkey, voiceHotkey, quickHotkey, timerHotkey].includes(note.hotkey) && (
             <div className="warn" role="alert">
               <WarnIcon />
-              <span>Эта клавиша уже занята — выберите другую, иначе заметка по ней не откроется.</span>
+              <span>Эта клавиша уже занята — выберите другую, иначе заметки по ней не появятся.</span>
             </div>
           )}
         </Block>

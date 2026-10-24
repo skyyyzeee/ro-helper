@@ -5,7 +5,6 @@ export const CALCULATOR_ID = 'calculator';
 /** The ids of the phrases' card and of the detention timer's: one of each. */
 export const PHRASES_ID = 'phrases';
 export const TIMER_ID = 'timer';
-export const NOTE_ID = 'note';
 
 /** The screen the blocks live on, in CSS pixels (the stand-in scene in the preview). */
 export interface Surface {
@@ -117,6 +116,13 @@ export function pinCard(groups: PinGroup[], card: PinCard, surface: Surface, pla
   const at = place ? clampTo(place.x, place.y, surface, { width: place.width ?? CARD_WIDTH, height: place.height ?? CARD_HEIGHT }) : nextPlace(groups, surface);
   const size = place ? { ...(place.width ? { width: place.width } : {}), ...(place.height ? { height: place.height } : {}) } : {};
   return [...groups, { id: freeId(groups, card.id), ...at, ...size, cards: [card] }];
+}
+
+/** Pins several cards as one block of their own, a page a card when there are more than one — the notes. */
+export function pinBlock(groups: PinGroup[], id: string, cards: PinCard[], surface: Surface, place?: Place): PinGroup[] {
+  const at = place ? clampTo(place.x, place.y, surface, { width: place.width ?? CARD_WIDTH, height: place.height ?? CARD_HEIGHT }) : nextPlace(groups, surface);
+  const size = place ? { ...(place.width ? { width: place.width } : {}), ...(place.height ? { height: place.height } : {}) } : {};
+  return [...groups, { id: freeId(groups, id), ...at, ...size, ...(cards.length > 1 ? { paged: true } : {}), cards }];
 }
 
 /** Unpins one card; a block left without cards goes with it. */
