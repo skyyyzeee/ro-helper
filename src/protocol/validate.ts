@@ -126,11 +126,10 @@ function checkNorm(pack: ServerPack, sources: Map<string, Source>, norm: AnswerN
   return { norm, hit: { article, document, ...(part ? { part } : {}) }, type: source.type, issues };
 }
 
-const LAW_SIDE = new Set<SourceType>(['law', 'charter']);
-
 /**
- * One statement about the norms: it names sources, every one was given, of a type the scope allows, not a law and
- * a rule of the server at once, and every figure in it stands in the sources it names.
+ * One statement about the norms: it names sources, every one was given, of a type the scope allows, and every figure
+ * in it stands in the sources it names. A law and a rule of the server may stand in one statement — «DM: деморган
+ * или бан; персонажу — 50 месяцев» — each checked as its own source; the answer shows each under its own side.
  */
 function checkClaim(claim: Claim, what: string, sources: Map<string, Source>, scope: Scope | undefined, fallback: string[]): string[] {
   const named = claim.sources.length ? claim.sources : fallback;
@@ -143,9 +142,6 @@ function checkClaim(claim: Claim, what: string, sources: Map<string, Source>, sc
   });
   for (const source of given) {
     if (scope && !inScope(source.type, scope)) issues.push(`${what}: опирается на ${SOURCE_TYPE_LABELS[source.type].toLowerCase()}, а вопрос — о другом`);
-  }
-  if (given.some((s) => LAW_SIDE.has(s.type)) && given.some((s) => s.type === 'server_rule')) {
-    issues.push(`${what}: закон и правило сервера смешаны в одном утверждении`);
   }
   const known = new Set(given.flatMap(figuresOf));
   const invented = [...new Set(figures(claim.text).filter((n) => n >= 2 && !known.has(n)))];

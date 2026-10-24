@@ -83,8 +83,10 @@ describe('hard gates: what the model makes up never comes out confirmed', () => 
     expect(caught(good({ violation: { text: 'кража', sources: ['S7'] } }))).toMatch(/источник S7, которого ИИ не передавали/);
   });
 
-  it('a law and a rule of the server in one statement', () => {
-    expect(caught(good({ violation: { text: 'кража и нарушение правил', sources: ['S1', ruleId] } }), 'mixed')).toMatch(/закон и правило сервера смешаны/);
+  it('lets a law and a rule of the server stand in one statement of an answer on both, each checked as its own', () => {
+    const validation = validateAnswer(pack, sources, good({ violation: { text: 'кража и нарушение правил', sources: ['S1', ruleId] } }), 'mixed');
+    expect(validation.issues).toEqual([]);
+    expect(validation.needsReview).toBe(false);
   });
 
   it('a norm of the wrong kind for the question — a rule in an answer about the laws, a law in one about the rules', () => {
