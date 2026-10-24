@@ -9,6 +9,8 @@ import type { PlatformAdapter } from '../platform/types';
 export const THEME_KEY = 'appearance.theme';
 export const ACCENT_KEY = 'appearance.accent';
 export const SCALE_KEY = 'appearance.scale';
+/** The blur behind the glass, on unless turned off: the heaviest thing the app draws over a game. */
+export const BLUR_KEY = 'appearance.blur';
 
 /** How big the overlay's text and controls are, for 2K and 4K screens; the cards over the game keep theirs. */
 export const SCALES = [0.9, 1, 1.15, 1.3];
@@ -65,11 +67,16 @@ export const isTheme = (value: unknown): value is Theme => THEMES.some((t) => t.
 export const isAccent = (value: unknown): value is Accent =>
   value === 'organization' || (typeof value === 'number' && Number.isFinite(value));
 
-/** Puts the theme and the accent on the page: `data-theme` on the root, and the `--accent-hue` token. */
-export function applyAppearance(theme: Theme, hue: number, root: HTMLElement = document.documentElement): void {
+/**
+ * Puts the theme and the accent on the page: `data-theme` on the root, and the `--accent-hue` token — and
+ * `data-blur="off"` when the blur behind the glass is turned off (tokens.css).
+ */
+export function applyAppearance(theme: Theme, hue: number, blur = true, root: HTMLElement = document.documentElement): void {
   if (theme === 'glass') delete root.dataset.theme;
   else root.dataset.theme = theme;
   root.style.setProperty('--accent-hue', String(hue));
+  if (blur) delete root.dataset.blur;
+  else root.dataset.blur = 'off';
 }
 
 /** The look as the settings show and change it. */
@@ -80,6 +87,8 @@ export interface AppearanceControl {
   setAccent: (accent: Accent) => void;
   scale: number;
   setScale: (scale: number) => void;
+  blur: boolean;
+  setBlur: (on: boolean) => void;
 }
 
 /**
@@ -90,23 +99,28 @@ export function useAppearance(platform: Pick<PlatformAdapter, 'readSetting' | 'w
   const [theme, setThemeState] = useState<Theme>('glass');
   const [accent, setAccentState] = useState<Accent>('organization');
   const [scale, setScaleState] = useState(1);
+  const [blur, setBlurState] = useState(true);
 
   useEffect(() => {
-    void Promise.all([platform.readSetting<unknown>(THEME_KEY), platform.readSetting<unknown>(ACCENT_KEY), platform.readSetting<unknown>(SCALE_KEY)]).then(
-      ([savedTheme, savedAccent, savedScale]) => {
-        if (isTheme(savedTheme)) setThemeState(savedTheme);
-        if (isAccent(savedAccent)) setAccentState(savedAccent);
-        if (isScale(savedScale)) setScaleState(savedScale);
-      },
-    );
+    void Promise.all([
+      platform.readSetting<unknown>(THEME_KEY),
+      platform.readSetting<unknown>(ACCENT_KEY),
+      platform.readSetting<unknown>(SCALE_KEY),
+      platform.readSetting<unknown>(BLUR_KEY),
+    ]).then(([savedTheme, savedAccent, savedScale, savedBlur]) => {
+      if (isTheme(savedTheme)) setThemeState(savedTheme);
+      if (isAccent(savedAccent)) setAccentState(savedAccent);
+      if (isScale(savedScale)) setScaleState(savedScale);
+      if (savedBlur === false) setBlurState(false);
+    });
   }, [platform]);
 
   // The page, and the pinned cards in their own window.
   useEffect(() => {
     const hue = accentHue(accent, organization);
-    applyAppearance(theme, hue);
-    void platform.setPinLook({ theme, hue });
-  }, [platform, theme, accent, organization]);
+    applyAppearance(theme, hue, blur);
+    void platform.setPinLook({ theme, hue, blur });
+  }, [platform, theme, accent, organization, blur]);
   useEffect(() => applyScale(scale), [scale]);
 
   const setTheme = useCallback(
@@ -130,5 +144,12 @@ export function useAppearance(platform: Pick<PlatformAdapter, 'readSetting' | 'w
     },
     [platform],
   );
-  return { theme, accent, setTheme, setAccent, scale, setScale };
+  const setBlur = useCallback(
+    (on: boolean) => {
+      setBlurState(on);
+      void platform.writeSetting(BLUR_KEY, on);
+    },
+    [platform],
+  );
+  return { theme, accent, setTheme, setAccent, scale, setScale, blur, setBlur };
 }

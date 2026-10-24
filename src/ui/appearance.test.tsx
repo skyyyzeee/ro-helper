@@ -1,13 +1,14 @@
 import { cleanup, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../test/renderApp';
-import { ACCENT_KEY, SCALE_KEY, THEME_KEY, accentHue, organizationHue } from './appearance';
+import { ACCENT_KEY, BLUR_KEY, SCALE_KEY, THEME_KEY, accentHue, organizationHue } from './appearance';
 
 const root = () => document.documentElement;
 const hue = () => root().style.getPropertyValue('--accent-hue');
 
 afterEach(() => {
   delete root().dataset.theme;
+  delete root().dataset.blur;
   root().style.removeProperty('--accent-hue');
   root().style.removeProperty('zoom');
 });
@@ -54,7 +55,7 @@ describe('the look: a theme and an accent', () => {
     await user.click(within(accents).getByRole('radio', { name: 'Оттенок 150' }));
     expect(hue()).toBe('150');
     expect(platform.settings.get(ACCENT_KEY)).toBe(150);
-    expect(platform.calls.filter((c) => c.method === 'setPinLook').at(-1)?.args[0]).toEqual({ theme: 'glass', hue: 150 });
+    expect(platform.calls.filter((c) => c.method === 'setPinLook').at(-1)?.args[0]).toEqual({ theme: 'glass', hue: 150, blur: true });
   });
 
   it('works out the hue: the organisation’s unless one was chosen; an unknown organisation gets the default blue', () => {
@@ -76,5 +77,25 @@ describe('the size of the text (an idea borrowed from LEX)', () => {
     expect(platform.settings.get(SCALE_KEY)).toBe(1.3);
     await user.click(within(sizes).getByRole('radio', { name: '100%' }));
     expect(root().style.getPropertyValue('zoom')).toBe('');
+  });
+});
+
+describe('the blur behind the glass, for the FPS', () => {
+  it('turns off at once, everywhere — the pinned cards and the quick bar too — and stays off', async () => {
+    const { platform, user } = await renderApp();
+    await openLook(user);
+    const blur = screen.getByRole('checkbox', { name: 'Размытие фона' });
+    expect(blur).toBeChecked();
+    expect(root().dataset.blur).toBeUndefined();
+    await user.click(blur);
+    expect(root().dataset.blur).toBe('off');
+    expect(platform.settings.get(BLUR_KEY)).toBe(false);
+    expect(platform.calls.filter((c) => c.method === 'setPinLook').at(-1)?.args[0]).toMatchObject({ blur: false });
+
+    const settings = Object.fromEntries(platform.settings);
+    cleanup();
+    delete root().dataset.blur;
+    await renderApp({ settings });
+    await vi.waitFor(() => expect(root().dataset.blur).toBe('off'));
   });
 });

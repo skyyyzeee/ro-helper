@@ -55,9 +55,12 @@ export async function reportBody(report: Report) {
 
 const sent = new Set<string>();
 
+/** The dev server (`npm run dev`, vite's port): its errors are the developer's own, not a player's. */
+const fromDevServer = () => typeof location !== 'undefined' && location.port === '1420';
+
 /** Sends a report unless the player turned them off, or it was sent this start, or enough were. */
 export async function sendReport(platform: PlatformAdapter, report: Report): Promise<void> {
-  if (sent.has(report.message) || sent.size >= MOST_A_START) return;
+  if (fromDevServer() || sent.has(report.message) || sent.size >= MOST_A_START) return;
   if ((await platform.readSetting<boolean>(REPORTS_KEY)) === false) return;
   sent.add(report.message);
   try {

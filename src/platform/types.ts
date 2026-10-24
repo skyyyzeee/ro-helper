@@ -133,6 +133,8 @@ export interface QuickBridge {
 export interface PinLook {
   theme: string;
   hue: number;
+  /** The blur behind the glass; on when not said (a look kept by an older version). */
+  blur?: boolean;
 }
 
 export interface PlatformAdapter {
