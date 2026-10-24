@@ -1,0 +1,59 @@
+# Every morning the wiki (wiki.russia.online) is downloaded again, and when it has anything new — a game build, a car,
+# a craft — a pull request into dev is opened with it, for a person to merge. The players get it from main without a
+# release. A pull request still open from the day before is closed for the new one, which has all of it.
+#
+# Needs «Allow GitHub Actions to create and approve pull requests» on in Settings → Actions → General.
+# A pull request opened by this workflow does not start CI by itself, so the types and tests run here first.
+name: Wiki refresh
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # 06:00 by Moscow
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency: wiki-refresh
+
+jobs:
+  refresh:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run wiki:import
+      - id: changes
+        run: node scripts/wiki-changes.mjs "$RUNNER_TEMP/wiki-summary.md"
+      - if: steps.changes.outputs.changed == 'true'
+        run: npm run wiki:build
+      - if: steps.changes.outputs.changed == 'true'
+        run: npm run typecheck && npm test
+      - if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          day=$(date -u +%Y-%m-%d)
+          branch="wiki-auto-$(date -u +%Y-%m-%d-%H%M)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add data/wiki src/data/wiki.json src/data/wiki-manifest.json
+          git commit -m "Wiki data: the catalogs as of $day"
+          git push origin "$branch"
+          gh pr list --base dev --state open --json number,headRefName \
+            --jq '.[] | select(.headRefName | startswith("wiki-auto-")) | select(.headRefName != "'"$branch"'") | .number' |
+            while read -r old; do
+              gh pr close "$old" --delete-branch --comment "Заменён более свежим обновлением вики от $day."
+            done
+          gh pr create --base dev --head "$branch" --title "Wiki data: the catalogs as of $day" --body-file "$RUNNER_TEMP/wiki-summary.md"

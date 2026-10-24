@@ -119,22 +119,68 @@ pub(crate) fn no_system_frame(window: &WebviewWindow) {
   }
 }
 
-/// The pin window, made the first time something is to go on it — a card, a notice: until then the app runs one
-/// window less, with nothing of its own over the game (players told of FPS drops, poll of October 2026).
-fn pin_window(app: &AppHandle) -> Result<WebviewWindow, String> {
-  if let Some(window) = app.get_webview_window(PIN_LABEL) {
-    return Ok(window);
-  }
-  create_pin_window(app).map_err(|e| e.to_string())?;
-  let window = app.get_webview_window(PIN_LABEL).ok_or_else(|| "no pin window".to_string())?;
-  #[cfg(windows)]
-  no_system_frame(&window);
-  Ok(window)
-}
-
 /// The pin window if it has been made: what would only change one is nothing to do before it is.
 fn made_pin_window(app: &AppHandle) -> Option<WebviewWindow> {
   app.get_webview_window(PIN_LABEL)
+}
+
+/// Set while the pin window is being made, so a second card pinned before it is up makes no second one.
+static PIN_MAKING: AtomicBool = AtomicBool::new(false);
+
+/// Makes the pin window, the first time something is to go on it — a card, a notice: until then the app runs one
+/// window less, with nothing of its own over the game (players told of FPS drops, poll of October 2026). Made on a
+/// thread of its own: built inside a synchronous command, where `pin_set` runs, the window never comes up on
+/// Windows and the pin is lost (WebView2; see Tauri's `WebviewWindowBuilder::new`). Once made, it shows what is
+/// pinned or on show by then.
+fn make_pin_window(app: &AppHandle) {
+  if PIN_MAKING.swap(true, Ordering::SeqCst) {
+    return;
+  }
+  let app = app.clone();
+  std::thread::spawn(move || {
+    let made = create_pin_window(&app);
+    PIN_MAKING.store(false, Ordering::SeqCst);
+    match made {
+      Ok(()) => {
+        let handle = app.clone();
+        let _ = app.run_on_main_thread(move || pin_window_made(&handle));
+      }
+      Err(error) => eprintln!("the pin window was not made: {error}"),
+    }
+  });
+}
+
+/// The pin window has just been made: framed like the others, then brought to what is pinned or on show now.
+/// The page reads the same with `pin_state` as it loads; it is told too, in case it has loaded already.
+fn pin_window_made(app: &AppHandle) {
+  let Some(window) = made_pin_window(app) else { return };
+  #[cfg(windows)]
+  no_system_frame(&window);
+  let state = app.state::<Pin>();
+  let groups = state.groups.lock().unwrap().clone();
+  let toast = state.toast.lock().unwrap().clone();
+  let _ = app.emit_to(PIN_LABEL, PIN_GROUPS_EVENT, &groups);
+  if let Some(toast) = &toast {
+    let shown = with_corner(app, &window, toast.clone());
+    *state.toast.lock().unwrap() = Some(shown.clone());
+    let _ = app.emit_to(PIN_LABEL, PIN_TOAST_EVENT, &shown);
+  }
+  if !groups.is_empty() || toast.is_some() {
+    let _ = show_pin_window(&window);
+  }
+}
+
+/// Shows the pin window over the game without taking the focus, the cards taking the mouse.
+fn show_pin_window(window: &WebviewWindow) -> Result<(), String> {
+  #[cfg(windows)]
+  if let Some(hwnd) = pin_window::hwnd(window) {
+    // Set again on every show: the window library may still rewrite the styles while the window is being built.
+    pin_window::set_click_through(hwnd, false);
+    pin_window::show(hwnd);
+  }
+  #[cfg(not(windows))]
+  window.show().map_err(|e| e.to_string())?;
+  Ok(())
 }
 
 /// Puts the blocks of cards on the pin window, without taking the focus from the game; nothing
@@ -142,33 +188,25 @@ fn made_pin_window(app: &AppHandle) -> Option<WebviewWindow> {
 #[tauri::command]
 fn pin_set(app: AppHandle, state: tauri::State<Pin>, groups: Vec<Value>) -> Result<(), String> {
   *state.groups.lock().unwrap() = groups.clone();
-  // Nothing pinned and no window yet: none is made for nothing.
-  if groups.is_empty() && made_pin_window(&app).is_none() {
+  // No window yet: made for the first card, and not for nothing.
+  let Some(window) = made_pin_window(&app) else {
+    if !groups.is_empty() {
+      make_pin_window(&app);
+    }
     return Ok(());
-  }
-  let window = pin_window(&app)?;
+  };
   app.emit_to(PIN_LABEL, PIN_GROUPS_EVENT, &groups).map_err(|e| e.to_string())?;
-  let empty = groups.is_empty();
-  #[cfg(windows)]
-  if let Some(hwnd) = pin_window::hwnd(&window) {
-    if empty {
-      // A notice still on show keeps the window up; it hides once the notice has gone.
-      if state.toast.lock().unwrap().is_none() {
-        pin_window::hide(hwnd);
-      }
-    } else {
-      // Set again on every show: the window library may still rewrite the styles while the window is being built.
-      pin_window::set_click_through(hwnd, false);
-      pin_window::show(hwnd);
-    }
+  if !groups.is_empty() {
+    return show_pin_window(&window);
   }
-  #[cfg(not(windows))]
-  if empty {
-    if state.toast.lock().unwrap().is_none() {
-      window.hide().map_err(|e| e.to_string())?;
+  // A notice still on show keeps the window up; it hides once the notice has gone.
+  if state.toast.lock().unwrap().is_none() {
+    #[cfg(windows)]
+    if let Some(hwnd) = pin_window::hwnd(&window) {
+      pin_window::hide(hwnd);
     }
-  } else {
-    window.show().map_err(|e| e.to_string())?;
+    #[cfg(not(windows))]
+    window.hide().map_err(|e| e.to_string())?;
   }
   Ok(())
 }
@@ -224,25 +262,28 @@ fn pin_live(app: AppHandle, state: tauri::State<Pin>, live: bool) -> Result<(), 
 /// with nothing pinned. The window takes the corner of the screen's work area along, measured from itself.
 #[tauri::command]
 fn pin_toast(app: AppHandle, state: tauri::State<Pin>, toast: Value) -> Result<(), String> {
-  let window = pin_window(&app)?;
-  let mut shown = toast;
+  // No window yet: it is made, and shows the notice once it is.
+  let Some(window) = made_pin_window(&app) else {
+    *state.toast.lock().unwrap() = Some(toast);
+    make_pin_window(&app);
+    return Ok(());
+  };
+  let shown = with_corner(&app, &window, toast);
+  *state.toast.lock().unwrap() = Some(shown.clone());
+  app.emit_to(PIN_LABEL, PIN_TOAST_EVENT, &shown).map_err(|e| e.to_string())?;
+  show_pin_window(&window)
+}
+
+/// The notice with the corner of the main screen's work area, measured from the pin window, to sit in.
+fn with_corner(app: &AppHandle, window: &WebviewWindow, mut toast: Value) -> Value {
   if let (Ok(Some(monitor)), Ok(origin)) = (app.primary_monitor(), window.outer_position()) {
     let area = monitor.work_area();
-    shown["corner"] = serde_json::json!({
+    toast["corner"] = serde_json::json!({
       "right": area.position.x + area.size.width as i32 - origin.x,
       "top": area.position.y - origin.y,
     });
   }
-  *state.toast.lock().unwrap() = Some(shown.clone());
-  app.emit_to(PIN_LABEL, PIN_TOAST_EVENT, &shown).map_err(|e| e.to_string())?;
-  #[cfg(windows)]
-  if let Some(hwnd) = pin_window::hwnd(&window) {
-    pin_window::set_click_through(hwnd, false);
-    pin_window::show(hwnd);
-  }
-  #[cfg(not(windows))]
-  window.show().map_err(|e| e.to_string())?;
-  Ok(())
+  toast
 }
 
 /// The notice has gone by itself: with nothing pinned, the window hides again.
