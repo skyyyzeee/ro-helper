@@ -41,17 +41,19 @@ describe('the AI through the AI server', () => {
     const calls = fakeServer();
     const { platform } = await ask('у меня украли телефон');
     expect(await screen.findByText(/Это кража/)).toBeInTheDocument();
+    // How long it took, under the answer.
+    expect(screen.getByText(/^Ответ за \d+,\d с$/)).toBeInTheDocument();
 
     expect(calls.every((c) => c.url === `${AI_SERVER}/v1/chat`)).toBe(true);
-    // One computer, one id, kept for the limits; the law terms are a step, the answer is the question.
+    // One computer, one id, kept for the limits; the answer is the question (its words placed it: no call for search phrases).
     const device = platform.settings.get(DEVICE_SETTING);
     expect(device).toMatch(/^d[0-9a-f]{32}$/);
     // Its own id, not the statistics' one: the AI server and the counts cannot be tied together.
     expect(device).not.toBe(platform.settings.get('device.id'));
     expect(calls.every((c) => c.device === device)).toBe(true);
-    expect(calls.map((c) => c.body.counts)).toEqual([false, true]);
+    expect(calls.map((c) => c.body.counts)).toEqual([true]);
     // The found articles go along, in the messages the server passes on.
-    expect(calls[1].body.messages?.at(-1)?.content).toMatch(/\[S\d+\] УК ст\. 65/);
+    expect(calls[0].body.messages?.at(-1)?.content).toMatch(/\[S\d+\] УК ст\. 65/);
   });
 
   it('says why when the day\'s questions are out', async () => {

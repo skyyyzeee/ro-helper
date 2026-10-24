@@ -9,11 +9,12 @@ import { AnswerFormatError, parseAnswer, type LegalAnswer } from './answer';
 import { aliasScope, matchAliases, type QueryAlias } from './aliases';
 import { AI_INTENTS, classify, type Classification, type QuestionType } from './classify';
 import { directPunishment } from './direct';
+import { checkNickname, nicknameOf } from './nickname';
 import { hintTerms } from './hints';
 import { PERSPECTIVE_TERMS, buildContext, type CaseState, type Perspective } from './context';
 import { ownCharters } from './charters';
 import { analysisPrompt, type Depth } from './prompt';
-import { isClosedQuestion } from './verdict';
+import { isClosedQuestion, verdictLabel } from './verdict';
 import { AiError, type AiProvider } from './provider';
 import { labelSources, packInScope, type Scope, type ScopeChoice, type Source } from './sources';
 import { calculateCharges, groundedGuide, sortGuide, validateAnswer, type HiddenPoint, type Validation } from './validate';
@@ -130,6 +131,10 @@ export interface Analysis {
   perspective?: Perspective;
   /** The side's points the checks left out, and why — for the debug view. */
   hiddenGuide?: HiddenPoint[];
+  /** The verdict in the question's own word: «Нельзя» to «можно ли…», «Не обязан» to «обязан ли…». */
+  verdictLabel?: string;
+  /** A situation, not a yes-or-no question, where a broken norm stands on the sources: «Нарушение» leads the answer. */
+  violation?: boolean;
 }
 
 /** The analysis of a situation in a scope: sources from the base, the AI's answer, the checks, the calculator. */
@@ -222,6 +227,7 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
   }
   const calculation = calculateCharges(pack, validation);
   const valid = validation.norms.filter((n) => n.hit && !n.issues.length);
+  const violation = !validation.verdict && !!answer.violation && (validation.status === 'confirmed' || validation.status === 'likely') && valid.length > 0;
   return {
     answer,
     sources,
@@ -232,6 +238,8 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
     terms,
     ...(perspective ? { perspective } : {}),
     ...(hiddenGuide.length ? { hiddenGuide } : {}),
+    ...(validation.verdict ? { verdictLabel: verdictLabel(validation.verdict, message) } : {}),
+    ...(violation ? { violation } : {}),
     case: {
       facts: answer.facts.length ? answer.facts : (previous?.facts ?? []),
       assumptions: answer.assumptions,
@@ -244,7 +252,7 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
 }
 
 /** Why the app answered itself, with no AI analysis. */
-export type SystemReason = 'greeting' | 'nonsense' | 'out_of_scope' | 'real_law' | 'article_lookup' | 'clarify_scope' | 'punishment';
+export type SystemReason = 'greeting' | 'nickname' | 'nonsense' | 'out_of_scope' | 'real_law' | 'article_lookup' | 'clarify_scope' | 'punishment';
 
 /** An answer: the AI's analysis, or the app's own word. */
 export type Outcome =
@@ -268,6 +276,7 @@ const SYSTEM_TEXT: Record<SystemReason, string> = {
   real_law: 'Я не использую реальные законы РФ — только законы и правила вашего сервера, загруженные в Кремлёвский Ассистент.',
   article_lookup: 'Это номер статьи — вот что нашлось в базе. Откройте нужную.',
   clarify_scope: 'Уточните, вас интересует закон или правила сервера?',
+  nickname: 'Проверка ника по правилам проекта.',
   punishment: 'Вот что грозит по законам вашего сервера — ответ из базы, без ИИ и без лимита. Если важны обстоятельства (повторно, группой, при сотруднике), разберите ситуацию с ИИ.',
 };
 
@@ -289,6 +298,8 @@ export interface QuestionInput extends Omit<AnalyseInput, 'scope' | 'terms'> {
   aliases?: readonly QueryAlias[] | (() => Promise<readonly QueryAlias[]>);
   /** False to have the AI weigh even «что будет за кражу?», which the base answers alone by default. */
   direct?: boolean;
+  /** True to ask the AI for search phrases even where the question's words placed it (the exam compares both). */
+  aiTerms?: boolean;
 }
 
 /**
@@ -314,6 +325,7 @@ export async function answerQuestion(input: QuestionInput): Promise<Outcome> {
     classification = { type: scope === 'law' ? 'legal' : scope, scope, why: 'уточнение к делу' };
   }
   if (classification.type === 'greeting') return system('greeting', classification);
+  if (classification.type === 'nickname') return system('nickname', classification, checkNickname(pack, nicknameOf(message)!));
   if (classification.type === 'nonsense') return system('nonsense', classification);
   if (classification.type === 'out_of_scope') return system(/РФ/.test(classification.why) ? 'real_law' : 'out_of_scope', classification);
   if (classification.type === 'article_lookup') {
@@ -368,7 +380,11 @@ export async function answerQuestion(input: QuestionInput): Promise<Outcome> {
   // The classifier's phrases were asked in the words of the laws: kept for an analysis in the laws. The players'
   // expressions are kept in any scope: they were approved for it.
   const keep = matched.length > 0 || scope === 'law';
-  const analysis = await analyse({ ...input, scope, ...(terms && keep ? { terms } : {}) });
+  // A first question its words already placed is searched with them and the hints alone: the AI's call for search
+  // phrases is one more turn in GigaChat's queue — one request at a time for every player — for little the search
+  // does not find without it (recall.test.ts). A follow-up, told against its case, keeps the call.
+  const skipTerms = !terms && !previous && aiCalls === 0 && input.aiTerms !== true;
+  const analysis = await analyse({ ...input, scope, ...(terms && keep ? { terms } : skipTerms ? { terms: [] } : {}) });
   analysis.aiCalls = (analysis.aiCalls ?? 0) + aiCalls;
   if (classification.mismatch && classification.mismatch !== 'mixed') analysis.switchTo = classification.mismatch;
   if (classification.mismatch) analysis.notes = [classification.why === 'слова не подсказали — так решил ИИ' ? RULES_HINT : MISMATCH_NOTE[classification.mismatch]];

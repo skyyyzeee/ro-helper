@@ -41,11 +41,12 @@ describe('the analysis on screen', () => {
     expect(within(reply).queryByText('Калькулятор:')).not.toBeInTheDocument();
   });
 
-  it('answers a question asked «да или нет» with «Да.» first, and only on the sources', async () => {
+  it('answers a question asked «да или нет» with the verdict first, in the word of the question, and only on the sources', async () => {
     const { bodies } = await ask('Обязан ли вор вернуть телефон?', { verdict: { answer: 'yes', text: 'Да, кража наказывается по УК.', sources: ['FOUND'] } });
     const reply = screen.getByRole('log');
     const verdict = reply.querySelector('.ai__verdict')!;
-    expect(verdict).toHaveTextContent('Да. кража наказывается по УК.');
+    // In the question's own word: «Обязан ли…» — «Обязан.», not a bare «Да.».
+    expect(verdict).toHaveTextContent('Обязан. кража наказывается по УК.');
     expect(verdict.compareDocumentPosition(within(reply).getByText('Ситуация')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(bodies.some((b) => b.includes('ВОПРОС ЗАКРЫТЫЙ'))).toBe(true);
   });

@@ -83,8 +83,10 @@ describe('hard gates: what the model makes up never comes out confirmed', () => 
     expect(caught(good({ violation: { text: 'кража', sources: ['S7'] } }))).toMatch(/источник S7, которого ИИ не передавали/);
   });
 
-  it('a law and a rule of the server in one statement', () => {
-    expect(caught(good({ violation: { text: 'кража и нарушение правил', sources: ['S1', ruleId] } }), 'mixed')).toMatch(/закон и правило сервера смешаны/);
+  it('lets a law and a rule of the server stand in one statement of an answer on both, each checked as its own', () => {
+    const validation = validateAnswer(pack, sources, good({ violation: { text: 'кража и нарушение правил', sources: ['S1', ruleId] } }), 'mixed');
+    expect(validation.issues).toEqual([]);
+    expect(validation.needsReview).toBe(false);
   });
 
   it('a norm of the wrong kind for the question — a rule in an answer about the laws, a law in one about the rules', () => {
@@ -270,7 +272,8 @@ describe('answers given again (ADR 0007)', () => {
   it('a first question may be answered from the server\'s cache — its steps and its answer; a follow-up may not', async () => {
     const { provider, requests } = fakeAi(() => good());
     const first = await answerQuestion({ provider, pack, message: 'украл телефон у прохожего на улице', depth: 'quick', choice: 'law' });
-    expect(requests.map((r) => r.cache)).toEqual(['украл телефон у прохожего на улице', 'украл телефон у прохожего на улице']);
+    // Its words placed it: one call, the analysis — no search phrases asked of the AI.
+    expect(requests.map((r) => r.cache)).toEqual(['украл телефон у прохожего на улице']);
     if (first.kind !== 'analysis') throw new Error('no analysis');
     requests.length = 0;
     await answerQuestion({ provider, pack, message: 'а если он был в маске', depth: 'quick', previous: first.analysis.case });

@@ -105,8 +105,14 @@ test('GigaChat answers first; the paid API only what it declines — Sber’s fi
     assert.equal((await ai.ask('продавал травка у школы')).body.text, '{"from": "paid"}');
     assert.equal((await ai.ask('сломай формат')).body.text, '{"from": "paid"}');
     assert.equal((await ai.ask('лимит кончился')).body.text, '{"from": "paid"}');
-    const { answered, spent } = await ai.status();
+    const { answered, spent, timing } = await ai.status();
     assert.deepEqual(answered, { gigachat: 1, paid: 3, cached: 0, why: { blacklist: 1, format: 1, http: 1 } });
+    // Each model's calls and their time, the failed ones too: what makes an answer slow shows in the status.
+    const giga4 = Object.entries(timing).find(([model]) => model.startsWith('gigachat:'))[1];
+    assert.equal(giga4.calls, 4);
+    assert.equal(giga4.failed, 3);
+    assert.ok(giga4.runMs >= 0 && giga4.maxMs >= 0);
+    assert.equal(Object.entries(timing).filter(([model]) => !model.startsWith('gigachat:')).reduce((n, [, t]) => n + t.calls, 0), 3);
     // Only the paid answers cost anything; the key was taken once, «Basic » and the line break dropped.
     assert.ok(spent > 0);
     assert.equal(giga.seen.tokens, 1);

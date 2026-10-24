@@ -942,6 +942,8 @@ export function Overlay({
     setServerOpen(false);
     setPrivacyOpen(false);
     setDiff(null);
+    // «Что изменилось» shown after an update of the laws gives way too: left open, it stood in the settings' place.
+    setChangesView(null);
     setAiOpen(false);
     setHistoryOpen(false);
     setMenuOpen(section === 'documents');

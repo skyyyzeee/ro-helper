@@ -3761,6 +3761,8 @@ input {
 .ai__answer { display: flex; flex-direction: column; gap: 6px; user-select: text; }
 
 .ai__line { margin: 0; font-size: 14.5px; line-height: 1.55; overflow-wrap: anywhere; }
+/* «Ответ за 5,4 с»: how long the player waited, small under the answer. */
+.ai__time { margin: 0; font-size: 12px; color: var(--text-muted); }
 
 .ai__line--item { padding-left: 14px; position: relative; }
 
@@ -4483,6 +4485,16 @@ select option {
 .status--not-found,
 .status--review { background: var(--gone-bg); color: var(--gone-text); }
 
+/* «Нарушение» over a situation where a norm is broken: the first thing read. */
+.ai__mark {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.ai__mark--violation { background: var(--gone-bg); color: var(--gone-text); }
+
 /* «Да.» / «Нет.» first, to a question asked so (verdict.ts): read at a glance, the details under it. */
 .ai__verdict {
   margin: 0;
@@ -4575,6 +4587,17 @@ select option {
 .source__name { color: var(--text-muted); font-size: 13.5px; }
 .source__why,
 .source__punishment { margin: 0; font-size: 13.5px; line-height: 1.45; }
+/* A rule's punishments, each a tag — the bans in red: «Demorgan 120-140 минут», «Ban 3-30 дней». */
+.source__tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 0; }
+.rule-tag {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--surface-active);
+  color: var(--text);
+}
+.rule-tag--ban { background: var(--gone-bg); color: var(--gone-text); }
 .source__issue {
   margin: 0;
   display: flex;
