@@ -57,6 +57,20 @@ describe('«Что изменилось»', () => {
     expect(changesScreen()).not.toBeInTheDocument();
   });
 
+  it('gives way to the settings: opened over it, they show, «Закреплённые» among them', async () => {
+    const { user } = await renderApp({ settings: { [SEEN]: '2026-09-01T10:00:00+03:00' } });
+    await screen.findByRole('region', { name: 'Что изменилось' });
+    await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    expect(changesScreen()).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Закреплённые' })).toBeInTheDocument();
+    // From the settings it still opens, and Esc leads back to them.
+    await user.click(screen.getByRole('button', { name: 'Что изменилось в законах' }));
+    expect(changesScreen()).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(changesScreen()).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Закреплённые' })).toBeInTheDocument();
+  });
+
   it('opens a changed article as «было → стало»: the old text on the left, the new on the right', async () => {
     const { user } = await renderApp({ settings: { [SEEN]: '2026-09-01T10:00:00+03:00' } });
     const view = await screen.findByRole('region', { name: 'Что изменилось' });
