@@ -104,13 +104,13 @@ describe('settings', () => {
   it('change the hotkey right in the settings, without the steps', async () => {
     const { platform, user } = await renderApp({ profile: { hotkey: 'Alt+Q' } });
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
-    await user.click(screen.getByRole('button', { name: 'Горячая клавиша: Alt + Q' }));
+    await user.click(screen.getByRole('button', { name: 'Открыть и скрыть ассистент: Alt + Q' }));
     await user.keyboard('{Control>}{Shift>}L{/Shift}{/Control}');
 
     expect(platform.settings.get(PROFILE_KEY)).toMatchObject({ hotkey: 'Ctrl+Shift+L' });
     expect(platform.state.hotkey).toBe('Ctrl+Shift+L');
     // The settings stay open, with the new keys on the field.
-    expect(screen.getByRole('button', { name: 'Горячая клавиша: Ctrl + Shift + L' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Открыть и скрыть ассистент: Ctrl + Shift + L' })).toBeInTheDocument();
   });
 
   it('change the server without going through the steps', async () => {

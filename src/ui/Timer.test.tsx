@@ -56,8 +56,8 @@ describe('the detention timer (issue #40)', () => {
   it('has its key in «Клавиши», which the player may turn off', async () => {
     const { platform, user } = await officer();
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
-    const block = within(screen.getByRole('group', { name: 'Настройки' })).getByRole('region', { name: 'Таймер задержания' });
-    await user.click(within(block).getByRole('switch', { name: 'Таймер задержания поверх игры' }));
+    const block = within(screen.getByRole('group', { name: 'Настройки' })).getByRole('region', { name: 'Горячие клавиши' });
+    await user.click(within(block).getByRole('switch', { name: 'Таймер задержания' }));
     expect(platform.settings.get('timer.hotkey')).toBe('');
     await vi.waitFor(() => expect(platform.state.shortcuts.timer).toBeUndefined());
   });
@@ -67,7 +67,7 @@ describe('the detention timer (issue #40)', () => {
     await vi.waitFor(() => expect(platform.state.quickHotkey).toBe('Alt+S'));
     expect(platform.state.shortcuts.timer).toBeUndefined();
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
-    expect(within(screen.getByRole('group', { name: 'Настройки' })).queryByRole('region', { name: 'Таймер задержания' })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: 'Настройки' })).queryByRole('group', { name: 'Таймер задержания' })).not.toBeInTheDocument();
   });
 });
 

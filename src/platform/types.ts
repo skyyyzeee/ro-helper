@@ -47,6 +47,8 @@ export interface PinGroup {
   flow?: 'column' | 'row';
   /** A block of several shown a card at a time, flipped through like pages, so it stays small. */
   paged?: boolean;
+  /** Which card of a paged block is on show; kept with the block, so a key can turn it while the assistant is shut. */
+  page?: number;
   /** Only the heading and the punishment, without the article's text: many cards take little room. */
   compact?: boolean;
   cards: PinCard[];

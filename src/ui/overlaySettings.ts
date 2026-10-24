@@ -43,6 +43,14 @@ export const NOTE_KEY = 'note.text';
 export const NOTE_MAX = 1000;
 export const NOTE_HOTKEY_KEY = 'note.hotkey';
 export const DEFAULT_NOTE_HOTKEY = 'Alt+E';
+/**
+ * Turning the notes on and back over the game, with the assistant shut (a player asked, 24.10.2026): off until the
+ * player turns them on in «Клавиши»; then Alt+D and Alt+A — right and left under the hand on WASD.
+ */
+export const NOTES_NEXT_HOTKEY_KEY = 'notes.next';
+export const NOTES_PREV_HOTKEY_KEY = 'notes.prev';
+export const DEFAULT_NOTES_NEXT_HOTKEY = 'Alt+D';
+export const DEFAULT_NOTES_PREV_HOTKEY = 'Alt+A';
 
 /** Streamer mode: the app is left out of screen capture (OBS, Discord, screenshots). Windows' own, set at every start. */
 export const STREAMER_KEY = 'overlay.streamer';
