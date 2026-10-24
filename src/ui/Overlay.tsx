@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { asksTheAi } from './askFirst';
 import {
   changedArticles,
   changesSince,
@@ -242,6 +243,12 @@ export function Overlay({
   const home = view === 'home';
   const listed = home ? [...popular, ...favorites, ...recent] : view === 'contents' ? contents.flatMap((group) => group.hits) : hits;
   const current = Math.min(selected, listed.length - 1);
+  // A question typed into the search: «Спросить ИИ» stands first and chosen, Enter asks (askFirst.ts); ↓ goes on
+  // to the articles, where Enter is the calculator's again.
+  const askFirst = view === 'results' && asksTheAi(query);
+  const [pastOffer, setPastOffer] = useState(false);
+  useEffect(() => setPastOffer(false), [query]);
+  const offerChosen = askFirst && !pastOffer;
   const remember = (hit: SearchHit) => {
     saved.remember(hit);
     // On the home lists the article moves to the top of the recent ones; the selection goes with it.
@@ -776,6 +783,17 @@ export function Overlay({
       }
       return;
     }
+    if (offerChosen) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        openAi(query);
+      } else if (e.key === 'ArrowDown' && listed.length) {
+        e.preventDefault();
+        setPastOffer(true);
+        setSelected(0);
+      }
+      return;
+    }
     if (!listed.length) return;
     const input = e.currentTarget;
     if (e.key === 'ArrowDown') {
@@ -783,7 +801,8 @@ export function Overlay({
       setSelected(Math.min(current + 1, listed.length - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setSelected(Math.max(current - 1, 0));
+      if (askFirst && current === 0) setPastOffer(false);
+      else setSelected(Math.max(current - 1, 0));
     } else if (e.key === 'Enter') {
       // Enter puts a punished article into the calculator; an article without a punishment opens instead.
       e.preventDefault();
@@ -1032,7 +1051,7 @@ export function Overlay({
     <div role="listitem" key={hitKey(hit)}>
       <ResultRow
         hit={hit}
-        selected={i === current}
+        selected={i === current && !offerChosen}
         inChapter={inChapter}
         tile={tile}
         changed={!!changeOf(hit)}
@@ -1852,6 +1871,15 @@ export function Overlay({
                 </button>
               </div>
             )}
+            {askFirst && (
+              <button className={offerChosen ? 'ai-offer ai-offer--top ai-offer--chosen' : 'ai-offer ai-offer--top'} type="button" onClick={() => openAi(query)}>
+                <SparkIcon size={18} />
+                <span>
+                  Спросить ИИ: <b>«{query.trim()}»</b>
+                </span>
+                <span className="kbd">Enter</span>
+              </button>
+            )}
             <div className="list" role="list" aria-label="Результаты поиска">
               {hits.map((hit, i) => rowFor(hit, i))}
             </div>
@@ -1867,12 +1895,12 @@ export function Overlay({
               />
             )}
             {/* A situation typed into the search finds nothing whole: the AI takes it word by word. */}
-            <button className="ai-offer" type="button" onClick={() => openAi(query)}>
+            {!askFirst && <button className="ai-offer" type="button" onClick={() => openAi(query)}>
               <SparkIcon size={18} />
               <span>
                 Разобрать с ИИ: <b>«{query.trim()}»</b>
               </span>
-            </button>
+            </button>}
           </>
         )}
       </div>
@@ -1938,7 +1966,7 @@ export function Overlay({
                 <b>↑↓</b> выбор
               </span>
               <span>
-                <b>Enter</b> в калькулятор
+                <b>Enter</b> {offerChosen ? 'спросить ИИ' : 'в калькулятор'}
               </span>
               <span>
                 <b>→</b> открыть

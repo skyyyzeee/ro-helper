@@ -3717,6 +3717,11 @@ input {
 
 .ai-offer svg { flex: none; }
 
+/* A question in the search: the offer first, above the articles; chosen, Enter asks — said by its key. */
+.ai-offer--top { margin: 0 0 8px; }
+.ai-offer--top .kbd { margin-left: auto; flex: none; }
+.ai-offer--chosen { box-shadow: inset 0 0 0 1.5px var(--accent-text); background: oklch(0.78 0.1 245 / 0.2); color: var(--text); }
+
 .ai__top { display: flex; align-items: center; }
 
 .ai__intro { display: flex; flex-direction: column; gap: 10px; }
@@ -3761,6 +3766,8 @@ input {
 .ai__answer { display: flex; flex-direction: column; gap: 6px; user-select: text; }
 
 .ai__line { margin: 0; font-size: 14.5px; line-height: 1.55; overflow-wrap: anywhere; }
+/* The gist of a short answer, in a sentence or two, right under the verdict. */
+.ai__gist { font-size: 15px; color: var(--text); }
 /* «Ответ за 5,4 с»: how long the player waited, small under the answer. */
 .ai__time { margin: 0; font-size: 12px; color: var(--text-muted); }
 
