@@ -22,3 +22,18 @@ export const VERDICT_LABELS: Record<ShownVerdict, string> = {
   depends: 'Зависит от обстоятельств',
   clarify: 'Нужно уточнение',
 };
+
+/** «Можно ли…», «законно ли…»: the verdict in the question's own word — «Нельзя», not a bare «Нет». */
+const ASKED_WORDS: [RegExp, Record<VerdictAnswer, string>][] = [
+  [/(?:^|[\s,(«"])(?:можно|могу|может|могут|можем|разрешено|допустимо|вправе|имею|имеет|имеют)\s+ли/i, { yes: 'Можно', no: 'Нельзя', depends: VERDICT_LABELS.depends }],
+  [/(?:^|[\s,(«"])(?:законно|правомерно)\s+ли/i, { yes: 'Законно', no: 'Незаконно', depends: VERDICT_LABELS.depends }],
+  [/(?:^|[\s,(«"])(?:обязан[аоы]?|долж(?:ен|на|ны|но)|нужно|надо|положено|полагается)\s+ли/i, { yes: 'Обязан', no: 'Не обязан', depends: VERDICT_LABELS.depends }],
+];
+
+/** The verdict's label for this question: in its own word where it has one, «Да» / «Нет» elsewhere. */
+export function verdictLabel(verdict: ShownVerdict, question: string): string {
+  if (verdict === 'clarify') return VERDICT_LABELS.clarify;
+  const text = question.replace(/ё/gi, 'е');
+  const words = ASKED_WORDS.find(([re]) => re.test(text))?.[1];
+  return words?.[verdict] ?? VERDICT_LABELS[verdict];
+}

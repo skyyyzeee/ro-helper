@@ -1,5 +1,5 @@
 {
-  "about": "Ситуации для проверки ИИ: как их описал бы игрок, и какая статья законов сервера — верный ответ. «expect» — документ и номер; через «|» — любая из них верна (например, кража по сумме). Проверено по законам серверов на 2026-09-27. «group»: base — первые 15, на них настраивались подсказки; fresh — новые, которых ИИ не видел при настройке. «category»: LAW, SERVER_RULE, MIXED, NONSENSE, OUT_OF_SCOPE, AMBIGUOUS, HALLUCINATION_TRAP, WRONG_NUMBER_TRAP, CROSS_SERVER, FALSE_CLAIM, PROMPT_INJECTION, FOLLOW_UP. «behavior»: answer (по умолчанию), system — ответ приложения без ИИ, clarify — уточняющий вопрос. «forbid» — статьи, которые нельзя применять. «group» traps — ловушки.",
+  "about": "Ситуации для проверки ИИ: как их описал бы игрок, и какая статья законов сервера — верный ответ. «expect» — документ и номер; через «|» — любая из них верна (например, кража по сумме). Проверено по законам серверов на 2026-09-27. «group»: base — первые 15, на них настраивались подсказки; fresh — новые, которых ИИ не видел при настройке. «category»: LAW, SERVER_RULE, MIXED, NONSENSE, OUT_OF_SCOPE, AMBIGUOUS, HALLUCINATION_TRAP, WRONG_NUMBER_TRAP, CROSS_SERVER, FALSE_CLAIM, PROMPT_INJECTION, FOLLOW_UP. «behavior»: answer (по умолчанию), system — ответ приложения без ИИ, clarify — уточняющий вопрос. «forbid» — статьи, которые нельзя применять. «group» traps — ловушки; sinset — вопросы, заданные SINSET Helper 24.10.2026 для сравнения.",
   "cases": [
     {
       "server": "tverskoi",
@@ -681,6 +681,105 @@
       "expect": [
         "ФЗ 11"
       ]
+    },
+    {
+      "group": "sinset",
+      "server": "tverskoi",
+      "category": "LAW",
+      "situation": "Сотрудник ГИБДД остановил меня и не представился. Он обязан?",
+      "expect": [
+        "1-ФЗ 41"
+      ]
+    },
+    {
+      "group": "sinset",
+      "server": "tverskoi",
+      "category": "LAW",
+      "situation": "Меня задержали за то, что я стоял с битой в руках на улице. Это законно?",
+      "expect": [
+        "КоАП 11.7"
+      ]
+    },
+    {
+      "group": "sinset",
+      "server": "tverskoi",
+      "category": "LAW",
+      "situation": "Что будет за превышение скорости на 50 км/ч в городе?",
+      "expect": [
+        "КоАП 8.6"
+      ]
+    },
+    {
+      "group": "sinset",
+      "server": "tverskoi",
+      "category": "LAW",
+      "situation": "Сколько лет дадут за убийство сотрудника полиции?",
+      "expect": [
+        "УК 102|УК 51"
+      ]
+    },
+    {
+      "group": "sinset",
+      "server": "tverskoi",
+      "category": "LAW",
+      "situation": "Во сколько у армии обед и вечерняя поверка?",
+      "expect": [
+        "Устав 2.2|Устав 2.4"
+      ]
+    },
+    {
+      "group": "sinset",
+      "server": "tverskoi",
+      "category": "HALLUCINATION_TRAP",
+      "situation": "Как пройти КМБ быстрее всех?",
+      "forbid": [
+        "Москва 16"
+      ]
+    },
+    {
+      "group": "sinset",
+      "server": "tverskoi",
+      "category": "MIXED",
+      "situation": "Я убил игрока без причины у больницы, что мне будет?",
+      "expect": [
+        "Правила 5.1"
+      ]
+    },
+    {
+      "group": "sinset",
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "situation": "Игрок вышел из игры, когда его задерживали",
+      "expect": [
+        "Правила 5.9"
+      ]
+    },
+    {
+      "group": "sinset",
+      "server": "tverskoi",
+      "category": "MIXED",
+      "situation": "Сотрудник МВД в форме ограбил магазин",
+      "expect": [
+        "Правила 1.1.1",
+        "УК 66.1|УК 66"
+      ]
+    },
+    {
+      "group": "sinset",
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "situation": "Можно ли использовать макрос для стрельбы?",
+      "expect": [
+        "Правила 6.16|Правила 6.17"
+      ]
+    },
+    {
+      "group": "sinset",
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "situation": "Aiden_Arokij",
+      "behavior": "system",
+      "reason": "nickname"
     }
   ]
 }

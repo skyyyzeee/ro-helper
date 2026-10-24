@@ -2,6 +2,7 @@
 // laws of Russia, gibberish, or a bare article number costs no AI call and never reaches the model at all. Plain
 // rules over the words; when they cannot tell, the AI's first call (the search phrases) also says what it is.
 import { unknownWords, type ServerPack } from '../core';
+import { nicknameOf } from './nickname';
 import type { Scope, ScopeChoice } from './sources';
 
 export type QuestionType =
@@ -15,6 +16,8 @@ export type QuestionType =
   | 'article_lookup'
   /** «Привет», «спасибо», «что ты умеешь». */
   | 'greeting'
+  /** A character's name, «Имя_Фамилия»: the app checks it against the rule on names, no AI. */
+  | 'nickname'
   /** Something the app's base has no answer to: the weather, the news, real laws. */
   | 'out_of_scope'
   /** No question at all. */
@@ -33,7 +36,7 @@ export interface Classification {
 }
 
 /** The types the app answers itself, with no AI and no sources. */
-export const ANSWERED_BY_APP = new Set<QuestionType>(['article_lookup', 'greeting', 'out_of_scope', 'nonsense']);
+export const ANSWERED_BY_APP = new Set<QuestionType>(['article_lookup', 'greeting', 'nickname', 'out_of_scope', 'nonsense']);
 
 /** `\b` and `\w` of JavaScript know only Latin letters: in these patterns they are a word's edge and letter in Russian too. */
 const EDGE = '(?:(?<![а-яa-z0-9])(?=[а-яa-z0-9])|(?<=[а-яa-z0-9])(?![а-яa-z0-9]))';
@@ -56,13 +59,24 @@ const OUT_OF_SCOPE: { re: RegExp; why: string }[] = [
 
 /** Words of the rules of the project: the game's own terms and its admins' punishments. */
 const RULE_WORDS = ru(
-  /\bпо правилам\b(?! дорожн)|правил\w* (сервера|проекта)|\bпо серверу\b|\bадмин(ы|а|у|ам|ов|ом|ка|ки|истратор\w*|истраци\w*)?\b|\bнрп\b|\bnon ?rp\b|\bnonrp\b|\bрп\b|\brp\b|\bдм\b|\bdm\b|\bрдм\b|\brdm\b|\bмг\b|метагейм\w*|\bпг\b|пауэргейм\w*|\bтк\b|\bdb\b|\bдб\b|\bsk\b|\bск\b(?=.*(убил|спавн|респ))|\booc\b|\bic\b|отыгр\w*|\bбан\w*|\bварн\w*|\bдеморган\w*|\bджайл\w*|\bкик\w*|багоюз\w*|\bчит\w*|стороннее по|твинк\w*|\bспавн\w*|\bреспаун\w*|капт\w*|\bбизвар\w*|война за территори\w*|\bфорт\w*|\bairdrop\b|аирдроп\w*|поставк\w*|\bцех\w*|\bдилер\w*|стрим-?снайп\w*/,
+  /\bпо правилам\b(?! дорожн)|правил\w* (сервера|проекта)|\bпо серверу\b|\bадмин(ы|а|у|ам|ов|ом|ка|ки|истратор\w*|истраци\w*)?\b|\bнрп\b|\bnon ?rp\b|\bnonrp\b|\bрп\b|\brp\b|\bдм\b|\bdm\b|\bрдм\b|\brdm\b|\bмг\b|метагейм\w*|\bпг\b|пауэргейм\w*|\bтк\b|\bdb\b|\bдб\b|\bsk\b|\bск\b(?=.*(убил|спавн|респ))|\booc\b|\bic\b|отыгр\w*|\bбез (ic |ик |рп |rp )?(причин\w*|повод\w*)|\b(вышел|вышла|вышли|выход\w*|выйти) из игры|\bливн\w*|\bрелог\w*|перезаш[её]л|\bмакрос\w*|\bникнейм\w*|\bник\b|\bбан\w*|\bварн\w*|\bдеморган\w*|\bджайл\w*|\bкик\w*|багоюз\w*|\bчит\w*|стороннее по|твинк\w*|\bспавн\w*|\bреспаун\w*|капт\w*|\bбизвар\w*|война за территори\w*|\bфорт\w*|\bairdrop\b|аирдроп\w*|поставк\w*|\bцех\w*|\bдилер\w*|стрим-?снайп\w*/,
 );
 
 /** Words of the laws: their names, their institutions and what they deal in. */
 const LAW_WORDS = ru(
   /\bстать[яиюей]\w*|\bст\.?\s*\d|\bук\b|\bкоап\b|\bупк\b|\bпдд\b|закон\w*|кодекс\w*|конституц\w*|штраф\w*|\bсрок\w*|наказан\w*|\bарест\w*|задерж\w*|задержа\w*|полиц\w*|\bмент\w*|\bкоп\w*|\bмвд\b|\bфсб\b|\bфсо\b|гибдд|\bдпс\b|сотрудник\w*|адвокат\w*|\bсуд\w*|прокур\w*|\bправа\b|\bправ\b|обыск\w*|протокол\w*|взятк\w*|розыск\w*|\bзвезд\w*|залог\w*|уголовн\w*|административн\w*|\bлиценз\w*|оружи\w*|наркот\w*|\bпреступ\w*|правонаруш\w*|\bнарушил\w*|\bчто (ему|мне|ей|им) (будет|грозит|светит|дадут)|впаят\w*|\bгрозит\b|\bдают\b|\bположено\b|светофор\w*|\bкрасный\b|\bкрасн\w* свет\w*|перекрест\w*|\bводител\w*|\bза рулем\b|\bдтп\b|\bпарков\w*|\bскорост\w*|\bпешеход\w*|\bобгон\w*|\bвстречк\w*|\bгаи\b/,
 );
+
+/**
+ * Words of the charters and the services they are of: a question of a faction's service — its hours, ranks,
+ * reprimands — has no word of a code in it («Во сколько у армии обед?»), and is the charters' all the same.
+ */
+const CHARTER_WORDS = ru(
+  /\bустав\w*|\bобед\w*|поверк\w*|построени\w*|распорядо?к\w*|рабоч\w+ (врем\w*|день|дня|график\w*)|\bграфик\w*|\bсмен[аыуе]\b|выговор\w*|\bзвани\w*|повышени\w*|понижени\w*|субордин\w*|форм\w* одежд\w*|\bувольнени\w*|\bотпуск\w*|\bотгул\w*|\bкмб\b|курс молодого бойца|\bарми[яиюей]\b|\bармейск\w*|\bвоенн\w*|росгвард\w*|\bфсвнг\b|больниц\w*|\bмедик\w*|правительств\w*|вест\w+ москв\w*|\bсми\b|\bфсо\b|\bфсб\b|\bгибдд\b/,
+);
+
+/** A question that opens on a member of a service — what they did is the question. */
+const MEMBER_DOING = ru(/^(сотрудник\w*|полицейск\w*|офицер\w*|военнослужащ\w*|военн\w+|госслужащ\w*|медик\w*|журналист\w*)\b/);
 
 /** The everyday words the server's synonyms list («украл», «избил»…): situations the laws speak to. */
 function synonymWords(pack: ServerPack): RegExp | null {
@@ -100,6 +114,7 @@ function shortName(pack: ServerPack, word: string): boolean {
  */
 export function classify(pack: ServerPack, raw: string, choice: ScopeChoice = 'auto'): Classification {
   const text = normal(raw);
+  if (nicknameOf(raw)) return { type: 'nickname', why: 'ник персонажа — проверит приложение по правилу о никах' };
   if (!text || looksLikeNonsense(pack, text)) return { type: 'nonsense', why: 'не похоже на вопрос' };
   if (GREETING.test(text)) return { type: 'greeting', why: 'приветствие или вопрос об ассистенте' };
   if (ARTICLE_LOOKUP.test(text)) return { type: 'article_lookup', why: 'номер статьи — ответит поиск' };
@@ -108,14 +123,17 @@ export function classify(pack: ServerPack, raw: string, choice: ScopeChoice = 'a
   if (!synonymsCache.has(pack)) synonymsCache.set(pack, synonymWords(pack));
   const synonyms = synonymsCache.get(pack);
   const rule = RULE_WORDS.test(text);
-  const law = LAW_WORDS.test(text) || !!synonyms?.test(text);
+  const law = LAW_WORDS.test(text) || CHARTER_WORDS.test(text) || !!synonyms?.test(text);
   // Not one word the server's documents hold, nor a word of the laws or rules: «ывапролдж», «трактор весит» —
   // nothing the base could answer, so nothing to ask the AI about.
   if (!rule && !law && !/\d/.test(text)) {
     const { known, unknown } = unknownWords(pack, text);
     if (!known && unknown.length) return { type: 'nonsense', why: 'ни одного слова из базы сервера' };
   }
-  const said: Scope | null = rule && law ? 'mixed' : rule ? 'server_rule' : law ? 'law' : null;
+  // A member of a service doing something («Сотрудник МВД в форме ограбил магазин»): what the law says of the deed,
+  // and what the project's rules for the state's factions say of the player.
+  const member = law && MEMBER_DOING.test(text);
+  const said: Scope | null = (rule || member) && law ? 'mixed' : rule ? 'server_rule' : law ? 'law' : null;
   const why = said === 'mixed' ? 'слова и закона, и правил сервера' : said === 'server_rule' ? 'слова правил сервера' : said === 'law' ? 'слова закона' : 'ни слов закона, ни слов правил';
 
   if (choice !== 'auto') {

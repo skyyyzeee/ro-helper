@@ -25,6 +25,18 @@ const HINTS: Hint[] = [
   { all: [ru(/гнал|летел|несся|разогнал/), ru(/скорост|км/)], terms: ['превышение скорости'] },
   // A red light: the law says «запрещающий сигнал» (КоАП Арбатского — the chapter's title only, not its article's text).
   { all: [ru(/на красн|красный свет|красный сигнал|на запрещающ|проскочил светофор|светофор\w* на красн/)], terms: ['проезд на запрещающий сигнал', 'запрещающий сигнал светофора', 'остановка перед стоп-линией'] },
+  // An officer who did not say who they are: the law names it the identification of a state servant.
+  { all: [OFFICIAL, ru(/не представил|не назвал\w* себя|не показал\w* удостоверени|без удостоверени|удостоверени\w* не (показ|предъяв)/)], terms: ['идентификация государственного служащего', 'служебное удостоверение'] },
+  // A bat, a knife in the hands in the street: the weapon bared in a public place.
+  { all: [ru(/\bбит[аоуеы]\w*|\bнож\w*|\bтопор\w*|\bмачет\w*|\bкастет\w*|оружи\w*|пистолет\w*|ствол\w*/), ru(/в рук\w*|достал|вытащил|держал|стоял|ходил|на улиц\w*|в общественн\w*/)], terms: ['обнажение оружия', 'обнажение оружия в общественных местах'] },
+  // A macro, a cheat, a script: software for an advantage in the game (the project's rules).
+  { all: [ru(/\bмакрос\w*|\bчит\w*|\bскрипт\w*|\bаим\w*|\baim\w*|\bбот\b|\bботом\b|автокликер\w*|\bсофт\w*/)], terms: ['постороннее ПО', 'игрового преимущества'] },
+  // Leaving the game in the middle of a scene: the rules call it leaving the RP.
+  { all: [ru(/(?:вышел|вышла|вышли|выход\w*|выйти|ушел|ушла) из игры|\bливн\w*|\bлив(ает|нул)\w*|\bрелог\w*|перезаш[её]л|\bвышел из (?:рп|rp)\b/)], terms: ['уход от RP', 'выход из игры во время RP'] },
+  // A member of a service doing a crime: the rules of the state factions forbid it without an approved scene.
+  { all: [ru(/^(?:сотрудник|полицейск|офицер|военнослужащ|военн|госслужащ|инспектор|\bмент|\bкоп)/), ru(/ограбил|украл|похитил|убил|избил|угнал|продал|торговал|грабил|крал|наркот/)], terms: ['криминальные действия сотрудникам гос. структур'] },
+  // A robbery told in a word («ограбил магазин»): the law names it грабёж — or разбой, with violence.
+  { all: [ru(/ограбил|ограблени|грабанул|обнес|обчистил/)], terms: ['грабёж', 'разбой'] },
   // A threat to kill.
   { all: [ru(/пообещал|обещал|грозил|угрожал|сказал|написал|кричал/), ru(/убьет|убью|убить|завалю|завалит|прикончу|прибью/)], terms: ['угроза убийством'] },
   // An officer beating someone.
