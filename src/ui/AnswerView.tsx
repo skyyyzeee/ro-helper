@@ -4,8 +4,13 @@ import { SOURCE_TYPE_LABELS, STATUS_LABELS, VERDICT_LABELS, type Analysis, type 
 import { shortLabel } from './AiView';
 import { answerText } from './ai';
 import { CheckIcon, ExternalIcon, PinIcon, PlusIcon, WarnIcon } from './icons';
+import { JurisdictionPill, Stars } from './lawBits';
 
 const STAGE_LABELS = { done: '', attempt: 'покушение', preparation: 'приготовление' } as const;
+
+/** The two sides of an answer on both: the player's punishment by the project's rules, the character's by the laws. */
+const RULE_SIDE = 'Правила проекта — наказание игроку';
+const LAW_SIDE = 'Законы — что грозит персонажу';
 
 /** The calculator's count in a line: «30 мес · 3 ★ · залог 150 000 ₽»; administrative fines and arrests after it. */
 export function calculationLine(result: DetentionResult): string {
@@ -34,7 +39,7 @@ export function cardText(analysis: Analysis): string {
   if (answer.reply) return answer.reply;
   const norms = validation.norms.filter((n) => n.hit && !n.issues.length).slice(0, 2);
   return [
-    validation.verdict && `${VERDICT_LABELS[validation.verdict]}.${validation.verdict !== 'clarify' && answer.verdict ? ` ${answer.verdict.text}` : ''}`,
+    validation.verdict && `${analysis.verdictLabel ?? VERDICT_LABELS[validation.verdict]}.${validation.verdict !== 'clarify' && answer.verdict ? ` ${answer.verdict.text}` : ''}`,
     answer.situation && `Суть: ${answer.situation}`,
     ...norms.map(({ hit }) => {
       const part = hit!.part ?? leadPart(hit!.article);
@@ -167,6 +172,8 @@ function SourceCard({
   }
   const part = hit.part ?? leadPart(hit.article);
   const punishment = part?.punishment ? formatPunishment(part.punishment) : '';
+  // A rule of the project says its punishment in a note: «Demorgan 120-140 минут / Ban 3-30 дней» — each a tag.
+  const ruleTags = type === 'server_rule' ? rulePunishments(hit) : [];
   return (
     <li className={issues.length ? 'source source--bad' : 'source'}>
       <div className="source__head">
@@ -178,12 +185,23 @@ function SourceCard({
         {type && <SourceTypeBadge type={type} />}
         {norm.fit === 'partial' && <span className="status status--likely">если подтвердится</span>}
         {norm.stage !== 'done' && <span className="status">{STAGE_LABELS[norm.stage]}</span>}
+        {part?.stars && <Stars stars={part.stars} size={12} />}
+        {part?.jurisdiction && <JurisdictionPill jurisdiction={part.jurisdiction} />}
       </div>
       <span className="source__doc">{hit.document.title}</span>
       {norm.why && <p className="source__why">{norm.why}</p>}
       {punishment && (
         <p className="source__punishment">
           <span className="demand__label">По базе:</span> {punishment}
+        </p>
+      )}
+      {ruleTags.length > 0 && (
+        <p className="source__tags" aria-label="Наказание игроку">
+          {ruleTags.map((tag) => (
+            <span key={tag} className={/ban/i.test(tag) ? 'rule-tag rule-tag--ban' : 'rule-tag'}>
+              {tag}
+            </span>
+          ))}
         </p>
       )}
       {issues.map((issue) => (
@@ -215,6 +233,16 @@ function SourceCard({
       </div>
     </li>
   );
+}
+
+/** The punishments a rule of the project gives, from its «Наказание» note: «Demorgan 120-140 минут», «Ban 3-30 дней». */
+export function rulePunishments(hit: SearchHit): string[] {
+  const note = hit.article.notes?.find((n) => /^наказани/i.test(n.label));
+  if (!note) return [];
+  return note.text
+    .split(/\s+\/\s+|\s*;\s*/)
+    .map((tag) => tag.trim().replace(/[.,]+$/, ''))
+    .filter((tag) => tag && tag.length <= 60);
 }
 
 /**
@@ -260,9 +288,10 @@ export function AnswerView({
   // A law and a rule of the server are told apart: when the answer has both, each under its own heading.
   const lawSide = validation.norms.filter((n) => n.type !== 'server_rule');
   const ruleSide = validation.norms.filter((n) => n.type === 'server_rule');
+  // What the player is punished with by the administration first, then what the character faces by the laws.
   const groups: [string, CheckedNorm[]][] = lawSide.length && ruleSide.length
-    ? [['По закону', lawSide], ['По правилам сервера', ruleSide]]
-    : [[ruleSide.length ? 'Применимые правила сервера' : 'Применимые нормы', validation.norms]];
+    ? [[RULE_SIDE, ruleSide], [LAW_SIDE, lawSide]]
+    : [[ruleSide.length ? RULE_SIDE : 'Применимые нормы', validation.norms]];
   // An answer for the player's side leads with it, and keeps the analysis behind it short.
   const lean = !!(answer.guide?.length && analysis.perspective);
   const chargeHits = (calculation?.charges ?? []).map((c) => ({ article: c.article, document: c.document, part: c.part, stage: c.stage }));
@@ -272,10 +301,12 @@ export function AnswerView({
       {/* A question asked «да или нет» is answered so first: the details follow for whoever reads on. */}
       {validation.verdict && (
         <p className={`ai__verdict ai__verdict--${validation.verdict}`}>
-          <b>{VERDICT_LABELS[validation.verdict]}.</b>
+          <b>{analysis.verdictLabel ?? VERDICT_LABELS[validation.verdict]}.</b>
           {validation.verdict !== 'clarify' && answer.verdict && <span> {answer.verdict.text}</span>}
         </p>
       )}
+      {/* A situation where something is broken: said first, as a mark — what and by which norm follows. */}
+      {analysis.violation && <span className="ai__mark ai__mark--violation">Есть нарушение</span>}
       <StatusBadge status={validation.status} review={validation.needsReview} />
       {validation.needsReview && (
         <div className="warn" role="alert">

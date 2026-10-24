@@ -76,7 +76,7 @@ describe('the AI as a closed layer over the base', () => {
     expect(platform.settings.get(SCOPE_SETTING)).toBe('server_rule');
 
     await ask('оскорбил родных игрока в голосовом чате');
-    await screen.findByText(/Применимые правила сервера|Не найдено/);
+    await screen.findByText(/Правила проекта — наказание игроку|Не найдено/);
     const analysis = bodies.map((b) => b).find((b) => b.includes('НАЙДЕННЫЕ ИСТОЧНИКИ'))!;
     expect(analysis).toContain('ПРАВИЛА СЕРВЕРА');
     expect(analysis).not.toMatch(/\[S\d+\]/);
