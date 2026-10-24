@@ -10,6 +10,7 @@ export { groundItems, idsOf, strayArticles, strayFigures, textIssues, type Groun
 export { confirmedHallucinations, gradeCase, refOf, type Category, type EvalCase, type Grade } from './grade';
 export { PERSPECTIVE_FOCUS, buildContext, sourcesBlock, type CaseState, type ContextInput, type Perspective } from './context';
 export { analysisPrompt, coreRules, playerData, type Depth } from './prompt';
+export { wantsFullAnalysis } from './depth';
 export { AiError, geminiProvider, openaiProvider, serverProvider, type AiErrorKind, type AiProvider, type AiRequest, type CustomAi, type Turn } from './provider';
 export {
   SCOPE_TYPES,

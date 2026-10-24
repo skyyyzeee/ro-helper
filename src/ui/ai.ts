@@ -27,6 +27,7 @@ import {
   type ScopeChoice,
   type SystemReason,
   type Turn,
+  wantsFullAnalysis,
 } from '../protocol';
 import type { SearchHit } from '../core';
 import { aiToken } from '../account/aiToken';
@@ -373,7 +374,8 @@ export function useAiChat(platform: PlatformAdapter, pack: ServerPack, organizat
           // their rights, the defence what to check. A new case told as done to the player is the citizen's.
           perspective: perspective ?? (previous ? perspectivesFor(organization)[0] : sideOfQuestion(question, organization)),
           ...(perspective && previous ? { rerun: true } : {}),
-          depth: options.brief ? 'quick' : (options.depth ?? depth),
+          // A long situation, a test, a matter for a court: the full analysis without being asked (protocol/depth.ts).
+          depth: options.brief ? 'quick' : (options.depth ?? (depth === 'quick' && wantsFullAnalysis(question) ? 'full' : depth)),
           choice: options.choice ?? choice,
           ...(options.direct === false ? { direct: false } : {}),
         });
