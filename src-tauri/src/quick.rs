@@ -2,6 +2,7 @@
 //! the game. Hidden, it waits made; shown, it takes the focus, and hidden again it hands the focus back to the
 //! window that had it — normally the game — as the overlay does.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
 pub const QUICK_LABEL: &str = "quick";
@@ -30,19 +31,35 @@ fn create_quick_window(app: &AppHandle) -> tauri::Result<()> {
   Ok(())
 }
 
-/// The bar's window, made now if it was not yet: framed and kept out of screen capture as the others are.
-fn quick_window(app: &AppHandle) -> Result<WebviewWindow, String> {
-  if let Some(window) = app.get_webview_window(QUICK_LABEL) {
-    return Ok(window);
+/// Set while the bar's window is being made, so a second press of the key before it is up makes no second one.
+static MAKING: AtomicBool = AtomicBool::new(false);
+
+/// Makes the bar's window on a thread of its own — built inside a synchronous command, where `quick_show` runs, a
+/// window never comes up on Windows (WebView2; see Tauri's `WebviewWindowBuilder::new`) — then frames it, keeps it
+/// out of screen capture as the others are, and shows it.
+fn make_quick_window(app: &AppHandle, position: Option<QuickPosition>) {
+  if MAKING.swap(true, Ordering::SeqCst) {
+    return;
   }
-  create_quick_window(app).map_err(|e| e.to_string())?;
-  let window = app.get_webview_window(QUICK_LABEL).ok_or("no quick window")?;
-  #[cfg(windows)]
-  crate::no_system_frame(&window);
-  if crate::CAPTURE_HIDDEN.load(std::sync::atomic::Ordering::Relaxed) {
-    let _ = crate::capture_hidden(&window, true);
-  }
-  Ok(window)
+  let app = app.clone();
+  std::thread::spawn(move || {
+    let made = create_quick_window(&app);
+    MAKING.store(false, Ordering::SeqCst);
+    if let Err(error) = made {
+      eprintln!("the quick search window was not made: {error}");
+      return;
+    }
+    let handle = app.clone();
+    let _ = app.run_on_main_thread(move || {
+      let Some(window) = handle.get_webview_window(QUICK_LABEL) else { return };
+      #[cfg(windows)]
+      crate::no_system_frame(&window);
+      if crate::CAPTURE_HIDDEN.load(Ordering::Relaxed) {
+        let _ = crate::capture_hidden(&window, true);
+      }
+      let _ = show(&handle, &window, position);
+    });
+  });
 }
 
 /// Where the player last dragged the bar to, in physical pixels (issue #20).
@@ -56,7 +73,18 @@ pub struct QuickPosition {
 /// the screen the overlay is on, and gives it the focus.
 #[tauri::command]
 pub fn quick_show(app: AppHandle, position: Option<QuickPosition>) -> Result<(), String> {
-  let window = quick_window(&app)?;
+  match app.get_webview_window(QUICK_LABEL) {
+    Some(window) => show(&app, &window, position),
+    // Made the first time the key asks for it, and shown once it is.
+    None => {
+      make_quick_window(&app, position);
+      Ok(())
+    }
+  }
+}
+
+/// The bar at its place, shown and given the focus.
+fn show(app: &AppHandle, window: &WebviewWindow, position: Option<QuickPosition>) -> Result<(), String> {
   let on_screen = position.filter(|at| {
     app.available_monitors().unwrap_or_default().iter().any(|m| {
       at.x >= m.position().x - 40
