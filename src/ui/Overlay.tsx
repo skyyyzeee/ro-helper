@@ -43,14 +43,15 @@ import { HomeBoosts } from './HomeBoosts';
 import { usePopular } from './popular';
 import { SideRail } from './SideRail';
 import { canRecord, startRecording, type Recording } from './voice';
-import { DEFAULT_OPACITY, DEFAULT_TIMER_HOTKEY, DEFAULT_VOICE_HOTKEY, NOTE_HOTKEY_KEY, NOTE_KEY, OPACITY_KEY, TIMER_HOTKEY_KEY, VOICE_HOTKEY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
+import { DEFAULT_NOTE_HOTKEY, DEFAULT_OPACITY, DEFAULT_TIMER_HOTKEY, DEFAULT_VOICE_HOTKEY, NOTE_HOTKEY_KEY, NOTE_KEY, OPACITY_KEY, TIMER_HOTKEY_KEY, VOICE_HOTKEY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
 import { formatHotkey, type Profile } from './profile';
 import { OrganizationChoice } from './OrganizationChoice';
 import { PinSurface } from './PinSurface';
 import { PrivacyView } from './PrivacyView';
 import { ReleaseNotesView } from './ReleaseNotesView';
-import { aiPinCard, articlePinCard, calculatorPinCard, notePinCard, phrasesPinCard, timerPinCard } from './pinCards';
-import { CALCULATOR_ID, MIN_WIDTH, NOTE_ID, PHRASES_ID, TIMER_ID, hasCard, pinCard, placeOf, unpinCard, updateCard, type Place } from './pinLayout';
+import { aiPinCard, articlePinCard, calculatorPinCard, phrasesPinCard, timerPinCard } from './pinCards';
+import { CALCULATOR_ID, MIN_WIDTH, PHRASES_ID, TIMER_ID, hasCard, pinCard, placeOf, unpinCard, updateCard, type Place } from './pinLayout';
+import { NOTES_KEY, NOTES_PLACE_KEY, hideNotes, notesPlace, notesShown, refreshNotes, restoreNotes, showNotes, type Note } from './notes';
 import { usePins } from './usePins';
 import { typedNumber, useCharges } from './useCharges';
 import { useQuickBridge } from './useQuickBridge';
@@ -702,22 +703,45 @@ export function Overlay({
     timerWasShown.current = timerShown;
   }, [timerShown]);
 
-  // The note (issue #40): signs, plates, the plan — written in «Закреплённое», kept on this computer only, pinned
-  // over the game as a card that follows the text. Its key, off unless turned on, opens the overlay on it.
-  const [note, setNote] = useState('');
+  // The notes (issue #40, `notes.ts`): written in «Закреплённые», each under a heading of its own, kept on this
+  // computer only; over the game one block that follows the text, a page a note. Their key shows and hides it.
+  const [notes, setNotes] = useState<Note[]>(() => restoreNotes(undefined, undefined));
+  const notesRef = useRef(notes);
+  notesRef.current = notes;
   useEffect(() => {
-    void platform.readSetting<string>(NOTE_KEY).then((saved) => setNote(typeof saved === 'string' ? saved : ''));
+    void Promise.all([platform.readSetting<Note[]>(NOTES_KEY), platform.readSetting<string>(NOTE_KEY)]).then(([saved, legacy]) => {
+      const restored = restoreNotes(saved, legacy);
+      setNotes(restored);
+      // The one note of before goes over to the list once; its key is left for an older version to read.
+      if (!Array.isArray(saved)) void platform.writeSetting(NOTES_KEY, restored);
+    });
   }, [platform]);
-  const notePinned = hasCard(groups, NOTE_ID);
-  const changeNote = (text: string) => {
-    setNote(text);
-    void platform.writeSetting(NOTE_KEY, text);
-    if (notePinned) setGroups((list) => updateCard(list, notePinCard(text)));
+  const notesPinned = notesShown(groups);
+  const changeNotes = (next: Note[]) => {
+    setNotes(next);
+    void platform.writeSetting(NOTES_KEY, next);
+    setGroups((list) => refreshNotes(list, next));
   };
-  const pinNote = (on: boolean) => setGroups((list) => (on ? pinCard(list, notePinCard(note), surface()) : unpinCard(list, NOTE_ID)));
+  const notesWhere = useRef<Place | undefined>(undefined);
+  useEffect(() => {
+    void platform.readSetting<Place>(NOTES_PLACE_KEY).then((saved) => {
+      if (saved && typeof saved.x === 'number' && typeof saved.y === 'number') notesWhere.current = saved;
+    });
+  }, [platform]);
+  const pinNotes = (on: boolean) =>
+    setGroups((list) => {
+      if (on) return showNotes(list, notesRef.current, surface(), notesWhere.current);
+      const place = notesPlace(list);
+      if (place) {
+        notesWhere.current = place;
+        void platform.writeSetting(NOTES_PLACE_KEY, place);
+      }
+      return hideNotes(list);
+    });
   const [noteHotkey, setNoteHotkey] = useState('');
   useEffect(() => {
-    void platform.readSetting<string>(NOTE_HOTKEY_KEY).then((saved) => setNoteHotkey(typeof saved === 'string' ? saved : ''));
+    // Never set: the key is on; set empty: the player turned it off.
+    void platform.readSetting<string>(NOTE_HOTKEY_KEY).then((saved) => setNoteHotkey(typeof saved === 'string' ? saved : DEFAULT_NOTE_HOTKEY));
   }, [platform]);
   const changeNoteHotkey = (accelerator: string) => {
     setNoteHotkey(accelerator);
@@ -726,10 +750,18 @@ export function Overlay({
   const [noteFocusAt, setNoteFocusAt] = useState<number>();
   // The section is opened by a function set further down; the key reaches it through this.
   const openNote = useRef(() => {});
+  /** The key: the notes over the game, or off it — the assistant left closed, the game keeping the focus. None
+   * written yet, it opens «Закреплённые» to write one. */
+  const pressNotes = useRef(() => {});
+  pressNotes.current = () => {
+    if (notesPinned) pinNotes(false);
+    else if (notesRef.current.some((note) => note.text.trim())) pinNotes(true);
+    else openNote.current();
+  };
   useEffect(() => {
     const others = [profile.hotkey, voiceHotkey, quickHotkey, detains ? timerHotkey : ''];
     if (capturing || !noteHotkey || others.includes(noteHotkey)) return;
-    trackHotkey(platform, 'note', noteHotkey, platform.registerShortcut('note', noteHotkey, () => openNote.current()), 'Заметка по ней не откроется.');
+    trackHotkey(platform, 'note', noteHotkey, platform.registerShortcut('note', noteHotkey, () => pressNotes.current()), 'Заметки по ней не появятся.');
     return () => {
       forgetHotkey('note');
       void platform.unregisterShortcut('note');
@@ -1519,7 +1551,7 @@ export function Overlay({
             onQuickHotkey={changeQuickHotkey}
             timerHotkey={detains ? timerHotkey : undefined}
             onTimerHotkey={changeTimerHotkey}
-            note={{ text: note, pinned: notePinned, onText: changeNote, onPin: pinNote, hotkey: noteHotkey, onHotkey: changeNoteHotkey, focusAt: noteFocusAt }}
+            note={{ notes, pinned: notesPinned, onNotes: changeNotes, onPin: pinNotes, hotkey: noteHotkey, onHotkey: changeNoteHotkey, focusAt: noteFocusAt }}
             onMemos={() => openSection('memos')}
             opacity={opacity}
             onOpacity={changeOpacity}
