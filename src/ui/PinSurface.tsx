@@ -542,7 +542,7 @@ export function PinWindow({ bridge }: { bridge: PinBridge }) {
 
   // The theme and the accent of the overlay: the last one kept, then each change it sends.
   useEffect(() => {
-    const apply = (look: PinLook | undefined) => look && applyAppearance(isTheme(look.theme) ? look.theme : 'glass', look.hue);
+    const apply = (look: PinLook | undefined) => look && applyAppearance(isTheme(look.theme) ? look.theme : 'glass', look.hue, look.blur !== false);
     void bridge.look().then(apply);
     return bridge.onLook(apply);
   }, [bridge]);

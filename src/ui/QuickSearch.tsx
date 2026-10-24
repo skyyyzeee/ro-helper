@@ -107,7 +107,7 @@ export function QuickSearch({ bridge }: { bridge: QuickBridge }) {
   // it has; the field keeps its text, selected, so typing replaces it.
   const load = useCallback(async () => {
     const [profile, look] = await Promise.all([bridge.readSetting<Profile>(PROFILE_KEY), bridge.readSetting<PinLook>(LOOK_KEY)]);
-    if (look) applyAppearance(isTheme(look.theme) ? look.theme : 'glass', look.hue);
+    if (look) applyAppearance(isTheme(look.theme) ? look.theme : 'glass', look.hue, look.blur !== false);
     const id = profile?.server ?? 'tverskoi';
     setOrganization(profile?.organization);
     const bundled = await loadPack(id);

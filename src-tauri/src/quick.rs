@@ -2,7 +2,7 @@
 //! the game. Hidden, it waits made; shown, it takes the focus, and hidden again it hands the focus back to the
 //! window that had it — normally the game — as the overlay does.
 
-use tauri::{AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
 pub const QUICK_LABEL: &str = "quick";
 /// Told to the bar each time it is shown: it empties its field and takes the focus.
@@ -12,8 +12,9 @@ const WIDTH: f64 = 680.0;
 /// How far down the screen the bar sits: under the top edge, over the game's own HUD.
 const TOP: f64 = 0.12;
 
-/// Made hidden at start, so the key shows it at once.
-pub fn create_quick_window(app: &AppHandle) -> tauri::Result<()> {
+/// Made hidden, the first time the key asks for it: until then the app runs one window less (players told of FPS
+/// drops). The first time it takes a moment to show; after that, at once.
+fn create_quick_window(app: &AppHandle) -> tauri::Result<()> {
   WebviewWindowBuilder::new(app, QUICK_LABEL, WebviewUrl::App("index.html".into()))
     .title("Кремлёвский Ассистент — быстрый поиск")
     .inner_size(WIDTH, 120.0)
@@ -29,6 +30,21 @@ pub fn create_quick_window(app: &AppHandle) -> tauri::Result<()> {
   Ok(())
 }
 
+/// The bar's window, made now if it was not yet: framed and kept out of screen capture as the others are.
+fn quick_window(app: &AppHandle) -> Result<WebviewWindow, String> {
+  if let Some(window) = app.get_webview_window(QUICK_LABEL) {
+    return Ok(window);
+  }
+  create_quick_window(app).map_err(|e| e.to_string())?;
+  let window = app.get_webview_window(QUICK_LABEL).ok_or("no quick window")?;
+  #[cfg(windows)]
+  crate::no_system_frame(&window);
+  if crate::CAPTURE_HIDDEN.load(std::sync::atomic::Ordering::Relaxed) {
+    let _ = crate::capture_hidden(&window, true);
+  }
+  Ok(window)
+}
+
 /// Where the player last dragged the bar to, in physical pixels (issue #20).
 #[derive(serde::Deserialize)]
 pub struct QuickPosition {
@@ -40,7 +56,7 @@ pub struct QuickPosition {
 /// the screen the overlay is on, and gives it the focus.
 #[tauri::command]
 pub fn quick_show(app: AppHandle, position: Option<QuickPosition>) -> Result<(), String> {
-  let window = app.get_webview_window(QUICK_LABEL).ok_or("no quick window")?;
+  let window = quick_window(&app)?;
   let on_screen = position.filter(|at| {
     app.available_monitors().unwrap_or_default().iter().any(|m| {
       at.x >= m.position().x - 40
@@ -83,6 +99,6 @@ pub fn quick_hide(app: AppHandle, state: tauri::State<crate::PreviousForeground>
 /// The bar's height, in CSS pixels, as tall as what it shows: no invisible window over the game below it.
 #[tauri::command]
 pub fn quick_fit(app: AppHandle, height: f64) -> Result<(), String> {
-  let window = app.get_webview_window(QUICK_LABEL).ok_or("no quick window")?;
+  let Some(window) = app.get_webview_window(QUICK_LABEL) else { return Ok(()) };
   window.set_size(LogicalSize::new(WIDTH, height.clamp(60.0, 640.0))).map_err(|e| e.to_string())
 }

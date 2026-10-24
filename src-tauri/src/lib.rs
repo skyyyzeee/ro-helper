@@ -106,7 +106,7 @@ mod pin_window {
 /// around the transparent overlay they show as a rectangle outside the panel's rounded corners.
 /// The panels draw their own edges, so the system's are turned off (Windows 10 has neither: no effect).
 #[cfg(windows)]
-fn no_system_frame(window: &WebviewWindow) {
+pub(crate) fn no_system_frame(window: &WebviewWindow) {
   use windows_sys::Win32::Graphics::Dwm::DwmSetWindowAttribute;
   const DWMWA_WINDOW_CORNER_PREFERENCE: u32 = 33;
   const DWMWA_BORDER_COLOR: u32 = 34;
@@ -119,16 +119,34 @@ fn no_system_frame(window: &WebviewWindow) {
   }
 }
 
+/// The pin window, made the first time something is to go on it — a card, a notice: until then the app runs one
+/// window less, with nothing of its own over the game (players told of FPS drops, poll of October 2026).
 fn pin_window(app: &AppHandle) -> Result<WebviewWindow, String> {
-  app.get_webview_window(PIN_LABEL).ok_or_else(|| "no pin window".into())
+  if let Some(window) = app.get_webview_window(PIN_LABEL) {
+    return Ok(window);
+  }
+  create_pin_window(app).map_err(|e| e.to_string())?;
+  let window = app.get_webview_window(PIN_LABEL).ok_or_else(|| "no pin window".to_string())?;
+  #[cfg(windows)]
+  no_system_frame(&window);
+  Ok(window)
+}
+
+/// The pin window if it has been made: what would only change one is nothing to do before it is.
+fn made_pin_window(app: &AppHandle) -> Option<WebviewWindow> {
+  app.get_webview_window(PIN_LABEL)
 }
 
 /// Puts the blocks of cards on the pin window, without taking the focus from the game; nothing
 /// pinned hides the window.
 #[tauri::command]
 fn pin_set(app: AppHandle, state: tauri::State<Pin>, groups: Vec<Value>) -> Result<(), String> {
-  let window = pin_window(&app)?;
   *state.groups.lock().unwrap() = groups.clone();
+  // Nothing pinned and no window yet: none is made for nothing.
+  if groups.is_empty() && made_pin_window(&app).is_none() {
+    return Ok(());
+  }
+  let window = pin_window(&app)?;
   app.emit_to(PIN_LABEL, PIN_GROUPS_EVENT, &groups).map_err(|e| e.to_string())?;
   let empty = groups.is_empty();
   #[cfg(windows)]
@@ -167,7 +185,7 @@ fn pin_layout(app: AppHandle, state: tauri::State<Pin>, groups: Vec<Value>) -> R
 #[tauri::command]
 #[allow(unused_variables)]
 fn pin_areas(app: AppHandle, areas: Vec<PinArea>) -> Result<(), String> {
-  let window = pin_window(&app)?;
+  let Some(window) = made_pin_window(&app) else { return Ok(()) };
   #[cfg(windows)]
   if let Some(hwnd) = pin_window::hwnd(&window) {
     let rects: Vec<(i32, i32, i32, i32)> = areas.iter().map(|a| (a.x, a.y, a.width, a.height)).collect();
@@ -187,8 +205,9 @@ fn pin_state(state: tauri::State<Pin>) -> Value {
 /// shown, come back on top of it and can be resized and paged too.
 #[tauri::command]
 fn pin_live(app: AppHandle, state: tauri::State<Pin>, live: bool) -> Result<(), String> {
-  let window = pin_window(&app)?;
   *state.live.lock().unwrap() = live;
+  // The window made later reads it from `pin_state` as it loads.
+  let Some(window) = made_pin_window(&app) else { return Ok(()) };
   #[cfg(windows)]
   if let Some(hwnd) = pin_window::hwnd(&window) {
     pin_window::set_click_through(hwnd, false);
@@ -229,8 +248,8 @@ fn pin_toast(app: AppHandle, state: tauri::State<Pin>, toast: Value) -> Result<(
 /// The notice has gone by itself: with nothing pinned, the window hides again.
 #[tauri::command]
 fn pin_toast_done(app: AppHandle, state: tauri::State<Pin>) -> Result<(), String> {
-  let window = pin_window(&app)?;
   *state.toast.lock().unwrap() = None;
+  let Some(window) = made_pin_window(&app) else { return Ok(()) };
   if state.groups.lock().unwrap().is_empty() {
     #[cfg(windows)]
     if let Some(hwnd) = pin_window::hwnd(&window) {
@@ -283,12 +302,12 @@ fn create_pin_window(app: &AppHandle) -> tauri::Result<()> {
 }
 
 /// Streamer mode, as last set: the pin window is made later, when a first card is pinned, and hides itself too.
-static CAPTURE_HIDDEN: AtomicBool = AtomicBool::new(false);
+pub(crate) static CAPTURE_HIDDEN: AtomicBool = AtomicBool::new(false);
 
 /// One window in or out of screen capture. Win32 directly, not the window library: the pin window's flags
 /// must not be touched through it (see `pin_window`).
 #[allow(unused_variables)]
-fn capture_hidden(window: &WebviewWindow, hidden: bool) -> Result<(), String> {
+pub(crate) fn capture_hidden(window: &WebviewWindow, hidden: bool) -> Result<(), String> {
   #[cfg(windows)]
   {
     use windows_sys::Win32::UI::WindowsAndMessaging::{SetWindowDisplayAffinity, WDA_EXCLUDEFROMCAPTURE, WDA_NONE};
@@ -435,13 +454,10 @@ pub fn run() {
         )?;
       }
 
-      create_pin_window(app.handle())?;
-      quick::create_quick_window(app.handle())?;
+      // The pin window and the quick search's are made when first used (`pin_window`, `quick::quick_window`).
       #[cfg(windows)]
-      for label in ["main", PIN_LABEL, quick::QUICK_LABEL] {
-        if let Some(window) = app.get_webview_window(label) {
-          no_system_frame(&window);
-        }
+      if let Some(window) = app.get_webview_window("main") {
+        no_system_frame(&window);
       }
 
       // The overlay has no frame and no taskbar button, so the tray is how to reach it and quit.

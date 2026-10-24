@@ -296,6 +296,9 @@ for (const r of raw('recipes').items) {
 }
 /** The materials a craft takes, in the wiki's words: «Медицинские материалы»… */
 const MATERIALS = (M.itemPage as Raw | undefined)?.materialTypes as Raw | undefined;
+/** The factions in the wiki's words: «lspd» → «МВД», «lscsd» → «ГИБДД», «opg1» → «ОПГ 1». */
+const FACTIONS = (M.craftsPage as Raw | undefined)?.fractions as Raw | undefined;
+const faction = (code: string) => word(code, FACTIONS) || code.toUpperCase();
 for (const r of raw('crafts').items) {
   const material = r.item?.materials ? { name: word(r.item.materialType, MATERIALS) || 'Материалы', count: Number(r.item.materials) } : undefined;
   add({
@@ -305,7 +308,7 @@ for (const r of raw('crafts').items) {
     subtitle: r.item?.typeName,
     group: r.fraction,
     image: r.item?.imageUrl,
-    facts: [...fact('Фракция', r.fraction), ...(material ? [[material.name, `× ${material.count}`] as [string, string]] : [])],
+    facts: [...fact('Фракция', faction(r.fraction)), ...(material ? [[material.name, `× ${material.count}`] as [string, string]] : [])],
     ...(material ? { make: { output: 1, parts: [material] } } : {}),
     tags: [],
     sources: [],
@@ -374,7 +377,7 @@ const TITLES: [WikiCatalogId, string, (group: string) => string][] = [
   ['businesses', 'Бизнесы', (g) => word(g, M.businessesPage)],
   ['realties', 'Недвижимость', (g) => word(g, M.realtiesPage)],
   ['recipes', 'Рецепты', (g) => `Уровень ${g}`],
-  ['crafts', 'Крафт фракций', (g) => g.toUpperCase()],
+  ['crafts', 'Крафт фракций', faction],
   ['updates', 'Обновления', (g) => g],
   ['posts', 'Статьи', (g) => sectionNames.get(g) ?? g],
 ];
