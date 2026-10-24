@@ -40,7 +40,7 @@ export const ARBATSKIY: ServerSources = {
     'fz-immunity', 'fz-advocacy', 'fz-business', 'fz-media', 'fz-health',
     // Уставы и положения организаций
     'ch-mvd', 'ch-gibdd', 'ch-gibdd-discipline', 'ch-gibdd-osb', 'ch-fsb', 'ch-fsb-usb', 'ch-fso',
-    'ch-army',
+    'ch-army', 'ch-army-discipline', 'ch-army-guard',
     'sk-charter', 'ch-gov', 'ch-hospital', 'ch-news', 'ch-news-ads', 'ch-news-edit',
     // Правила проекта (общие для всех серверов)
     'rules-main', 'rules-gov', 'rules-crime',

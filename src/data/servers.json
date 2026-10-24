@@ -222,7 +222,9 @@
         "documents": [
           "fz-army",
           "fz-weapons",
-          "ch-army"
+          "ch-army",
+          "ch-army-discipline",
+          "ch-army-guard"
         ]
       },
       {
