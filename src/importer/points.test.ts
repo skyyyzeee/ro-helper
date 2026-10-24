@@ -32,7 +32,7 @@ const OLD_GIBDD = [
 ].join('\n');
 
 const COUNTS: [string, LawFormat, number][] = [
-  ['ch-mvd', 'points', 247], ['ch-gibdd', 'points', 88], ['ch-fso', 'points', 97], ['ch-hospital', 'points', 223], ['ch-news', 'points', 157],
+  ['ch-mvd', 'points', 247], ['ch-gibdd', 'points', 88], ['ch-fso', 'points', 97], ['ch-hospital', 'points', 223], ['ch-news', 'points', 90],
   ['sk-main', 'points', 39], ['sk-gsu', 'points', 51], ['sk-inspections', 'points', 20], ['sk-ranks', 'points', 12],
   ['rules-main', 'points', 98], ['rules-gov', 'points', 119], ['rules-crime', 'points', 52],
   ['ch-army', 'law', 65], ['ch-army-discipline', 'law', 45], ['ch-army-guard', 'law', 44],
@@ -176,7 +176,8 @@ const parseOn = (server: string, id: string, format: LawFormat, options: PointsO
 describe('charters of Арбатский and Кутузовский (real forum text)', () => {
   const CHARTERS: [string, string, LawFormat, number][] = [
     ['arbatskiy', 'ch-mvd', 'law', 85], ['arbatskiy', 'ch-gibdd', 'law', 33],
-    ['arbatskiy', 'ch-army', 'law', 78], ['arbatskiy', 'sk-charter', 'law', 88],
+    ['arbatskiy', 'ch-army', 'points', 198], ['arbatskiy', 'sk-charter', 'law', 88],
+    ['arbatskiy', 'ch-army-discipline', 'points', 123], ['arbatskiy', 'ch-army-guard', 'points', 71],
     ['arbatskiy', 'ch-hospital', 'points', 143], ['arbatskiy', 'ch-news', 'points', 221],
     ['kutuzovskiy', 'ch-mvd', 'points', 337], ['kutuzovskiy', 'ch-gibdd', 'law', 33], ['kutuzovskiy', 'ch-army-discipline', 'points', 103],
     ['kutuzovskiy', 'ch-hospital', 'points', 165], ['kutuzovskiy', 'ch-news', 'points', 138], ['kutuzovskiy', 'sk-appeals', 'law', 29],
@@ -189,9 +190,9 @@ describe('charters of Арбатский and Кутузовский (real forum 
     }
   });
 
-  it('a charter numbering its points «1.», «5.1» anew in each chapter, a chapter heading lost on the forum (ФСБ Арбатского)', () => {
+  it('a charter numbering its points «1.», «5.1» anew in each chapter, «- 3.1.» with a dash, a chapter heading lost on the forum (ФСБ Арбатского)', () => {
     const fsb = parseOn('arbatskiy', 'ch-fsb', 'points', { points: 'numbered' });
-    expect({ count: fsb.articles.length, issues: fsb.issues }).toEqual({ count: 225, issues: [] });
+    expect({ count: fsb.articles.length, issues: fsb.issues }).toEqual({ count: 212, issues: [] });
     expect(fsb.articles[0]).toMatchObject({ number: '1', chapter: 'I' });
     // «ГЛАВА» alone: the chapter after VIII, with the points of its own 1.1, not VIII's again.
     expect(fsb.chapters.map((c) => c.number)).toEqual(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']);
