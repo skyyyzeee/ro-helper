@@ -298,6 +298,8 @@ export interface QuestionInput extends Omit<AnalyseInput, 'scope' | 'terms'> {
   aliases?: readonly QueryAlias[] | (() => Promise<readonly QueryAlias[]>);
   /** False to have the AI weigh even «что будет за кражу?», which the base answers alone by default. */
   direct?: boolean;
+  /** True to ask the AI for search phrases even where the question's words placed it (the exam compares both). */
+  aiTerms?: boolean;
 }
 
 /**
@@ -378,7 +380,11 @@ export async function answerQuestion(input: QuestionInput): Promise<Outcome> {
   // The classifier's phrases were asked in the words of the laws: kept for an analysis in the laws. The players'
   // expressions are kept in any scope: they were approved for it.
   const keep = matched.length > 0 || scope === 'law';
-  const analysis = await analyse({ ...input, scope, ...(terms && keep ? { terms } : {}) });
+  // A first question its words already placed is searched with them and the hints alone: the AI's call for search
+  // phrases is one more turn in GigaChat's queue — one request at a time for every player — for little the search
+  // does not find without it (recall.test.ts). A follow-up, told against its case, keeps the call.
+  const skipTerms = !terms && !previous && aiCalls === 0 && input.aiTerms !== true;
+  const analysis = await analyse({ ...input, scope, ...(terms && keep ? { terms } : skipTerms ? { terms: [] } : {}) });
   analysis.aiCalls = (analysis.aiCalls ?? 0) + aiCalls;
   if (classification.mismatch && classification.mismatch !== 'mixed') analysis.switchTo = classification.mismatch;
   if (classification.mismatch) analysis.notes = [classification.why === 'слова не подсказали — так решил ИИ' ? RULES_HINT : MISMATCH_NOTE[classification.mismatch]];

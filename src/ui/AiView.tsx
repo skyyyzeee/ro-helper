@@ -311,6 +311,7 @@ export function AiView({
                       onHintEnd={markHint.end}
                     />
                   )}
+                  {message.seconds !== undefined && <p className="ai__time">Ответ за {message.seconds.toFixed(1).replace('.', ',')} с</p>}
                   {can?.has('ai.debug') && <DebugView analysis={message.analysis} classification={message.classification} />}
                 </>
               ) : (

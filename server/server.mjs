@@ -134,7 +134,21 @@ const today = () => new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 1
 // ——— What was spent today, kept on disk so a restart does not reset the limits ———
 
 /** A fresh day: nothing spent, nothing asked; `answered` — who answered, and why the paid API had to; `marks` — marks taken. */
-const freshDay = () => ({ day: today(), spent: 0, devices: {}, accounts: {}, ips: {}, answered: { gigachat: 0, paid: 0, cached: 0, why: {} }, marks: 0 });
+const freshDay = () => ({ day: today(), spent: 0, devices: {}, accounts: {}, ips: {}, answered: { gigachat: 0, paid: 0, cached: 0, why: {} }, marks: 0, timing: {} });
+
+/**
+ * How long each model took today, to find what makes an answer slow: the calls, the ones that failed, and in all
+ * the milliseconds waited in GigaChat's queue (one request at a time) and spent answering, with the longest answer.
+ */
+function timed(model, waitMs, runMs, ok) {
+  const t = ((state.timing ??= {})[model] ??= { calls: 0, failed: 0, waitMs: 0, runMs: 0, maxMs: 0 });
+  t.calls += 1;
+  if (!ok) t.failed += 1;
+  t.waitMs += waitMs;
+  t.runMs += runMs;
+  t.maxMs = Math.max(t.maxMs, waitMs + runMs);
+  dirty = true;
+}
 let state = freshDay();
 if (existsSync(CONFIG.stateFile)) {
   try {
@@ -236,7 +250,19 @@ async function inTurn(models, call) {
 }
 
 /** The paid OpenAI-compatible API, model after model while they are busy. */
-async function paid({ system, messages, json, think }, models = CONFIG.models) {
+async function paid(request, models = CONFIG.models) {
+  const started = Date.now();
+  try {
+    const answer = await paidOnce(request, models);
+    timed(answer.model, 0, Date.now() - started, true);
+    return answer;
+  } catch (error) {
+    timed(models[0], 0, Date.now() - started, false);
+    throw error;
+  }
+}
+
+async function paidOnce({ system, messages, json, think }, models) {
   if (!CONFIG.apiKey) throw new UpstreamError(503, null, 'no paid API key');
   let used = models[0];
   const body = await inTurn(models, (model) =>
@@ -264,7 +290,7 @@ async function paid({ system, messages, json, think }, models = CONFIG.models) {
   const usage = body?.usage ?? {};
   const [priceIn, priceOut] = MODEL_PRICES[used] ?? [CONFIG.priceIn, CONFIG.priceOut];
   const rubles = ((usage.prompt_tokens ?? 0) * priceIn + (usage.completion_tokens ?? 0) * priceOut) / 1e6;
-  return { text, rubles, usage: { input: usage.prompt_tokens ?? 0, output: usage.completion_tokens ?? 0 } };
+  return { text, rubles, usage: { input: usage.prompt_tokens ?? 0, output: usage.completion_tokens ?? 0 }, model: used };
 }
 
 /** Rubles per 1M tokens, in and out, by ProxyAPI's list (October 2026): the budget counts what each model costs. */
@@ -298,10 +324,21 @@ async function gigachatToken() {
 /** One request at a time, as GigaChat takes them; how many wait for their turn. */
 let turn = Promise.resolve();
 let waiting = 0;
-function inGigachatTurn(call) {
+function inGigachatTurn(call, model) {
   if (waiting >= CONFIG.gigachat.maxWaiting) return Promise.reject(new Declined('queue'));
   waiting += 1;
-  const mine = turn.then(call);
+  const queued = Date.now();
+  const mine = turn.then(async () => {
+    const started = Date.now();
+    let ok = false;
+    try {
+      const result = await call();
+      ok = true;
+      return result;
+    } finally {
+      timed(`gigachat:${model}`, started - queued, Date.now() - started, ok);
+    }
+  });
   turn = mine.catch(() => undefined).finally(() => {
     waiting -= 1;
   });
@@ -337,7 +374,7 @@ async function gigachat({ system, messages, json }, model = CONFIG.gigachat.mode
     if (json && !readableJson(text)) throw new Declined('format');
     const usage = body?.usage ?? {};
     return { text, rubles: 0, usage: { input: usage.prompt_tokens ?? 0, output: usage.completion_tokens ?? 0 } };
-  });
+  }, model);
 }
 
 /**
@@ -798,7 +835,7 @@ const server = createServer(async (request, response) => {
   }
   if (request.method === 'GET' && request.url === '/v1/status') {
     rollDay();
-    return send(response, 200, { ok: true, open: state.spent < CONFIG.budgetPerDay || !!CONFIG.gigachat.key, answered: state.answered, spent: Math.round(state.spent * 100) / 100, marks: state.marks ?? 0, cache: cache.size });
+    return send(response, 200, { ok: true, open: state.spent < CONFIG.budgetPerDay || !!CONFIG.gigachat.key, answered: state.answered, spent: Math.round(state.spent * 100) / 100, marks: state.marks ?? 0, cache: cache.size, timing: state.timing ?? {} });
   }
   if (request.method === 'GET' && request.url.startsWith('/v1/feedback')) {
     if (!isAdmin(request)) return send(response, 403, { error: 'Нужен ключ администратора.' });

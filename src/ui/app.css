@@ -3761,6 +3761,8 @@ input {
 .ai__answer { display: flex; flex-direction: column; gap: 6px; user-select: text; }
 
 .ai__line { margin: 0; font-size: 14.5px; line-height: 1.55; overflow-wrap: anywhere; }
+/* «Ответ за 5,4 с»: how long the player waited, small under the answer. */
+.ai__time { margin: 0; font-size: 12px; color: var(--text-muted); }
 
 .ai__line--item { padding-left: 14px; position: relative; }
 
