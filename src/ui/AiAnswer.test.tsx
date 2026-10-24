@@ -24,7 +24,9 @@ describe('the analysis on screen', () => {
     await ask('у меня украли телефон');
     const reply = screen.getByRole('log');
     expect(within(reply).getByText('Подтверждено')).toBeInTheDocument();
-    for (const block of ['Ситуация', 'Применимые нормы', 'Нарушение', 'Наказание', 'Процедура']) expect(within(reply).getByText(block)).toBeInTheDocument();
+    // The gist first, in a sentence or two; the blocks of the analysis under it.
+    expect(reply.querySelector('.ai__gist')).not.toBeNull();
+    for (const block of ['Применимые нормы', 'Нарушение', 'Наказание', 'Процедура']) expect(within(reply).getByText(block)).toBeInTheDocument();
     expect(within(reply).getByText(/По базе:/).parentElement).toHaveTextContent(/штраф до 50\s000\s₽ либо 30\sмес/);
     expect(within(reply).getByText('Калькулятор:').parentElement).toHaveTextContent(/30\sмес/);
   });
@@ -47,7 +49,7 @@ describe('the analysis on screen', () => {
     const verdict = reply.querySelector('.ai__verdict')!;
     // In the question's own word: «Обязан ли…» — «Обязан.», not a bare «Да.».
     expect(verdict).toHaveTextContent('Обязан. кража наказывается по УК.');
-    expect(verdict.compareDocumentPosition(within(reply).getByText('Ситуация')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(verdict.compareDocumentPosition(reply.querySelector('.ai__gist')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(bodies.some((b) => b.includes('ВОПРОС ЗАКРЫТЫЙ'))).toBe(true);
   });
 

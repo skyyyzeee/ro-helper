@@ -331,6 +331,9 @@ export function AnswerView({
         ),
       )}
 
+      {/* The gist in a sentence or two, before the side's points: what a short answer is. */}
+      {lean && answer.situation && <p className="ai__line ai__gist">{answer.situation}</p>}
+
       {answer.guide && answer.guide.length > 0 && analysis.perspective && (
         <Guide items={answer.guide} perspective={analysis.perspective} sources={byId} onOpen={onOpen} />
       )}
@@ -382,11 +385,6 @@ export function AnswerView({
 
           <details className="answer__more">
             <summary>Подробный разбор</summary>
-      {answer.situation && (
-        <Block title="Ситуация">
-          <p className="ai__line">{answer.situation}</p>
-        </Block>
-      )}
 
       {answer.violation && (
         <Block title="Нарушение">

@@ -29,23 +29,38 @@ the bot, README and PRIVACY; «хелпер» in players' texts became «асс�
 ### Branches — nothing lands on `main` untested
 - **`main`** is what players get: releases are tagged from it, and installed copies download the laws from
   `src/data/*.json` on `main` — whatever is merged there reaches players. Only the owner merges into `main`.
-- **`dev`** is where work comes together and is tried: everyone else's changes go into `dev` by a pull request
-  (the owner's own, and their agent's, go straight in, with no pull request but a note for AidenArokij in
-  `docs/FOR_AIDEN.md` — what was done and what it means for him, in Russian, newest on top; read it when you
-  start); when
-  `dev` has been tried, a pull request `dev` → `main` and a release follow.
+- **`dev`** is the next release: **only what may reach players goes in** — finished and tried. Whatever is in
+  `dev` ships with the next `dev` → `main`, whoever's it is (24.10.2026: three urgent fixes released from `dev`
+  took AidenArokij's unfinished AI work along). Work not ready to ship stays on its own branch, or comes in
+  turned off behind a switch in `src/ui/features.ts` (`export const AI_FROM_SEARCH = false`, as `MEMOS` is):
+  the code is in `dev`, players don't see it until the switch is turned on.
+- **Who merges into `dev`.** AidenArokij's pull requests are merged by the owner; Aiden may merge one himself
+  only when it says «готово к релизу» and carries its line for «Что нового» (Russian, for players) in the
+  description. The owner's own work, and their agent's, goes straight in with no pull request but a note for
+  AidenArokij in `docs/FOR_AIDEN.md` — what was done and what it means for him, in Russian, newest on top;
+  read it when you start.
 - **Work branches** start from `dev` (`design-…`, `ai-…`, `ticket-15-…`) and end as a pull request into `dev`.
   Keep them to one thing; CI (types, tests, the native tests) runs on every pull request and must be green.
-- The one thing that may go straight to `main`: the owner's law updates (`npm run import`), so a fix reaches
-  players at once — then merge `main` back into `dev`.
+  The version and «Что нового» are not changed on a work branch: the line for «Что нового» goes in the
+  pull request's description, and the release collects them.
+- **An urgent fix goes past `dev`.** A branch `hotfix-X.Y.Z` from **`main`**, with only the fix, its test, the
+  version and its «Что нового»; checked (`npm test`, `npm run build`, `cargo check`), merged into `main`, tagged
+  on the owner's word, then `main` merged back into `dev`. Never release an urgent fix by merging `dev` into
+  `main`: that ships everything waiting in `dev`.
+- The one thing that may go straight to `main` without a branch: the owner's law updates (`npm run import`), so
+  a fix reaches players at once — then merge `main` back into `dev`.
 - Never force-push `main` or `dev`, never rewrite pushed history, never push a tag. Commit only the files you
   changed, by name (no `git add -A` / `git add .`): the owner keeps untracked files of their own in the tree.
 
 ### Releases — the owner's
 - The version is only in `package.json`; «Что нового» is a `## <version>` section at the top of `CHANGELOG.md`
   (the build fails without one). A pushed tag `v*` builds a **draft** release titled «Release X.Y.Z» (and that is how versions are called when talking to the owner: «Release 2.4.0»); the owner installs it from the
-  draft, tries it, and publishes it — only then do installed copies update. Tags are pushed by the owner only:
-  a tag signs an update with the owner's key.
+  draft, tries it, and publishes it — only then do installed copies update. Tags are pushed by the owner only
+  (or their agent when the owner says so in words, for that version): a tag signs an update with the owner's key.
+- **A release is made by the owner, one at a time.** Before `dev` → `main`, list what will ship:
+  `git log --oneline main..dev`. Every change there must be ready for players and have its line in the new
+  `## X.Y.Z` of `CHANGELOG.md`; ask its author about anything not. AidenArokij may prepare a release branch
+  (`release-X.Y.Z` from `dev`: the version and «Что нового»), the owner merges it and tags.
 
 ### Design
 - The layout follows **direction C** of `design/mockup-v2/index.html` exactly: the side column always on
