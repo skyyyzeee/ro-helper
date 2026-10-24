@@ -477,6 +477,13 @@ input {
   cursor: default;
 }
 
+/* A button with an icon before its words: «Написать в Discord». */
+.settings__button:has(> svg) {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
 .settings__note {
   font-size: 13px;
   color: var(--text-muted);

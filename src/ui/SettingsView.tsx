@@ -1046,6 +1046,11 @@ export function SettingsView({
       <div className="settings__part" id={sectionId('faq')}>
         <Block title="Частые вопросы">
           <FaqSection />
+          <p className="set__hint">Не нашли ответа, нашли ошибку в статье или есть идея — напишите нам в Discord.</p>
+          <button className="settings__button" type="button" onClick={() => void platform.openExternal(LINKS.discord)}>
+            <DiscordIcon />
+            Написать в Discord
+          </button>
         </Block>
       </div>
 
