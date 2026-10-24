@@ -21,7 +21,7 @@ Chromium (и Firefox, у него та же проверка) считает п�
 `supabase/migrations/20261024000000_article_stats.sql`). Все статьи сервера по дням: `day`, `article`, `count`,
 за последние `days` дней (по умолчанию 7, не больше 30). Те же обезличенные числа, что и у
 `popular_articles`; таблица закрыта, вызывается с publishable key, который уже лежит в `.env` сервера, —
-никаких секретов. Работает, когда skyze запустит миграцию в Supabase (до этого — 404).
+никаких секретов. Миграция запущена 24.10.2026 — уже работает; числа копятся с 24.10.
 
 ```bash
 curl -X POST https://evwyrdytojwxlvgqrkar.supabase.co/rest/v1/rpc/article_stats -H "apikey: <SUPABASE_PUBLISHABLE_KEY>" -H "Content-Type: application/json" -d "{\"target\":\"tverskoi\",\"days\":30}"
