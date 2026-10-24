@@ -43,7 +43,7 @@ import { HomeBoosts } from './HomeBoosts';
 import { usePopular } from './popular';
 import { SideRail } from './SideRail';
 import { canRecord, startRecording, type Recording } from './voice';
-import { DEFAULT_NOTE_HOTKEY, DEFAULT_OPACITY, DEFAULT_TIMER_HOTKEY, DEFAULT_VOICE_HOTKEY, NOTE_HOTKEY_KEY, NOTE_KEY, OPACITY_KEY, TIMER_HOTKEY_KEY, VOICE_HOTKEY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
+import { DEFAULT_NOTE_HOTKEY, DEFAULT_OPACITY, NOTES_NEXT_HOTKEY_KEY, NOTES_PREV_HOTKEY_KEY, DEFAULT_TIMER_HOTKEY, DEFAULT_VOICE_HOTKEY, NOTE_HOTKEY_KEY, NOTE_KEY, OPACITY_KEY, TIMER_HOTKEY_KEY, VOICE_HOTKEY_KEY, applyOpacity, clampOpacity } from './overlaySettings';
 import { formatHotkey, type Profile } from './profile';
 import { OrganizationChoice } from './OrganizationChoice';
 import { PinSurface } from './PinSurface';
@@ -51,7 +51,8 @@ import { PrivacyView } from './PrivacyView';
 import { ReleaseNotesView } from './ReleaseNotesView';
 import { aiPinCard, articlePinCard, calculatorPinCard, phrasesPinCard, timerPinCard } from './pinCards';
 import { CALCULATOR_ID, MIN_WIDTH, PHRASES_ID, TIMER_ID, hasCard, pinCard, placeOf, unpinCard, updateCard, type Place } from './pinLayout';
-import { NOTES_KEY, NOTES_PLACE_KEY, hideNotes, notesPlace, notesShown, refreshNotes, restoreNotes, showNotes, type Note } from './notes';
+import { NOTES_KEY, NOTES_PLACE_KEY, hideNotes, noteOnShow, notesPlace, notesShown, refreshNotes, restoreNotes, showNote, showNotes, turnNotes, type Note } from './notes';
+import { freeOf } from './keymap';
 import { usePins } from './usePins';
 import { typedNumber, useCharges } from './useCharges';
 import { useQuickBridge } from './useQuickBridge';
@@ -758,15 +759,75 @@ export function Overlay({
     else if (notesRef.current.some((note) => note.text.trim())) pinNotes(true);
     else openNote.current();
   };
+  // Every key before the notes' own, in the order of «Клавиши» (`keyUses` in `KeysBlock.tsx`): a key two things
+  // were given is the earlier one's, and the later one is not registered.
+  const phraseAccelerators = Array.from({ length: keyed }, (_, i) => `${phraseKeys}+${i + 1}`);
+  const heldBeforeNotes = [profile.hotkey, voiceHotkey, quickHotkey, detains ? timerHotkey : '', ...phraseAccelerators];
+  const heldText = heldBeforeNotes.join('\n');
   useEffect(() => {
-    const others = [profile.hotkey, voiceHotkey, quickHotkey, detains ? timerHotkey : ''];
-    if (capturing || !noteHotkey || others.includes(noteHotkey)) return;
+    if (capturing || !freeOf(noteHotkey, heldText.split('\n'))) return;
     trackHotkey(platform, 'note', noteHotkey, platform.registerShortcut('note', noteHotkey, () => pressNotes.current()), 'Заметки по ней не появятся.');
     return () => {
       forgetHotkey('note');
       void platform.unregisterShortcut('note');
     };
-  }, [platform, noteHotkey, capturing, profile.hotkey, voiceHotkey, quickHotkey, timerHotkey, detains]);
+  }, [platform, noteHotkey, capturing, heldText]);
+
+  // Turning the notes over the game with the assistant shut (a player asked, 24.10.2026): on and back, and each note
+  // on a key of its own. Not on show, «on» and «back» bring them up; a note's key on its own page hides them.
+  const [notesNext, setNotesNext] = useState('');
+  const [notesPrev, setNotesPrev] = useState('');
+  useEffect(() => {
+    void Promise.all([platform.readSetting<string>(NOTES_NEXT_HOTKEY_KEY), platform.readSetting<string>(NOTES_PREV_HOTKEY_KEY)]).then(([next, prev]) => {
+      setNotesNext(typeof next === 'string' ? next : '');
+      setNotesPrev(typeof prev === 'string' ? prev : '');
+    });
+  }, [platform]);
+  const changeNotesNext = (accelerator: string) => {
+    setNotesNext(accelerator);
+    void platform.writeSetting(NOTES_NEXT_HOTKEY_KEY, accelerator);
+  };
+  const changeNotesPrev = (accelerator: string) => {
+    setNotesPrev(accelerator);
+    void platform.writeSetting(NOTES_PREV_HOTKEY_KEY, accelerator);
+  };
+  const turnNotesBy = useRef((_by: number) => {});
+  turnNotesBy.current = (by) => {
+    if (notesPinned) setGroups((list) => turnNotes(list, by));
+    else pressNotes.current();
+  };
+  const pressNote = useRef((_id: string) => {});
+  pressNote.current = (id) => {
+    const note = notesRef.current.find((n) => n.id === id);
+    if (!note?.text.trim()) return openNote.current();
+    if (notesPinned && noteOnShow(groups) === id) return pinNotes(false);
+    setGroups((list) => showNote(list, notesRef.current, id, surface(), notesWhere.current));
+  };
+  /** The notes' keys after the others, each registered only when no key before it holds the same. */
+  const noteKeys = [
+    { name: 'notes-next', hotkey: notesNext, press: () => turnNotesBy.current(1) },
+    { name: 'notes-prev', hotkey: notesPrev, press: () => turnNotesBy.current(-1) },
+    ...notes.map((note) => ({ name: `note:${note.id}`, hotkey: note.hotkey ?? '', press: () => pressNote.current(note.id) })),
+  ];
+  const noteKeysText = noteKeys.map((key) => `${key.name} ${key.hotkey}`).join('\n');
+  useEffect(() => {
+    if (capturing) return;
+    const held = [...heldText.split('\n'), noteHotkey];
+    const registered: string[] = [];
+    for (const key of noteKeys) {
+      if (!freeOf(key.hotkey, held)) continue;
+      held.push(key.hotkey);
+      registered.push(key.name);
+      trackHotkey(platform, key.name, key.hotkey, platform.registerShortcut(key.name, key.hotkey, key.press), 'Заметки по ней не перелистнутся.');
+    }
+    return () =>
+      registered.forEach((name) => {
+        forgetHotkey(name);
+        void platform.unregisterShortcut(name);
+      });
+    // The keys are the text above: a note written on, its key the same, registers nothing anew.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [platform, capturing, heldText, noteHotkey, noteKeysText]);
 
   /** Ctrl+C copies the charges, unless there is text selected to copy. Says whether it did. */
   const copyShortcut = useRef<() => boolean>(() => false);
@@ -1551,7 +1612,20 @@ export function Overlay({
             onQuickHotkey={changeQuickHotkey}
             timerHotkey={detains ? timerHotkey : undefined}
             onTimerHotkey={changeTimerHotkey}
-            note={{ notes, pinned: notesPinned, onNotes: changeNotes, onPin: pinNotes, hotkey: noteHotkey, onHotkey: changeNoteHotkey, focusAt: noteFocusAt }}
+            note={{
+              notes,
+              pinned: notesPinned,
+              onNotes: changeNotes,
+              onPin: pinNotes,
+              hotkey: noteHotkey,
+              onHotkey: changeNoteHotkey,
+              next: notesNext,
+              onNext: changeNotesNext,
+              prev: notesPrev,
+              onPrev: changeNotesPrev,
+              focusAt: noteFocusAt,
+            }}
+            phrases={isFaction(organization) ? { keys: phraseKeys, onKeys: changePhraseKeys, count: phrases.length } : undefined}
             onMemos={() => openSection('memos')}
             opacity={opacity}
             onOpacity={changeOpacity}
