@@ -52,7 +52,7 @@ mod pin_window {
   use windows_sys::Win32::UI::WindowsAndMessaging::{
     GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, ShowWindow, GWL_EXSTYLE, HWND_TOPMOST, SWP_FRAMECHANGED,
     SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SW_HIDE, SW_SHOWNOACTIVATE, WS_EX_LAYERED,
-    WS_EX_TRANSPARENT,
+    WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT,
   };
 
   pub fn hwnd(window: &tauri::WebviewWindow) -> Option<HWND> {
@@ -92,12 +92,47 @@ mod pin_window {
   }
 
   /// Lets the mouse pass through to the game, the same styles the window library uses for it.
+  ///
+  /// Always a tool window too. Chrome, Firefox, Discord, Edge and every other Chromium app stop drawing a window
+  /// they think is covered by a visible window that is not click-through, not a tool window and not cut to a
+  /// complex shape — and they take that window's whole rectangle, here the desktop. With one card pinned the
+  /// window takes the mouse and is cut to one rectangle: those apps froze behind it until it was unpinned.
   pub fn set_click_through(hwnd: HWND, on: bool) {
     let bits = (WS_EX_TRANSPARENT | WS_EX_LAYERED) as isize;
     unsafe {
-      let style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+      let style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) | WS_EX_TOOLWINDOW as isize;
       SetWindowLongPtrW(hwnd, GWL_EXSTYLE, if on { style | bits } else { style & !bits });
       SetWindowPos(hwnd, std::ptr::null_mut(), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    }
+  }
+
+  #[cfg(test)]
+  mod tests {
+    use super::*;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{CreateWindowExW, DestroyWindow, WS_POPUP};
+
+    fn ex_style(hwnd: HWND) -> u32 {
+      unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32 }
+    }
+
+    #[test]
+    fn the_pin_window_is_a_tool_window_whether_or_not_it_takes_the_mouse() {
+      let class: Vec<u16> = "STATIC\0".encode_utf16().collect();
+      let hwnd = unsafe {
+        CreateWindowExW(0, class.as_ptr(), std::ptr::null(), WS_POPUP, 0, 0, 400, 300, std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null())
+      };
+      assert!(!hwnd.is_null());
+
+      // Shown over the game, taking the mouse: what froze the Chromium apps behind it, but for the tool window.
+      set_click_through(hwnd, false);
+      assert_eq!(ex_style(hwnd) & (WS_EX_TRANSPARENT | WS_EX_LAYERED), 0);
+      assert_ne!(ex_style(hwnd) & WS_EX_TOOLWINDOW, 0);
+
+      set_click_through(hwnd, true);
+      assert_eq!(ex_style(hwnd) & (WS_EX_TRANSPARENT | WS_EX_LAYERED), WS_EX_TRANSPARENT | WS_EX_LAYERED);
+      assert_ne!(ex_style(hwnd) & WS_EX_TOOLWINDOW, 0);
+
+      unsafe { DestroyWindow(hwnd) };
     }
   }
 }
