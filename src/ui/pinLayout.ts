@@ -182,6 +182,14 @@ export function pageGroup(groups: PinGroup[], groupId: string, paged: boolean): 
   return groups.map((g) => (g.id === groupId ? { ...g, paged, ...(paged ? { height: undefined } : {}) } : g));
 }
 
+/** A paged block turned to a card, by its place: past either end it goes round. */
+export function turnPage(groups: PinGroup[], groupId: string, to: number): PinGroup[] {
+  return groups.map((g) => (g.id === groupId && g.cards.length ? { ...g, page: ((to % g.cards.length) + g.cards.length) % g.cards.length } : g));
+}
+
+/** The card of a block on show: a paged one's page, as far as it has cards. */
+export const pageOf = (group: PinGroup): number => (group.paged && group.cards.length > 1 ? Math.min(Math.max(group.page ?? 0, 0), group.cards.length - 1) : 0);
+
 /** Dragged out of a block of several, a card becomes a block of its own where it was dropped. */
 export function detachCard(groups: PinGroup[], groupId: string, cardId: string, x: number, y: number, surface: Surface): PinGroup[] {
   const group = groups.find((g) => g.id === groupId);

@@ -4,7 +4,7 @@ import type { PinBridge, ShownToast } from '../platform/tauri';
 import type { PinArea, PinCard, PinGroup, PinLook } from '../platform/types';
 import { applyAppearance, isTheme } from './appearance';
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, CompactIcon, DownloadIcon, GripIcon, PagesIcon, PinIcon, ResizeIcon, StarIcon } from './icons';
-import { CARD_WIDTH, MIN_HEIGHT, compactGroup, detachCard, dropSide, joinGroups, keepOnScreen, moveGroup, pageGroup, resizeGroup, unpinCard, unpinGroup, type DropSide } from './pinLayout';
+import { CARD_WIDTH, MIN_HEIGHT, compactGroup, detachCard, dropSide, joinGroups, keepOnScreen, moveGroup, pageGroup, pageOf, resizeGroup, turnPage, unpinCard, unpinGroup, type DropSide } from './pinLayout';
 
 /**
  * What a card pinned over the game shows: an article's part, or the calculator's total. Compact, only the
@@ -176,8 +176,6 @@ const cardKey = (groupId: string, cardId: string) => `${groupId} :: ${cardId}`;
 export function PinSurface({ groups: incoming, live, onChange, onClearCalculator, onCopy, onAreas, toast, onToastEnd }: PinSurfaceProps) {
   const [groups, setGroups] = useState(incoming);
   const [drag, setDrag] = useState<Drag | null>(null);
-  /** Which card of a paged block is on show, by block. */
-  const [pages, setPages] = useState<Record<string, number>>({});
   const root = useRef<HTMLDivElement>(null);
   const boxes = useRef(new Map<string, HTMLElement>());
   const latest = useRef(groups);
@@ -393,9 +391,10 @@ export function PinSurface({ groups: incoming, live, onChange, onClearCalculator
       {groups.map((group) => {
         const stacked = group.cards.length > 1;
         const paged = stacked && !!group.paged;
-        const page = paged ? Math.min(pages[group.id] ?? 0, group.cards.length - 1) : 0;
+        const page = pageOf(group);
         const shown = paged ? [group.cards[page]] : group.cards;
-        const turn = (to: number) => setPages((current) => ({ ...current, [group.id]: (to + group.cards.length) % group.cards.length }));
+        // The page is the block's: the overlay's keys turn it too, with the assistant shut.
+        const turn = (to: number) => commit(turnPage(groups, group.id, to));
         const drop = drag?.over?.id === group.id ? drag.over.side : null;
         // Side by side, a block is as wide as the cards in it — as far as the screen allows.
         const wide = group.flow === 'row' && shown.length > 1 ? Math.min(CARD_WIDTH * shown.length, Math.max(CARD_WIDTH, size.width - group.x - 8)) : undefined;

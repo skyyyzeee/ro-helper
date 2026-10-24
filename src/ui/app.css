@@ -6343,3 +6343,10 @@ select option {
   margin: 0;
   color: var(--text-muted, rgba(255, 255, 255, 0.7));
 }
+
+/* «Клавиши»: every key of the assistant on one list, a line each with what goes wrong with it under it */
+.keys__item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

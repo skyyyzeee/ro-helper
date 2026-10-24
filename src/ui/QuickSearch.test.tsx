@@ -204,8 +204,8 @@ describe('the overlay, for the quick search', () => {
     const { platform, user } = await renderApp();
     await vi.waitFor(() => expect(platform.state.quickHotkey).toBe('Alt+S'));
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
-    const block = within(screen.getByRole('group', { name: 'Настройки' })).getByRole('region', { name: 'Быстрый поиск' });
-    await user.click(within(block).getByRole('switch', { name: 'Быстрый поиск поверх игры' }));
+    const block = within(screen.getByRole('group', { name: 'Настройки' })).getByRole('region', { name: 'Горячие клавиши' });
+    await user.click(within(block).getByRole('switch', { name: 'Быстрый поиск' }));
     expect(platform.settings.get('quick.hotkey')).toBe('');
     await vi.waitFor(() => expect(platform.state.quickHotkey).toBeNull());
   });

@@ -7,7 +7,8 @@ import { AdminSection } from './AdminView';
 import { AiMarksAdmin } from './AiMarksAdmin';
 import { FaqSection } from './Faq';
 import { useCapabilities } from './roles';
-import { useTakenHotkey } from './hotkeys';
+import { HotkeyField } from './HotkeyField';
+import { KeysBlock, type KeysBlockProps } from './KeysBlock';
 import { ACCENT_HUES, SCALES, THEMES, organizationHue, type AppearanceControl } from './appearance';
 import { AI_SERVER, APP_VERSION, AUTHORS, LINKS } from './about';
 import { AI_CUSTOM_SETTING, AI_KEY_SETTING, AI_KEY_URL, AI_PROVIDER_SETTING, AI_SERVER_SETTING, type AiProvider } from './ai';
@@ -15,9 +16,8 @@ import type { CustomAi } from '../protocol';
 import { AdminIcon, BookIcon, CloseIcon, DiscordIcon, GitHubIcon, HelpIcon, InfoIcon, KeyboardIcon, PaletteIcon, PinIcon, SparkIcon, TuneIcon, WarnIcon } from './icons';
 import { REPORTS_HINT, REPORTS_LABEL, useReportsChoice } from './reports';
 import { formatDate } from './lawBits';
-import { DEFAULT_NOTE_HOTKEY, DEFAULT_QUICK_HOTKEY, DEFAULT_TIMER_HOTKEY, DEFAULT_VOICE_HOTKEY, MAX_OPACITY, MIN_OPACITY, NOTE_MAX, STREAMER_KEY } from './overlaySettings';
+import { DEFAULT_VOICE_HOTKEY, MAX_OPACITY, MIN_OPACITY, NOTE_MAX, STREAMER_KEY } from './overlaySettings';
 import { NOTES_MAX, NOTE_TITLE, newNote, type Note } from './notes';
-import { captureHotkey, hasModifier, hotkeyKeys } from './profile';
 import type { Laws, LawsStatus } from './laws';
 import type { Updates } from './updates';
 
@@ -91,94 +91,6 @@ function Row({ label, value, children }: { label: string; value?: ReactNode; chi
       <span className="sp" />
       {children}
     </div>
-  );
-}
-
-/** The hotkey, changed right here: press the field, then the combination. */
-function HotkeyField({
-  hotkey,
-  onHotkey,
-  onCapturing,
-  label = 'Открыть и скрыть оверлей',
-  name,
-}: {
-  hotkey: string;
-  onHotkey: (accelerator: string) => void;
-  onCapturing: (capturing: boolean) => void;
-  label?: string;
-  /** What the key is registered as (`hotkeys.ts`): held by another program, the field says so. */
-  name?: string;
-}) {
-  const taken = useTakenHotkey(name) === hotkey;
-  const [listening, setListening] = useState(false);
-  const [unsupported, setUnsupported] = useState(false);
-
-  // While a hotkey is being recorded the current one must be released, or Windows swallows the keys.
-  useEffect(() => onCapturing(listening), [listening, onCapturing]);
-  useEffect(() => () => onCapturing(false), [onCapturing]);
-
-  const record = (event: ReactKeyboardEvent) => {
-    if (!listening) return;
-    event.preventDefault();
-    // Esc here only stops the recording: it must not step back through the overlay as well.
-    event.stopPropagation();
-    if (event.key === 'Escape') {
-      setListening(false);
-      return;
-    }
-    const result = captureHotkey(event);
-    if (result.kind === 'waiting') return;
-    if (result.kind === 'unsupported') {
-      setUnsupported(true);
-      return;
-    }
-    setUnsupported(false);
-    setListening(false);
-    if (result.accelerator !== hotkey) onHotkey(result.accelerator);
-  };
-
-  return (
-    <>
-      <div className="set__row">
-        <span className="set__label">{label}</span>
-        <span className="sp" />
-        <button
-          type="button"
-          className={listening ? 'ob__hotkey set__hotkey ob__hotkey--listen' : 'ob__hotkey set__hotkey'}
-          aria-label={`Горячая клавиша: ${listening ? 'нажмите сочетание' : hotkeyKeys(hotkey).join(' + ')}`}
-          onClick={() => {
-            setUnsupported(false);
-            setListening(true);
-          }}
-          onBlur={() => setListening(false)}
-          onKeyDown={record}
-        >
-          {listening ? (
-            <span className="muted">Нажмите сочетание…</span>
-          ) : (
-            hotkeyKeys(hotkey).map((key) => (
-              <span key={key} className="ob__key">
-                {key}
-              </span>
-            ))
-          )}
-        </button>
-      </div>
-      {taken && !listening && (
-        <div className="warn" role="alert">
-          <WarnIcon />
-          <span>Сочетание занято другой программой — клавиша не сработает. Задайте другое.</span>
-        </div>
-      )}
-      <p className="set__hint">{listening ? 'Нажмите нужное сочетание. Esc — отмена.' : 'Нажмите на поле и задайте новое сочетание.'}</p>
-      {unsupported && <p className="set__hint">Эту клавишу назначить нельзя: подойдут буквы, цифры, F1–F24, пробел.</p>}
-      {!hasModifier(hotkey) && (
-        <div className="warn" role="alert">
-          <WarnIcon />
-          <span>Без Ctrl, Alt или Shift клавиша может пересечься с управлением в игре.</span>
-        </div>
-      )}
-    </>
   );
 }
 
@@ -504,7 +416,7 @@ function NotesField({ note }: { note: NonNullable<SettingsViewProps['note']> }) 
         </button>
       </div>
       <p className="set__hint">
-        {note.hotkey ? `${note.hotkey} показывает и прячет их поверх игры, не открывая ассистента. ` : ''}Хранятся только на этом компьютере.
+        {note.hotkey ? `${note.hotkey} показывает и прячет их поверх игры, не открывая ассистента. ` : ''}Свою клавишу каждой заметке и клавиши, чтобы листать, можно задать в «Клавишах». Хранятся только на этом компьютере.
       </p>
     </section>
   );
@@ -723,7 +635,22 @@ export interface SettingsViewProps {
    * empty when off. `focusAt`: the key was pressed with none written — the first takes the cursor. Absent in a bare
    * overlay of the tests.
    */
-  note?: { notes: Note[]; pinned: boolean; onNotes: (notes: Note[]) => void; onPin: (on: boolean) => void; hotkey: string; onHotkey: (accelerator: string) => void; focusAt?: number };
+  note?: {
+    notes: Note[];
+    pinned: boolean;
+    onNotes: (notes: Note[]) => void;
+    onPin: (on: boolean) => void;
+    hotkey: string;
+    onHotkey: (accelerator: string) => void;
+    /** The keys turning the notes on and back over the game; empty when off. */
+    next: string;
+    onNext: (accelerator: string) => void;
+    prev: string;
+    onPrev: (accelerator: string) => void;
+    focusAt?: number;
+  };
+  /** The faction's phrases for the chat, for their keys in «Клавиши»; absent for those with none. */
+  phrases?: KeysBlockProps['phrases'];
   opacity: number;
   onOpacity: (value: number) => void;
   /** The theme and the accent; without it (a bare overlay in tests) the choice is not shown. */
@@ -766,6 +693,7 @@ export function SettingsView({
   timerHotkey,
   onTimerHotkey,
   note,
+  phrases,
   onMemos,
   opacity,
   onOpacity,
@@ -1015,61 +943,21 @@ export function SettingsView({
       </div>
 
       <div className="settings__part" id={sectionId('keys')}>
-      <Block title="Горячая клавиша">
-        <HotkeyField name="overlay" hotkey={hotkey} onHotkey={onHotkey} onCapturing={onCapturing} />
-      </Block>
-
-      <Block title="Быстрый поиск">
-        <Switch
-          label="Быстрый поиск поверх игры"
-          hint="Своя клавиша открывает сверху экрана только строку поиска: статьи сразу под ней, → — открыть статью, Enter — в калькулятор, Tab — спросить ИИ. Весь ассистент не нужен."
-          on={!!quickHotkey}
-          onChange={(on) => onQuickHotkey(on ? DEFAULT_QUICK_HOTKEY : '')}
+      <Block title="Горячие клавиши">
+        <KeysBlock
+          hotkey={hotkey}
+          onHotkey={onHotkey}
+          voiceHotkey={voiceHotkey}
+          onVoiceHotkey={onVoiceHotkey}
+          quickHotkey={quickHotkey}
+          onQuickHotkey={onQuickHotkey}
+          timerHotkey={timerHotkey}
+          onTimerHotkey={onTimerHotkey}
+          notes={note && { notes: note.notes, onNotes: note.onNotes, hotkey: note.hotkey, onHotkey: note.onHotkey, next: note.next, onNext: note.onNext, prev: note.prev, onPrev: note.onPrev }}
+          phrases={phrases}
+          onCapturing={onCapturing}
         />
-        {quickHotkey && <HotkeyField name="quick" label="Открыть быстрый поиск" hotkey={quickHotkey} onHotkey={onQuickHotkey} onCapturing={onCapturing} />}
-        {quickHotkey && (quickHotkey === hotkey || quickHotkey === voiceHotkey) && (
-          <div className="warn" role="alert">
-            <WarnIcon />
-            <span>Эта клавиша уже занята — выберите другую, иначе быстрый поиск не откроется.</span>
-          </div>
-        )}
       </Block>
-
-      {note && (
-        <Block title="Заметки поверх игры">
-          <Switch
-            label="Клавиша заметок"
-            hint="Нажали — ваши заметки появились поверх игры, ещё раз — спрятались. Ассистент не открывается. Писать их — в «Закреплённых»."
-            on={!!note.hotkey}
-            onChange={(on) => note.onHotkey(on ? DEFAULT_NOTE_HOTKEY : '')}
-          />
-          {note.hotkey && <HotkeyField name="note" label="Показать и спрятать заметки" hotkey={note.hotkey} onHotkey={note.onHotkey} onCapturing={onCapturing} />}
-          {note.hotkey && [hotkey, voiceHotkey, quickHotkey, timerHotkey].includes(note.hotkey) && (
-            <div className="warn" role="alert">
-              <WarnIcon />
-              <span>Эта клавиша уже занята — выберите другую, иначе заметки по ней не появятся.</span>
-            </div>
-          )}
-        </Block>
-      )}
-
-      {timerHotkey !== undefined && onTimerHotkey && (
-        <Block title="Таймер задержания">
-          <Switch
-            label="Таймер задержания поверх игры"
-            hint="Клавиша запускает отсчёт в момент задержания: маленькая карточка поверх игры показывает, сколько оно длится. Ещё раз — стоп."
-            on={!!timerHotkey}
-            onChange={(on) => onTimerHotkey(on ? DEFAULT_TIMER_HOTKEY : '')}
-          />
-          {timerHotkey && <HotkeyField name="timer" label="Запустить и остановить таймер" hotkey={timerHotkey} onHotkey={onTimerHotkey} onCapturing={onCapturing} />}
-          {timerHotkey && (timerHotkey === hotkey || timerHotkey === voiceHotkey || timerHotkey === quickHotkey) && (
-            <div className="warn" role="alert">
-              <WarnIcon />
-              <span>Эта клавиша уже занята — выберите другую, иначе таймер не запустится.</span>
-            </div>
-          )}
-        </Block>
-      )}
       </div>
 
       <div className="settings__part" id={sectionId('faq')}>
