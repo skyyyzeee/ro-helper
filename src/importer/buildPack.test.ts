@@ -27,26 +27,28 @@ describe('bundled Тверской pack', () => {
     // The laws and charters checked on 27 September were edited from 21 to 26 September — before the version already
     // out (the project rules, dated by the check at 21:58) — so their entry, and the version, are the time of the import;
     // so are the documents of the organisations added after them, posted long before.
-    expect(TVERSKOI_PACK.version).toBe('2026-10-20T06:27:48+03:00');
+    expect(TVERSKOI_PACK.version).toBe('2026-10-24T07:05:08+03:00');
     expect(TVERSKOI_PACK.documents.find((d) => d.id === 'ch-mvd')?.source).toMatchObject({ thread: 27660 });
     expect(TVERSKOI_PACK.changes.map((c) => c.version)).toEqual([
-      '2026-10-20T06:27:48+03:00', '2026-10-12T17:39:07+03:00', '2026-10-08T03:59:49+03:00', '2026-09-27T23:04:03+03:00', '2026-09-27T22:38:20+03:00', '2026-09-27T21:58:06+03:00', '2026-09-24T15:52:15+03:00', '2026-09-11T12:14:23+03:00',
+      '2026-10-24T07:05:08+03:00', '2026-10-20T06:27:48+03:00', '2026-10-12T17:39:07+03:00', '2026-10-08T03:59:49+03:00', '2026-09-27T23:04:03+03:00', '2026-09-27T22:38:20+03:00', '2026-09-27T21:58:06+03:00', '2026-09-24T15:52:15+03:00', '2026-09-11T12:14:23+03:00',
     ]);
+    // Checked on 24 October: the МВД charter (6 points added) and the server's rules were edited.
+    expect(TVERSKOI_PACK.changes[0].documents.map((d) => d.documentId)).toEqual(['ch-mvd', 'rules-server']);
     // Checked on 20 October: the УК (new ст. 13.1 and 101.1, ст. 107 repealed), КоАП (ст. 10.2 repealed), ПДД, charters and project rules were edited.
-    expect(TVERSKOI_PACK.changes[0].documents.map((d) => d.documentId)).toEqual(
+    expect(TVERSKOI_PACK.changes[1].documents.map((d) => d.documentId)).toEqual(
       expect.arrayContaining(['uk', 'koap', 'pdd', 'fz16-fsvng', 'msk-property', 'ch-mvd', 'ch-army-discipline', 'ch-hospital', 'rules-main', 'rules-gov', 'rules-martial', 'rules-supply', 'rules-robbery', 'rules-fort']),
     );
-    expect(TVERSKOI_PACK.changes[0].documents).toHaveLength(14);
+    expect(TVERSKOI_PACK.changes[1].documents).toHaveLength(14);
     // Checked on 12 October: the ГИБДД charter lost its point 2.6 (the office uniform), the guard charter and the project rules were edited.
-    expect(TVERSKOI_PACK.changes[1].documents.map((d) => d.documentId)).toEqual(expect.arrayContaining(['ch-gibdd', 'ch-army-guard', 'rules-main', 'rules-gov']));
+    expect(TVERSKOI_PACK.changes[2].documents.map((d) => d.documentId)).toEqual(expect.arrayContaining(['ch-gibdd', 'ch-army-guard', 'rules-main', 'rules-gov']));
     // Checked on 8 October: the УК's new ст. 64.1 came with no later edit date on the forum — dated by the check.
-    expect(TVERSKOI_PACK.changes[2].documents.map((d) => d.documentId)).toEqual(expect.arrayContaining(['uk', 'koap', 'ch-hospital', 'rules-main']));
-    expect(TVERSKOI_PACK.changes[3].documents.map((d) => d.documentId)).toEqual(['ch-army-structure', 'ch-army-id', 'ch-gov']);
-    expect(TVERSKOI_PACK.changes[4].documents.some((d) => d.documentId === 'uk')).toBe(true);
-    expect(TVERSKOI_PACK.changes[5].documents.every((d) => d.documentId.startsWith('rules-'))).toBe(true);
-    expect(TVERSKOI_PACK.changes[6].documents.map((d) => d.documentId)).toEqual(['ch-mvd']);
-    expect(TVERSKOI_PACK.changes[7].documents.every((d) => d.kind === 'added' && d.documentId.startsWith('rules-'))).toBe(true);
-    expect(TVERSKOI_PACK.changes[7].documents).toHaveLength(10);
+    expect(TVERSKOI_PACK.changes[3].documents.map((d) => d.documentId)).toEqual(expect.arrayContaining(['uk', 'koap', 'ch-hospital', 'rules-main']));
+    expect(TVERSKOI_PACK.changes[4].documents.map((d) => d.documentId)).toEqual(['ch-army-structure', 'ch-army-id', 'ch-gov']);
+    expect(TVERSKOI_PACK.changes[5].documents.some((d) => d.documentId === 'uk')).toBe(true);
+    expect(TVERSKOI_PACK.changes[6].documents.every((d) => d.documentId.startsWith('rules-'))).toBe(true);
+    expect(TVERSKOI_PACK.changes[7].documents.map((d) => d.documentId)).toEqual(['ch-mvd']);
+    expect(TVERSKOI_PACK.changes[8].documents.every((d) => d.kind === 'added' && d.documentId.startsWith('rules-'))).toBe(true);
+    expect(TVERSKOI_PACK.changes[8].documents).toHaveLength(10);
   });
 
   it('holds the legislative base, the charters of the organisations and the project rules: 66 documents', () => {

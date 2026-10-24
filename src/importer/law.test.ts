@@ -147,3 +147,39 @@ describe('a chapter named on the line under it, and an empty note (backlog 02, 0
     expect(law.articles[0].notes).toEqual([]);
   });
 });
+
+describe('items with a punishment each, and a text that starts like a footer (backlog 03, 06)', () => {
+  it('reads «36.1 …» with «Наказание: …» under it as an article of its own, the punishment its note', () => {
+    const law = parseLawText(
+      [
+        'Статья 36. За нарушение кодекса предусмотрены следующие виды взысканий:',
+        '36.1 Неуважительное отношение к гражданам.',
+        'Наказание: штраф в размере 5000 Рублей.',
+        '36.2 Нарушение внешнего вида.',
+        'Наказание: штраф в размере 7500 Рублей.',
+        'Статья 37. Порядок',
+        '37.1. Взыскание налагает руководитель.',
+      ].join('\n'),
+      'ethics',
+      'law',
+    );
+    expect(law.articles.map((a) => [a.number, a.parts.map((p) => p.text), a.notes])).toEqual([
+      ['36', [], []],
+      ['36.1', ['Неуважительное отношение к гражданам.'], [{ label: 'Наказание', text: 'штраф в размере 5000 Рублей.' }]],
+      ['36.2', ['Нарушение внешнего вида.'], [{ label: 'Наказание', text: 'штраф в размере 7500 Рублей.' }]],
+      // Numbered lines with no punishment under them stay the article's parts.
+      ['37', ['Взыскание налагает руководитель.'], []],
+    ]);
+  });
+
+  it('keeps «Принятые законопроекты …» as text, and «Подписано: …» as the footer', () => {
+    const law = parseLawText(
+      ['Статья 57.', 'Принятые законопроекты направляются на подпись.', 'Статья 58.', 'Закон вступает в силу.', 'Подписано: Председатель'].join('\n'),
+      'const',
+      'law',
+    );
+    expect(law.articles[0].parts.map((p) => p.text)).toEqual(['Принятые законопроекты направляются на подпись.']);
+    expect(law.articles[1].parts.map((p) => p.text)).toEqual(['Закон вступает в силу.']);
+    expect(law.footer).toEqual(['Подписано: Председатель']);
+  });
+});

@@ -55,6 +55,10 @@ const HEADING_JURISDICTION = /^\(([ФРВСC](?:\s*\/\s*[ФРВСC])*)\)\s*(.*)$
 const PRIORITY_LINE = /^Приоритет\s+розыска\s+(\d)\s*$/i;
 const NOTE = /^(Примечани[ея]|Пояснени[ея])(?:\s+(\d+))?\s*[.:]?\s*(.*)$/;
 const SUBNUMBERED = /^(\d+(?:\.\d+)+)\.\s+(.*)$/;
+/** «36.1 Неуважительное отношение…»: an item of an article, its number with no full stop after it. */
+const SUB_ITEM = /^(\d+(?:\.\d+)+)\.?\s+(\S.*)$/;
+/** «Наказание: штраф в размере 5000 Рублей.» under an item. */
+const PENALTY_LINE = /^Наказание\s*:\s*(.+)$/i;
 /** «ч. 1. Порядок …», «ч. 1 Судебная …», «Часть 1. На территории …». */
 
 const LABELLED_PART = /^(?:ч\.|Часть)\s*(\d+(?:\.\d+)*)\.?\s+(.*)$/;
@@ -74,7 +78,8 @@ const MARKERS = /^(ОСОБЕННАЯ ЧАСТЬ|ОБЩАЯ ЧАСТЬ)$/i;
  * подписания Мэром …», «Нормативно-правовой акт подписан …».
  */
 const FOOTER =
-  /^(?:(?:Одобрен|Подписан|Принят)\S*\s|Приложение\s+к\s|(?:Настоящий\s+)?Закон\s+принят\s|Вступает\s+в\s+юридическую\s+силу\s+после\s|Нормативно-правовой\s+акт\s+подписан\s)/;
+  // «Принят(а/о) …», not «Принятые законопроекты …» — an article's text that starts so (Конституция Арбатского, ст. 57).
+  /^(?:(?:Одобрен|Подписан|Принят)[аоы]?[\s:,.]|Приложение\s+к\s|(?:Настоящий\s+)?Закон\s+принят\s|Вступает\s+в\s+юридическую\s+силу\s+после\s|Нормативно-правовой\s+акт\s+подписан\s)/;
 /** Markup debris such as a stray code fence. */
 const JUNK = /^(?:[`*_=~]{3,}|[✦❖▰◆◇═─━\s]+)$/;
 /** A short unpunctuated line right before an article heading (ПДД: «аварийные сигналы»). */
@@ -150,6 +155,8 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
   const penal = format === 'criminal-code' || format === 'administrative-code';
   let group: string | undefined;
   let article: Article | undefined;
+  /** The article whose items with a punishment each («36.1 …», «Наказание: …») are being read as articles of their own. */
+  let itemsOf: Article | undefined;
   let lastNote: Note | undefined;
 
   const lastPart = (): Part | undefined => article?.parts[article.parts.length - 1];
@@ -216,6 +223,7 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
         title = heading[2].replace(/\.$/, '');
       }
       article = { id: `${documentId}-${m[1]}`, number: m[1], title, chapter: chapter?.number, parts: [], notes: [] };
+      itemsOf = undefined;
       if (chapter) filled.add(chapter);
       if (headingJurisdiction) article.parts.push({ text: '', points: [], jurisdiction: headingJurisdiction });
       if (group) article.group = group;
@@ -309,6 +317,23 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
         article.parts.push(part);
         continue;
       }
+    }
+
+    // The ethics code: «36.1 Неуважительное отношение…» with «Наказание: штраф…» under it — every item with a punishment
+    // of its own is an article of its own («ст. 36.1»), the punishment its note, as the documents of points have it
+    // (backlog 03). Only so when the punishment follows: other numbered lines stay the article's parts.
+    if (!penal && (m = line.match(SUB_ITEM)) && m[1].startsWith(`${(itemsOf ?? article).number}.`) && PENALTY_LINE.test(lines[i + 1] ?? '')) {
+      lastNote = undefined;
+      itemsOf ??= article;
+      article = { id: `${documentId}-${m[1]}`, number: m[1], title: '', chapter: itemsOf.chapter, parts: [{ text: m[2], points: [] }], notes: [] };
+      if (itemsOf.group) article.group = itemsOf.group;
+      articles.push(article);
+      continue;
+    }
+    if (!penal && itemsOf && (m = line.match(PENALTY_LINE))) {
+      lastNote = undefined;
+      article.notes.push({ label: 'Наказание', text: m[1] });
+      continue;
     }
 
     if ((m = line.match(LABELLED_PART)) || (m = line.match(SUBNUMBERED)) || (m = line.match(NUMBERED))) {
