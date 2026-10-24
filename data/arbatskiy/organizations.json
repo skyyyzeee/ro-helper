@@ -3,7 +3,7 @@
   {"id": "gibdd", "name": "ГИБДД", "kind": "state", "force": true, "documents": ["pdd", "koap", "fz-police", "ch-gibdd", "ch-gibdd-discipline", "ch-gibdd-osb"]},
   {"id": "fsb", "name": "ФСБ", "kind": "state", "force": true, "documents": ["fz-fsb", "upk", "fz-docs", "ch-fsb", "ch-fsb-usb"]},
   {"id": "fso", "name": "ФСО", "kind": "state", "force": true, "documents": ["fz-fso", "fz-territory", "ch-fso"]},
-  {"id": "army", "name": "Армия", "kind": "state", "force": true, "documents": ["fz-army", "fz-weapons", "ch-army"]},
+  {"id": "army", "name": "Армия", "kind": "state", "force": true, "documents": ["fz-army", "fz-weapons", "ch-army", "ch-army-discipline", "ch-army-guard"]},
   {"id": "sk", "name": "Следственный комитет", "kind": "state", "force": true, "documents": ["fz-sk", "upk", "sk-charter"]},
   {"id": "prosecutor", "name": "Прокуратура", "kind": "state", "force": true, "documents": ["fkz-prosecutor", "upk"]},
   {"id": "court", "name": "Суд", "kind": "state", "documents": ["fkz-court", "upk"]},
