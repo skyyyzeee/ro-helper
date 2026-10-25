@@ -60,6 +60,20 @@ const LAWYER_TERMS = ['права защитника', 'адвокат защи�
 
 const LAWYER_VERDICTS = new Set<Verdict>(['lawful', 'unlawful', 'partly', 'unclear']);
 
+/**
+ * The verdict of an item: its "verdict" — or, from a model that slips the format, a verdict written as a key of its
+ * own: {"violation": "R3"} for {"verdict": "violation"} (a 👎 of the exam, 25.10.2026). Its sources, if the item
+ * gives none apart, are that key's value. Anything else is no verdict.
+ */
+function verdictOf<V extends string>(item: object, verdicts: Set<V>): { verdict?: V; sources: string[] } {
+  const { verdict, sources } = item as { verdict?: unknown; sources?: unknown };
+  if (verdicts.has(verdict as V)) return { verdict: verdict as V, sources: idsOf(sources) };
+  const keyed = Object.keys(item).filter((key) => key !== 'unclear' && verdicts.has(key as V)) as V[];
+  if (keyed.length !== 1) return { sources: idsOf(sources) };
+  const given = idsOf(sources);
+  return { verdict: keyed[0], sources: given.length ? given : idsOf((item as Record<string, unknown>)[keyed[0]]) };
+}
+
 /** The gist, unless the AI echoed its instructions into it instead. */
 function aboutTheCase(note: string): string {
   return /\b(basis|verdict|reply|officer|refusal|demand)\b/i.test(note) ? '' : note.trim();
@@ -102,14 +116,10 @@ export async function checkDemands(provider: AiProvider, pack: ServerPack, said:
   const parsed = json(raw) as { demands?: Partial<Demand>[]; reply?: string; note?: string };
   const told = (parsed.demands ?? [])
     .filter((d) => d.demand)
-    .map((d) => ({
-      demand: d.demand!,
-      verdict: LAWYER_VERDICTS.has(d.verdict as Verdict) ? (d.verdict as Verdict) : 'unclear',
-      basis: d.basis ?? '',
-      officer: d.officer ?? '',
-      refusal: d.refusal ?? '',
-      sources: idsOf(d.sources),
-    }));
+    .map((d) => {
+      const { verdict, sources } = verdictOf(d, LAWYER_VERDICTS);
+      return { demand: d.demand!, verdict: verdict ?? ('unclear' as const), basis: d.basis ?? '', officer: d.officer ?? '', refusal: d.refusal ?? '', sources };
+    });
   if (!told.length) throw new AiError('ИИ не разобрал требования — перескажите их подробнее.');
   // A verdict with no source given behind it is no verdict: «not found», and nothing to do or refuse on it.
   const issues: string[] = [];
@@ -160,7 +170,7 @@ const DETENTION_PROMPT = (pack: ServerPack) =>
     coreRules(pack, 'mixed'),
     'ЗАДАЧА: ты — наставник академии.',
     'Сотрудник рассказывает, как он провёл задержание (арест): что делал и в каком порядке. Разбери КАЖДЫЙ его шаг отдельно по источникам ниже: сделано ли это по закону и по правилам сервера для госструктур. Затем назови, что по ним нужно было сделать, но в рассказе этого нет.',
-    'ПРАВИЛА ГОССТРУКТУР (R…) тоже обязательны для сотрудника: например, озвучить статьи и права в голосовой чат, не задерживать за маску или AFK-игроков, не выдавать максимум за мелочь. Нарушение такого правила — тоже "violation".',
+    'ПРАВИЛА ГОССТРУКТУР (R…) тоже обязательны для сотрудника: например, озвучить статьи и права в голосовой чат, не задерживать за маску или AFK-игроков, не выдавать максимум за мелочь. Нарушение такого правила — тоже "violation". Если запрещён сам повод задержания (маска, AFK), это "violation" у шага задержания по этому правилу, а не пункт «missed».',
     'БУДЬ ЧЕСТЕН И СПОКОЕН: это самопроверка для обучения. Верно сделанное так и отмечай — не ищи нарушений там, где их нет. Нарушение отмечай только если статья или правило из источников прямо говорит иначе.',
     'СТРОГИЕ ПРАВИЛА: опирайся только на источники и ссылайся на них в точности как они подписаны (например «УПК ст. 50»). Никаких законов РФ. Не придумывай статей, прав и сроков, которых нет в источниках. Если про шаг в источниках ничего нет — verdict "unclear". У каждого шага и каждого пункта «missed» — "sources": id источников, на которых стоит вывод; без них вывод засчитан не будет. В «missed» — только то, чего прямо требует источник. СРОКИ СРАВНИВАЙ ЧИСЛАМИ. Не пиши в тексте слова verdict, basis, fix и не рассуждай вслух.',
     'ПИШИ КОРОТКО: «step» — 3–8 слов; «basis» — один источник и одно предложение до 25 слов, что в нём сказано по этому шагу; «fix» — одно предложение до 20 слов, как надо было, или пустая строка, если сделано верно; «summary» — до 20 слов, главный вывод.',
@@ -214,13 +224,10 @@ export async function reviewDetention(provider: AiProvider, pack: ServerPack, sa
   const parsed = json(raw) as { steps?: Partial<DetentionStep>[]; missed?: Partial<MissedStep>[]; summary?: string };
   const steps = (parsed.steps ?? [])
     .filter((s) => s.step)
-    .map((s) => ({
-      step: s.step!,
-      verdict: STEP_VERDICTS.has(s.verdict as StepVerdict) ? (s.verdict as StepVerdict) : 'unclear',
-      basis: s.basis ?? '',
-      fix: s.verdict === 'ok' ? '' : (s.fix ?? ''),
-      sources: idsOf(s.sources),
-    }));
+    .map((s) => {
+      const { verdict = 'unclear', sources } = verdictOf(s, STEP_VERDICTS);
+      return { step: s.step!, verdict, basis: s.basis ?? '', fix: verdict === 'ok' ? '' : (s.fix ?? ''), sources };
+    });
   if (!steps.length) throw new AiError('ИИ не разобрал шаги — расскажите подробнее, что вы делали и в каком порядке.');
   const missed = (parsed.missed ?? []).filter((m) => m.what).map((m) => ({ what: m.what!, basis: m.basis ?? '', sources: idsOf(m.sources) }));
   const summary = typeof parsed.summary === 'string' ? parsed.summary.trim() : '';
