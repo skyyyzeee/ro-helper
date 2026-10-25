@@ -25,6 +25,11 @@ describe('what players ask, read the way they mean it', () => {
       expect(classify(pack, q), q).toMatchObject({ type: 'legal', scope: 'law' });
   });
 
+  it('takes the street’s words for drugs, and a kill over a quarrel from outside the game, for the laws too', () => {
+    expect(classify(pack, 'Парень продавал травку у школы').scope).toBe('law');
+    expect(classify(pack, 'Игрок перенёс ссору из дискорда в игру и теперь постоянно убивает меня').scope).toBe('mixed');
+  });
+
   it('checks a character’s name by the rule on names, with no AI', () => {
     expect(classify(pack, 'Aiden_Arokij').type).toBe('nickname');
     expect(nicknameOf('проверь ник Иван_Петров')).toEqual({ first: 'Иван', last: 'Петров' });

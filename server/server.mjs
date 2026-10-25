@@ -957,7 +957,7 @@ const server = createServer(async (request, response) => {
       ? input.messages.filter((m) => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string').slice(-14)
       : [];
     if (!messages.length || typeof input.system !== 'string') return send(response, 400, { error: 'Пустой вопрос.' });
-    const request = { system: input.system.slice(0, 8000), messages, json: !!input.json, think: input.think === true };
+    const request = { system: input.system.slice(0, 16000), messages, json: !!input.json, think: input.think === true };
     // An admin trying a model: that model only, off the computer's limit (the daily budget still counts), no cache.
     if (typeof input.model === 'string' && isAdmin(request_)) {
       // «gigachat:GigaChat-2-Max»: any model of GigaChat's, on its free tokens.

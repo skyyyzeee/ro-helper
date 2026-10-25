@@ -8,6 +8,9 @@ import { JurisdictionPill, Stars } from './lawBits';
 
 const STAGE_LABELS = { done: '', attempt: 'покушение', preparation: 'приготовление' } as const;
 
+/** At most so long, the AI's name for a broken rule is the card's title; longer, it is an explanation under it. */
+const SHORT_NAME = 60;
+
 /** The two sides of an answer on both: the player's punishment by the project's rules, the character's by the laws. */
 const RULE_SIDE = 'Правила проекта — наказание игроку';
 const LAW_SIDE = 'Законы — что грозит персонажу';
@@ -174,6 +177,8 @@ function SourceCard({
   const punishment = part?.punishment ? formatPunishment(part.punishment) : '';
   // A rule of the project says its punishment in a note: «Demorgan 120-140 минут / Ban 3-30 дней» — each a tag.
   const ruleTags = type === 'server_rule' ? rulePunishments(hit) : [];
+  // A rule named the way a complaint names it («Задержание за маску», prompt.ts): that is its title on the card.
+  const named = type === 'server_rule' && norm.why && norm.why.length <= SHORT_NAME ? norm.why : undefined;
   return (
     <li className={issues.length ? 'source source--bad' : 'source'}>
       <div className="source__head">
@@ -181,7 +186,7 @@ function SourceCard({
           {shortLabel(hit)}
           {hit.part?.number ? ` ч. ${hit.part.number}` : ''}
         </button>
-        <span className="source__name">{articleTitle(hit.article)}</span>
+        <span className="source__name">{named ?? articleTitle(hit.article)}</span>
         {type && <SourceTypeBadge type={type} />}
         {norm.fit === 'partial' && <span className="status status--likely">если подтвердится</span>}
         {norm.stage !== 'done' && <span className="status">{STAGE_LABELS[norm.stage]}</span>}
@@ -189,7 +194,7 @@ function SourceCard({
         {part?.jurisdiction && <JurisdictionPill jurisdiction={part.jurisdiction} />}
       </div>
       <span className="source__doc">{hit.document.title}</span>
-      {norm.why && <p className="source__why">{norm.why}</p>}
+      {norm.why && !named && <p className="source__why">{norm.why}</p>}
       {punishment && (
         <p className="source__punishment">
           <span className="demand__label">По базе:</span> {punishment}

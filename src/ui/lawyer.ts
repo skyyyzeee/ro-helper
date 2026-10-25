@@ -53,7 +53,7 @@ const VERDICTS = new Set<Verdict>(['lawful', 'unlawful', 'partly', 'unclear']);
 
 /** The gist, unless the AI echoed its instructions into it instead. */
 function aboutTheCase(note: string): string {
-  return /(basis|verdict|reply|officer|refusal|demand)/i.test(note) ? '' : note.trim();
+  return /\b(basis|verdict|reply|officer|refusal|demand)\b/i.test(note) ? '' : note.trim();
 }
 
 /** The reply as said in the game: without the «Сотрудник адвокату:» the AI sometimes puts before it, or quotes around it. */
