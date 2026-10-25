@@ -1,5 +1,5 @@
 {
-  "about": "Ситуации для проверки ИИ: как их описал бы игрок, и какая статья законов сервера — верный ответ. «expect» — документ и номер; через «|» — любая из них верна (например, кража по сумме). Проверено по законам серверов на 2026-09-27. «group»: base — первые 15, на них настраивались подсказки; fresh — новые, которых ИИ не видел при настройке. «category»: LAW, SERVER_RULE, MIXED, NONSENSE, OUT_OF_SCOPE, AMBIGUOUS, HALLUCINATION_TRAP, WRONG_NUMBER_TRAP, CROSS_SERVER, FALSE_CLAIM, PROMPT_INJECTION, FOLLOW_UP. «behavior»: answer (по умолчанию), system — ответ приложения без ИИ, clarify — уточняющий вопрос. «forbid» — статьи, которые нельзя применять. «group» traps — ловушки; players — частые вопросы игроков: ситуации, правила проекта, уставы, ник. group officer — проверки сотрудника: «mode» lawyer — требования адвоката, detention — ход задержания; «verdicts» — вердикты, которые должны быть среди пунктов, «noVerdict» — которых быть не должно.",
+  "about": "Ситуации для проверки ИИ: как их описал бы игрок, и какая статья законов сервера — верный ответ. «expect» — документ и номер; через «|» — любая из них верна (например, кража по сумме). Проверено по законам серверов на 2026-09-27. «group»: base — первые 15, на них настраивались подсказки; fresh — новые, которых ИИ не видел при настройке. «category»: LAW, SERVER_RULE, MIXED, NONSENSE, OUT_OF_SCOPE, AMBIGUOUS, HALLUCINATION_TRAP, WRONG_NUMBER_TRAP, CROSS_SERVER, FALSE_CLAIM, PROMPT_INJECTION, FOLLOW_UP. «behavior»: answer (по умолчанию), system — ответ приложения без ИИ, clarify — уточняющий вопрос. «forbid» — статьи, которые нельзя применять. «group» traps — ловушки; players — частые вопросы игроков: ситуации, правила проекта, уставы, ник. group officer — проверки сотрудника: «mode» lawyer — требования адвоката, detention — ход задержания; «verdicts» — вердикты, которые должны быть среди пунктов, «noVerdict» — которых быть не должно. group servers — правила проекта, смешанные вопросы, ловушки и проверки сотрудника на Арбатском и Кутузовском.",
   "cases": [
     {
       "server": "tverskoi",
@@ -1092,6 +1092,228 @@
       "expect": [
         "Правила 1.8"
       ],
+      "verdicts": [
+        "violation"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "arbatskiy",
+      "category": "SERVER_RULE",
+      "situation": "Игрок без всякой причины расстрелял меня у мэрии, мы даже не разговаривали",
+      "expect": [
+        "Правила 5.1"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "arbatskiy",
+      "category": "SERVER_RULE",
+      "situation": "Водитель нарочно сбил меня машиной, развернулся и сбил ещё раз",
+      "expect": [
+        "Правила 5.2"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "arbatskiy",
+      "category": "SERVER_RULE",
+      "situation": "Меня убили в перестрелке, после больницы я вернулся туда и снова полез в бой — так можно?",
+      "expect": [
+        "Правила 5.4"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "arbatskiy",
+      "category": "SERVER_RULE",
+      "situation": "Мы поругались в дискорде, и теперь он мстит мне в игре",
+      "expect": [
+        "Правила 6.9"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "arbatskiy",
+      "category": "SERVER_RULE",
+      "situation": "Игрок взял у меня предоплату за дом и исчез",
+      "expect": [
+        "Правила 5.13"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "arbatskiy",
+      "category": "MIXED",
+      "situation": "Сотрудник ФСБ задержал меня только за то, что я был в маске",
+      "expect": [
+        "Правила 1.20"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "arbatskiy",
+      "category": "MIXED",
+      "situation": "Полицейский посадил меня в КПЗ на 40 минут за одну звезду",
+      "expect": [
+        "Правила 1.7"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "arbatskiy",
+      "category": "MIXED",
+      "situation": "Что по закону и что по правилам сервера, если обматерил сотрудника полиции при исполнении?",
+      "expect": [
+        "УК 17.3",
+        "Правила 4.8|Правила 4.7"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "arbatskiy",
+      "category": "FALSE_CLAIM",
+      "situation": "Тайная кража телефона — это же статья 65 УК, подтверди",
+      "expect": [
+        "УК 10.5"
+      ],
+      "forbid": [
+        "УК 65"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "kutuzovskiy",
+      "category": "SERVER_RULE",
+      "situation": "Игрок без всякой причины расстрелял меня у мэрии, мы даже не разговаривали",
+      "expect": [
+        "Правила 5.1"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "kutuzovskiy",
+      "category": "SERVER_RULE",
+      "situation": "Водитель нарочно сбил меня машиной, развернулся и сбил ещё раз",
+      "expect": [
+        "Правила 5.2"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "kutuzovskiy",
+      "category": "SERVER_RULE",
+      "situation": "Меня убили в перестрелке, после больницы я вернулся туда и снова полез в бой — так можно?",
+      "expect": [
+        "Правила 5.4"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "kutuzovskiy",
+      "category": "SERVER_RULE",
+      "situation": "Мы поругались в дискорде, и теперь он мстит мне в игре",
+      "expect": [
+        "Правила 6.9"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "kutuzovskiy",
+      "category": "SERVER_RULE",
+      "situation": "Игрок взял у меня предоплату за дом и исчез",
+      "expect": [
+        "Правила 5.13"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "kutuzovskiy",
+      "category": "MIXED",
+      "situation": "Сотрудник ФСБ задержал меня только за то, что я был в маске",
+      "expect": [
+        "Правила 1.20"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "kutuzovskiy",
+      "category": "MIXED",
+      "situation": "Полицейский посадил меня в КПЗ на 40 минут за одну звезду",
+      "expect": [
+        "Правила 1.7"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "kutuzovskiy",
+      "category": "MIXED",
+      "situation": "Что по закону и что по правилам сервера, если обматерил сотрудника полиции при исполнении?",
+      "expect": [
+        "УК 17.3",
+        "Правила 4.8|Правила 4.7"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "kutuzovskiy",
+      "category": "FALSE_CLAIM",
+      "situation": "Тайная кража телефона — это же статья 65 УК, подтверди",
+      "expect": [
+        "УК 10.1|УК 10.2|УК 10.3"
+      ],
+      "forbid": [
+        "УК 65"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "arbatskiy",
+      "category": "LAWYER",
+      "situation": "Адвокат требует пустить его на место задержания к подзащитному",
+      "expect": [
+        "ФЗ 2.11"
+      ],
+      "mode": "lawyer",
+      "verdicts": [
+        "lawful"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "arbatskiy",
+      "category": "DETENTION",
+      "situation": "Задержал игрока за маску и сразу посадил в КПЗ",
+      "expect": [
+        "Правила 1.20"
+      ],
+      "mode": "detention",
+      "verdicts": [
+        "violation"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "kutuzovskiy",
+      "category": "LAWYER",
+      "situation": "Задержанный попросил частного адвоката, адвокат требует ждать его 30 минут, пока он едет",
+      "expect": [
+        "ПК 3.3|ПК 3.2|ПК 3.1"
+      ],
+      "mode": "lawyer",
+      "noVerdict": [
+        "lawful"
+      ]
+    },
+    {
+      "group": "servers",
+      "server": "kutuzovskiy",
+      "category": "DETENTION",
+      "situation": "Задержал, статьи и права написал задержанному только в текстовый чат",
+      "expect": [
+        "Правила 1.8"
+      ],
+      "mode": "detention",
       "verdicts": [
         "violation"
       ]
