@@ -4,7 +4,7 @@ import { classify } from './classify';
 import { checkNickname, nicknameOf } from './nickname';
 import { verdictLabel } from './verdict';
 
-// Questions asked of another helper (SINSET, October 2026) that ours took for the wrong kind or answered by nothing.
+// Questions players ask (the exam group «players», October 2026) that the app took for the wrong kind or answered by nothing.
 describe('what players ask, read the way they mean it', () => {
   const pack = TVERSKOI_PACK;
 

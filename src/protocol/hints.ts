@@ -57,8 +57,47 @@ const HINTS: Hint[] = [
 ];
 
 /** The law's words for what the text tells in everyday ones; none when no pattern fits. */
+/**
+ * Situations that break the project's rules, told the way players tell them in complaints on the forum: the rules'
+ * own words for them («DM», «NonRP Drive», «злоупотребление функционалом государственных структур»). One of these
+ * in a question also tells the classifier the rules are asked about (classify.ts), with no AI.
+ */
+const RULE_HINTS: Hint[] = [
+  // Killed or hit for nothing: DM.
+  { all: [ru(/убил|убили|застрелил|пристрелил|стрелял|избил|ударил|напал|завалил/), ru(/без (?:ic |ик |рп )?(?:причин|повод|диалог)|ни за что|просто так|ничего (?:ему |ей |им )?не (?:делал|сделал)|первым не|молча/)], terms: ['DM Deathmatch', 'без IC причины и IC диалога'] },
+  // Run over on purpose: DB.
+  { all: [ru(/наехал|наезжал|сбил|давил|задавил|переехал|таранил/), ru(/специально|намеренно|несколько раз|постоянно|нарочно|машин|авто|транспорт/)], terms: ['DriveBy наезд на игрока транспортом'] },
+  // Driven where no car can go: NonRP Drive.
+  { all: [ru(/заехал|ездил|езди[тл]|катался|ехал|въехал|гонял/), ru(/в здани|в интерьер|по горам|по горе|на гору|по воде|по реке|по лестниц|в помещени/)], terms: ['NonRP Drive вождение транспорта в невозможных условиях'] },
+  // Back where one was killed: NLR.
+  { all: [ru(/вернулся|вернулась|пришел|пришла|приехал|приехала|возвращ/), ru(/убили|смерт|возродил|респ|погиб|после того как умер/)], terms: ['NLR правила новой жизни возвращение на место гибели'] },
+  // More than the character could do: PG.
+  { all: [ru(/в наручник|связанн|раненый|с ранени|со сломанн|без сознани|избитый/), ru(/убежал|побежал|перепрыгнул|прыгнул|залез|дрался|стрелял|сбежал|отбивался/)], terms: ['PG Power gaming преувеличение возможностей персонажа'] },
+  // A chase or a gunfight taken into a green zone.
+  { all: [ru(/зелен\w* зон/)], terms: ['погони и перестрелки в зеленых зонах'] },
+  // Cheated of money or property.
+  { all: [ru(/обманул|кинул|скам|развел|не вернул|пропал|забрал деньги|не отдал|исчез/), ru(/деньг|машин|имуществ|перев[её]л|сделк|оплат|предоплат|купит/)], terms: ['обмана на имущество'] },
+  // An officer who did not say the charge or the rights.
+  { all: [OFFICIAL, ru(/не (?:сказал|назвал|озвучил|объяснил|разъяснил|зачитал|огласил)/), ru(/стать|прав|за что/)], terms: ['права и статьи озвучены в голосовой чат'] },
+  // An officer misusing the state's functions: for a mask, an AFK player, the casino, five stars for a trifle.
+  { all: [OFFICIAL, ru(/задерж|дал|выдал|посадил|арестовал|оштрафовал|повязал|принял|кафа/), ru(/за маску|в маске|\bafk\b|\bафк\b|казино|5 звезд|пять звезд|максимальн\w* срок|за мелк|судимост|в больниц/)], terms: ['злоупотребление функционалом государственных структур'] },
+  // A quarrel carried from outside the game into it.
+  { all: [ru(/дискорд|discord|из жизни|в реале|\booc\b|\bоос\b|вне игры|телеграм/), ru(/ссор|конфликт|обид|мстит|убивает|враж|претензи/)], terms: ['Переносить конфликты из OOC в IC'] },
+  // Accounts: more than one, or sold.
+  { all: [ru(/аккаунт/), ru(/\bдва\b|\b2\b|несколько|второй|твинк|еще один/)], terms: ['количество разрешенных аккаунтов'] },
+  { all: [ru(/аккаунт/), ru(/прода|обмен|передат|отдат|купит/)], terms: ['продажа обмен игровых аккаунтов'] },
+  // Bugs.
+  { all: [ru(/\bбаг\w*|багоюз|сквозь стен|сквозь текстур|под текстур|уязвимост|\bдюп\w*/)], terms: ['уязвимости системы и баги'] },
+];
+
+/** Whether the question tells a situation that breaks the project's rules. */
+export const breaksRules = (text: string): boolean => {
+  const normal = text.toLowerCase().replace(/ё/g, 'е');
+  return RULE_HINTS.some((hint) => hint.all.every((pattern) => pattern.test(normal)));
+};
+
 export function hintTerms(text: string): string[] {
   const normal = text.toLowerCase().replace(/ё/g, 'е');
-  const terms = HINTS.filter((hint) => hint.all.every((pattern) => pattern.test(normal))).flatMap((hint) => hint.terms);
+  const terms = [...HINTS, ...RULE_HINTS].filter((hint) => hint.all.every((pattern) => pattern.test(normal))).flatMap((hint) => hint.terms);
   return [...new Set(terms)];
 }

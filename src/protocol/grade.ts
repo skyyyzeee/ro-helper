@@ -52,9 +52,10 @@ const matches = (wanted: string, refs: string[]) => wanted.split('|').some((one)
 /**
  * Statements an answer marked «Подтверждено» may not hold — checked again here, apart from the checks that set the
  * status, so the exam would see it if those ever let one through: a norm that is none of the sources, a statement
- * with no source, an article or a figure its own sources lack. Empty for an answer that is not confirmed.
+ * with no source, an article or a figure its own sources lack — but for a figure of the case the player told, in
+ * what is broken (validate.ts). Empty for an answer that is not confirmed.
  */
-export function confirmedHallucinations(analysis: Analysis): string[] {
+export function confirmedHallucinations(analysis: Analysis, told = ''): string[] {
   if (analysis.validation.status !== 'confirmed') return [];
   const found: string[] = [];
   const byId = new Map(analysis.sources.map((s) => [s.id, s]));
@@ -64,7 +65,7 @@ export function confirmedHallucinations(analysis: Analysis): string[] {
   for (const claim of claims) {
     const own = claim.sources.flatMap((id) => byId.get(id) ?? []);
     if (!own.length) found.push(`утверждение без источника: «${claim.text}»`);
-    const figures = strayFigures(claim.text, own);
+    const figures = strayFigures(claim.text, own, claim === answer.violation ? told : '');
     if (figures.length) found.push(`цифры не из источников: ${figures.join(', ')}`);
   }
   const stray = strayArticles([answer.situation, ...answer.uncertainty, ...claims.map((c) => c.text)].join(' '), analysis.sources);
@@ -131,7 +132,7 @@ export function gradeCase(c: EvalCase, outcome: Outcome): Grade {
   }
 
   const { analysis } = outcome;
-  const hallucinations = confirmedHallucinations(analysis);
+  const hallucinations = confirmedHallucinations(analysis, `${c.situation}\n${c.followUp ?? ''}`);
   if (hallucinations.length) hardGates.push(`подтверждённая выдумка: ${hallucinations.join('; ')}`);
 
   const valid = analysis.validation.norms.filter((n) => n.hit && !n.issues.length);

@@ -2,6 +2,7 @@
 // laws of Russia, gibberish, or a bare article number costs no AI call and never reaches the model at all. Plain
 // rules over the words; when they cannot tell, the AI's first call (the search phrases) also says what it is.
 import { unknownWords, type ServerPack } from '../core';
+import { breaksRules } from './hints';
 import { nicknameOf } from './nickname';
 import type { Scope, ScopeChoice } from './sources';
 
@@ -122,7 +123,8 @@ export function classify(pack: ServerPack, raw: string, choice: ScopeChoice = 'a
 
   if (!synonymsCache.has(pack)) synonymsCache.set(pack, synonymWords(pack));
   const synonyms = synonymsCache.get(pack);
-  const rule = RULE_WORDS.test(text);
+  // A situation that breaks the rules (a kill for nothing, a car driven up a mountain) is the rules' too.
+  const rule = RULE_WORDS.test(text) || breaksRules(text);
   const law = LAW_WORDS.test(text) || CHARTER_WORDS.test(text) || !!synonyms?.test(text);
   // Not one word the server's documents hold, nor a word of the laws or rules: «ывапролдж», «трактор весит» —
   // nothing the base could answer, so nothing to ask the AI about.

@@ -1,7 +1,7 @@
 // What the AI is given for one question: the case as structured blocks and the found sources under ids, each type
 // in a block of its own, so every norm it cites can be traced back to a text it was actually shown — and the
 // player's words come as fenced data, not as instructions.
-import { articleText, sourceLabel, type Organization, type ServerPack } from '../core';
+import { articleText, chapterHeading, sourceLabel, type Organization, type ServerPack } from '../core';
 import { playerData } from './prompt';
 import { SOURCE_TYPE_LABELS, type Scope, type Source, type SourceType } from './sources';
 
@@ -112,6 +112,9 @@ export function sourcesBlock(sources: Source[]): string {
 function sourceText({ id, type, hit }: Source): string {
   const text = articleText(hit.article);
   const cut = text.length > SOURCE_CHARS ? `${text.slice(0, SOURCE_CHARS)}…` : text;
-  // The label first, as the model copies it into "ref"; the type after the document's name.
-  return `[${id}] ${sourceLabel(hit)} — ${hit.document.title} (${SOURCE_TYPE_LABELS[type].toLowerCase()})\n${cut}`;
+  // The label first, as the model copies it into "ref"; the type after the document's name. The chapter's title
+  // too: it may name the deed the article's text does not (КоАП Арбатского, гл. 13 «Проезд на запрещающий сигнал»).
+  const chapter = hit.article.chapter ? hit.document.chapters.find((c) => c.number === hit.article.chapter) : undefined;
+  const heading = chapter?.title ? `${chapterHeading(chapter)}\n` : '';
+  return `[${id}] ${sourceLabel(hit)} — ${hit.document.title} (${SOURCE_TYPE_LABELS[type].toLowerCase()})\n${heading}${cut}`;
 }

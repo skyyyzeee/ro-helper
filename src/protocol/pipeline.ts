@@ -197,7 +197,8 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
     }
   }
 
-  const validation = validateAnswer(pack, sources, answer, scope);
+  // The player's own figures of the case («предложил 50 000») may stand in what is broken.
+  const validation = validateAnswer(pack, sources, answer, scope, searchText);
   // The side's points are shown only where they stand on the sources: one that does not is left out, not flagged —
   // to the player; the admin's debug view tells which and why.
   let hiddenGuide: HiddenPoint[] = [];

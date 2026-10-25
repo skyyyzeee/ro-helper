@@ -1,5 +1,5 @@
 {
-  "about": "Ситуации для проверки ИИ: как их описал бы игрок, и какая статья законов сервера — верный ответ. «expect» — документ и номер; через «|» — любая из них верна (например, кража по сумме). Проверено по законам серверов на 2026-09-27. «group»: base — первые 15, на них настраивались подсказки; fresh — новые, которых ИИ не видел при настройке. «category»: LAW, SERVER_RULE, MIXED, NONSENSE, OUT_OF_SCOPE, AMBIGUOUS, HALLUCINATION_TRAP, WRONG_NUMBER_TRAP, CROSS_SERVER, FALSE_CLAIM, PROMPT_INJECTION, FOLLOW_UP. «behavior»: answer (по умолчанию), system — ответ приложения без ИИ, clarify — уточняющий вопрос. «forbid» — статьи, которые нельзя применять. «group» traps — ловушки; sinset — вопросы, заданные SINSET Helper 24.10.2026 для сравнения.",
+  "about": "Ситуации для проверки ИИ: как их описал бы игрок, и какая статья законов сервера — верный ответ. «expect» — документ и номер; через «|» — любая из них верна (например, кража по сумме). Проверено по законам серверов на 2026-09-27. «group»: base — первые 15, на них настраивались подсказки; fresh — новые, которых ИИ не видел при настройке. «category»: LAW, SERVER_RULE, MIXED, NONSENSE, OUT_OF_SCOPE, AMBIGUOUS, HALLUCINATION_TRAP, WRONG_NUMBER_TRAP, CROSS_SERVER, FALSE_CLAIM, PROMPT_INJECTION, FOLLOW_UP. «behavior»: answer (по умолчанию), system — ответ приложения без ИИ, clarify — уточняющий вопрос. «forbid» — статьи, которые нельзя применять. «group» traps — ловушки; players — частые вопросы игроков: ситуации, правила проекта, уставы, ник.",
   "cases": [
     {
       "server": "tverskoi",
@@ -683,7 +683,7 @@
       ]
     },
     {
-      "group": "sinset",
+      "group": "players",
       "server": "tverskoi",
       "category": "LAW",
       "situation": "Сотрудник ГИБДД остановил меня и не представился. Он обязан?",
@@ -692,7 +692,7 @@
       ]
     },
     {
-      "group": "sinset",
+      "group": "players",
       "server": "tverskoi",
       "category": "LAW",
       "situation": "Меня задержали за то, что я стоял с битой в руках на улице. Это законно?",
@@ -701,7 +701,7 @@
       ]
     },
     {
-      "group": "sinset",
+      "group": "players",
       "server": "tverskoi",
       "category": "LAW",
       "situation": "Что будет за превышение скорости на 50 км/ч в городе?",
@@ -710,7 +710,7 @@
       ]
     },
     {
-      "group": "sinset",
+      "group": "players",
       "server": "tverskoi",
       "category": "LAW",
       "situation": "Сколько лет дадут за убийство сотрудника полиции?",
@@ -719,7 +719,7 @@
       ]
     },
     {
-      "group": "sinset",
+      "group": "players",
       "server": "tverskoi",
       "category": "LAW",
       "situation": "Во сколько у армии обед и вечерняя поверка?",
@@ -728,7 +728,7 @@
       ]
     },
     {
-      "group": "sinset",
+      "group": "players",
       "server": "tverskoi",
       "category": "HALLUCINATION_TRAP",
       "situation": "Как пройти КМБ быстрее всех?",
@@ -737,7 +737,7 @@
       ]
     },
     {
-      "group": "sinset",
+      "group": "players",
       "server": "tverskoi",
       "category": "MIXED",
       "situation": "Я убил игрока без причины у больницы, что мне будет?",
@@ -746,7 +746,7 @@
       ]
     },
     {
-      "group": "sinset",
+      "group": "players",
       "server": "tverskoi",
       "category": "SERVER_RULE",
       "situation": "Игрок вышел из игры, когда его задерживали",
@@ -755,7 +755,7 @@
       ]
     },
     {
-      "group": "sinset",
+      "group": "players",
       "server": "tverskoi",
       "category": "MIXED",
       "situation": "Сотрудник МВД в форме ограбил магазин",
@@ -765,7 +765,7 @@
       ]
     },
     {
-      "group": "sinset",
+      "group": "players",
       "server": "tverskoi",
       "category": "SERVER_RULE",
       "situation": "Можно ли использовать макрос для стрельбы?",
@@ -774,12 +774,147 @@
       ]
     },
     {
-      "group": "sinset",
+      "group": "players",
       "server": "tverskoi",
       "category": "SERVER_RULE",
       "situation": "Aiden_Arokij",
       "behavior": "system",
       "reason": "nickname"
+    },
+    {
+      "group": "players",
+      "server": "tverskoi",
+      "category": "MIXED",
+      "situation": "Чел предложил подвезти, я сел к нему в машину, он заехал во двор и застрелил меня, я ему ничего не делал",
+      "expect": [
+        "Правила 5.1"
+      ]
+    },
+    {
+      "group": "players",
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "situation": "Игрок специально несколько раз наехал на меня машиной",
+      "expect": [
+        "Правила 5.2"
+      ]
+    },
+    {
+      "group": "players",
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "situation": "Игрок заехал на машине в здание, а потом катался по горам",
+      "expect": [
+        "Правила 5.3"
+      ]
+    },
+    {
+      "group": "players",
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "situation": "Меня убили в перестрелке, я возродился и вернулся на то место отомстить, так можно?",
+      "expect": [
+        "Правила 5.4"
+      ]
+    },
+    {
+      "group": "players",
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "situation": "Задержанный в наручниках убежал от полиции и перепрыгнул забор",
+      "expect": [
+        "Правила 5.5"
+      ]
+    },
+    {
+      "group": "players",
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "situation": "Игрок убежал от погони в зелёную зону и спрятался там",
+      "expect": [
+        "Правила 5.18"
+      ]
+    },
+    {
+      "group": "players",
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "situation": "Игрок пообещал купить мне машину, я перевёл ему деньги, а он пропал",
+      "expect": [
+        "Правила 5.13"
+      ]
+    },
+    {
+      "group": "players",
+      "server": "tverskoi",
+      "category": "MIXED",
+      "situation": "Полицейский задержал меня и не сказал, по какой статье и какие у меня права",
+      "expect": [
+        "Правила 1.8"
+      ]
+    },
+    {
+      "group": "players",
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "situation": "Полицейский задерживает AFK игроков на крыше казино",
+      "expect": [
+        "Правила 1.20"
+      ]
+    },
+    {
+      "group": "players",
+      "server": "tverskoi",
+      "category": "MIXED",
+      "situation": "Полицейский задержал меня просто за то, что я был в маске",
+      "expect": [
+        "Правила 1.20"
+      ]
+    },
+    {
+      "group": "players",
+      "server": "tverskoi",
+      "category": "MIXED",
+      "situation": "Полицейский дал мне 5 звёзд за то, что я перешёл дорогу в неположенном месте",
+      "expect": [
+        "Правила 1.20"
+      ]
+    },
+    {
+      "group": "players",
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "situation": "Игрок перенёс ссору из дискорда в игру и теперь постоянно убивает меня",
+      "expect": [
+        "Правила 6.9"
+      ]
+    },
+    {
+      "group": "players",
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "situation": "Можно ли иметь два аккаунта на сервере?",
+      "expect": [
+        "Правила 2.1"
+      ]
+    },
+    {
+      "group": "players",
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "situation": "Можно продать свой аккаунт другу?",
+      "expect": [
+        "Правила 2.4"
+      ]
+    },
+    {
+      "group": "players",
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "situation": "Игрок использует баг и проходит сквозь стены",
+      "expect": [
+        "Правила 6.8"
+      ]
     }
   ]
 }

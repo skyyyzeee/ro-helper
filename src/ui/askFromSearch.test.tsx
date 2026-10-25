@@ -6,7 +6,7 @@ import { AI_KEY_SETTING, AI_PROVIDER_SETTING } from './ai';
 
 const GEMINI = { [AI_PROVIDER_SETTING]: 'gemini', [AI_KEY_SETTING]: 'test-key' };
 
-// A question typed into the search goes to the AI on Enter (an idea borrowed from SINSET); a few words of an article
+// A question typed into the search goes to the AI on Enter; a few words of an article
 // stay the search's.
 describe('asking the AI from the search', () => {
   afterEach(() => vi.unstubAllGlobals());
