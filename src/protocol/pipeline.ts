@@ -112,7 +112,7 @@ export function withoutClaimedArticles(text: string): string {
 }
 
 /** Two lists taken in turn, each article once. */
-function alternate(first: SearchHit[], second: SearchHit[]): SearchHit[] {
+export function alternate(first: SearchHit[], second: SearchHit[]): SearchHit[] {
   const seen = new Set<string>();
   const out: SearchHit[] = [];
   for (let i = 0; i < Math.max(first.length, second.length); i++) {

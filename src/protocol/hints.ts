@@ -91,6 +91,8 @@ const RULE_HINTS: Hint[] = [
   { all: [OFFICIAL, ru(/не (?:сказал|назвал|озвучил|объяснил|разъяснил|зачитал|огласил)/), ru(/стать|прав|за что/)], terms: ['права и статьи озвучены в голосовой чат'] },
   // An officer misusing the state's functions: for a mask, an AFK player, the casino, five stars for a trifle.
   { all: [OFFICIAL, ru(/задерж|дал|выдал|посадил|арестовал|оштрафовал|повязал|принял|кафа/), ru(/за маску|в маске|\bafk\b|\bафк\b|казино|5 звезд|пять звезд|максимальн\w* срок|за мелк|судимост|в больниц/)], terms: ['злоупотребление функционалом государственных структур'] },
+  // Held in the cells longer than the stars allow.
+  { all: [ru(/\bкпз\b|в камер/), ru(/минут|звезд/)], terms: ['максимально допустимый срок посадки в КПЗ за звезду'] },
   // A quarrel from outside the game settled by killing in it: DM as well as the quarrel carried over.
   { all: [ru(/дискорд|discord|из жизни|в реале|\booc\b|\bоос\b|вне игры|телеграм/), ru(/убивает|убил|убива|стреляет|валит|завалил|застрелил/)], terms: ['DM Deathmatch', 'без IC причины и IC диалога'] },
   // A quarrel carried from outside the game into it.

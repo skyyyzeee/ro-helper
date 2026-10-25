@@ -1,5 +1,5 @@
 {
-  "about": "Ситуации для проверки ИИ: как их описал бы игрок, и какая статья законов сервера — верный ответ. «expect» — документ и номер; через «|» — любая из них верна (например, кража по сумме). Проверено по законам серверов на 2026-09-27. «group»: base — первые 15, на них настраивались подсказки; fresh — новые, которых ИИ не видел при настройке. «category»: LAW, SERVER_RULE, MIXED, NONSENSE, OUT_OF_SCOPE, AMBIGUOUS, HALLUCINATION_TRAP, WRONG_NUMBER_TRAP, CROSS_SERVER, FALSE_CLAIM, PROMPT_INJECTION, FOLLOW_UP. «behavior»: answer (по умолчанию), system — ответ приложения без ИИ, clarify — уточняющий вопрос. «forbid» — статьи, которые нельзя применять. «group» traps — ловушки; players — частые вопросы игроков: ситуации, правила проекта, уставы, ник.",
+  "about": "Ситуации для проверки ИИ: как их описал бы игрок, и какая статья законов сервера — верный ответ. «expect» — документ и номер; через «|» — любая из них верна (например, кража по сумме). Проверено по законам серверов на 2026-09-27. «group»: base — первые 15, на них настраивались подсказки; fresh — новые, которых ИИ не видел при настройке. «category»: LAW, SERVER_RULE, MIXED, NONSENSE, OUT_OF_SCOPE, AMBIGUOUS, HALLUCINATION_TRAP, WRONG_NUMBER_TRAP, CROSS_SERVER, FALSE_CLAIM, PROMPT_INJECTION, FOLLOW_UP. «behavior»: answer (по умолчанию), system — ответ приложения без ИИ, clarify — уточняющий вопрос. «forbid» — статьи, которые нельзя применять. «group» traps — ловушки; players — частые вопросы игроков: ситуации, правила проекта, уставы, ник. group officer — проверки сотрудника: «mode» lawyer — требования адвоката, detention — ход задержания; «verdicts» — вердикты, которые должны быть среди пунктов, «noVerdict» — которых быть не должно.",
   "cases": [
     {
       "server": "tverskoi",
@@ -917,6 +917,183 @@
       "situation": "Игрок использует баг и проходит сквозь стены",
       "expect": [
         "Правила 6.8"
+      ]
+    },
+    {
+      "server": "tverskoi",
+      "category": "LAWYER",
+      "mode": "lawyer",
+      "group": "officer",
+      "situation": "Адвокат требует дать ему свидание с задержанным наедине до допроса",
+      "expect": [
+        "УПК 26|УПК 28|13-ФЗ 10"
+      ],
+      "verdicts": [
+        "lawful"
+      ]
+    },
+    {
+      "server": "tverskoi",
+      "category": "LAWYER",
+      "mode": "lawyer",
+      "group": "officer",
+      "situation": "Адвокат требует свидание с подзащитным наедине на 30 минут",
+      "expect": [
+        "УПК 26"
+      ],
+      "noVerdict": [
+        "lawful"
+      ]
+    },
+    {
+      "server": "tverskoi",
+      "category": "LAWYER",
+      "mode": "lawyer",
+      "group": "officer",
+      "situation": "Адвокат требует ознакомить его с протоколом задержания",
+      "expect": [
+        "УПК 28|13-ФЗ 10"
+      ],
+      "verdicts": [
+        "lawful"
+      ]
+    },
+    {
+      "server": "tverskoi",
+      "category": "LAWYER",
+      "mode": "lawyer",
+      "group": "officer",
+      "situation": "Адвокат требует немедленно отпустить задержанного, потому что прошло уже 20 минут",
+      "expect": [
+        "6-ФЗ 14"
+      ],
+      "noVerdict": [
+        "lawful"
+      ]
+    },
+    {
+      "server": "tverskoi",
+      "category": "LAWYER",
+      "mode": "lawyer",
+      "group": "officer",
+      "situation": "Адвокат пришёл без удостоверения адвоката и требует пустить его к подзащитному",
+      "expect": [
+        "УПК 28"
+      ],
+      "noVerdict": [
+        "lawful"
+      ]
+    },
+    {
+      "server": "tverskoi",
+      "category": "LAWYER",
+      "mode": "lawyer",
+      "group": "officer",
+      "situation": "Адвокат требует дать задержанному позвонить",
+      "expect": [
+        "УПК 26|6-ФЗ 14"
+      ],
+      "verdicts": [
+        "lawful"
+      ]
+    },
+    {
+      "server": "tverskoi",
+      "category": "LAWYER",
+      "mode": "lawyer",
+      "group": "officer",
+      "situation": "Адвокат требует свидание с задержанным наедине и отпустить его через 15 минут после задержания",
+      "verdicts": [
+        "lawful",
+        "unlawful"
+      ]
+    },
+    {
+      "server": "tverskoi",
+      "category": "DETENTION",
+      "mode": "detention",
+      "group": "officer",
+      "situation": "Надел наручники, предъявил удостоверение, провёл обыск, разъяснил причину задержания и права, озвучил статьи и права в голосовой чат, доставил в отдел",
+      "expect": [
+        "УПК 52"
+      ],
+      "noVerdict": [
+        "violation"
+      ]
+    },
+    {
+      "server": "tverskoi",
+      "category": "DETENTION",
+      "mode": "detention",
+      "group": "officer",
+      "situation": "Задержал игрока только за то, что он ходил в маске",
+      "expect": [
+        "Правила 1.20"
+      ],
+      "verdicts": [
+        "violation"
+      ]
+    },
+    {
+      "server": "tverskoi",
+      "category": "DETENTION",
+      "mode": "detention",
+      "group": "officer",
+      "situation": "Надел наручники и сразу повёз в отдел, удостоверение не показал и права не разъяснил",
+      "expect": [
+        "УПК 52"
+      ]
+    },
+    {
+      "server": "tverskoi",
+      "category": "DETENTION",
+      "mode": "detention",
+      "group": "officer",
+      "situation": "Задержанный попросил вызвать адвоката, я отказал и сразу посадил его в КПЗ",
+      "expect": [
+        "Правила 1.9|УПК 52|6-ФЗ 14"
+      ],
+      "verdicts": [
+        "violation"
+      ]
+    },
+    {
+      "server": "tverskoi",
+      "category": "DETENTION",
+      "mode": "detention",
+      "group": "officer",
+      "situation": "За одну звезду розыска посадил задержанного в КПЗ на 30 минут",
+      "expect": [
+        "Правила 1.7"
+      ],
+      "verdicts": [
+        "violation"
+      ]
+    },
+    {
+      "server": "tverskoi",
+      "category": "DETENTION",
+      "mode": "detention",
+      "group": "officer",
+      "situation": "Задержал сотрудника МВД и посадил в КПЗ, прокурора не вызывал",
+      "expect": [
+        "Правила 1.14|УПК 52|КоАП 16.2.2"
+      ],
+      "verdicts": [
+        "violation"
+      ]
+    },
+    {
+      "server": "tverskoi",
+      "category": "DETENTION",
+      "mode": "detention",
+      "group": "officer",
+      "situation": "Задержал, а статьи и права написал задержанному только в текстовый чат",
+      "expect": [
+        "Правила 1.8"
+      ],
+      "verdicts": [
+        "violation"
       ]
     }
   ]

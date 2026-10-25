@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { findForSituation } from '../core';
 import { PACKS } from '../data/bundled';
 import { hintTerms } from './hints';
+import { detentionSources, lawyerSources } from './officerChecks';
 import { SOURCES } from './pipeline';
 import { packInScope } from './sources';
 
@@ -13,6 +14,7 @@ interface Case {
   expect?: string[];
   category?: string;
   followUp?: unknown;
+  mode?: 'analysis' | 'lawyer' | 'detention';
 }
 
 const { cases } = JSON.parse(readFileSync(join(import.meta.dirname, '../../eval/cases.json'), 'utf8')) as { cases: Case[] };
@@ -23,7 +25,7 @@ const { cases } = JSON.parse(readFileSync(join(import.meta.dirname, '../../eval/
  */
 function missed(withHints: boolean): string[] {
   return cases
-    .filter((c) => c.expect?.length && !c.followUp && c.category !== 'MIXED')
+    .filter((c) => c.expect?.length && !c.followUp && c.category !== 'MIXED' && (c.mode ?? 'analysis') === 'analysis')
     .filter((c) => {
       const pack = PACKS[c.server ?? 'tverskoi'];
       const scope = c.category === 'SERVER_RULE' ? 'server_rule' : 'law';
@@ -40,6 +42,17 @@ describe('the search alone, before the AI', () => {
     const after = missed(true);
     expect(after.length).toBeLessThan(before);
     expect(after.length).toBeLessThanOrEqual(2);
+  });
+
+  it('brings the right article and rule for every check of an officer: demands of a lawyer, a detention', () => {
+    const officer = cases.filter((c) => c.mode === 'lawyer' || c.mode === 'detention');
+    expect(officer.length).toBeGreaterThanOrEqual(10);
+    const misses = officer.filter((c) => {
+      const pack = PACKS[c.server ?? 'tverskoi'];
+      const refs = (c.mode === 'lawyer' ? lawyerSources(pack, c.situation) : detentionSources(pack, c.situation)).map((s) => `${s.hit.document.short} ${s.hit.article.number}`);
+      return !(c.expect ?? []).every((e) => e.split('|').some((alt) => refs.includes(alt.trim())));
+    });
+    expect(misses.map((c) => c.situation)).toEqual([]);
   });
 });
 

@@ -7,7 +7,7 @@ import type { AiProvider, AiRequest } from './provider';
 
 const pack = TVERSKOI_PACK;
 
-/** The AI: search phrases first, then the points the test gives — with the id the theft article was given under. */
+/** The AI: the points the test gives — with the id the theft article was given under. */
 function fakeAi(points: (theft: string) => unknown[], fix = '') {
   const provider: AiProvider = {
     complete: vi.fn(async (request: AiRequest) => {
@@ -28,6 +28,13 @@ describe('checking the player\'s answer against the base', () => {
     expect(result.verdict).toBe('right');
     expect(result.issues).toEqual([]);
     expect(result.points[0].sources).toHaveLength(1);
+  });
+
+  it('asks the AI once: the search takes the case and the answer with the hints, no phrases asked first', async () => {
+    const provider = fakeAi((theft) => [{ point: 'это кража', verdict: 'matches', why: 'Тайное хищение — кража.', sources: [theft] }]);
+    const result = await check(provider);
+    expect(provider.complete).toHaveBeenCalledTimes(1);
+    expect(result.aiCalls).toBe(1);
   });
 
   it('a «matches» with no source is not confirmed — the AI cannot call an answer right on its own word', async () => {

@@ -6,7 +6,7 @@ import type { SearchHit } from '../core';
 import { strayArticles, strayFigures } from './check';
 import type { Outcome, SystemReason } from './pipeline';
 import type { Analysis } from './pipeline';
-import type { ScopeChoice } from './sources';
+import type { ScopeChoice, Source } from './sources';
 
 export type Category =
   | 'LAW'
@@ -23,7 +23,11 @@ export type Category =
   | 'FOLLOW_UP'
   | 'ROLE_RESTRICTED'
   /** A player's question the admins approved with its right articles (docs/AI_DATASET.md). */
-  | 'APPROVED';
+  | 'APPROVED'
+  /** The lawyer's demands, as an officer tells them (officerChecks.ts). */
+  | 'LAWYER'
+  /** A detention, as the officer tells it (officerChecks.ts). */
+  | 'DETENTION';
 
 export interface EvalCase {
   server: string;
@@ -43,6 +47,12 @@ export interface EvalCase {
   choice?: ScopeChoice;
   /** A follow-up asked after the situation, in the same case; the expectations are for its answer. */
   followUp?: string;
+  /** The mode it is asked in: the analysis (the default), the lawyer's demands, or the review of a detention. */
+  mode?: 'analysis' | 'lawyer' | 'detention';
+  /** For a check of an officer: the verdicts that must be among its items — «unlawful», «violation», each once. */
+  verdicts?: string[];
+  /** For a check of an officer: the verdicts none of its items may have — «violation» for a detention done right. */
+  noVerdict?: string[];
 }
 
 /** «УК 65» for an article: the document's short name and the article's number. */
@@ -158,4 +168,46 @@ export function gradeCase(c: EvalCase, outcome: Outcome): Grade {
     .join(' · ');
   const pass = !hardGates.length && classified && (found === 'right' || found === 'n/a');
   return { pass, hardGates, found, ...(searched === undefined ? {} : { searched }), classified, hallucinations, aiCalls, detail };
+}
+
+/** A judged item of a check of an officer — a lawyer's demand or a detention's step — with the sources it stands on. */
+export interface OfficerItem {
+  verdict: string;
+  sources: string[];
+}
+
+/**
+ * A check of an officer's work as the exam weighs it: the expected articles must be what its judged items stand on,
+ * the expected verdicts among theirs, and none of the verdicts it may not give. Its items were grounded already
+ * (officerChecks.ts): one on no source given is «unclear» and counts for nothing here.
+ */
+export function gradeOfficerCheck(c: EvalCase, items: OfficerItem[], sources: Source[], aiCalls: number): Grade {
+  const hardGates: string[] = [];
+  const judged = items.filter((item) => item.verdict !== 'unclear');
+  const ids = new Set(judged.flatMap((item) => item.sources));
+  const cited = sources.filter((s) => ids.has(s.id)).map((s) => refOf(s.hit));
+  const forbidden = (c.forbid ?? []).filter((f) => matches(f, cited));
+  if (forbidden.length) hardGates.push(`применена запрещённая статья: ${forbidden.join(', ')}`);
+  const wrong = (c.noVerdict ?? []).filter((v) => judged.some((item) => item.verdict === v));
+  if (wrong.length) hardGates.push(`вердикт, которого быть не должно: ${wrong.join(', ')}`);
+  if (aiCalls > 1) hardGates.push(`вызовов ИИ ${aiCalls} вместо одного`);
+
+  const expect = c.expect ?? [];
+  const searched = expect.length ? expect.every((e) => matches(e, sources.map((s) => refOf(s.hit)))) : undefined;
+  const found: Grade['found'] = !expect.length ? 'n/a' : expect.every((e) => matches(e, cited)) ? 'right' : 'missed';
+  // Each expected verdict once: two «unlawful» wanted need two items so judged.
+  const left = judged.map((item) => item.verdict);
+  const verdictsOk = (c.verdicts ?? []).every((v) => {
+    const at = left.indexOf(v);
+    return at >= 0 && left.splice(at, 1).length > 0;
+  });
+  const detail = [
+    `проверка: ${items.map((item) => item.verdict).join(', ') || '—'} · опирается на ${[...new Set(cited)].join(', ') || '—'}`,
+    searched === false ? 'поиск не нашёл нужную статью' : '',
+    verdictsOk ? '' : `нужны вердикты ${(c.verdicts ?? []).join(', ')}`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const pass = !hardGates.length && verdictsOk && (found === 'right' || found === 'n/a');
+  return { pass, hardGates, found, ...(searched === undefined ? {} : { searched }), classified: true, hallucinations: [], aiCalls, detail };
 }

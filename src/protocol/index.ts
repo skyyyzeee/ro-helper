@@ -7,7 +7,7 @@ export { diffCases, type CaseDiff, type CaseView } from './caseDiff';
 export { answerVerdict, checkMyAnswer, type AnswerCheck, type AnswerCheckInput, type AnswerPoint, type AnswerVerdict, type PointVerdict } from './answerCheck';
 export { ANSWERED_BY_APP, classify, type Classification, type QuestionType } from './classify';
 export { groundItems, idsOf, strayArticles, strayFigures, textIssues, type GroundedItem } from './check';
-export { confirmedHallucinations, gradeCase, refOf, type Category, type EvalCase, type Grade } from './grade';
+export { confirmedHallucinations, gradeCase, gradeOfficerCheck, refOf, type Category, type EvalCase, type Grade, type OfficerItem } from './grade';
 export { PERSPECTIVE_FOCUS, buildContext, sourcesBlock, type CaseState, type ContextInput, type Perspective } from './context';
 export { analysisPrompt, coreRules, playerData, type Depth } from './prompt';
 export { wantsFullAnalysis } from './depth';
@@ -36,12 +36,15 @@ export {
   type Status,
   type Validation,
 } from './validate';
+export { breaksRules, hintTerms } from './hints';
+export { checkDemands, detentionSources, lawyerSources, reviewDetention, type DetentionReview, type LawyerAnswer } from './officerChecks';
 export {
   SOURCES,
   analyse,
   answerQuestion,
   lawTerms,
   searchTerms,
+  withoutClaimedArticles,
   type Analysis,
   type AnalyseInput,
   type Outcome,
