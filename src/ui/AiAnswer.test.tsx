@@ -31,6 +31,25 @@ describe('the analysis on screen', () => {
     expect(within(reply).getByText('Калькулятор:').parentElement).toHaveTextContent(/30\sмес/);
   });
 
+  it('keeps the punishment and the articles in view, and folds the rest of the analysis under «Подробный разбор»', async () => {
+    const { user } = await ask('у меня украли телефон');
+    const reply = screen.getByRole('log');
+    // The gist, the punishment and the cards come before the fold, in that order.
+    const order = ['.ai__gist', '.answer__calc', '.sources', '.answer__more'].map((selector) => reply.querySelector(selector)!);
+    order.slice(1).forEach((node, i) => expect(order[i].compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy());
+    const more = reply.querySelector<HTMLDetailsElement>('details.answer__more')!;
+    expect(more.open).toBe(false);
+    for (const block of ['Нарушение', 'Процедура']) expect(more).toContainElement(within(reply).getByText(block));
+    expect(more).not.toContainElement(within(reply).getByText('Наказание'));
+    await user.click(within(more).getByText('Подробный разбор'));
+    expect(more.open).toBe(true);
+  });
+
+  it('shows no fold when the analysis has nothing more to tell', async () => {
+    await ask('у меня украли телефон', { violation: null, procedure: [], uncertainty: [], assumptions: [] });
+    expect(screen.getByRole('log').querySelector('details.answer__more')).toBeNull();
+  });
+
   it('marks an answer citing an article the laws do not have as one to check, and never as confirmed', async () => {
     await ask('у меня украли телефон', {
       norms: [{ source: 'S99', ref: 'УК ст. 999', part: '1', why: 'выдумана', fit: 'direct', charge: true, stage: 'done' }],
