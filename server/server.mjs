@@ -348,16 +348,32 @@ function inGigachatTurn(call, model) {
   return mine;
 }
 
+/** The first object the text completes, from its first «{» to the «}» that closes it; empty when none closes. */
+function firstObject(text) {
+  const start = text.indexOf('{');
+  if (start < 0) return '';
+  let depth = 0;
+  let quoted = false;
+  for (let i = start; i < text.length; i += 1) {
+    const char = text[i];
+    if (quoted) {
+      if (char === '\\') i += 1;
+      else if (char === '"') quoted = false;
+    } else if (char === '"') quoted = true;
+    else if (char === '{' || char === '[') depth += 1;
+    else if ((char === '}' || char === ']') && --depth === 0) return text.slice(start, i + 1);
+  }
+  return '';
+}
+
 /**
  * A JSON answer must be JSON: a broken one is the paid API's to give, not the player's to see. The JSON as the model
- * wrote it — out of fences, or the one object amid a word before or after it («Вот разбор: {…}») — or nothing; the
- * app reads the same way (src/protocol/json.ts).
+ * wrote it — whole, out of fences, or else the first object it completed: amid words («Вот разбор: {…}»), or closed
+ * and gone on after (`…]}","summary": "…"`) — or nothing; the app reads the same way (src/protocol/json.ts).
  */
 function jsonOf(text) {
   const bare = text.trim().replace(/^```(?:json)?\s*|```\s*$/g, '');
-  const start = bare.indexOf('{');
-  const end = bare.lastIndexOf('}');
-  for (const candidate of [bare, start >= 0 && end > start ? bare.slice(start, end + 1) : '']) {
+  for (const candidate of [bare, firstObject(bare)]) {
     try {
       JSON.parse(candidate);
       return candidate;

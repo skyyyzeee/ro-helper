@@ -41,6 +41,7 @@ async function fakeGigachat({ life = 30 * 60_000, delay = 0 } = {}) {
     if (question.includes('травка')) return json(response, 200, { choices: [{ message: { content: 'Генеративные языковые модели не обладают собственным мнением…' }, finish_reason: 'blacklist' }] });
     if (question.includes('сломай')) return json(response, 200, { choices: [{ message: { content: '{"phra e": [' }, finish_reason: 'stop' }] });
     if (question.includes('со словами')) return json(response, 200, { choices: [{ message: { content: 'Вот разбор: {"from": "gigachat"} Надеюсь, помог.' }, finish_reason: 'stop' }] });
+    if (question.includes('закрыл рано')) return json(response, 200, { choices: [{ message: { content: '{"from": "gigachat", "steps": [1]}","summary": "хвост"}' }, finish_reason: 'stop' }] });
     if (question.includes('лимит')) return json(response, 402, { message: 'Payment Required' });
     return json(response, 200, { choices: [{ message: { content: '{"from": "gigachat"}' }, finish_reason: 'stop' }] });
   });
@@ -340,6 +341,8 @@ test('an admin may try one model for a request: that model, off the computer\'s 
     assert.equal((await trial('gpt-4.1-mini', 'wrong')).body.text, '{"from": "gigachat"}');
     // An answer with a word around its JSON is the JSON; one with none, the admin sees what the model wrote and why.
     assert.equal((await trial('gigachat', undefined, 'ответ со словами')).body.text, '{"from": "gigachat"}');
+    // Closed and gone on after: the object it completed, as GigaChat-3-Ultra wrote on 25.10.2026.
+    assert.equal((await trial('gigachat', undefined, 'закрыл рано')).body.text, '{"from": "gigachat", "steps": [1]}');
     const broken = await trial('gigachat:GigaChat-3-Ultra', undefined, 'сломай формат');
     assert.equal(broken.status, 502);
     assert.equal(broken.body.declined, 'format stop 12');
