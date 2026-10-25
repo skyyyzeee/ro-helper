@@ -11,6 +11,7 @@ import { SOURCES, alternate, withoutClaimedArticles } from './pipeline';
 import { coreRules, playerData } from './prompt';
 import { AiError, type AiProvider } from './provider';
 import { labelSources, packInScope, type Source } from './sources';
+import { readJson } from './json';
 
 // ——— Требования адвоката ———
 
@@ -75,7 +76,7 @@ export function spoken(reply: string): string {
   return said.charAt(0).toUpperCase() + said.slice(1);
 }
 
-const json = (raw: string) => JSON.parse(raw.trim().replace(/^```(?:json)?\s*|```\s*$/g, '')) as Record<string, unknown>;
+const json = (raw: string) => readJson(raw) as Record<string, unknown>;
 
 /** The hints for a text an officer tells of their own work: the officer is the one speaking, though rarely says so. */
 const officerHints = (text: string) => hintTerms(`сотрудник ${text}`);

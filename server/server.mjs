@@ -304,7 +304,10 @@ const MODEL_PRICES = {
 // ——— GigaChat ———
 
 /** Why GigaChat did not answer this one: the paid API then does. */
-class Declined extends Error {}
+class Declined extends Error {
+  /** What the model wrote, when it was no answer to give: shown to an admin trying a model, never kept. */
+  text = '';
+}
 
 /** The access token: its authorization key is exchanged for one that lasts 30 minutes, renewed a minute early. */
 let token = { value: '', until: 0 };
@@ -345,14 +348,24 @@ function inGigachatTurn(call, model) {
   return mine;
 }
 
-/** A JSON answer must be JSON: a broken one is the paid API's to give, not the player's to see. */
-function readableJson(text) {
-  try {
-    JSON.parse(text.trim().replace(/^```(?:json)?\s*|```\s*$/g, ''));
-    return true;
-  } catch {
-    return false;
+/**
+ * A JSON answer must be JSON: a broken one is the paid API's to give, not the player's to see. The JSON as the model
+ * wrote it — out of fences, or the one object amid a word before or after it («Вот разбор: {…}») — or nothing; the
+ * app reads the same way (src/protocol/json.ts).
+ */
+function jsonOf(text) {
+  const bare = text.trim().replace(/^```(?:json)?\s*|```\s*$/g, '');
+  const start = bare.indexOf('{');
+  const end = bare.lastIndexOf('}');
+  for (const candidate of [bare, start >= 0 && end > start ? bare.slice(start, end + 1) : '']) {
+    try {
+      JSON.parse(candidate);
+      return candidate;
+    } catch {
+      // The next way, or none.
+    }
   }
+  return null;
 }
 
 async function gigachat({ system, messages, json, think }, model = CONFIG.gigachat.model) {
@@ -369,12 +382,17 @@ async function gigachat({ system, messages, json, think }, model = CONFIG.gigach
     if (response.status === 401) token = { value: '', until: 0 };
     if (!response.ok) throw new Declined(`http ${response.status}`);
     const choice = body?.choices?.[0];
-    const text = choice?.message?.content ?? '';
+    const said = choice?.message?.content ?? '';
     // Sber's filter answers some topics (drugs, say) with a stock text and this reason — whatever the prompt says.
     if (choice?.finish_reason === 'blacklist') throw new Declined('blacklist');
-    if (!text.trim()) throw new Declined('empty');
-    // Cut at the length, or broken otherwise: the journal says which, and how long it was.
-    if (json && !readableJson(text)) throw new Declined(`format ${choice?.finish_reason ?? '?'} ${text.length}`);
+    if (!said.trim()) throw new Declined('empty');
+    const text = json ? jsonOf(said) : said;
+    if (text === null) {
+      // Cut at the length, or broken otherwise: the journal says which, and how long it was.
+      const declined = new Declined(`format ${choice?.finish_reason ?? '?'} ${said.length}`);
+      declined.text = said;
+      throw declined;
+    }
     const usage = body?.usage ?? {};
     return { text, rubles: 0, usage: { input: usage.prompt_tokens ?? 0, output: usage.completion_tokens ?? 0 } };
   }, model);
@@ -475,13 +493,7 @@ function forgetAnswers(question) {
 
 /** An answer worth keeping: a JSON answer that is JSON at all — a broken one would only be retried again and again. */
 function keepable(text, json) {
-  if (!json) return true;
-  try {
-    JSON.parse(text.trim().replace(/^```(?:json)?\s*|```\s*$/g, ''));
-    return true;
-  } catch {
-    return false;
-  }
+  return !json || jsonOf(text) !== null;
 }
 
 // ——— The players' marks ———
@@ -968,7 +980,14 @@ const server = createServer(async (request, response) => {
       if (!gigaModel && !CONFIG.trialModels.includes(input.model)) return send(response, 400, { error: `Модель не из списка: ${CONFIG.trialModels.join(', ')}` });
       rollDay();
       if (!gigaModel && input.model !== 'gigachat' && state.spent >= CONFIG.budgetPerDay) return send(response, 429, { error: 'Дневной бюджет ИИ исчерпан.' });
-      const answer = gigaModel ? await gigachat(request, gigaModel) : input.model === 'gigachat' ? await gigachat(request) : await paid(request, [input.model]);
+      let answer;
+      try {
+        answer = gigaModel ? await gigachat(request, gigaModel) : input.model === 'gigachat' ? await gigachat(request) : await paid(request, [input.model]);
+      } catch (error) {
+        // What the model said instead of an answer, for the admin to see why: the exam's misses are read, not guessed.
+        if (error instanceof Declined) return send(response, 502, { error: 'ИИ сейчас не отвечает. Попробуйте через минуту.', declined: error.message, said: error.text.slice(0, 6000) });
+        throw error;
+      }
       // The budget counts what it cost; the address's limit does not: an exam would use up the admin's own day.
       state.spent += answer.rubles;
       dirty = true;
