@@ -1,6 +1,6 @@
 // A question or a situation typed into the search («Сотрудник ГИБДД не представился, он обязан?») is the AI's: the
 // offer to ask it stands first in the results, chosen, so Enter asks. A few words of an article («кража», «65»,
-// «коап 8.6») are the search's, as ever: Enter puts the article into the calculator. An idea borrowed from SINSET.
+// «коап 8.6») are the search's, as ever: Enter puts the article into the calculator.
 
 /** An article number, perhaps with its code: «65», «ук 10.2», «коап 8.6?» — never the AI's. */
 const ARTICLE = /^\s*(?:(?:ук|коап|пдд|упк|тк|ст\.?|статья|статью|п\.?|пункт)\s*)?\d+(?:\.\d+)*\s*\??\s*$/i;

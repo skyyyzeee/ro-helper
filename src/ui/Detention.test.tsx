@@ -81,8 +81,12 @@ describe('the review of a detention (issue #4)', () => {
     const review = bodies.find((b) => b.counts !== false)!;
     expect(review.system).toContain('Верно сделанное так и отмечай');
     expect(review.messages?.at(-1)?.content).toContain('НАЙДЕННЫЕ ИСТОЧНИКИ');
-    // Laws only, and the officer's story fenced as data.
-    expect(review.messages?.at(-1)?.content).not.toMatch(/\[R\d+\]/);
+    // The laws and the project's rules for the state's factions (ПГО), and the officer's story fenced as data.
+    expect(review.messages?.at(-1)?.content).toMatch(/\[S\d+\]/);
+    expect(review.messages?.at(-1)?.content).toMatch(/\[R\d+\]/);
+    expect(review.system).toContain('ПРАВИЛА ГОССТРУКТУР');
+    // One AI call: the search takes the officer's words with the hints, no phrases asked first.
+    expect(bodies.filter((b) => b.counts === false)).toHaveLength(0);
     expect(review.messages?.at(-1)?.content).toContain('<<<');
     expect(review.think).toBe(true);
   });

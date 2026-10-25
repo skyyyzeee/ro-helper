@@ -37,6 +37,20 @@ const HINTS: Hint[] = [
   { all: [ru(/^(?:сотрудник|полицейск|офицер|военнослужащ|военн|госслужащ|инспектор|\bмент|\bкоп)/), ru(/ограбил|украл|похитил|убил|избил|угнал|продал|торговал|грабил|крал|наркот/)], terms: ['криминальные действия сотрудникам гос. структур'] },
   // A robbery told in a word («ограбил магазин»): the law names it грабёж — or разбой, with violence.
   { all: [ru(/ограбил|ограблени|грабанул|обнес|обчистил/)], terms: ['грабёж', 'разбой'] },
+  // Taken with a weapon or a threat: разбой, not грабёж.
+  { all: [ru(/отобрал|отобрали|отнял|отняли|ограбил|ограбили|грабил|забрал\w* силой|снял\w* с него/), ru(/нож|пистолет|ствол|оружи|угрож|пригрози|избил|избили/)], terms: ['разбой', 'нападение в целях хищения чужого имущества с угрозой применения насилия'] },
+  // A driver who would not be tested for drink.
+  { all: [ru(/дуть|продуть|алкотест|трубк|освидетельствован|медосвидетельств/), ru(/отказ|не стал|не захотел|не согласил/)], terms: ['невыполнение водителем требования о прохождении медицинского освидетельствования на состояние опьянения'] },
+  // An officer's lawful demand ignored.
+  { all: [ru(/потребовал|требовани|приказал|сказал остановиться|требует/), ru(/не остановил|не подчин|проигнорир|игнорир|не выполнил|пош[её]л дальше|продолжил ид|не послушал/)], terms: ['неповиновение законному требованию должностного лица'] },
+  // Driving with no licence: «прав нет», «без прав».
+  { all: [ru(/без прав|прав\w* (?:у него |у нее )?(?:нет|не было|никогда не было)|лишен\w* прав|без водительск/), ru(/ездил|ехал|управлял|за рул|водител|машин|катался/)], terms: ['управление транспортным средством водителем, не имеющим права управления'] },
+  // Driving drunk.
+  { all: [ru(/пьян|нетрезв|опьянен|выпивш|алкогол|бухой|под градусом/), ru(/за рул|водител|ехал|управлял|машин|ездил/)], terms: ['управление транспортным средством в состоянии опьянения'] },
+  // A kill told in a verb («убивает меня», «застрелил»): the law calls it убийство.
+  { all: [ru(/\bубил\b|\bубила\b|\bубивает\b|\bубивают\b|застрелил|пристрелил|зарезал|задушил/)], terms: ['убийство'] },
+  // Crossing the road where one should not: a pedestrian's breach of the traffic rules.
+  { all: [ru(/(?:перешел|переходил|перебежал|перебегал|переходить) (?:дорог|улиц|проезж)|в неположенном месте|\bпешеход\w*/)], terms: ['нарушение пешеходом Правил дорожного движения', 'пешеходный переход'] },
   // A threat to kill.
   { all: [ru(/пообещал|обещал|грозил|угрожал|сказал|написал|кричал/), ru(/убьет|убью|убить|завалю|завалит|прикончу|прибью/)], terms: ['угроза убийством'] },
   // An officer beating someone.
@@ -57,8 +71,53 @@ const HINTS: Hint[] = [
 ];
 
 /** The law's words for what the text tells in everyday ones; none when no pattern fits. */
+/**
+ * Situations that break the project's rules, told the way players tell them in complaints on the forum: the rules'
+ * own words for them («DM», «NonRP Drive», «злоупотребление функционалом государственных структур»). One of these
+ * in a question also tells the classifier the rules are asked about (classify.ts), with no AI.
+ */
+const RULE_HINTS: Hint[] = [
+  // Killed or hit for nothing: DM.
+  { all: [ru(/убил|убили|застрелил|пристрелил|стрелял|избил|ударил|напал|завалил/), ru(/без (?:всякой |всякого |какой-либо |какой-то |видимой |ic |ик |рп )?(?:причин|повод|диалог)|ни за что|просто так|ничего (?:ему |ей |им )?не (?:делал|сделал)|первым не|молча|не (?:разговаривал|говорил|общал)|без слов/)], terms: ['DM Deathmatch', 'без IC причины и IC диалога'] },
+  // Run over on purpose: DB.
+  { all: [ru(/наехал|наезжал|сбил|давил|задавил|переехал|таранил/), ru(/специально|намеренно|несколько раз|постоянно|нарочно|машин|авто|транспорт/)], terms: ['DriveBy наезд на игрока транспортом'] },
+  // Driven where no car can go: NonRP Drive.
+  { all: [ru(/заехал|ездил|езди[тл]|катался|ехал|въехал|гонял/), ru(/в здани|в интерьер|по горам|по горе|на гору|по воде|по реке|по лестниц|в помещени/)], terms: ['NonRP Drive вождение транспорта в невозможных условиях'] },
+  // Back where one was killed: NLR.
+  { all: [ru(/вернулся|вернулась|пришел|пришла|приехал|приехала|возвращ/), ru(/убили|смерт|возродил|респ|погиб|после того как умер/)], terms: ['NLR правила новой жизни возвращение на место гибели'] },
+  // More than the character could do: PG.
+  { all: [ru(/в наручник|связанн|раненый|с ранени|со сломанн|без сознани|избитый/), ru(/убежал|побежал|перепрыгнул|прыгнул|залез|дрался|стрелял|сбежал|отбивался/)], terms: ['PG Power gaming преувеличение возможностей персонажа'] },
+  // A detainee who ran: leaving the RP by the rules, an escape from custody by the law.
+  { all: [ru(/в наручник|задержанн|из-под стражи|из кпз|из камеры|под конвоем|при задержании/), ru(/убежал|сбежал|побежал|вырвался|скрылся/)], terms: ['уход от RP', 'побег из-под стражи'] },
+  // A chase or a gunfight taken into a green zone.
+  { all: [ru(/зелен\w* зон/)], terms: ['погони и перестрелки в зеленых зонах'] },
+  // Cheated of money or property.
+  { all: [ru(/обманул|кинул|скам|развел|не вернул|пропал|забрал деньги|не отдал|исчез/), ru(/деньг|машин|имуществ|перев[её]л|сделк|оплат|предоплат|купит/)], terms: ['обмана на имущество'] },
+  // An officer who did not say the charge or the rights.
+  { all: [OFFICIAL, ru(/не (?:сказал|назвал|озвучил|объяснил|разъяснил|зачитал|огласил)/), ru(/стать|прав|за что/)], terms: ['права и статьи озвучены в голосовой чат'] },
+  // An officer misusing the state's functions: for a mask, an AFK player, the casino, five stars for a trifle.
+  { all: [OFFICIAL, ru(/задерж|дал|выдал|посадил|арестовал|оштрафовал|повязал|принял|кафа/), ru(/за маску|в маске|\bafk\b|\bафк\b|казино|5 звезд|пять звезд|максимальн\w* срок|за мелк|судимост|в больниц/)], terms: ['злоупотребление функционалом государственных структур'] },
+  // Held in the cells longer than the stars allow.
+  { all: [ru(/\bкпз\b|в камер/), ru(/минут|звезд/)], terms: ['максимально допустимый срок посадки в КПЗ за звезду'] },
+  // A quarrel from outside the game settled by killing in it: DM as well as the quarrel carried over.
+  { all: [ru(/дискорд|discord|из жизни|в реале|\booc\b|\bоос\b|вне игры|телеграм/), ru(/убивает|убил|убива|стреляет|валит|завалил|застрелил/)], terms: ['DM Deathmatch', 'без IC причины и IC диалога'] },
+  // A quarrel carried from outside the game into it.
+  { all: [ru(/дискорд|discord|из жизни|в реале|\booc\b|\bоос\b|вне игры|телеграм/), ru(/ссор|конфликт|обид|мстит|убивает|враж|претензи/)], terms: ['Переносить конфликты из OOC в IC'] },
+  // Accounts: more than one, or sold.
+  { all: [ru(/аккаунт/), ru(/\bдва\b|\b2\b|несколько|второй|твинк|еще один/)], terms: ['количество разрешенных аккаунтов'] },
+  { all: [ru(/аккаунт/), ru(/прода|обмен|передат|отдат|купит/)], terms: ['продажа обмен игровых аккаунтов'] },
+  // Bugs.
+  { all: [ru(/\bбаг\w*|багоюз|сквозь стен|сквозь текстур|под текстур|уязвимост|\bдюп\w*/)], terms: ['уязвимости системы и баги'] },
+];
+
+/** Whether the question tells a situation that breaks the project's rules. */
+export const breaksRules = (text: string): boolean => {
+  const normal = text.toLowerCase().replace(/ё/g, 'е');
+  return RULE_HINTS.some((hint) => hint.all.every((pattern) => pattern.test(normal)));
+};
+
 export function hintTerms(text: string): string[] {
   const normal = text.toLowerCase().replace(/ё/g, 'е');
-  const terms = HINTS.filter((hint) => hint.all.every((pattern) => pattern.test(normal))).flatMap((hint) => hint.terms);
+  const terms = [...HINTS, ...RULE_HINTS].filter((hint) => hint.all.every((pattern) => pattern.test(normal))).flatMap((hint) => hint.terms);
   return [...new Set(terms)];
 }

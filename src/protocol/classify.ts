@@ -2,6 +2,7 @@
 // laws of Russia, gibberish, or a bare article number costs no AI call and never reaches the model at all. Plain
 // rules over the words; when they cannot tell, the AI's first call (the search phrases) also says what it is.
 import { unknownWords, type ServerPack } from '../core';
+import { breaksRules } from './hints';
 import { nicknameOf } from './nickname';
 import type { Scope, ScopeChoice } from './sources';
 
@@ -64,7 +65,7 @@ const RULE_WORDS = ru(
 
 /** Words of the laws: their names, their institutions and what they deal in. */
 const LAW_WORDS = ru(
-  /\bстать[яиюей]\w*|\bст\.?\s*\d|\bук\b|\bкоап\b|\bупк\b|\bпдд\b|закон\w*|кодекс\w*|конституц\w*|штраф\w*|\bсрок\w*|наказан\w*|\bарест\w*|задерж\w*|задержа\w*|полиц\w*|\bмент\w*|\bкоп\w*|\bмвд\b|\bфсб\b|\bфсо\b|гибдд|\bдпс\b|сотрудник\w*|адвокат\w*|\bсуд\w*|прокур\w*|\bправа\b|\bправ\b|обыск\w*|протокол\w*|взятк\w*|розыск\w*|\bзвезд\w*|залог\w*|уголовн\w*|административн\w*|\bлиценз\w*|оружи\w*|наркот\w*|\bпреступ\w*|правонаруш\w*|\bнарушил\w*|\bчто (ему|мне|ей|им) (будет|грозит|светит|дадут)|впаят\w*|\bгрозит\b|\bдают\b|\bположено\b|светофор\w*|\bкрасный\b|\bкрасн\w* свет\w*|перекрест\w*|\bводител\w*|\bза рулем\b|\bдтп\b|\bпарков\w*|\bскорост\w*|\bпешеход\w*|\bобгон\w*|\bвстречк\w*|\bгаи\b/,
+  /\bстать[яиюей]\w*|\bст\.?\s*\d|\bук\b|\bкоап\b|\bупк\b|\bпдд\b|закон\w*|кодекс\w*|конституц\w*|штраф\w*|\bсрок\w*|наказан\w*|\bарест\w*|задерж\w*|задержа\w*|полиц\w*|\bмент\w*|\bкоп\w*|\bмвд\b|\bфсб\b|\bфсо\b|гибдд|\bдпс\b|сотрудник\w*|адвокат\w*|\bсуд\w*|прокур\w*|\bправа\b|\bправ\b|обыск\w*|протокол\w*|взятк\w*|розыск\w*|\bзвезд\w*|залог\w*|уголовн\w*|административн\w*|\bлиценз\w*|оружи\w*|наркот\w*|\bтравк\w*|\bгрин\b|закладк\w*|\bмеф\w*|гашиш\w*|марихуан\w*|\bкосяк\w*|\bпреступ\w*|правонаруш\w*|\bнарушил\w*|\bчто (ему|мне|ей|им) (будет|грозит|светит|дадут)|впаят\w*|\bгрозит\b|\bдают\b|\bположено\b|светофор\w*|\bкрасный\b|\bкрасн\w* свет\w*|перекрест\w*|\bводител\w*|\bза рулем\b|\bдтп\b|\bпарков\w*|\bскорост\w*|\bпешеход\w*|\bобгон\w*|\bвстречк\w*|\bгаи\b/,
 );
 
 /**
@@ -74,6 +75,9 @@ const LAW_WORDS = ru(
 const CHARTER_WORDS = ru(
   /\bустав\w*|\bобед\w*|поверк\w*|построени\w*|распорядо?к\w*|рабоч\w+ (врем\w*|день|дня|график\w*)|\bграфик\w*|\bсмен[аыуе]\b|выговор\w*|\bзвани\w*|повышени\w*|понижени\w*|субордин\w*|форм\w* одежд\w*|\bувольнени\w*|\bотпуск\w*|\bотгул\w*|\bкмб\b|курс молодого бойца|\bарми[яиюей]\b|\bармейск\w*|\bвоенн\w*|росгвард\w*|\bфсвнг\b|больниц\w*|\bмедик\w*|правительств\w*|вест\w+ москв\w*|\bсми\b|\bфсо\b|\bфсб\b|\bгибдд\b/,
 );
+
+/** Killing, shooting, beating: a crime by the laws whatever else it breaks («убивает меня из-за ссоры в дискорде»). */
+const VIOLENCE = ru(/\b(убил|убила|убили|убивает|убивают|убить|застрелил|пристрелил|стреляет|стрелял|избил|избивает|ранил|зарезал|задушил)\b/);
 
 /** A question that opens on a member of a service — what they did is the question. */
 const MEMBER_DOING = ru(/^(сотрудник\w*|полицейск\w*|офицер\w*|военнослужащ\w*|военн\w+|госслужащ\w*|медик\w*|журналист\w*)\b/);
@@ -122,8 +126,9 @@ export function classify(pack: ServerPack, raw: string, choice: ScopeChoice = 'a
 
   if (!synonymsCache.has(pack)) synonymsCache.set(pack, synonymWords(pack));
   const synonyms = synonymsCache.get(pack);
-  const rule = RULE_WORDS.test(text);
-  const law = LAW_WORDS.test(text) || CHARTER_WORDS.test(text) || !!synonyms?.test(text);
+  // A situation that breaks the rules (a kill for nothing, a car driven up a mountain) is the rules' too.
+  const rule = RULE_WORDS.test(text) || breaksRules(text);
+  const law = LAW_WORDS.test(text) || CHARTER_WORDS.test(text) || VIOLENCE.test(text) || !!synonyms?.test(text);
   // Not one word the server's documents hold, nor a word of the laws or rules: «ывапролдж», «трактор весит» —
   // nothing the base could answer, so nothing to ask the AI about.
   if (!rule && !law && !/\d/.test(text)) {

@@ -5,7 +5,7 @@ import type { SearchHit } from '../core';
 import { TVERSKOI_PACK } from '../data/bundled';
 import type { LegalAnswer } from './answer';
 import { classify } from './classify';
-import { confirmedHallucinations, gradeCase } from './grade';
+import { confirmedHallucinations, gradeCase, gradeOfficerCheck } from './grade';
 import type { Analysis, Outcome } from './pipeline';
 import { labelSources } from './sources';
 import { validateAnswer } from './validate';
@@ -74,5 +74,28 @@ describe('the exam\'s hard gates', () => {
     expect(gradeCase({ server: 'tverskoi', situation: '…', behavior: 'clarify' }, analysisOf(answer())).pass).toBe(false);
     const asks = analysisOf(answer({ norms: [], questions: [{ question: 'Что он сделал?', options: ['Украл', 'Ударил'] }] }));
     expect(gradeCase({ server: 'tverskoi', situation: '…', behavior: 'clarify' }, asks).pass).toBe(true);
+  });
+});
+
+describe('a check of an officer, as the exam weighs it', () => {
+  const ids = Object.fromEntries(sources.map((s) => [s.hit.article.number, s.id]));
+  const lawyer = { server: 'tverskoi', situation: '…', mode: 'lawyer' as const, expect: ['УК 65'] };
+
+  it('passes when the expected article is what a judged item stands on, with the verdicts wanted', () => {
+    const grade = gradeOfficerCheck({ ...lawyer, verdicts: ['lawful'] }, [{ verdict: 'lawful', sources: [ids['65']] }], sources, 1);
+    expect(grade.pass).toBe(true);
+    expect(grade.found).toBe('right');
+  });
+
+  it('an item on no source counts for nothing, and a verdict wanted twice needs two items', () => {
+    expect(gradeOfficerCheck(lawyer, [{ verdict: 'unclear', sources: [ids['65']] }], sources, 1).found).toBe('missed');
+    const once = [{ verdict: 'unlawful', sources: [ids['65']] }];
+    expect(gradeOfficerCheck({ ...lawyer, verdicts: ['unlawful', 'unlawful'] }, once, sources, 1).pass).toBe(false);
+  });
+
+  it('a verdict it may not give, or a second AI call, fails it whatever else is right', () => {
+    const items = [{ verdict: 'violation', sources: [ids['65']] }];
+    expect(gradeOfficerCheck({ ...lawyer, noVerdict: ['violation'] }, items, sources, 1).hardGates).toEqual(['вердикт, которого быть не должно: violation']);
+    expect(gradeOfficerCheck(lawyer, items, sources, 2).pass).toBe(false);
   });
 });

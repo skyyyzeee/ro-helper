@@ -15,7 +15,7 @@ const ANSWER = {
   note: 'Первое требование законно — его нужно выполнить.',
 };
 
-/** The AI server: the law terms, then the weighing of the demands; every request kept. */
+/** The AI server: the weighing of the demands (and law terms, were any asked); every request kept. */
 function fakeServer() {
   const bodies: { system?: string; messages?: { content: string }[]; json?: boolean; counts?: boolean; think?: boolean }[] = [];
   vi.stubGlobal(
@@ -68,6 +68,8 @@ describe('the lawyer\'s demands', () => {
     expect(asked.messages?.at(-1)?.content).not.toMatch(/\[R\d+\]/);
     expect(asked.messages?.at(-1)?.content).toContain('<<<');
     expect(asked.system).toContain('Ты не источник законодательства');
+    // One AI call: the search takes the officer's words with the hints, no phrases asked first.
+    expect(bodies.filter((b) => b.counts === false)).toHaveLength(0);
   });
 
   it('shows a verdict with no source behind it as not found, and says why', async () => {

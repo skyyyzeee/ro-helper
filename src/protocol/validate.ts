@@ -135,7 +135,7 @@ function checkNorm(pack: ServerPack, sources: Map<string, Source>, norm: AnswerN
  * in it stands in the sources it names. A law and a rule of the server may stand in one statement — «DM: деморган
  * или бан; персонажу — 50 месяцев» — each checked as its own source; the answer shows each under its own side.
  */
-function checkClaim(claim: Claim, what: string, sources: Map<string, Source>, scope: Scope | undefined, fallback: string[]): string[] {
+function checkClaim(claim: Claim, what: string, sources: Map<string, Source>, scope: Scope | undefined, fallback: string[], told: number[] = []): string[] {
   const named = claim.sources.length ? claim.sources : fallback;
   if (!named.length) return [`${what}: утверждение без источника — проверьте его по статьям`];
   const issues: string[] = [];
@@ -147,7 +147,7 @@ function checkClaim(claim: Claim, what: string, sources: Map<string, Source>, sc
   for (const source of given) {
     if (scope && !inScope(source.type, scope)) issues.push(`${what}: опирается на ${SOURCE_TYPE_LABELS[source.type].toLowerCase()}, а вопрос — о другом`);
   }
-  const known = new Set(given.flatMap(figuresOf));
+  const known = new Set([...given.flatMap(figuresOf), ...told]);
   const invented = [...new Set(figures(claim.text).filter((n) => n >= 2 && !known.has(n)))];
   if (invented.length) issues.push(`${what}: в указанных источниках нет цифр ${invented.join(', ')}`);
   return issues;
@@ -156,15 +156,17 @@ function checkClaim(claim: Claim, what: string, sources: Map<string, Source>, sc
 /**
  * Checks an answer against the sources it was given and the server's base. `scope`: what the question was about —
  * a norm of another kind in the answer is an issue. Answers saved before claims had sources are held to the norms
- * they cited, as they were then.
+ * they cited, as they were then. `told`: the player's own words — a figure of the case they gave («предложил
+ * 50 000») may stand in what is broken; never in the punishment, the steps or the verdict, which are the laws' alone
+ * («штраф ведь 1 000 000?» stays a figure to flag).
  */
-export function validateAnswer(pack: ServerPack, sources: Source[], answer: LegalAnswer, scope?: Scope): Validation {
+export function validateAnswer(pack: ServerPack, sources: Source[], answer: LegalAnswer, scope?: Scope, told = ''): Validation {
   const byId = new Map(sources.map((s) => [s.id, s]));
   const norms = answer.norms.map((norm) => checkNorm(pack, byId, norm, scope));
   const issues = norms.flatMap((n) => n.issues);
 
   const fallback = answer.legacy ? norms.filter((n) => n.hit).map((n) => n.norm.source) : [];
-  if (answer.violation) issues.push(...checkClaim(answer.violation, 'Нарушение', byId, scope, fallback));
+  if (answer.violation) issues.push(...checkClaim(answer.violation, 'Нарушение', byId, scope, fallback, figures(told)));
   if (answer.punishment) issues.push(...checkClaim(answer.punishment, 'Наказание', byId, scope, fallback));
   answer.procedure.forEach((step, i) => issues.push(...checkClaim(step, `Порядок, шаг ${i + 1}`, byId, scope, fallback)));
   const verdictIssues = answer.verdict ? checkClaim(answer.verdict, 'Ответ', byId, scope, fallback) : [];

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { findForSituation } from '../core';
 import { PACKS } from '../data/bundled';
 import { hintTerms } from './hints';
+import { detentionSources, lawyerSources } from './officerChecks';
 import { SOURCES } from './pipeline';
 import { packInScope } from './sources';
 
@@ -13,6 +14,7 @@ interface Case {
   expect?: string[];
   category?: string;
   followUp?: unknown;
+  mode?: 'analysis' | 'lawyer' | 'detention';
 }
 
 const { cases } = JSON.parse(readFileSync(join(import.meta.dirname, '../../eval/cases.json'), 'utf8')) as { cases: Case[] };
@@ -23,7 +25,7 @@ const { cases } = JSON.parse(readFileSync(join(import.meta.dirname, '../../eval/
  */
 function missed(withHints: boolean): string[] {
   return cases
-    .filter((c) => c.expect?.length && !c.followUp && c.category !== 'MIXED')
+    .filter((c) => c.expect?.length && !c.followUp && c.category !== 'MIXED' && (c.mode ?? 'analysis') === 'analysis')
     .filter((c) => {
       const pack = PACKS[c.server ?? 'tverskoi'];
       const scope = c.category === 'SERVER_RULE' ? 'server_rule' : 'law';
@@ -41,6 +43,45 @@ describe('the search alone, before the AI', () => {
     expect(after.length).toBeLessThan(before);
     expect(after.length).toBeLessThanOrEqual(2);
   });
+
+  it('brings the right article and rule for every check of an officer: demands of a lawyer, a detention', () => {
+    const officer = cases.filter((c) => c.mode === 'lawyer' || c.mode === 'detention');
+    expect(officer.length).toBeGreaterThanOrEqual(10);
+    const misses = officer.filter((c) => {
+      const pack = PACKS[c.server ?? 'tverskoi'];
+      const refs = (c.mode === 'lawyer' ? lawyerSources(pack, c.situation) : detentionSources(pack, c.situation)).map((s) => `${s.hit.document.short} ${s.hit.article.number}`);
+      return !(c.expect ?? []).every((e) => e.split('|').some((alt) => refs.includes(alt.trim())));
+    });
+    expect(misses.map((c) => c.situation)).toEqual([]);
+  });
+});
+
+/**
+ * Follow-ups, searched as the analysis searches them with no AI call for phrases: the follow-up itself, and it with
+ * its case's facts, in turn — the hints on both.
+ */
+describe('a follow-up, searched with its case and the hints alone', () => {
+  it.each([
+    ['tverskoi', 'У прохожего тайком украли телефон', 'Нет, отобрали открыто, у него на глазах', 'УК 66'],
+    ['arbatskiy', 'Машина проехала перекрёсток на красный', 'А если водитель был пьяный за рулём?', 'КоАП 23.1.4'],
+    ['tverskoi', 'У прохожего отобрали телефон', 'А если при этом угрожали ножом?', 'УК 66.1'],
+    ['tverskoi', 'Игрок украл машину со стоянки', 'А если его задержали, а он сбежал из-под стражи?', 'УК 100'],
+    ['tverskoi', 'Игрок подрался с другим у бара', 'А если он его в итоге убил?', 'УК 51'],
+    ['tverskoi', 'Водитель превысил скорость', 'А если он ещё и пьяный был?', 'КоАП 8.27'],
+    ['tverskoi', 'Водителя остановили для проверки документов', 'А если он отказался дуть в трубку?', 'КоАП 8.28'],
+    ['tverskoi', 'Мужчина кричал на прохожих на улице', 'А если он ещё и витрину разбил?', 'УК 73|КоАП 11.1'],
+    ['tverskoi', 'Сотрудник полиции потребовал остановиться', 'А если игрок не остановился и пошёл дальше?', 'УК 105'],
+    ['tverskoi', 'Игрок написал другому, что найдёт его', 'А если он прямо сказал, что убьёт?', 'УК 57'],
+    ['tverskoi', 'Игрока затащили в машину', 'А если его потом держали в подвале и требовали выкуп?', 'УК 58'],
+  ])('%s: «%s» → «%s» finds %s', (server, first, followUp, want) => {
+    const pack = PACKS[server];
+    const both = `${first}\n${followUp}`;
+    const search = (text: string) => findForSituation(packInScope(pack, 'law'), text, { limit: SOURCES + 4, lawTerms: hintTerms(both) });
+    const own = search(followUp);
+    const withCase = search(both);
+    const refs = [...new Set([...own.flatMap((hit, i) => [hit, withCase[i]]).filter(Boolean), ...withCase].map((h) => `${h.document.short} ${h.article.number}`))].slice(0, SOURCES);
+    expect(want.split('|').some((alt) => refs.includes(alt))).toBe(true);
+  });
 });
 
 describe('the hints: the law\'s words for everyday ones', () => {
@@ -57,6 +98,14 @@ describe('the hints: the law\'s words for everyday ones', () => {
     ['Сотрудник ГИБДД остановил меня и не представился', 'идентификация государственного служащего'],
     ['Задержали за то, что стоял с битой в руках на улице', 'обнажение оружия'],
     ['Можно ли использовать макрос для стрельбы?', 'постороннее ПО'],
+    ['Человек ездил на машине, хотя прав у него никогда не было', 'управление транспортным средством водителем, не имеющим права управления'],
+    ['А если водитель был пьяный за рулём?', 'управление транспортным средством в состоянии опьянения'],
+    ['Игрок специально несколько раз наехал на меня машиной', 'DriveBy наезд на игрока транспортом'],
+    ['Полицейский задержал меня просто за то, что я был в маске', 'злоупотребление функционалом государственных структур'],
+    ['Игрок без всякой причины расстрелял меня, мы даже не разговаривали', 'DM Deathmatch'],
+    ['Полицейский посадил меня в КПЗ на 40 минут за одну звезду', 'максимально допустимый срок посадки в КПЗ за звезду'],
+    ['Игрок перенёс ссору из дискорда в игру и теперь постоянно убивает меня', 'Переносить конфликты из OOC в IC'],
+    ['Я перешёл дорогу в неположенном месте', 'нарушение пешеходом Правил дорожного движения'],
     ['При задержании хочу зачитать миранду — что зачитывать?', 'разъяснение прав задержанному'],
     ['Сотрудник не разъяснил мне права', 'права задержанного'],
     ['Машина проехала перекрёсток на красный сигнал светофора', 'проезд на запрещающий сигнал'],

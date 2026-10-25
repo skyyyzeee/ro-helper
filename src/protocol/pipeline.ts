@@ -97,6 +97,30 @@ function followUpHits(pack: ServerPack, previous: CaseState, own: SearchHit[], w
   return merged;
 }
 
+/**
+ * A situation without the article numbers the player put in it («кража — это статья 45 УК, подтверди», «по 65 статье
+ * же 10 лет?»): the articles are found by what happened, not by a number the player believes — a wrong one would
+ * otherwise come up as a source and be taken. A bare number is no situation: classify.ts answers it as a lookup.
+ */
+export function withoutClaimedArticles(text: string): string {
+  return text
+    .replace(/(?:^|[\s(«"])(?:стать[яеиюёй]|ст\.?|пункт[ауе]?|п\.)\s*\d+(?:\.\d+)*/gi, ' ')
+    .replace(/\d+(?:\.\d+)*\s*(?:-?(?:й|я|ой|ая|ую)\s+)?(?:стать[яеиюёй]|ст\.)/gi, ' ')
+    .replace(/(?:^|\s)(?:ук|коап|упк|пдд|тк)\s+(?:рф\s+)?\d+(?:\.\d+)*/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Two lists taken in turn, each article once. */
+export function alternate(first: SearchHit[], second: SearchHit[]): SearchHit[] {
+  const seen = new Set<string>();
+  const out: SearchHit[] = [];
+  for (let i = 0; i < Math.max(first.length, second.length); i++) {
+    for (const hit of [first[i], second[i]]) if (hit && !seen.has(hit.article.id) && seen.add(hit.article.id)) out.push(hit);
+  }
+  return out;
+}
+
 export interface AnalyseInput {
   provider: AiProvider;
   pack: ServerPack;
@@ -163,8 +187,12 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
   // The law's words for what the player told in everyday ones (hints.ts), beside the AI's: its miss is not the search's.
   const phrases = [...new Set([...hintTerms(searchText), ...terms])];
   // An officer's answer rests on their own service's charter (charters.ts): a few more are found to make up for the ones left out.
+  const searchIn = (within: ServerPack, text: string) =>
+    ownCharters(findForSituation(within, withoutClaimedArticles(text), { boostDocuments: organization?.documents, lawTerms: phrases, limit: SOURCES + 4 }), pack, organization, searchText);
+  // A question on both is searched in each, the two taken in turn — a rule, a law, a rule…: ranked together, the
+  // rules' short points crowd the laws out of the first few (УК 51 twelfth for «убивает меня из-за ссоры в дискорде»).
   const search = (text: string) =>
-    ownCharters(findForSituation(inScope, text, { boostDocuments: organization?.documents, lawTerms: phrases, limit: SOURCES + 4 }), pack, organization, searchText);
+    scope === 'mixed' ? alternate(searchIn(packInScope(pack, 'server_rule'), text), searchIn(packInScope(pack, 'law'), text)) : searchIn(inScope, text);
   const found = previous ? followUpHits(inScope, previous, search(rerun ? searchText : message), search(searchText)) : search(message);
   // The side's own law — the rights of a detainee for the defence, an officer's duties — after the case's, never in
   // its place: a few articles that hold the side's words whole.
@@ -197,7 +225,8 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
     }
   }
 
-  const validation = validateAnswer(pack, sources, answer, scope);
+  // The player's own figures of the case («предложил 50 000») may stand in what is broken.
+  const validation = validateAnswer(pack, sources, answer, scope, searchText);
   // The side's points are shown only where they stand on the sources: one that does not is left out, not flagged —
   // to the player; the admin's debug view tells which and why.
   let hiddenGuide: HiddenPoint[] = [];
@@ -389,10 +418,10 @@ export async function answerQuestion(input: QuestionInput): Promise<Outcome> {
   // The classifier's phrases were asked in the words of the laws: kept for an analysis in the laws. The players'
   // expressions are kept in any scope: they were approved for it.
   const keep = matched.length > 0 || scope === 'law';
-  // A first question its words already placed is searched with them and the hints alone: the AI's call for search
-  // phrases is one more turn in GigaChat's queue — one request at a time for every player — for little the search
-  // does not find without it (recall.test.ts). A follow-up, told against its case, keeps the call.
-  const skipTerms = !terms && !previous && aiCalls === 0 && input.aiTerms !== true;
+  // A question its words already placed is searched with them and the hints alone: the AI's call for search phrases
+  // is one more turn in GigaChat's queue — one request at a time for every player — for little the search does not
+  // find without it (recall.test.ts). A follow-up too: it is searched with its case's facts and the hints on both.
+  const skipTerms = !terms && aiCalls === 0 && input.aiTerms !== true;
   const analysis = await analyse({ ...input, scope, ...(terms && keep ? { terms } : skipTerms ? { terms: [] } : {}) });
   analysis.aiCalls = (analysis.aiCalls ?? 0) + aiCalls;
   if (classification.mismatch && classification.mismatch !== 'mixed') analysis.switchTo = classification.mismatch;
