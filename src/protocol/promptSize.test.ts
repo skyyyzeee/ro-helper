@@ -4,10 +4,11 @@ import { analysisPrompt } from './prompt';
 import { withoutClaimedArticles } from './pipeline';
 
 /**
- * AI servers before 25.10.2026 cut the instructions at 8000 characters: past it the end — the answer's format — is
- * lost, and every answer comes back unreadable. Kept under it with room to spare until every server is updated.
+ * The AI server cuts the instructions at 16 000 characters (8000 before 25.10.2026): past it the end — the answer's
+ * format — is lost, and every answer comes back unreadable. Kept well under it: every character is read on every
+ * question, in GigaChat's queue.
  */
-const MOST = 7900;
+const MOST = 9000;
 
 describe('the instructions to the AI', () => {
   it('fit the AI server, for every server, scope, side and kind of question', () => {
@@ -21,6 +22,17 @@ describe('the instructions to the AI', () => {
               if (prompt.length > longest.length) longest = { length: prompt.length, of: [server, depth, scope, side, closed].join(' ') };
             }
     expect(longest.length, longest.of).toBeLessThanOrEqual(MOST);
+  });
+
+  it('ask a quick answer on both for the law and the rule, and only there', () => {
+    const both = 'главная статья закона и главный пункт правил сервера';
+    expect(analysisPrompt(PACKS.tverskoi, 'quick', 'mixed')).toContain(both);
+    expect(analysisPrompt(PACKS.tverskoi, 'quick', 'law')).not.toContain(both);
+    expect(analysisPrompt(PACKS.tverskoi, 'full', 'mixed')).not.toContain(both);
+  });
+
+  it('answer an act named outright, and ask only what changes the article', () => {
+    expect(analysisPrompt(PACKS.tverskoi, 'quick', 'law')).toMatch(/если действие названо прямо.+только если от ответа зависит, какая статья/);
   });
 });
 
