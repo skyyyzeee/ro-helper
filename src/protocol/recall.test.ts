@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { findForSituation } from '../core';
 import { PACKS } from '../data/bundled';
+import { matchesRef } from './grade';
 import { hintTerms } from './hints';
 import { detentionSources, lawyerSources } from './officerChecks';
 import { SOURCES } from './pipeline';
@@ -30,8 +31,7 @@ function missed(withHints: boolean): string[] {
       const pack = PACKS[c.server ?? 'tverskoi'];
       const scope = c.category === 'SERVER_RULE' ? 'server_rule' : 'law';
       const hits = findForSituation(packInScope(pack, scope), c.situation, { limit: SOURCES, lawTerms: withHints ? hintTerms(c.situation) : [] });
-      const refs = hits.map((h) => `${h.document.short} ${h.article.number}`);
-      return !c.expect!.every((e) => e.split('|').some((alt) => refs.includes(alt.trim())));
+      return !c.expect!.every((e) => matchesRef(e, hits));
     })
     .map((c) => c.situation);
 }
@@ -49,8 +49,8 @@ describe('the search alone, before the AI', () => {
     expect(officer.length).toBeGreaterThanOrEqual(10);
     const misses = officer.filter((c) => {
       const pack = PACKS[c.server ?? 'tverskoi'];
-      const refs = (c.mode === 'lawyer' ? lawyerSources(pack, c.situation) : detentionSources(pack, c.situation)).map((s) => `${s.hit.document.short} ${s.hit.article.number}`);
-      return !(c.expect ?? []).every((e) => e.split('|').some((alt) => refs.includes(alt.trim())));
+      const hits = (c.mode === 'lawyer' ? lawyerSources(pack, c.situation) : detentionSources(pack, c.situation)).map((s) => s.hit);
+      return !(c.expect ?? []).every((e) => matchesRef(e, hits));
     });
     expect(misses.map((c) => c.situation)).toEqual([]);
   });

@@ -5,7 +5,7 @@ import type { SearchHit } from '../core';
 import { TVERSKOI_PACK } from '../data/bundled';
 import type { LegalAnswer } from './answer';
 import { classify } from './classify';
-import { confirmedHallucinations, gradeCase, gradeOfficerCheck } from './grade';
+import { confirmedHallucinations, gradeCase, gradeOfficerCheck, matchesRef } from './grade';
 import type { Analysis, Outcome } from './pipeline';
 import { labelSources } from './sources';
 import { validateAnswer } from './validate';
@@ -97,5 +97,21 @@ describe('a check of an officer, as the exam weighs it', () => {
     const items = [{ verdict: 'violation', sources: [ids['65']] }];
     expect(gradeOfficerCheck({ ...lawyer, noVerdict: ['violation'] }, items, sources, 1).hardGates).toEqual(['вердикт, которого быть не должно: violation']);
     expect(gradeOfficerCheck(lawyer, items, sources, 2).pass).toBe(false);
+  });
+});
+
+describe('an expected article, by its label or by its id', () => {
+  const ruleOf = (documentId: string, number: string): SearchHit => {
+    const doc = pack.documents.find((d) => d.id === documentId)!;
+    return { document: doc, article: doc.articles.find((a) => a.number === number)! };
+  };
+
+  it('tells apart the rules a label shares: «rules-main-5.1» is DM of the project, not 5.1 of the state factions', () => {
+    const dm = ruleOf('rules-main', '5.1');
+    const state = ruleOf('rules-gov', '5.1');
+    expect(matchesRef('Правила 5.1', [state])).toBe(true);
+    expect(matchesRef('rules-main-5.1', [state])).toBe(false);
+    expect(matchesRef('rules-main-5.1', [dm])).toBe(true);
+    expect(matchesRef('УК 65|rules-main-5.1', [hit('65')])).toBe(true);
   });
 });
