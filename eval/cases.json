@@ -1,5 +1,5 @@
 {
-  "about": "Ситуации для проверки ИИ: как их описал бы игрок, и какая статья законов сервера — верный ответ. «expect» — документ и номер; через «|» — любая из них верна (например, кража по сумме). Проверено по законам серверов на 2026-09-27. «group»: base — первые 15, на них настраивались подсказки; fresh — новые, которых ИИ не видел при настройке. «category»: LAW, SERVER_RULE, MIXED, NONSENSE, OUT_OF_SCOPE, AMBIGUOUS, HALLUCINATION_TRAP, WRONG_NUMBER_TRAP, CROSS_SERVER, FALSE_CLAIM, PROMPT_INJECTION, FOLLOW_UP. «behavior»: answer (по умолчанию), system — ответ приложения без ИИ, clarify — уточняющий вопрос. «forbid» — статьи, которые нельзя применять. «group» traps — ловушки; players — частые вопросы игроков: ситуации, правила проекта, уставы, ник. group officer — проверки сотрудника: «mode» lawyer — требования адвоката, detention — ход задержания; «verdicts» — вердикты, которые должны быть среди пунктов, «noVerdict» — которых быть не должно. group servers — правила проекта, смешанные вопросы, ловушки и проверки сотрудника на Арбатском и Кутузовском.",
+  "about": "Ситуации для проверки ИИ: как их описал бы игрок, и какая статья законов сервера — верный ответ. «expect» — документ и номер; через «|» — любая из них верна (например, кража по сумме). Проверено по законам серверов на 2026-09-27. «group»: base — первые 15, на них настраивались подсказки; fresh — новые, которых ИИ не видел при настройке. «category»: LAW, SERVER_RULE, MIXED, NONSENSE, OUT_OF_SCOPE, AMBIGUOUS, HALLUCINATION_TRAP, WRONG_NUMBER_TRAP, CROSS_SERVER, FALSE_CLAIM, PROMPT_INJECTION, FOLLOW_UP. «behavior»: answer (по умолчанию), system — ответ приложения без ИИ, clarify — уточняющий вопрос. «forbid» — статьи, которые нельзя применять. «group» traps — ловушки; players — частые вопросы игроков: ситуации, правила проекта, уставы, ник. group officer — проверки сотрудника: «mode» lawyer — требования адвоката, detention — ход задержания; «verdicts» — вердикты, которые должны быть среди пунктов, «noVerdict» — которых быть не должно. group servers — правила проекта, смешанные вопросы, ловушки и проверки сотрудника на Арбатском и Кутузовском. group marks — вопросы игроков из отзывов 👍/👎 в приложении, с проверенными по законам ответами.",
   "cases": [
     {
       "server": "tverskoi",
@@ -1316,6 +1316,69 @@
       "mode": "detention",
       "verdicts": [
         "violation"
+      ]
+    },
+    {
+      "group": "marks",
+      "server": "tverskoi",
+      "category": "LAW",
+      "situation": "стадии применения силы",
+      "expect": [
+        "6-ФЗ 18|6-ФЗ 17|6-ФЗ 19"
+      ]
+    },
+    {
+      "group": "marks",
+      "server": "kutuzovskiy",
+      "category": "MIXED",
+      "situation": "напиши мне при задержании если я хочу зачитать миранду, что зачитывать и сколько раз?",
+      "expect": [
+        "Конституция 15|ПК 2|ФЗ 52",
+        "Правила 1.8"
+      ]
+    },
+    {
+      "group": "marks",
+      "server": "tverskoi",
+      "category": "NONSENSE",
+      "situation": "двкр",
+      "behavior": "system",
+      "reason": "nonsense"
+    },
+    {
+      "group": "marks",
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "situation": "какие статьи УК связанны с охраняемой территорией",
+      "expect": [
+        "УК 12.7.1"
+      ]
+    },
+    {
+      "group": "marks",
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "situation": "покушение на жизнь",
+      "expect": [
+        "УК 3.1|УК 6.2"
+      ]
+    },
+    {
+      "group": "marks",
+      "server": "tverskoi",
+      "category": "LAW",
+      "situation": "Должен ли я иметь действующие мед.справки при управлении транспортным средством",
+      "expect": [
+        "ПДД 2.1"
+      ]
+    },
+    {
+      "group": "marks",
+      "server": "tverskoi",
+      "category": "LAW",
+      "situation": "Человек в маске с электродубинкой стоит у здания МВД — что ему грозит?",
+      "expect": [
+        "УК 74|КоАП 11.7|8-ФЗ 2|6-ФЗ 12"
       ]
     }
   ]
