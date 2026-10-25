@@ -39,7 +39,11 @@ export interface EvalCase {
   behavior?: 'answer' | 'system' | 'clarify';
   /** For the app's own word: which. */
   reason?: SystemReason;
-  /** The articles that are the right answer, «УК 65»; «УК 10.1|УК 10.2» — any of them. Every entry must be found. */
+  /**
+   * The articles that are the right answer, «УК 65»; «УК 10.1|УК 10.2» — any of them. Every entry must be found. A
+   * number several documents share («Правила 5.1» is in three sets of rules) is named by the article's id in the
+   * base instead: «rules-main-5.1» (eval.test.ts keeps every one of them single).
+   */
   expect?: string[];
   /** Articles that must never be cited as applying: the player's false «статья 777», another server's numbering. */
   forbid?: string[];
@@ -55,9 +59,14 @@ export interface EvalCase {
   noVerdict?: string[];
 }
 
+type Hit = Pick<SearchHit, 'document' | 'article'>;
+
 /** «УК 65» for an article: the document's short name and the article's number. */
-export const refOf = (hit: Pick<SearchHit, 'document' | 'article'>) => `${hit.document.short} ${hit.article.number}`;
-const matches = (wanted: string, refs: string[]) => wanted.split('|').some((one) => refs.includes(one.trim()));
+export const refOf = (hit: Hit) => `${hit.document.short} ${hit.article.number}`;
+
+/** Whether any of the articles is one of the wanted «УК 10.1|rules-main-5.1»: by its label or by its id in the base. */
+export const matchesRef = (wanted: string, hits: Hit[]) =>
+  wanted.split('|').some((one) => hits.some((hit) => one.trim() === refOf(hit) || one.trim() === hit.article.id));
 
 /**
  * Statements an answer marked «Подтверждено» may not hold — checked again here, apart from the checks that set the
@@ -107,11 +116,11 @@ export function gradeCase(c: EvalCase, outcome: Outcome): Grade {
 
   // «Что будет за кражу?» answered by the base alone (direct.ts): its articles are the answer, as the AI's would be.
   if (outcome.kind === 'system' && outcome.reason === 'punishment' && behavior === 'answer') {
-    const given = (outcome.hits ?? []).map(refOf);
+    const given = outcome.hits ?? [];
     const expect = c.expect ?? [];
-    const forbidden = (c.forbid ?? []).filter((f) => matches(f, given));
+    const forbidden = (c.forbid ?? []).filter((f) => matchesRef(f, given));
     if (forbidden.length) hardGates.push(`применена запрещённая статья: ${forbidden.join(', ')}`);
-    const found: Grade['found'] = !expect.length ? 'n/a' : expect.every((e) => matches(e, given)) ? 'right' : 'missed';
+    const found: Grade['found'] = !expect.length ? 'n/a' : expect.every((e) => matchesRef(e, given)) ? 'right' : 'missed';
     return {
       pass: !hardGates.length && (found === 'right' || found === 'n/a'),
       hardGates,
@@ -120,7 +129,7 @@ export function gradeCase(c: EvalCase, outcome: Outcome): Grade {
       classified: true,
       hallucinations: [],
       aiCalls,
-      detail: `ответ базы без ИИ: ${given.join(', ')}`,
+      detail: `ответ базы без ИИ: ${given.map(refOf).join(', ')}`,
     };
   }
   if (outcome.kind === 'system') {
@@ -146,20 +155,20 @@ export function gradeCase(c: EvalCase, outcome: Outcome): Grade {
   if (hallucinations.length) hardGates.push(`подтверждённая выдумка: ${hallucinations.join('; ')}`);
 
   const valid = analysis.validation.norms.filter((n) => n.hit && !n.issues.length);
-  const direct = valid.filter((n) => n.norm.fit === 'direct').map((n) => refOf(n.hit!));
-  const cited = valid.map((n) => refOf(n.hit!));
-  const forbidden = (c.forbid ?? []).filter((f) => matches(f, direct));
+  const direct = valid.filter((n) => n.norm.fit === 'direct').map((n) => n.hit!);
+  const cited = valid.map((n) => n.hit!);
+  const forbidden = (c.forbid ?? []).filter((f) => matchesRef(f, direct));
   if (forbidden.length) hardGates.push(`применена запрещённая статья: ${forbidden.join(', ')}`);
 
-  const sources = analysis.sources.map((s) => refOf(s.hit));
+  const sources = analysis.sources.map((s) => s.hit);
   const expect = c.expect ?? [];
-  const searched = expect.length ? expect.every((e) => matches(e, sources)) : undefined;
-  const found: Grade['found'] = !expect.length ? 'n/a' : expect.every((e) => matches(e, direct)) ? 'right' : expect.every((e) => matches(e, cited)) ? 'partly' : 'missed';
+  const searched = expect.length ? expect.every((e) => matchesRef(e, sources)) : undefined;
+  const found: Grade['found'] = !expect.length ? 'n/a' : expect.every((e) => matchesRef(e, direct)) ? 'right' : expect.every((e) => matchesRef(e, cited)) ? 'partly' : 'missed';
   const classified =
     behavior === 'answer' ? true : behavior === 'clarify' ? analysis.validation.status === 'clarify' || analysis.answer.questions.length > 0 : false;
 
   const detail = [
-    `ИИ: ${direct.join(', ') || '—'}${cited.length > direct.length ? ` (ещё ${cited.filter((r) => !direct.includes(r)).join(', ')})` : ''}`,
+    `ИИ: ${direct.map(refOf).join(', ') || '—'}${cited.length > direct.length ? ` (ещё ${cited.filter((h) => !direct.includes(h)).map(refOf).join(', ')})` : ''}`,
     `статус: ${analysis.validation.status}${analysis.validation.needsReview ? ', требует проверки' : ''}`,
     searched === false ? 'поиск не нашёл нужную статью' : '',
     analysis.validation.issues.length ? `проверки: ${analysis.validation.issues.slice(0, 3).join('; ')}` : '',
@@ -185,16 +194,16 @@ export function gradeOfficerCheck(c: EvalCase, items: OfficerItem[], sources: So
   const hardGates: string[] = [];
   const judged = items.filter((item) => item.verdict !== 'unclear');
   const ids = new Set(judged.flatMap((item) => item.sources));
-  const cited = sources.filter((s) => ids.has(s.id)).map((s) => refOf(s.hit));
-  const forbidden = (c.forbid ?? []).filter((f) => matches(f, cited));
+  const cited = sources.filter((s) => ids.has(s.id)).map((s) => s.hit);
+  const forbidden = (c.forbid ?? []).filter((f) => matchesRef(f, cited));
   if (forbidden.length) hardGates.push(`применена запрещённая статья: ${forbidden.join(', ')}`);
   const wrong = (c.noVerdict ?? []).filter((v) => judged.some((item) => item.verdict === v));
   if (wrong.length) hardGates.push(`вердикт, которого быть не должно: ${wrong.join(', ')}`);
   if (aiCalls > 1) hardGates.push(`вызовов ИИ ${aiCalls} вместо одного`);
 
   const expect = c.expect ?? [];
-  const searched = expect.length ? expect.every((e) => matches(e, sources.map((s) => refOf(s.hit)))) : undefined;
-  const found: Grade['found'] = !expect.length ? 'n/a' : expect.every((e) => matches(e, cited)) ? 'right' : 'missed';
+  const searched = expect.length ? expect.every((e) => matchesRef(e, sources.map((s) => s.hit))) : undefined;
+  const found: Grade['found'] = !expect.length ? 'n/a' : expect.every((e) => matchesRef(e, cited)) ? 'right' : 'missed';
   // Each expected verdict once: two «unlawful» wanted need two items so judged.
   const left = judged.map((item) => item.verdict);
   const verdictsOk = (c.verdicts ?? []).every((v) => {
@@ -202,7 +211,7 @@ export function gradeOfficerCheck(c: EvalCase, items: OfficerItem[], sources: So
     return at >= 0 && left.splice(at, 1).length > 0;
   });
   const detail = [
-    `проверка: ${items.map((item) => item.verdict).join(', ') || '—'} · опирается на ${[...new Set(cited)].join(', ') || '—'}`,
+    `проверка: ${items.map((item) => item.verdict).join(', ') || '—'} · опирается на ${[...new Set(cited.map(refOf))].join(', ') || '—'}`,
     searched === false ? 'поиск не нашёл нужную статью' : '',
     verdictsOk ? '' : `нужны вердикты ${(c.verdicts ?? []).join(', ')}`,
   ]
