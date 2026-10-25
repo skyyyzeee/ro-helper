@@ -80,6 +80,8 @@ describe('the review of a detention (issue #4)', () => {
     // The AI was given the server's articles and told to be fair; the review counts as one question, with thinking.
     const review = bodies.find((b) => b.counts !== false)!;
     expect(review.system).toContain('Верно сделанное так и отмечай');
+    // Short, for the officer to read: the three that matter most of what was not done.
+    expect(review.system).toContain('в «missed» — не больше 3 самых важных пунктов');
     expect(review.messages?.at(-1)?.content).toContain('НАЙДЕННЫЕ ИСТОЧНИКИ');
     // The laws and the project's rules for the state's factions (ПГО), and the officer's story fenced as data.
     expect(review.messages?.at(-1)?.content).toMatch(/\[S\d+\]/);

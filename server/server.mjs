@@ -355,12 +355,14 @@ function readableJson(text) {
   }
 }
 
-async function gigachat({ system, messages, json }, model = CONFIG.gigachat.model) {
+async function gigachat({ system, messages, json, think }, model = CONFIG.gigachat.model) {
   return inGigachatTurn(async () => {
     const response = await fetch(`${CONFIG.gigachat.api}/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await gigachatToken()}` },
-      body: JSON.stringify({ model, messages: [{ role: 'system', content: system }, ...messages], max_tokens: CONFIG.maxOutputTokens }),
+      // Weighing a lawyer's demands or a detention step by step asks for the longer answer: cut at the limit, its JSON
+      // breaks and the whole answer is lost.
+      body: JSON.stringify({ model, messages: [{ role: 'system', content: system }, ...messages], max_tokens: think ? CONFIG.maxOutputTokens * 2 : CONFIG.maxOutputTokens }),
     });
     const body = await response.json().catch(() => null);
     // 401: the token went stale early — the next request takes a new one. 402/429: the free tokens are used up, or too fast.
@@ -371,7 +373,8 @@ async function gigachat({ system, messages, json }, model = CONFIG.gigachat.mode
     // Sber's filter answers some topics (drugs, say) with a stock text and this reason — whatever the prompt says.
     if (choice?.finish_reason === 'blacklist') throw new Declined('blacklist');
     if (!text.trim()) throw new Declined('empty');
-    if (json && !readableJson(text)) throw new Declined('format');
+    // Cut at the length, or broken otherwise: the journal says which, and how long it was.
+    if (json && !readableJson(text)) throw new Declined(`format ${choice?.finish_reason ?? '?'} ${text.length}`);
     const usage = body?.usage ?? {};
     return { text, rubles: 0, usage: { input: usage.prompt_tokens ?? 0, output: usage.completion_tokens ?? 0 } };
   }, model);
