@@ -185,6 +185,18 @@ describe('the classifier: what is no question of the base never reaches the AI',
     expect(outcome.kind === 'analysis' && outcome.analysis.answer.questions[0].question).toMatch(/Опишите ситуацию подробнее/);
   });
 
+  it('answers a follow-up in one AI call: its case\'s facts and the hints are its search, no phrases asked first', async () => {
+    const { provider, requests } = fakeAi(() => good());
+    const first = await ask(provider, 'У прохожего тайком украли телефон');
+    expect(first.kind).toBe('analysis');
+    if (first.kind !== 'analysis') return;
+    const outcome = await answerQuestion({ provider, pack, message: 'Нет, отобрали открыто, у него на глазах', depth: 'quick', choice: 'auto', previous: first.analysis.case });
+    expect(provider.complete).toHaveBeenCalledTimes(2);
+    expect(outcome.kind === 'analysis' && outcome.analysis.aiCalls).toBe(1);
+    // The robbery is among what the AI was given for the follow-up.
+    expect(requests.at(-1)!.turns.at(-1)!.parts.map((p) => ('text' in p ? p.text : '')).join('')).toMatch(/УК ст\. 66 /);
+  });
+
   it('stops at the AI\'s first call when it says the question is not about the game', async () => {
     const { provider } = fakeAi(() => good(), 'out_of_scope');
     expect(await ask(provider, 'сколько весит трактор если он танцует')).toMatchObject({ kind: 'system', reason: 'out_of_scope', aiCalls: 1 });

@@ -418,10 +418,10 @@ export async function answerQuestion(input: QuestionInput): Promise<Outcome> {
   // The classifier's phrases were asked in the words of the laws: kept for an analysis in the laws. The players'
   // expressions are kept in any scope: they were approved for it.
   const keep = matched.length > 0 || scope === 'law';
-  // A first question its words already placed is searched with them and the hints alone: the AI's call for search
-  // phrases is one more turn in GigaChat's queue — one request at a time for every player — for little the search
-  // does not find without it (recall.test.ts). A follow-up, told against its case, keeps the call.
-  const skipTerms = !terms && !previous && aiCalls === 0 && input.aiTerms !== true;
+  // A question its words already placed is searched with them and the hints alone: the AI's call for search phrases
+  // is one more turn in GigaChat's queue — one request at a time for every player — for little the search does not
+  // find without it (recall.test.ts). A follow-up too: it is searched with its case's facts and the hints on both.
+  const skipTerms = !terms && aiCalls === 0 && input.aiTerms !== true;
   const analysis = await analyse({ ...input, scope, ...(terms && keep ? { terms } : skipTerms ? { terms: [] } : {}) });
   analysis.aiCalls = (analysis.aiCalls ?? 0) + aiCalls;
   if (classification.mismatch && classification.mismatch !== 'mixed') analysis.switchTo = classification.mismatch;

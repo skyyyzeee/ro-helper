@@ -56,6 +56,34 @@ describe('the search alone, before the AI', () => {
   });
 });
 
+/**
+ * Follow-ups, searched as the analysis searches them with no AI call for phrases: the follow-up itself, and it with
+ * its case's facts, in turn — the hints on both.
+ */
+describe('a follow-up, searched with its case and the hints alone', () => {
+  it.each([
+    ['tverskoi', 'У прохожего тайком украли телефон', 'Нет, отобрали открыто, у него на глазах', 'УК 66'],
+    ['arbatskiy', 'Машина проехала перекрёсток на красный', 'А если водитель был пьяный за рулём?', 'КоАП 23.1.4'],
+    ['tverskoi', 'У прохожего отобрали телефон', 'А если при этом угрожали ножом?', 'УК 66.1'],
+    ['tverskoi', 'Игрок украл машину со стоянки', 'А если его задержали, а он сбежал из-под стражи?', 'УК 100'],
+    ['tverskoi', 'Игрок подрался с другим у бара', 'А если он его в итоге убил?', 'УК 51'],
+    ['tverskoi', 'Водитель превысил скорость', 'А если он ещё и пьяный был?', 'КоАП 8.27'],
+    ['tverskoi', 'Водителя остановили для проверки документов', 'А если он отказался дуть в трубку?', 'КоАП 8.28'],
+    ['tverskoi', 'Мужчина кричал на прохожих на улице', 'А если он ещё и витрину разбил?', 'УК 73|КоАП 11.1'],
+    ['tverskoi', 'Сотрудник полиции потребовал остановиться', 'А если игрок не остановился и пошёл дальше?', 'УК 105'],
+    ['tverskoi', 'Игрок написал другому, что найдёт его', 'А если он прямо сказал, что убьёт?', 'УК 57'],
+    ['tverskoi', 'Игрока затащили в машину', 'А если его потом держали в подвале и требовали выкуп?', 'УК 58'],
+  ])('%s: «%s» → «%s» finds %s', (server, first, followUp, want) => {
+    const pack = PACKS[server];
+    const both = `${first}\n${followUp}`;
+    const search = (text: string) => findForSituation(packInScope(pack, 'law'), text, { limit: SOURCES + 4, lawTerms: hintTerms(both) });
+    const own = search(followUp);
+    const withCase = search(both);
+    const refs = [...new Set([...own.flatMap((hit, i) => [hit, withCase[i]]).filter(Boolean), ...withCase].map((h) => `${h.document.short} ${h.article.number}`))].slice(0, SOURCES);
+    expect(want.split('|').some((alt) => refs.includes(alt))).toBe(true);
+  });
+});
+
 describe('the hints: the law\'s words for everyday ones', () => {
   it.each([
     ['Инспектор ДПС взял 20 000, чтобы не выписывать штраф', 'взятка'],
