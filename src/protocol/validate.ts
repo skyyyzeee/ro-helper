@@ -120,8 +120,12 @@ function checkNorm(pack: ServerPack, sources: Map<string, Source>, norm: AnswerN
   let part = source.hit.part;
   // An article written as one whole has no parts to get wrong: «ч. 1» of it is the article itself.
   if (norm.part && article.parts.some((p) => p.number)) {
-    part = article.parts.find((p) => p.number === norm.part);
-    if (!part) issues.push(`${document.short} ${article.number}: в статье нет части ${norm.part}`);
+    // A precise model names several parts, or a part with its point: «1, 3», «ч. 1 и 2», «1, п. а», «2б». Each
+    // number must be a part of the article; the first is the one the card shows.
+    const named = norm.part.match(/\d+(?:\.\d+)*/g) ?? [];
+    const missing = named.filter((n) => !article.parts.some((p) => p.number === n));
+    part = named.length ? article.parts.find((p) => p.number === named[0]) : undefined;
+    if (!named.length || missing.length) issues.push(`${document.short} ${article.number}: в статье нет части ${missing.join(', ') || norm.part}`);
   }
   return { norm, hit: { article, document, ...(part ? { part } : {}) }, type: source.type, issues };
 }
