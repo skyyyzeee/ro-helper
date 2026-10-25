@@ -820,10 +820,11 @@
     {
       "group": "players",
       "server": "tverskoi",
-      "category": "SERVER_RULE",
+      "category": "MIXED",
       "situation": "Задержанный в наручниках убежал от полиции и перепрыгнул забор",
       "expect": [
-        "Правила 5.5"
+        "Правила 5.9|Правила 5.5",
+        "УК 100"
       ]
     },
     {
