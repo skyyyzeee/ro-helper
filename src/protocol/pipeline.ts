@@ -18,6 +18,7 @@ import { isClosedQuestion, verdictLabel } from './verdict';
 import { AiError, type AiProvider } from './provider';
 import { labelSources, packInScope, type Scope, type ScopeChoice, type Source } from './sources';
 import { calculateCharges, groundedGuide, sortGuide, validateAnswer, type HiddenPoint, type Validation } from './validate';
+import { readJson } from './json';
 
 /** A message this short that finds nothing tells no situation: the player is asked to describe it. */
 const VAGUE_WORDS = 6;
@@ -62,7 +63,7 @@ export interface Terms {
 export async function searchTerms(provider: AiProvider, situation: string, scope: Scope = 'law', askIntent = false, cache?: string): Promise<Terms> {
   try {
     const text = await provider.complete({ system: termsPrompt(scope, askIntent), turns: [{ role: 'user', parts: [{ text: situation }] }], json: true, counts: false, ...(cache ? { cache } : {}) });
-    const parsed: unknown = JSON.parse(text.trim().replace(/^```(?:json)?\s*|```\s*$/g, ''));
+    const parsed: unknown = readJson(text);
     // A service in JSON-object mode (the AI server) cannot answer with a bare array: it wraps it, {"phrases": […]}.
     const object = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null;
     const list = Array.isArray(parsed) ? parsed : Array.isArray(object?.phrases) ? object.phrases : object ? Object.values(object).find(Array.isArray) : undefined;

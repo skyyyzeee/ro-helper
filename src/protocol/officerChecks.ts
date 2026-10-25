@@ -11,6 +11,7 @@ import { SOURCES, alternate, withoutClaimedArticles } from './pipeline';
 import { coreRules, playerData } from './prompt';
 import { AiError, type AiProvider } from './provider';
 import { labelSources, packInScope, type Source } from './sources';
+import { readJson } from './json';
 
 // ——— Требования адвоката ———
 
@@ -89,7 +90,7 @@ export function spoken(reply: string): string {
   return said.charAt(0).toUpperCase() + said.slice(1);
 }
 
-const json = (raw: string) => JSON.parse(raw.trim().replace(/^```(?:json)?\s*|```\s*$/g, '')) as Record<string, unknown>;
+const json = (raw: string) => readJson(raw) as Record<string, unknown>;
 
 /** The hints for a text an officer tells of their own work: the officer is the one speaking, though rarely says so. */
 const officerHints = (text: string) => hintTerms(`сотрудник ${text}`);
@@ -173,7 +174,7 @@ const DETENTION_PROMPT = (pack: ServerPack) =>
     'ПРАВИЛА ГОССТРУКТУР (R…) тоже обязательны для сотрудника: например, озвучить статьи и права в голосовой чат, не задерживать за маску или AFK-игроков, не выдавать максимум за мелочь. Нарушение такого правила — тоже "violation". Если запрещён сам повод задержания (маска, AFK), это "violation" у шага задержания по этому правилу, а не пункт «missed».',
     'БУДЬ ЧЕСТЕН И СПОКОЕН: это самопроверка для обучения. Верно сделанное так и отмечай — не ищи нарушений там, где их нет. Нарушение отмечай только если статья или правило из источников прямо говорит иначе.',
     'СТРОГИЕ ПРАВИЛА: опирайся только на источники и ссылайся на них в точности как они подписаны (например «УПК ст. 50»). Никаких законов РФ. Не придумывай статей, прав и сроков, которых нет в источниках. Если про шаг в источниках ничего нет — verdict "unclear". У каждого шага и каждого пункта «missed» — "sources": id источников, на которых стоит вывод; без них вывод засчитан не будет. В «missed» — только то, чего прямо требует источник. СРОКИ СРАВНИВАЙ ЧИСЛАМИ. Не пиши в тексте слова verdict, basis, fix и не рассуждай вслух.',
-    'ПИШИ КОРОТКО: «step» — 3–8 слов; «basis» — один источник и одно предложение до 25 слов, что в нём сказано по этому шагу; «fix» — одно предложение до 20 слов, как надо было, или пустая строка, если сделано верно; «summary» — до 20 слов, главный вывод.',
+    'ПИШИ КОРОТКО: «step» — 3–8 слов; «basis» — один источник и одно предложение до 25 слов, что в нём сказано по этому шагу; «fix» — одно предложение до 20 слов, как надо было, или пустая строка, если сделано верно; «summary» — до 20 слов, главный вывод; в «missed» — не больше 3 самых важных пунктов.',
     'Ответь JSON: {"steps": [{"step": "что сделал сотрудник", "verdict": "ok" | "violation" | "unclear", "basis": "УПК ст. 26 — что в ней сказано", "fix": "как надо было", "sources": ["S3"]}], "missed": [{"what": "что не сделано", "basis": "УПК ст. 27 — что в ней сказано", "sources": ["S4"]}], "summary": "вывод"}.',
   ].join('\n\n');
 

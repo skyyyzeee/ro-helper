@@ -36,9 +36,12 @@ async function fakeGigachat({ life = 30 * 60_000, delay = 0 } = {}) {
     seen.chats += 1;
     const question = JSON.parse(body).messages.at(-1).content;
     seen.models = [...(seen.models ?? []), JSON.parse(body).model];
+    seen.maxTokens = [...(seen.maxTokens ?? []), JSON.parse(body).max_tokens];
     await new Promise((resolve) => setTimeout(resolve, delay));
     if (question.includes('травка')) return json(response, 200, { choices: [{ message: { content: 'Генеративные языковые модели не обладают собственным мнением…' }, finish_reason: 'blacklist' }] });
     if (question.includes('сломай')) return json(response, 200, { choices: [{ message: { content: '{"phra e": [' }, finish_reason: 'stop' }] });
+    if (question.includes('со словами')) return json(response, 200, { choices: [{ message: { content: 'Вот разбор: {"from": "gigachat"} Надеюсь, помог.' }, finish_reason: 'stop' }] });
+    if (question.includes('закрыл рано')) return json(response, 200, { choices: [{ message: { content: '{"from": "gigachat", "steps": [1]}","summary": "хвост"}' }, finish_reason: 'stop' }] });
     if (question.includes('лимит')) return json(response, 402, { message: 'Payment Required' });
     return json(response, 200, { choices: [{ message: { content: '{"from": "gigachat"}' }, finish_reason: 'stop' }] });
   });
@@ -68,11 +71,11 @@ async function aiServer(env) {
     child.on('exit', (code) => reject(new Error(`server exited ${code}`)));
   });
   let n = 0;
-  const ask = async (text, { device = 'device-0001', cache, token } = {}) => {
+  const ask = async (text, { device = 'device-0001', cache, token, think } = {}) => {
     const response = await fetch(`http://127.0.0.1:${port}/v1/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Device': device, 'X-Forwarded-For': `10.0.0.${++n % 250}`, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ system: 's', messages: [{ role: 'user', content: text }], json: true, ...(cache ? { cache: true, question: cache } : {}) }),
+      body: JSON.stringify({ system: 's', messages: [{ role: 'user', content: text }], json: true, ...(think ? { think: true } : {}), ...(cache ? { cache: true, question: cache } : {}) }),
     });
     return { status: response.status, body: await response.json() };
   };
@@ -95,6 +98,19 @@ async function aiServer(env) {
 }
 
 const gigaEnv = (giga) => ({ GIGACHAT_AUTH_KEY: 'Basic Z2lnYTprZXk=\n', GIGACHAT_OAUTH_URL: `${giga.url}/oauth`, GIGACHAT_API_URL: giga.url });
+
+test('GigaChat gets twice the room for an answer that thinks: a detention weighed step by step is long', async () => {
+  const giga = await fakeGigachat();
+  const ai = await aiServer({ ...gigaEnv(giga), MAX_OUTPUT_TOKENS: '2000' });
+  try {
+    await ai.ask('украл телефон');
+    await ai.ask('задержал за маску', { think: true });
+    assert.deepEqual(giga.seen.maxTokens, [2000, 4000]);
+  } finally {
+    ai.stop();
+    giga.server.close();
+  }
+});
 
 test('GigaChat answers first; the paid API only what it declines — Sber’s filter, broken JSON, used-up tokens', async () => {
   const giga = await fakeGigachat();
@@ -307,11 +323,11 @@ test('an admin may try one model for a request: that model, off the computer\'s 
   });
   const paidUrl = `http://127.0.0.1:${paidServer.address().port}`;
   const ai = await aiServer({ ...gigaEnv(giga), AI_BASE_URL: paidUrl, AI_API_KEY: 'paid-key', ADMIN_TOKEN: 'admin-token-0123456789', QUESTIONS_PER_DEVICE: '1' });
-  const trial = (model, token = 'admin-token-0123456789') =>
+  const trial = (model, token = 'admin-token-0123456789', content = 'украл') =>
     fetch(`${ai.base}/v1/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Device': 'device-0001', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ system: 's', messages: [{ role: 'user', content: 'украл' }], json: true, model }),
+      body: JSON.stringify({ system: 's', messages: [{ role: 'user', content }], json: true, model }),
     }).then(async (r) => ({ status: r.status, body: await r.json() }));
   try {
     const first = await trial('gpt-4.1-mini');
@@ -323,6 +339,14 @@ test('an admin may try one model for a request: that model, off the computer\'s 
     assert.equal((await trial('gpt-9-ultra')).status, 400);
     // Without the admins' key the model asked is not taken: GigaChat first, as for everyone.
     assert.equal((await trial('gpt-4.1-mini', 'wrong')).body.text, '{"from": "gigachat"}');
+    // An answer with a word around its JSON is the JSON; one with none, the admin sees what the model wrote and why.
+    assert.equal((await trial('gigachat', undefined, 'ответ со словами')).body.text, '{"from": "gigachat"}');
+    // Closed and gone on after: the object it completed, as GigaChat-3-Ultra wrote on 25.10.2026.
+    assert.equal((await trial('gigachat', undefined, 'закрыл рано')).body.text, '{"from": "gigachat", "steps": [1]}');
+    const broken = await trial('gigachat:GigaChat-3-Ultra', undefined, 'сломай формат');
+    assert.equal(broken.status, 502);
+    assert.equal(broken.body.declined, 'format stop 12');
+    assert.equal(broken.body.said, '{"phra e": [');
   } finally {
     ai.stop();
     giga.server.close();

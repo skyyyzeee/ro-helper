@@ -11,6 +11,7 @@ import { hintTerms } from './hints';
 import { SOURCES, alternate, withoutClaimedArticles } from './pipeline';
 import { sourcesBlock, type CaseState } from './context';
 import { labelSources, packInScope, type Scope, type Source } from './sources';
+import { readJson } from './json';
 
 export type PointVerdict = 'matches' | 'contradicts' | 'unconfirmed';
 
@@ -128,7 +129,7 @@ export async function checkMyAnswer(input: AnswerCheckInput): Promise<AnswerChec
   });
   let parsed: { points?: Partial<AnswerPoint>[]; fix?: string };
   try {
-    parsed = JSON.parse(raw.trim().replace(/^```(?:json)?\s*|```\s*$/g, ''));
+    parsed = readJson(raw) as typeof parsed;
   } catch {
     throw new AiError('ИИ ответил не в том формате — попробуйте ещё раз.', 'format');
   }

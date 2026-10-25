@@ -21,8 +21,10 @@ export function trialProvider(server: string, model: string, token: string, toke
         headers: { 'Content-Type': 'application/json', 'X-Device': device, Authorization: `Bearer ${token}` },
         body: JSON.stringify({ system, messages, json, think, model }),
       });
-      const body = (await response.json().catch(() => null)) as { text?: string; error?: string; usage?: Tokens | null } | null;
-      if (!response.ok || !body?.text) throw new AiError(body?.error ?? `Сервер ИИ не ответил (код ${response.status}).`, response.status === 429 ? 'limit' : 'failed');
+      const body = (await response.json().catch(() => null)) as { text?: string; error?: string; usage?: Tokens | null; declined?: string; said?: string } | null;
+      // A model that answered with no readable answer: the server says why and what it wrote, for the exam to show.
+      const why = body?.declined ? ` [${body.declined}]${body.said ? ` ИИ написал: ${body.said.replace(/\s+/g, ' ').slice(0, 1500)}` : ''}` : '';
+      if (!response.ok || !body?.text) throw new AiError(`${body?.error ?? `Сервер ИИ не ответил (код ${response.status}).`}${why}`, response.status === 429 ? 'limit' : 'failed');
       // A paid model answers with its tokens. None: the server did not take the request as the admins' — the key is
       // not the one in its .env, or the server is older — and the answer is GigaChat's: the exam would compare nothing.
       if (model !== 'gigachat' && !body.usage) {
