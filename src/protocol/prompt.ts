@@ -42,12 +42,24 @@ const SCHEMA = `{
   "notFound": false
 }`;
 
+/** The quick analysis's: no procedure, no list of what it depends on — those are the full one's (a shorter answer is a quicker one). */
+const QUICK_SCHEMA = `{
+  "situation": "суть ответа, 1–2 предложения",
+  "facts": ["факт дела", "…"],
+  "norms": [{"source": "id источника", "ref": "подпись этого источника дословно", "part": "номер части или пусто", "why": "почему подходит, коротко", "fit": "direct" | "partial", "charge": true | false, "stage": "done" | "attempt" | "preparation"}],
+  "violation": {"text": "что именно нарушено", "sources": ["id"]},
+  "punishment": {"text": "наказание — дословно, как в источнике", "sources": ["id"]},
+  "questions": [{"question": "уточняющий вопрос", "options": ["вариант", "вариант"]}],
+  "notFound": false
+}`;
+
 /** The schema with "guide" for an answer seen from a side. */
 // First in the object, right after the situation: a model writes the fields in order and leaves out the last ones.
-const SCHEMA_WITH_GUIDE = SCHEMA.replace(
-  '\n  "facts"',
-  '\n  "guide": [{"text": "пункт для игрока — обязательно, 3–8 пунктов", "sources": ["id"], "mark": "ok" | "violated" | "unknown" (только для защиты)}],\n  "facts"',
-);
+const withGuide = (schema: string, points: string) =>
+  schema.replace(
+    '\n  "facts"',
+    `\n  "guide": [{"text": "пункт для игрока — обязательно, ${points} пунктов", "sources": ["id"], "mark": "ok" | "violated" | "unknown" (только для защиты)}],\n  "facts"`,
+  );
 
 /** The verdict's field, right after the situation: a model writes the fields in order and leaves out the last ones. */
 const withVerdict = (schema: string) =>
@@ -58,7 +70,8 @@ const VERDICT_RULE =
 
 /** `closed`: the player asks a question answered yes or no (verdict.ts) — the answer starts with the verdict. */
 export function analysisPrompt(pack: ServerPack, depth: Depth, scope: Scope = 'law', perspective?: Perspective, closed = false): string {
-  const schema = perspective ? SCHEMA_WITH_GUIDE : SCHEMA;
+  const base = depth === 'quick' ? QUICK_SCHEMA : SCHEMA;
+  const schema = perspective ? withGuide(base, depth === 'quick' ? '2–3' : '3–8') : base;
   return [
     coreRules(pack, scope),
     'ЗАДАЧА: разбери ситуацию игрока по источникам из блока «НАЙДЕННЫЕ ИСТОЧНИКИ». Ссылайся по их id ("source": "S3") и с подписью ЭТОГО ЖЕ источника из его заголовка — не переписывай подпись из примера. У "violation", "punishment" и каждого шага "procedure" — список id источников, где это сказано; без источника утверждение не пиши. Каждая цифра наказания и порядка — только из текста указанных источников.',
@@ -71,12 +84,12 @@ export function analysisPrompt(pack: ServerPack, depth: Depth, scope: Scope = 'l
     'Если есть «ФАКТЫ ДЕЛА ДО ЭТОГО СООБЩЕНИЯ», новое сообщение — поправка или «а если…»: измени в "facts" только затронутые факты (исправленный факт пометь в конце «(изменено)»), остальные оставь как были, и пересмотри только то, что от них зависит. Поправка игрока важнее допущения.',
     'Если указана «ТОЧКА ЗРЕНИЯ», отвечай с неё, но факты и источники те же: точка зрения не меняет ни нормы, ни факты.',
     perspective
-      ? `${PERSPECTIVE_GUIDE[perspective]} ${depth === 'quick' ? '3–5 пунктов.' : '4–8 пунктов.'} Пункт без источника не пиши. Это главное в ответе для игрока: пиши конкретно и обращаясь к нему («потребуйте», «вы вправе»).`
+      ? `${PERSPECTIVE_GUIDE[perspective]} ${depth === 'quick' ? '2–3 пункта.' : '4–8 пунктов.'} Пункт без источника не пиши. Это главное в ответе для игрока: пиши конкретно и обращаясь к нему («потребуйте», «вы вправе»).`
       : '',
     '"ref" копируй дословно из заголовка источника — вместе с названием документа, как он там написан («6-ФЗ ст. 13», а не «УК ст. 13»). Пиши для игрока обычным языком: не упоминай в тексте названия полей (stage, fit, source) и id источников.',
     closed ? VERDICT_RULE : '',
     depth === 'quick'
-      ? 'РЕЖИМ — БЫСТРЫЙ РАЗБОР: 1–2 главные нормы, "procedure" и "uncertainty" — не больше чем по одному пункту, всё предельно коротко.'
+      ? 'РЕЖИМ — БЫСТРЫЙ РАЗБОР: 1–2 главные нормы, всё предельно коротко. Порядок действий и оговорки здесь не нужны: их даст подробный разбор.'
       : 'РЕЖИМ — ПОЛНЫЙ РАЗБОР: все подходящие нормы (включая альтернативную квалификацию, с "fit": "partial"), порядок действий по шагам, от чего зависит вывод.',
     `Ответь ТОЛЬКО JSON-объектом такого вида, без пояснений вне него:\n${closed ? withVerdict(schema) : schema}`,
   ]

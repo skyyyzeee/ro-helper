@@ -24,10 +24,17 @@ const VAGUE_WORDS = 6;
 const VAGUE_QUESTION = { question: 'Опишите ситуацию подробнее: кто, что сделал, где это было?', options: [] as string[] };
 const wordCount = (text: string) => (text.match(/[а-яёa-z0-9]+/gi) ?? []).length;
 
-/** Articles given to the AI for one question. */
+/** Articles given to the AI for one question in the full analysis. */
 export const SOURCES = 14;
+/**
+ * In the quick one: fewer to read, a quicker answer. The search alone brings the right article into the first 8 as
+ * often as into the first 14 (recall.test.ts).
+ */
+export const QUICK_SOURCES = 8;
 /** At most so many of the sources are the side's own law (context.ts PERSPECTIVE_TERMS). */
 const SIDE_SOURCES = 3;
+/** In the quick one, beside its 8 for the case. */
+const QUICK_SIDE_SOURCES = 2;
 
 const TERMS_TASK: Record<Scope, string> = {
   law: 'на языке законов: юридические термины, названия правонарушений, участники, предметы («незаконное ношение оружия», «сокрытие лица», «неповиновение сотруднику полиции»). Первыми — само правонарушение, если оно есть (кража, грабёж, побои), названное термином закона, даже если игрок его не назвал: деньги сотруднику, чтобы отпустил, — «дача взятки»; не выполнил требование сотрудника — «неповиновение законному требованию»; пьяный за рулём — «управление в состоянии опьянения»; нашли оружие без лицензии — «незаконное хранение оружия». Сотрудник взял деньги — «получение взятки»; сотрудник избил задержанного — «превышение должностных полномочий»; ударил полицейского — «насилие в отношении представителя власти»; пообещал убить — «угроза убийством». Потом участники и порядок действий',
@@ -140,6 +147,7 @@ export interface Analysis {
 /** The analysis of a situation in a scope: sources from the base, the AI's answer, the checks, the calculator. */
 export async function analyse(input: AnalyseInput): Promise<Analysis> {
   const { provider, pack, organization, message, previous, perspective, depth } = input;
+  const most = depth === 'quick' ? QUICK_SOURCES : SOURCES;
   const scope = input.scope ?? previous?.scope ?? 'law';
   const inScope = packInScope(pack, scope);
   let aiCalls = 0;
@@ -164,8 +172,9 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
     ownCharters(searchArticles(inScope, `${words} `, { boostDocuments: organization?.documents, limit: 2 }), pack, organization, searchText).filter((hit) => hit.document.kind !== 'penal-code'),
   );
   const own = new Set(found.map((hit) => hit.article.id));
-  const extra = side.filter((hit, i) => !own.has(hit.article.id) && side.findIndex((h) => h.article.id === hit.article.id) === i).slice(0, SIDE_SOURCES);
-  const sources = labelSources([...found.slice(0, SOURCES - extra.length), ...extra.map(({ article, document }) => ({ article, document }))]);
+  const extra = side.filter((hit, i) => !own.has(hit.article.id) && side.findIndex((h) => h.article.id === hit.article.id) === i).slice(0, depth === 'quick' ? QUICK_SIDE_SOURCES : SIDE_SOURCES);
+  // The quick analysis keeps its 8 for the case and adds the side's on top: the side's must not crowd the case out.
+  const sources = labelSources([...found.slice(0, depth === 'quick' ? most : most - extra.length), ...extra.map(({ article, document }) => ({ article, document }))]);
   const context = buildContext({ pack, organization, message, sources, perspective, previous });
   // A first question may be answered again to anyone who asks it with the same laws (ADR 0007); a follow-up is its own case.
   const request = { system: analysisPrompt(pack, depth, scope, perspective, isClosedQuestion(message)), turns: [{ role: 'user' as const, parts: [{ text: context }] }], json: true, think: depth === 'full', ...(previous ? {} : { cache: message }) };
