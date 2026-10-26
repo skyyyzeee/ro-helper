@@ -126,6 +126,9 @@ describe('checking the answer against the laws', () => {
     const noPart = validateAnswer(pack, sources, answer({ norms: [{ ...answer().norms[0], part: '7' }] }));
     expect(noPart.issues[0]).toMatch(/нет части 7/);
     expect([notShown, wrongNumber, noPart].every((v) => v.needsReview && v.status !== 'confirmed')).toBe(true);
+    // A precise model names several parts, or a part with its point (GigaChat-3-Ultra): each must be there.
+    for (const part of ['1, 2', 'ч. 1 и 2', '1, п. а', '2б']) expect(validateAnswer(pack, sources, answer({ norms: [{ ...answer().norms[0], part }] })).issues, part).toEqual([]);
+    expect(validateAnswer(pack, sources, answer({ norms: [{ ...answer().norms[0], part: '1, 7' }] })).issues[0]).toMatch(/нет части 7/);
     // An article with no numbered parts has no part to get wrong.
     const whole = pack.documents.find((d) => d.id === 'upk')!.articles.find((a) => a.parts.length && a.parts.every((p) => !p.number))!;
     const wholeSources = labelSources([{ document: pack.documents.find((d) => d.id === 'upk')!, article: whole }]);

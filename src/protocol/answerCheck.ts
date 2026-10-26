@@ -7,9 +7,11 @@ import { groundItems, idsOf, textIssues } from './check';
 import { coreRules, playerData } from './prompt';
 import type { AiProvider } from './provider';
 import { AiError } from './provider';
-import { searchTerms, SOURCES } from './pipeline';
+import { hintTerms } from './hints';
+import { SOURCES, alternate, withoutClaimedArticles } from './pipeline';
 import { sourcesBlock, type CaseState } from './context';
 import { labelSources, packInScope, type Scope, type Source } from './sources';
+import { readJson } from './json';
 
 export type PointVerdict = 'matches' | 'contradicts' | 'unconfirmed';
 
@@ -104,15 +106,18 @@ export async function checkMyAnswer(input: AnswerCheckInput): Promise<AnswerChec
   const scope = input.scope ?? input.previous?.scope ?? 'law';
   const situation = input.previous?.facts.length ? input.previous.facts.join('. ') : input.situation;
   const inScope = packInScope(pack, scope);
-  const asked = `${situation}\n${answer}`;
-  const terms = (await searchTerms(provider, asked, scope)).phrases;
+  const asked = withoutClaimedArticles(`${situation}\n${answer}`);
+  // One AI call: the search takes the words of the case and the answer with the hints, no phrases asked first.
+  const terms = hintTerms(`${situation}\n${answer}`);
   // The case's own articles first: the answer is about them.
   const kept = (input.previous?.articles ?? []).flatMap((id) => {
     const document = inScope.documents.find((d) => d.articles.some((a) => a.id === id));
     const article = document?.articles.find((a) => a.id === id);
     return document && article ? [{ document, article }] : [];
   });
-  const found = findForSituation(inScope, asked, { boostDocuments: organization?.documents, lawTerms: terms, limit: SOURCES });
+  const searchIn = (within: typeof inScope) => findForSituation(within, asked, { boostDocuments: organization?.documents, lawTerms: terms, limit: SOURCES });
+  // On both, the laws and the rules in turn: ranked together, the rules' short points crowd the laws out.
+  const found = scope === 'mixed' ? alternate(searchIn(packInScope(pack, 'server_rule')), searchIn(packInScope(pack, 'law'))) : searchIn(inScope);
   const seen = new Set<string>();
   const sources = labelSources([...kept, ...found].filter((hit) => !seen.has(hit.article.id) && seen.add(hit.article.id)).slice(0, SOURCES));
   if (!sources.length) throw new AiError('В базе сервера не нашлось статей по этому ответу — проверить не по чему.');
@@ -124,7 +129,7 @@ export async function checkMyAnswer(input: AnswerCheckInput): Promise<AnswerChec
   });
   let parsed: { points?: Partial<AnswerPoint>[]; fix?: string };
   try {
-    parsed = JSON.parse(raw.trim().replace(/^```(?:json)?\s*|```\s*$/g, ''));
+    parsed = readJson(raw) as typeof parsed;
   } catch {
     throw new AiError('ИИ ответил не в том формате — попробуйте ещё раз.', 'format');
   }
@@ -160,5 +165,5 @@ export async function checkMyAnswer(input: AnswerCheckInput): Promise<AnswerChec
   const fix = typeof parsed.fix === 'string' ? named(parsed.fix.trim(), sources) : '';
   const fixIssues = textIssues(fix, sources);
   if (fixIssues.length) issues.push(`Что изменить: ${fixIssues.join('; ')}`);
-  return { answer, points, verdict: answerVerdict(points), fix: fixIssues.length ? '' : fix, sources, issues, aiCalls: 2 };
+  return { answer, points, verdict: answerVerdict(points), fix: fixIssues.length ? '' : fix, sources, issues, aiCalls: 1 };
 }

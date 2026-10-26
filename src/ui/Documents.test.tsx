@@ -9,7 +9,7 @@ const GEMINI = { [AI_PROVIDER_SETTING]: 'gemini', [AI_KEY_SETTING]: 'test-key' }
 
 const REPORT = 'РАПОРТ\nЯ, лейтенант полиции Иван Петров, задержал гражданина {ФИО задержанного}.\nКвалификация: УК ст. 65 «Кража».';
 
-/** Gemini as the tests see it: the law terms first, then the document; every request kept to look at. */
+/** Gemini as the tests see it: the document (and law terms, were any asked); every request kept to look at. */
 function fakeGemini() {
   const bodies: string[] = [];
   const fetch = vi.fn(async (_url: string, init: RequestInit) => {
@@ -44,6 +44,8 @@ describe('writing a document with the AI', () => {
     // The author and the found articles went to the AI; the gap it could not fill is marked.
     expect(bodies.at(-1)).toContain('лейтенант полиции');
     expect(bodies.at(-1)).toContain('УК ст. 65');
+    // One AI call: the search takes the player's words with the hints, no phrases asked first.
+    expect(bodies).toHaveLength(1);
     expect(within(view).getByText('{ФИО задержанного}')).toHaveClass('doc__gap');
     expect(within(view).getByRole('button', { name: /УК ст\. 65 «Кража»/ })).toBeInTheDocument();
 

@@ -4,7 +4,7 @@ import { classify } from './classify';
 import { checkNickname, nicknameOf } from './nickname';
 import { verdictLabel } from './verdict';
 
-// Questions asked of another helper (SINSET, October 2026) that ours took for the wrong kind or answered by nothing.
+// Questions players ask (the exam group «players», October 2026) that the app took for the wrong kind or answered by nothing.
 describe('what players ask, read the way they mean it', () => {
   const pack = TVERSKOI_PACK;
 
@@ -23,6 +23,11 @@ describe('what players ask, read the way they mean it', () => {
   it('takes a question of a faction’s service — its hours, its course, its reprimands — for the charters', () => {
     for (const q of ['Во сколько у армии обед и вечерняя поверка?', 'Как пройти КМБ быстрее всех?', 'Сколько выговоров до увольнения в ФСБ?'])
       expect(classify(pack, q), q).toMatchObject({ type: 'legal', scope: 'law' });
+  });
+
+  it('takes the street’s words for drugs, and a kill over a quarrel from outside the game, for the laws too', () => {
+    expect(classify(pack, 'Парень продавал травку у школы').scope).toBe('law');
+    expect(classify(pack, 'Игрок перенёс ссору из дискорда в игру и теперь постоянно убивает меня').scope).toBe('mixed');
   });
 
   it('checks a character’s name by the rule on names, with no AI', () => {

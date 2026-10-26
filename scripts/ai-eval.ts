@@ -18,7 +18,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ServerPack } from '../src/core';
 import { trialProvider, type Tokens } from './eval-trial';
-import { AiError, answerQuestion, gradeCase, openaiProvider, serverProvider, type AiProvider, type Category, type Depth, type EvalCase, type Grade, type QueryAlias } from '../src/protocol';
+import { AiError, answerQuestion, checkDemands, detentionSources, gradeCase, gradeOfficerCheck, lawyerSources, openaiProvider, reviewDetention, serverProvider, type AiProvider, type Category, type Depth, type EvalCase, type Grade, type QueryAlias } from '../src/protocol';
 
 // about.ts reads the version Vite puts in at build time; outside Vite it is set here, before about.ts is loaded.
 (globalThis as { __APP_VERSION__?: string }).__APP_VERSION__ = 'eval';
@@ -174,15 +174,27 @@ for (const c of cases) {
   const row: Row = { number: c.number, category: categoryOf, grade: null };
   said.length = 0;
   try {
-    const base = { provider, pack: pack(c.server), depth, choice: c.choice ?? 'auto', aliases: fromServer.aliases } as const;
-    let outcome = await answerQuestion({ ...base, message: c.situation });
-    // A follow-up goes on from the case the first answer left; the calls of both are counted.
-    if (c.followUp && outcome.kind === 'analysis') {
-      const first = outcome.analysis.aiCalls ?? 0;
-      outcome = await answerQuestion({ ...base, message: c.followUp, previous: outcome.analysis.case });
-      if (outcome.kind === 'analysis') outcome.analysis.aiCalls = (outcome.analysis.aiCalls ?? 0) + first;
+    const p = pack(c.server);
+    if (c.mode === 'lawyer') {
+      // The lawyer's demands: one AI call over its own search; the exam weighs what each demand stands on.
+      const answer = await checkDemands(provider, p, c.situation);
+      row.grade = gradeOfficerCheck(c, answer.demands, lawyerSources(p, c.situation), said.length);
+    } else if (c.mode === 'detention') {
+      // A detention's steps, and the duties missed — a missed one counts as «missed» among the verdicts.
+      const review = await reviewDetention(provider, p, c.situation);
+      const items = [...review.steps, ...review.missed.map((m) => ({ verdict: 'missed', sources: m.sources }))];
+      row.grade = gradeOfficerCheck(c, items, detentionSources(p, c.situation), said.length);
+    } else {
+      const base = { provider, pack: p, depth, choice: c.choice ?? 'auto', aliases: fromServer.aliases } as const;
+      let outcome = await answerQuestion({ ...base, message: c.situation });
+      // A follow-up goes on from the case the first answer left; the calls of both are counted.
+      if (c.followUp && outcome.kind === 'analysis') {
+        const first = outcome.analysis.aiCalls ?? 0;
+        outcome = await answerQuestion({ ...base, message: c.followUp, previous: outcome.analysis.case });
+        if (outcome.kind === 'analysis') outcome.analysis.aiCalls = (outcome.analysis.aiCalls ?? 0) + first;
+      }
+      row.grade = gradeCase(c, outcome);
     }
-    row.grade = gradeCase(c, outcome);
   } catch (error) {
     row.error = error instanceof AiError ? `${error.kind}: ${error.message}` : String(error);
     // What the model said instead of an answer: a refusal reads differently from broken JSON.

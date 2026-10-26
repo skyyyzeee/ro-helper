@@ -3,9 +3,9 @@
 // found in the server's laws, and may cite only those.
 import { useCallback, useEffect, useState } from 'react';
 import { findForSituation, type SearchHit, type ServerPack } from '../core';
-import { coreRules, labelSources, packInScope, playerData, sourcesBlock, textIssues } from '../protocol';
+import { coreRules, hintTerms, labelSources, packInScope, playerData, sourcesBlock, textIssues, withoutClaimedArticles } from '../protocol';
 import type { PlatformAdapter } from '../platform/types';
-import { SOURCES, ask, connect, lawTerms } from './ai';
+import { SOURCES, ask, connect } from './ai';
 
 export type DocumentKind = 'report' | 'detention' | 'statement' | 'complaint' | 'lawsuit';
 
@@ -135,9 +135,9 @@ export function useDocumentWriter(platform: PlatformAdapter, pack: ServerPack, b
       try {
         const key = await connect(platform);
         const form = DOCUMENT_KINDS.find((k) => k.id === kind)!;
-        const terms = await lawTerms(key, text);
-        // A document cites the laws and charters: the rules of the server are no ground for a report or a lawsuit.
-        const sources = labelSources(findForSituation(packInScope(pack, 'law'), text, { boostDocuments, lawTerms: terms, limit: SOURCES }));
+        // A document cites the laws and charters: the rules of the server are no ground for a report or a lawsuit. One
+        // AI call: the search takes the player's words with the hints (hints.ts), not phrases asked of the AI first.
+        const sources = labelSources(findForSituation(packInScope(pack, 'law'), withoutClaimedArticles(text), { boostDocuments, lawTerms: hintTerms(text), limit: SOURCES }));
         const prompt = sources.length
           ? `Описание игрока.\n${playerData(text)}\n\n${sourcesBlock(sources)}`
           : `Описание игрока.\n${playerData(text)}\n\nПоиск по законам сервера ничего не нашёл: статей не указывай, поставь {статья не найдена в законах сервера}.`;

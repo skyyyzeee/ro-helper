@@ -2,6 +2,7 @@
 // the norms carries the ids of the sources it stands on, so the checks can hold each one to its own sources.
 
 import type { VerdictAnswer } from './verdict';
+import { readJson } from './json';
 
 /** How far the act went, as the calculator takes it. */
 export type Stage = 'done' | 'attempt' | 'preparation';
@@ -128,7 +129,7 @@ const claims = (value: unknown): Claim[] => (Array.isArray(value) ? value.map((i
 export function parseAnswer(raw: string): LegalAnswer {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw.trim().replace(/^```(?:json)?\s*|```\s*$/g, ''));
+    parsed = readJson(raw);
   } catch {
     throw new AnswerFormatError('ИИ ответил не в том формате.');
   }

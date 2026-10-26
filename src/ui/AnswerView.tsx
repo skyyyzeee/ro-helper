@@ -8,6 +8,9 @@ import { JurisdictionPill, Stars } from './lawBits';
 
 const STAGE_LABELS = { done: '', attempt: 'покушение', preparation: 'приготовление' } as const;
 
+/** At most so long, the AI's name for a broken rule is the card's title; longer, it is an explanation under it. */
+const SHORT_NAME = 60;
+
 /** The two sides of an answer on both: the player's punishment by the project's rules, the character's by the laws. */
 const RULE_SIDE = 'Правила проекта — наказание игроку';
 const LAW_SIDE = 'Законы — что грозит персонажу';
@@ -174,6 +177,8 @@ function SourceCard({
   const punishment = part?.punishment ? formatPunishment(part.punishment) : '';
   // A rule of the project says its punishment in a note: «Demorgan 120-140 минут / Ban 3-30 дней» — each a tag.
   const ruleTags = type === 'server_rule' ? rulePunishments(hit) : [];
+  // A rule named the way a complaint names it («Задержание за маску», prompt.ts): that is its title on the card.
+  const named = type === 'server_rule' && norm.why && norm.why.length <= SHORT_NAME ? norm.why : undefined;
   return (
     <li className={issues.length ? 'source source--bad' : 'source'}>
       <div className="source__head">
@@ -181,7 +186,7 @@ function SourceCard({
           {shortLabel(hit)}
           {hit.part?.number ? ` ч. ${hit.part.number}` : ''}
         </button>
-        <span className="source__name">{articleTitle(hit.article)}</span>
+        <span className="source__name">{named ?? articleTitle(hit.article)}</span>
         {type && <SourceTypeBadge type={type} />}
         {norm.fit === 'partial' && <span className="status status--likely">если подтвердится</span>}
         {norm.stage !== 'done' && <span className="status">{STAGE_LABELS[norm.stage]}</span>}
@@ -189,7 +194,7 @@ function SourceCard({
         {part?.jurisdiction && <JurisdictionPill jurisdiction={part.jurisdiction} />}
       </div>
       <span className="source__doc">{hit.document.title}</span>
-      {norm.why && <p className="source__why">{norm.why}</p>}
+      {norm.why && !named && <p className="source__why">{norm.why}</p>}
       {punishment && (
         <p className="source__punishment">
           <span className="demand__label">По базе:</span> {punishment}
@@ -292,8 +297,6 @@ export function AnswerView({
   const groups: [string, CheckedNorm[]][] = lawSide.length && ruleSide.length
     ? [[RULE_SIDE, ruleSide], [LAW_SIDE, lawSide]]
     : [[ruleSide.length ? RULE_SIDE : 'Применимые нормы', validation.norms]];
-  // An answer for the player's side leads with it, and keeps the analysis behind it short.
-  const lean = !!(answer.guide?.length && analysis.perspective);
   const chargeHits = (calculation?.charges ?? []).map((c) => ({ article: c.article, document: c.document, part: c.part, stage: c.stage }));
 
   return (
@@ -331,16 +334,14 @@ export function AnswerView({
         ),
       )}
 
-      {/* The gist in a sentence or two, before the side's points: what a short answer is. */}
-      {lean && answer.situation && <p className="ai__line ai__gist">{answer.situation}</p>}
+      {/* The gist in a sentence or two, before the side's points and the articles: what a short answer is. */}
+      {answer.situation && <p className="ai__line ai__gist">{answer.situation}</p>}
 
       {answer.guide && answer.guide.length > 0 && analysis.perspective && (
         <Guide items={answer.guide} perspective={analysis.perspective} sources={byId} onOpen={onOpen} />
       )}
 
-      {lean ? (
-        // The side's answer said it: the punishment and the articles stay at hand, the rest of the analysis folds away.
-        <>
+      {/* The punishment and the articles stay at hand; the rest of the analysis folds away. */}
       {(answer.punishment || calculation) && (
         <Block title="Наказание">
           {answer.punishment && (
@@ -383,128 +384,43 @@ export function AnswerView({
         </Block>
       ))}
 
-          <details className="answer__more">
-            <summary>Подробный разбор</summary>
-
-      {answer.violation && (
-        <Block title="Нарушение">
-          <p className="ai__line">
-            <ClaimLine claim={answer.violation} sources={byId} onOpen={onOpen} />
-          </p>
-        </Block>
-      )}
-
-      {answer.procedure.length > 0 && (
-        <Block title="Процедура">
-          <ol className="answer__list">
-            {answer.procedure.map((step) => (
-              <li key={step.text}>
-                <ClaimLine claim={step} sources={byId} onOpen={onOpen} />
-              </li>
-            ))}
-          </ol>
-        </Block>
-      )}
-
-      {(answer.uncertainty.length > 0 || answer.assumptions.length > 0) && (
-        <Block title="Неопределённость">
-          <ul className="answer__list">
-            {answer.assumptions.map((item) => (
-              <li key={`a-${item}`}>Допущено: {item}</li>
-            ))}
-            {answer.uncertainty.map((item) => (
-              <li key={`u-${item}`}>{item}</li>
-            ))}
-          </ul>
-        </Block>
-      )}
-
-          </details>
-        </>
-      ) : (
-        <>
-      {answer.situation && (
-        <Block title="Ситуация">
-          <p className="ai__line">{answer.situation}</p>
-        </Block>
-      )}
-
-      {groups.map(([title, norms]) => norms.length > 0 && (
-        <Block key={title} title={title}>
-          <ul className="sources">
-            {norms.map((checked, i) => (
-              <SourceCard
-                key={`${checked.norm.source}-${i}`}
-                checked={checked}
-                onOpen={onOpen}
-                onCharge={(hit) => onCharge([{ ...hit, stage: checked.norm.stage }])}
-                onPin={onPinArticle}
-                onLink={onLink}
-                chargeable={!!checked.hit && calculable.includes(checked.hit.document.id) && !checked.issues.length}
-              />
-            ))}
-          </ul>
-        </Block>
-      ))}
-
-      {answer.violation && (
-        <Block title="Нарушение">
-          <p className="ai__line">
-            <ClaimLine claim={answer.violation} sources={byId} onOpen={onOpen} />
-          </p>
-        </Block>
-      )}
-
-      {(answer.punishment || calculation) && (
-        <Block title="Наказание">
-          {answer.punishment && (
-            <p className="ai__line">
-              <ClaimLine claim={answer.punishment} sources={byId} onOpen={onOpen} />
-            </p>
+      {/* What was broken, the steps and what is unsure: for whoever reads on — none of it, no fold at all. */}
+      {(answer.violation || answer.procedure.length > 0 || answer.uncertainty.length > 0 || answer.assumptions.length > 0) && (
+        <details className="answer__more">
+          <summary>Подробный разбор</summary>
+          {answer.violation && (
+            <Block title="Нарушение">
+              <p className="ai__line">
+                <ClaimLine claim={answer.violation} sources={byId} onOpen={onOpen} />
+              </p>
+            </Block>
           )}
-          {calculation && (
-            <div className="answer__calc">
-              <span className="demand__label">Калькулятор:</span> <b>{calculationLine(calculation.result) || '—'}</b>
-              <span className="answer__charge">{calculation.result.charge}</span>
-              <button type="button" className="chip-btn" onClick={() => onCharge(chargeHits)}>
-                <PlusIcon size={13} /> Открыть в калькуляторе
-              </button>
-              {calculation.result.charge && (
-                <button type="button" className="chip-btn" onClick={() => copy('charge', calculation.result.charge)}>
-                  {copied === 'charge' ? 'Скопировано' : 'Скопировать обвинение'}
-                </button>
-              )}
-            </div>
+
+          {answer.procedure.length > 0 && (
+            <Block title="Процедура">
+              <ol className="answer__list">
+                {answer.procedure.map((step) => (
+                  <li key={step.text}>
+                    <ClaimLine claim={step} sources={byId} onOpen={onOpen} />
+                  </li>
+                ))}
+              </ol>
+            </Block>
           )}
-        </Block>
-      )}
 
-      {answer.procedure.length > 0 && (
-        <Block title="Процедура">
-          <ol className="answer__list">
-            {answer.procedure.map((step) => (
-              <li key={step.text}>
-                <ClaimLine claim={step} sources={byId} onOpen={onOpen} />
-              </li>
-            ))}
-          </ol>
-        </Block>
-      )}
-
-      {(answer.uncertainty.length > 0 || answer.assumptions.length > 0) && (
-        <Block title="Неопределённость">
-          <ul className="answer__list">
-            {answer.assumptions.map((item) => (
-              <li key={`a-${item}`}>Допущено: {item}</li>
-            ))}
-            {answer.uncertainty.map((item) => (
-              <li key={`u-${item}`}>{item}</li>
-            ))}
-          </ul>
-        </Block>
-      )}
-
-        </>
+          {(answer.uncertainty.length > 0 || answer.assumptions.length > 0) && (
+            <Block title="Неопределённость">
+              <ul className="answer__list">
+                {answer.assumptions.map((item) => (
+                  <li key={`a-${item}`}>Допущено: {item}</li>
+                ))}
+                {answer.uncertainty.map((item) => (
+                  <li key={`u-${item}`}>{item}</li>
+                ))}
+              </ul>
+            </Block>
+          )}
+        </details>
       )}
 
       {answer.questions.length > 0 && (

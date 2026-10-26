@@ -83,6 +83,17 @@ describe('hard gates: what the model makes up never comes out confirmed', () => 
     expect(caught(good({ violation: { text: 'кража', sources: ['S7'] } }))).toMatch(/источник S7, которого ИИ не передавали/);
   });
 
+  it('lets a figure the player told stand in what is broken, never in the punishment', () => {
+    const told = 'Задержанный предложил сотруднику 70 000, чтобы тот его отпустил';
+    const bribe = good({ violation: { text: 'дача взятки в 70 000 рублей', sources: ['S1'] } });
+    expect(validateAnswer(pack, sources, bribe, 'law', told).issues).toEqual([]);
+    // Without the player's words the same figure is one to check.
+    expect(validateAnswer(pack, sources, bribe, 'law').issues.join(' ')).toMatch(/нет цифр 70000/);
+    // «Штраф ведь 1 000 000?»: a figure the player gave is no punishment of the laws.
+    const echoed = good({ punishment: { text: 'штраф 1 000 000 рублей', sources: ['S1'] } });
+    expect(validateAnswer(pack, sources, echoed, 'law', 'Штраф за превышение скорости ведь 1 000 000 рублей?').issues.join(' ')).toMatch(/нет цифр 1000000/);
+  });
+
   it('lets a law and a rule of the server stand in one statement of an answer on both, each checked as its own', () => {
     const validation = validateAnswer(pack, sources, good({ violation: { text: 'кража и нарушение правил', sources: ['S1', ruleId] } }), 'mixed');
     expect(validation.issues).toEqual([]);
@@ -172,6 +183,18 @@ describe('the classifier: what is no question of the base never reaches the AI',
     const outcome = await ask(provider, 'чела приняли, что ему будет?');
     expect(outcome.kind === 'analysis' && outcome.analysis.validation.status).toBe('clarify');
     expect(outcome.kind === 'analysis' && outcome.analysis.answer.questions[0].question).toMatch(/Опишите ситуацию подробнее/);
+  });
+
+  it('answers a follow-up in one AI call: its case\'s facts and the hints are its search, no phrases asked first', async () => {
+    const { provider, requests } = fakeAi(() => good());
+    const first = await ask(provider, 'У прохожего тайком украли телефон');
+    expect(first.kind).toBe('analysis');
+    if (first.kind !== 'analysis') return;
+    const outcome = await answerQuestion({ provider, pack, message: 'Нет, отобрали открыто, у него на глазах', depth: 'quick', choice: 'auto', previous: first.analysis.case });
+    expect(provider.complete).toHaveBeenCalledTimes(2);
+    expect(outcome.kind === 'analysis' && outcome.analysis.aiCalls).toBe(1);
+    // The robbery is among what the AI was given for the follow-up.
+    expect(requests.at(-1)!.turns.at(-1)!.parts.map((p) => ('text' in p ? p.text : '')).join('')).toMatch(/УК ст\. 66 /);
   });
 
   it('stops at the AI\'s first call when it says the question is not about the game', async () => {
