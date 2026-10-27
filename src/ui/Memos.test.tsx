@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { FakeAccounts } from '../account/fake';
 import type { Memo } from '../account/roles';
@@ -90,7 +90,10 @@ describe('memos (ticket 17)', () => {
     await user.type(field, 'Рейд');
     await user.click(within(bar).getByRole('button', { name: 'Заголовок' }));
     expect(field).toHaveValue('# Рейд');
-    await user.type(field, '{End}{Enter}');
+    // The editor selects the line it laid out on the next frame: waited for, or on a slow machine it came in the middle
+    // of the typing below and the Enter replaced the heading. Then on from the end of it.
+    await act(() => new Promise<void>((done) => requestAnimationFrame(() => done())));
+    await user.type(field, '{Enter}', { initialSelectionStart: '# Рейд'.length, initialSelectionEnd: '# Рейд'.length });
     await user.click(within(bar).getByRole('button', { name: 'Жирный' }));
     expect(field).toHaveValue('# Рейд\n**текст**');
 
