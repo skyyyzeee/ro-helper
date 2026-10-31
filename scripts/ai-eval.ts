@@ -2,7 +2,10 @@
 // AI's analysis → the checks against the laws), and scored against the article that is the right answer. It tells
 // the search's misses from the AI's, so a model or a prompt can be compared with another on the same questions.
 //
-//   npm run eval                                   — through the app's AI server (counts against its daily limits)
+//   npm run eval                                   — through the app's AI server; with the admins' key in
+//                                                    AI_ADMIN_TOKEN the run is off the day's limits (its cost
+//                                                    still counts against the server's budget), without it the
+//                                                    run counts as one player's day and stops at the limit
 //   npm run eval -- --limit 3 --server tverskoi    — a few only
 //   npm run eval -- --url https://openrouter.ai/api/v1 --model some/model   — any OpenAI-compatible AI;
 //                                                    its key, if it needs one, in the AI_EVAL_KEY environment variable
@@ -101,7 +104,7 @@ const service: AiProvider = trial
     ? await gigachat(process.env.GIGACHAT_AUTH_KEY!, model ?? 'GigaChat-2')
     : url
       ? openaiProvider({ url, model: model!, key: process.env.AI_EVAL_KEY ?? '' })
-      : serverProvider(AI_SERVER, `deval${Math.random().toString(36).slice(2, 12)}`);
+      : serverProvider(AI_SERVER, `deval${Math.random().toString(36).slice(2, 12)}`, async () => process.env.AI_ADMIN_TOKEN?.trim() || null);
 /** The model's last answers, to show what it said when an answer could not be read. */
 const said: string[] = [];
 const provider: AiProvider = {
