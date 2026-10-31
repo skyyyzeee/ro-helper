@@ -46,6 +46,13 @@ describe('a detention judged in a slipped format', () => {
 });
 
 describe('a lawyer\'s demand judged in a slipped format', () => {
+  it('tells the AI that a lawyer acts in the criminal process: the basis is the УПК or the police law, not the КоАП', async () => {
+    const provider = fakeAi(() => ({ demands: [], reply: '', note: '' }));
+    await checkDemands(provider, pack, 'Адвокат требует дать задержанному позвонить');
+    const { system } = vi.mocked(provider.complete).mock.calls[0][0];
+    expect(system).toMatch(/уголовном процессе/);
+  });
+
   it('takes {"unlawful": "S5"} for unlawful by S5', async () => {
     const answer = await checkDemands(
       fakeAi((id) => ({ demands: [{ demand: 'Отпустить через 20 минут', unlawful: id(/6-ФЗ ст\. 14/), basis: 'Срок задержания — до часа.', refusal: 'Срок не истёк.' }], reply: '', note: '' })),
