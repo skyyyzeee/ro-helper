@@ -94,15 +94,26 @@ function stripTrailingDash(text: string): string {
 const TEXT_AS_HEADING = 60;
 
 /**
+ * A long heading that reads as the article's own text, not its title: several sentences («… работником. Внутри …»),
+ * an introduction with a colon («… в следующих случаях:»), a definition with a dash («Рабочее время - период …»),
+ * or a finite verb («признается», «возникают», «работает», «защищать»). A noun phrase («Возмещение имущественного
+ * ущерба …») has none of these and stays a title.
+ */
+const READS_AS_TEXT =
+  /[.!?]\s+[А-ЯЁA-Z«(]|:(?:\s|$)|\s[-—–]\s|(?:ется|ются|ают|яют|еют|уют|ает|яет|еет|ать|ять|ить|ыть|еть|уть|оть|ться)(?=[\s.,;:!?…)]|$)/i;
+
+/**
  * An article with nothing but a long heading — no text, points or punishment — has its text where the title goes
  * (КоАП, ТК and the federal laws of Арбатский, the УК of Кутузовский): the heading becomes its text, and the title is
- * left to the start of it. A heading over articles of its own («Статья 2.1 …», then «Статья 2.1.1 …») stays a title.
+ * left to the start of it. A heading over articles of its own («Статья 2.1 …», then «Статья 2.1.1 …») stays a title,
+ * unless it reads as a sentence or an introduction (READS_AS_TEXT): then it is the text over its own sub-articles
+ * (КоАП and ТК of Арбатский, УПК of Кутузовский).
  */
 function headingsAsText(articles: Article[]): void {
   articles.forEach((article, i) => {
     if (article.title.length <= TEXT_AS_HEADING) return;
     if (article.parts.some((part) => part.text || part.punishment || part.points.length)) return;
-    if (articles[i + 1]?.number.startsWith(`${article.number}.`)) return;
+    if (articles[i + 1]?.number.startsWith(`${article.number}.`) && !READS_AS_TEXT.test(article.title)) return;
     // The title lost its full stop; the text keeps one.
     const text = /[.!?:;…]$/.test(article.title) ? article.title : `${article.title}.`;
     if (article.parts[0]) article.parts[0].text = text;

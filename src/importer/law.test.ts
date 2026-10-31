@@ -119,6 +119,29 @@ describe('an article written with no title (backlog 01)', () => {
     expect(heading.title).toMatch(/^Направления деятельности/);
     expect(titled.title).toBe('Порядок вступления в силу');
   });
+
+  it('reads a long sentence over sub-articles as text, but keeps a noun-phrase title', () => {
+    const law = parseLawText(
+      [
+        'Статья 2.1. Административным правонарушением признается противоправное, виновное действие (бездействие) физического или юридического лица, за которое настоящим Кодексом установлена ответственность.',
+        'Статья 2.1.1. Рецидив административных правонарушений влечет более строгое наказание на основании настоящего Кодекса.',
+        'Статья 3.8. Категории водительских прав подлежат аннулированию в следующих случаях:',
+        'Статья 3.8.1. Утрата водительских прав.',
+        'Статья 4.4. Возмещение имущественного ущерба и морального вреда, причиненных административным правонарушением',
+        'Статья 4.4.1. Возмещение производится в полном объеме.',
+      ].join('\n'),
+      'koap',
+      'law',
+    );
+    const [sentence, , introduction, , noun] = law.articles;
+    // A sentence or an introduction over sub-articles is the article's own text (КоАП, ТК Арбатского).
+    expect(sentence.title).toBe('');
+    expect(sentence.parts[0].text).toMatch(/^Административным правонарушением .* ответственность\.$/);
+    expect(introduction.title).toBe('');
+    expect(introduction.parts[0].text).toMatch(/^Категории водительских прав .* случаях:$/);
+    // A noun phrase stays a title even over sub-articles of its own.
+    expect(noun.title).toBe('Возмещение имущественного ущерба и морального вреда, причиненных административным правонарушением');
+  });
 });
 
 describe('a chapter named on the line under it, and an empty note (backlog 02, 07)', () => {

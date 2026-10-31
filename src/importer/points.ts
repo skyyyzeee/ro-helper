@@ -33,8 +33,10 @@ const CAPS_CHAPTER = /^(\d+|[IVXLC]+)\.\s+([^a-zа-яё]{3,80})$/;
  */
 const POINT = /^(?:-\s+)?(?:Статья\s+)?(\d{1,3}\.\d{1,3}(?:\.\d{1,3})*\.?|\d{1,3}\.)(?:\s+\|?\s*|\s*\|\s*)(\S.*)$/;
 const ITEM = /^([а-яё]|\d+)\)\s+(.*)$/;
-/** «2. Обязанности лидера»: in project rules written in «1.1» points, the title of the section numbered 2. */
-const NUMBERED_SECTION = /^(\d{1,2})\.\s+([^.;!?]{2,80}?)\s*:?$/;
+/** «2. Обязанности лидера»: in project rules written in «1.1» points, the title of the section numbered 2.
+ *  Also «1.Общее положение.» — no space after the number and a full stop at the end (ch-news Тверского);
+ *  a digit after the dot («2.14 …») is a point, not a title. */
+const NUMBERED_SECTION = /^(\d{1,2})\.(?:\s+|(?=[^\s\d]))([^.;!?]{2,80}?)\s*\.?:?$/;
 /**
  * «Примечание: …», «➤ Исключение к п.5.42.: …», «Пояснение: …» — and «Наказание: Строгий выговор» on the line under
  * a point, where the charters of Арбатский and Кутузовский write what Тверской puts after «|».
@@ -320,6 +322,22 @@ export function parsePointsText(text: string, documentId: string, options: Point
       }
     }
     seen.add(c.number);
+  }
+
+  // A title-like point immediately followed by a point of the same number is that point's sub-heading, not a
+  // point of its own (МВД Кутузовского: «9.8. Понятие и цели служебной проверки» over «9.8. Служебная проверка — …»,
+  // backlog 08). Two full-text points with one number — a forum typo — stay side by side, told apart by uniqueIds.
+  // Unlike TITLE_LIKE, a comma is fine: «Права сотрудника, в отношении которого проводится проверка».
+  const looksLikeHeading = (text: string) => /^[^•\-—・\d]/.test(text) && text.length <= 70 && !/[.;!?]/.test(text.replace(/:$/, ''));
+  for (let i = 0; i < articles.length - 1; i++) {
+    const [heading, point] = [articles[i], articles[i + 1]];
+    if (heading.number !== point.number || heading.chapter !== point.chapter) continue;
+    if (heading.notes.length || heading.parts.length !== 1) continue;
+    const only = heading.parts[0];
+    if (only.number || only.points.length || !looksLikeHeading(only.text)) continue;
+    point.group = only.text.replace(/:$/, '');
+    articles.splice(i, 1);
+    i--;
   }
 
   uniqueIds(articles, documentId, issues);

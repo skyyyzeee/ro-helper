@@ -179,7 +179,7 @@ describe('charters of Арбатский and Кутузовский (real forum 
     ['arbatskiy', 'ch-army', 'points', 198], ['arbatskiy', 'sk-charter', 'law', 88],
     ['arbatskiy', 'ch-army-discipline', 'points', 123], ['arbatskiy', 'ch-army-guard', 'points', 71],
     ['arbatskiy', 'ch-hospital', 'points', 143], ['arbatskiy', 'ch-news', 'points', 221],
-    ['kutuzovskiy', 'ch-mvd', 'points', 337], ['kutuzovskiy', 'ch-gibdd', 'law', 33], ['kutuzovskiy', 'ch-army-discipline', 'points', 103],
+    ['kutuzovskiy', 'ch-mvd', 'points', 331], ['kutuzovskiy', 'ch-gibdd', 'law', 33], ['kutuzovskiy', 'ch-army-discipline', 'points', 103],
     ['kutuzovskiy', 'ch-hospital', 'points', 165], ['kutuzovskiy', 'ch-news', 'points', 138], ['kutuzovskiy', 'sk-appeals', 'law', 29],
   ];
 
@@ -246,5 +246,65 @@ describe('sections that hold chapters (Положение о структуре 
   it('keeps a chapter of text alone, with no points, in its place', () => {
     expect(structure.chapters[0].preface.length).toBeGreaterThan(0);
     expect(structure.chapters.map((c) => c.number)).toEqual(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII']);
+  });
+});
+
+describe('a section titled «1.Название.» with no space after the number (ch-news Тверского, backlog 02)', () => {
+  it('titles the sections and leaves the points under them', () => {
+    const doc = parseLawText(
+      [
+        '1.Общее положение.',
+        '1.1. Вести Москвы – это ведущая новостная организация штата.',
+        '1.2. Устав — это свод правил.',
+        '2.Основные обязанности сотрудника Вестей Москвы.',
+        '2.1. Каждый сотрудник обязан ознакомиться с Законом «О Средствах Массовой Информации».',
+        '2.14 Каждый сотрудник обязан оставить отчет в разделе своего отдела.',
+        '3. Сотрудникам запрещено',
+        '3.1. Нарушать действующее законодательство города.',
+      ].join('\n'),
+      'ch-news',
+      'points',
+    );
+    expect(doc.chapters.map((c) => [c.number, c.title])).toEqual([
+      ['1', 'Общее положение'],
+      ['2', 'Основные обязанности сотрудника Вестей Москвы'],
+      ['3', 'Сотрудникам запрещено'],
+    ]);
+    // «2.14 Каждый…» is a point, not the title of section 2 written again.
+    expect(doc.articles.map((a) => a.number)).toEqual(['1.1', '1.2', '2.1', '2.14', '3.1']);
+  });
+});
+
+describe('a title-like point repeated with the same number (ch-mvd Кутузовского, backlog 08)', () => {
+  it('reads the first as the sub-heading of the second, not as a point of its own', () => {
+    const doc = parseLawText(
+      [
+        'Глава IX. Служебная проверка',
+        '9.7. По вызову УСБ сотрудник обязан явиться.',
+        '9.8. Понятие и цели служебной проверки',
+        '9.8. Служебная проверка — это внутреннее разбирательство, проводимое в целях установления факта НВС.',
+        '9.9. Служебная проверка проводится по решению уполномоченного руководителя.',
+      ].join('\n'),
+      'ch-mvd',
+      'points',
+    );
+    expect(doc.articles.map((a) => a.number)).toEqual(['9.7', '9.8', '9.9']);
+    const point = doc.articles.find((a) => a.number === '9.8')!;
+    expect(point.id).toBe('ch-mvd-9.8');
+    expect(point.group).toBe('Понятие и цели служебной проверки');
+    expect(point.parts[0].text).toMatch(/^Служебная проверка — это/);
+  });
+
+  it('leaves two full-text points with one number (a forum typo) side by side', () => {
+    const doc = parseLawText(
+      [
+        '4. Личный состав — совокупность всех сотрудников, стажеров и иных лиц, состоящих в штате подразделения.',
+        '4. Управление — структурное подразделение, осуществляющее руководство определенным направлением деятельности.',
+      ].join('\n'),
+      'ch-fsb',
+      'points',
+    );
+    expect(doc.articles).toHaveLength(2);
+    expect(new Set(doc.articles.map((a) => a.id)).size).toBe(2);
   });
 });
