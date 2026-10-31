@@ -41,6 +41,12 @@ describe('the instructions to the AI', () => {
     expect(analysisPrompt(PACKS.tverskoi, 'quick', 'law')).toContain('такой статьи в законах сервера нет');
   });
 
+  it('keeps the norm direct when only the severity hangs on the facts (сумма, публичность)', () => {
+    const prompt = analysisPrompt(PACKS.tverskoi, 'quick', 'law');
+    expect(prompt).toContain('не повод для "partial"');
+    expect(prompt).toContain('"questions" пустой');
+  });
+
   it('takes a bare legal topic for a legal question, not an unclear one («стадии применения силы»)', async () => {
     const seen: string[] = [];
     const provider: AiProvider = {
