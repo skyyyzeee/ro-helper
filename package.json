@@ -17,6 +17,7 @@
     "eval": "tsx scripts/ai-eval.ts",
     "eval:ai": "tsx scripts/ai-eval.ts --group traps",
     "test:server": "node --test server/server.test.mjs",
+    "check:exe": "node scripts/check-exe-version.mjs",
     "charters:check": "tsx scripts/charters-check.ts",
     "laws:check": "node scripts/laws-check.mjs"
   },
