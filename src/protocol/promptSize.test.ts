@@ -35,6 +35,7 @@ describe('the instructions to the AI', () => {
   it('treats an officer insult as insulting an authority, never the general article', () => {
     const prompt = analysisPrompt(PACKS.tverskoi, 'quick', 'law');
     expect(prompt).toContain('ОСКОРБЛЕНИЕ СОТРУДНИКА ПОЛИЦИИ');
+    expect(prompt).toContain('неважно, сказан мат в лицо или в чат');
     expect(prompt).toContain('даже если про исполнение прямо не сказано');
   });
 
