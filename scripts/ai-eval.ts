@@ -183,12 +183,16 @@ for (const c of cases) {
     if (c.mode === 'lawyer') {
       // The lawyer's demands: one AI call over its own search; the exam weighs what each demand stands on.
       const answer = await checkDemands(provider, p, c.situation);
-      row.grade = gradeOfficerCheck(c, answer.demands, lawyerSources(p, c.situation), said.length);
+      const sources = lawyerSources(p, c.situation);
+      row.grade = gradeOfficerCheck(c, answer.demands, sources, said.length);
+      if (!row.grade.pass) misses.push({ number: c.number, situation: c.situation, detail: row.grade.detail, sources: sources.map((s) => `${s.id}: ${refOf(s.hit)}`), answer: answer.demands });
     } else if (c.mode === 'detention') {
       // A detention's steps, and the duties missed — a missed one counts as «missed» among the verdicts.
       const review = await reviewDetention(provider, p, c.situation);
       const items = [...review.steps, ...review.missed.map((m) => ({ verdict: 'missed', sources: m.sources }))];
-      row.grade = gradeOfficerCheck(c, items, detentionSources(p, c.situation), said.length);
+      const sources = detentionSources(p, c.situation);
+      row.grade = gradeOfficerCheck(c, items, sources, said.length);
+      if (!row.grade.pass) misses.push({ number: c.number, situation: c.situation, detail: row.grade.detail, sources: sources.map((s) => `${s.id}: ${refOf(s.hit)}`), answer: items });
     } else {
       const base = { provider, pack: p, depth, choice: c.choice ?? 'auto', aliases: fromServer.aliases } as const;
       let outcome = await answerQuestion({ ...base, message: c.situation });
