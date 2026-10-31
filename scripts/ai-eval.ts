@@ -21,7 +21,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ServerPack } from '../src/core';
 import { trialProvider, type Tokens } from './eval-trial';
-import { AiError, answerQuestion, checkDemands, detentionSources, gradeCase, gradeOfficerCheck, lawyerSources, openaiProvider, reviewDetention, serverProvider, type AiProvider, type Category, type Depth, type EvalCase, type Grade, type QueryAlias } from '../src/protocol';
+import { AiError, answerQuestion, checkDemands, detentionSources, gradeCase, gradeOfficerCheck, lawyerSources, openaiProvider, refOf, reviewDetention, serverProvider, type AiProvider, type Category, type Depth, type EvalCase, type Grade, type QueryAlias } from '../src/protocol';
 
 // about.ts reads the version Vite puts in at build time; outside Vite it is set here, before about.ts is loaded.
 (globalThis as { __APP_VERSION__?: string }).__APP_VERSION__ = 'eval';
@@ -170,7 +170,7 @@ interface Row {
 }
 const rows: Row[] = [];
 /** The failed analyses' raw answers, kept beside the run: a miss is read, not guessed. */
-const misses: { number: number; situation: string; detail: string; answer: unknown }[] = [];
+const misses: { number: number; situation: string; detail: string; sources?: string[]; answer: unknown }[] = [];
 
 console.log(`Экзамен ИИ: ${cases.length} ситуаций, ${depth === 'full' ? 'полный' : 'быстрый'} разбор, ${via}\n`);
 for (const c of cases) {
@@ -200,7 +200,13 @@ for (const c of cases) {
       }
       row.grade = gradeCase(c, outcome);
       if (!row.grade.pass && outcome.kind === 'analysis') {
-        misses.push({ number: c.number, situation: c.followUp ? `${c.situation} → ${c.followUp}` : c.situation, detail: row.grade.detail, answer: outcome.analysis.answer });
+        misses.push({
+          number: c.number,
+          situation: c.followUp ? `${c.situation} → ${c.followUp}` : c.situation,
+          detail: row.grade.detail,
+          sources: outcome.analysis.sources.map((s) => `${s.id}: ${refOf(s.hit)}`),
+          answer: outcome.analysis.answer,
+        });
       }
     }
   } catch (error) {

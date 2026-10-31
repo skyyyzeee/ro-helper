@@ -15,6 +15,7 @@ import {
   packInScope,
   lawTerms,
   parseAnswer,
+  rulesAsNorms,
   serverProvider,
   validateAnswer,
   type AiProvider,
@@ -134,6 +135,17 @@ describe('checking the answer against the laws', () => {
     const wholeSources = labelSources([{ document: pack.documents.find((d) => d.id === 'upk')!, article: whole }]);
     const partOne = validateAnswer(pack, wholeSources, answer({ punishment: null, norms: [{ ...answer().norms[0], ref: `УПК ст. ${whole.number}`, charge: false }] }));
     expect(partOne.issues).toEqual([]);
+  });
+
+  it('lists the server rule a claim stands on as a norm, when the model left it out', () => {
+    const withRules = labelSources([THEFT, article('rules-main', '4.8')]);
+    const enriched = rulesAsNorms(answer({ punishment: { text: 'По правилам сервера: WARN', sources: ['R1'] } }), withRules);
+    expect(enriched.norms).toHaveLength(2);
+    expect(enriched.norms[1]).toMatchObject({ source: 'R1', charge: false, fit: 'direct' });
+    expect(enriched.norms[1].ref).toContain('4.8');
+    // The model listed it itself: nothing to add.
+    const own = answer({ norms: [...answer().norms, { source: 'R1', ref: 'Правила п. 4.8', why: 'мора', fit: 'direct', charge: false, stage: 'done' }] });
+    expect(rulesAsNorms(own, withRules).norms).toHaveLength(2);
   });
 
   it('re-points a norm whose label names an article another source holds — the id was the slip, not the article', () => {

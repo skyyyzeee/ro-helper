@@ -169,6 +169,27 @@ export interface Analysis {
   violation?: boolean;
 }
 
+/**
+ * A server's rule the answer already stands on — among the sources of what is broken, of the punishment or of a
+ * step — is a norm of the answer, though the model left it out of the list: added as one (no charge: the codes
+ * alone charge), so the rule shows as the norm it is, not as a bare line of the punishment.
+ */
+export function rulesAsNorms(answer: LegalAnswer, sources: Source[]): LegalAnswer {
+  const cited = new Set(answer.norms.map((n) => n.source));
+  const claims = [answer.violation, answer.punishment, ...answer.procedure].filter((claim) => !!claim);
+  const missing = new Map<string, Source>();
+  for (const claim of claims)
+    for (const id of claim.sources) {
+      const source = sources.find((s) => s.id === id);
+      if (source && source.type === 'server_rule' && !cited.has(id)) missing.set(id, source);
+    }
+  if (!missing.size) return answer;
+  return {
+    ...answer,
+    norms: [...answer.norms, ...[...missing.values()].map((s) => ({ source: s.id, ref: sourceLabel(s.hit), why: 'правило сервера, на которое опирается ответ', fit: 'direct' as const, charge: false, stage: 'done' as const }))],
+  };
+}
+
 /** The analysis of a situation in a scope: sources from the base, the AI's answer, the checks, the calculator. */
 export async function analyse(input: AnalyseInput): Promise<Analysis> {
   const { provider, pack, organization, message, previous, perspective, depth } = input;
@@ -226,6 +247,8 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
     }
   }
 
+  // A rule the answer stands on is a norm, though the model listed it nowhere; the codes alone charge.
+  if (scope !== 'law') answer = rulesAsNorms(answer, sources);
   // The player's own figures of the case («предложил 50 000») may stand in what is broken.
   const validation = validateAnswer(pack, sources, answer, scope, searchText);
   // The side's points are shown only where they stand on the sources: one that does not is left out, not flagged —

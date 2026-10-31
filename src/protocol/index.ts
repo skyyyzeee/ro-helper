@@ -43,6 +43,7 @@ export {
   analyse,
   answerQuestion,
   lawTerms,
+  rulesAsNorms,
   searchTerms,
   withoutClaimedArticles,
   type Analysis,
