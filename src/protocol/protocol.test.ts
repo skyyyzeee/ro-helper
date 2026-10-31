@@ -136,6 +136,22 @@ describe('checking the answer against the laws', () => {
     expect(partOne.issues).toEqual([]);
   });
 
+  it('re-points a norm whose label names an article another source holds — the id was the slip, not the article', () => {
+    const two = labelSources([THEFT, article('uk', '66')]);
+    const slipped = answer({
+      norms: [{ source: 'S1', ref: 'УК ст. 66', part: '1', why: 'грабёж — открытое хищение чужого имущества', fit: 'direct', charge: true, stage: 'done' }],
+      violation: { text: 'грабёж', sources: ['S2'] },
+      punishment: null,
+    });
+    const validation = validateAnswer(pack, two, slipped);
+    expect(validation.issues).toEqual([]);
+    expect(validation.norms[0].hit?.article.number).toBe('66');
+    expect(validation.norms[0].norm.source).toBe('S2');
+    // The article the label names is none of the sources: the old check stands — flag or repair by the why.
+    const notShown = validateAnswer(pack, sources, answer({ norms: [{ ...answer().norms[0], ref: 'УК ст. 88', why: 'тайное хищение' }] }));
+    expect(notShown.norms[0].hit?.article.number).toBe('65');
+  });
+
   it('flags a figure of the punishment the articles do not have', () => {
     const validation = validateAnswer(pack, sources, answer({ punishment: { text: 'штраф до 70 000 ₽ либо 30 мес', sources: ['S1'] } }));
     expect(validation.issues).toEqual([expect.stringMatching(/Наказание: в указанных источниках нет цифр 70000/)]);
