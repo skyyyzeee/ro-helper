@@ -47,7 +47,7 @@ describe('a detention judged in a slipped format', () => {
 
 describe('a lawyer\'s demand judged in a slipped format', () => {
   it('tells the AI that a lawyer acts in the criminal process: the basis is the УПК or the police law, not the КоАП', async () => {
-    const provider = fakeAi(() => ({ demands: [], reply: '', note: '' }));
+    const provider = fakeAi((id) => ({ demands: [{ demand: 'Дать позвонить', lawful: id(/УПК ст\. 26/), basis: 'Задержанный вправе на звонок.', refusal: '' }], reply: '', note: '' }));
     await checkDemands(provider, pack, 'Адвокат требует дать задержанному позвонить');
     const { system } = vi.mocked(provider.complete).mock.calls[0][0];
     expect(system).toMatch(/уголовном процессе/);
