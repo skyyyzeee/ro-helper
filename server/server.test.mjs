@@ -485,6 +485,28 @@ test('with sign-in required, a player not signed in is told how to go on; a sign
   }
 });
 
+test('the admins\' exam answers past the computer\'s limit and spends nothing of the computer\'s day', async () => {
+  const giga = await fakeGigachat();
+  const token = 'admin-token-0123456789';
+  const ai = await aiServer({ ...gigaEnv(giga), ADMIN_TOKEN: token, QUESTIONS_PER_DEVICE: '1' });
+  try {
+    // One question a day per computer: the second is told to wait.
+    assert.equal((await ai.ask('вопрос')).status, 200);
+    assert.equal((await ai.ask('вопрос')).status, 429);
+    // The admins' exam goes on past the limit, on the same computer.
+    assert.equal((await ai.ask('вопрос', { token })).body.text, '{"from": "gigachat"}');
+    assert.equal((await ai.ask('вопрос', { token })).status, 200);
+    // A fresh computer the exam ran on keeps its own day untouched.
+    assert.equal((await ai.ask('вопрос', { device: 'device-exam', token })).status, 200);
+    assert.equal((await ai.ask('вопрос', { device: 'device-exam', token })).status, 200);
+    assert.equal((await ai.ask('вопрос', { device: 'device-exam' })).status, 200);
+    assert.equal((await ai.ask('вопрос', { device: 'device-exam' })).status, 429);
+  } finally {
+    ai.stop();
+    giga.server.close();
+  }
+});
+
 test('a faction\'s leader or deputy asks more a day: their role read with their own token, kept a while', async () => {
   const giga = await fakeGigachat();
   const supabase = await fakeSupabase({ 'user-lead-0001': ['leader'], 'user-dept-0002': ['deputy'] });
