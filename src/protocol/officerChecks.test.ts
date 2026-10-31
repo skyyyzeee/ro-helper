@@ -51,6 +51,7 @@ describe('a lawyer\'s demand judged in a slipped format', () => {
     await checkDemands(provider, pack, 'Адвокат требует дать задержанному позвонить');
     const { system } = vi.mocked(provider.complete).mock.calls[0][0];
     expect(system).toMatch(/уголовном процессе/);
+    expect(system).toMatch(/сроку самого задержания/);
   });
 
   it('takes {"unlawful": "S5"} for unlawful by S5', async () => {
