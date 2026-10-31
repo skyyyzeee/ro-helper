@@ -169,6 +169,8 @@ interface Row {
   error?: string;
 }
 const rows: Row[] = [];
+/** The failed analyses' raw answers, kept beside the run: a miss is read, not guessed. */
+const misses: { number: number; situation: string; detail: string; answer: unknown }[] = [];
 
 console.log(`Экзамен ИИ: ${cases.length} ситуаций, ${depth === 'full' ? 'полный' : 'быстрый'} разбор, ${via}\n`);
 for (const c of cases) {
@@ -197,6 +199,9 @@ for (const c of cases) {
         if (outcome.kind === 'analysis') outcome.analysis.aiCalls = (outcome.analysis.aiCalls ?? 0) + first;
       }
       row.grade = gradeCase(c, outcome);
+      if (!row.grade.pass && outcome.kind === 'analysis') {
+        misses.push({ number: c.number, situation: c.followUp ? `${c.situation} → ${c.followUp}` : c.situation, detail: row.grade.detail, answer: outcome.analysis.answer });
+      }
     }
   } catch (error) {
     row.error = error instanceof AiError ? `${error.kind}: ${error.message}` : String(error);
@@ -257,6 +262,7 @@ const result = {
   cases: Object.fromEntries(rows.map((r) => [r.number, { pass: !!r.grade?.pass, hard: r.grade?.hardGates ?? [], category: r.category }])),
 };
 writeFileSync(join(resultsDir, 'last.json'), JSON.stringify(result, null, 2));
+writeFileSync(join(resultsDir, 'misses.json'), JSON.stringify(misses, null, 2));
 const baselineFile = join(resultsDir, 'baseline.json');
 if (args.includes('--save-baseline')) {
   writeFileSync(baselineFile, JSON.stringify(result, null, 2));
