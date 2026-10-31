@@ -32,6 +32,10 @@ describe('the instructions to the AI', () => {
     expect(analysisPrompt(PACKS.tverskoi, 'full', 'mixed')).not.toContain(both);
   });
 
+  it('makes the server rule a norm of its own, not a line of the punishment', () => {
+    expect(analysisPrompt(PACKS.tverskoi, 'quick', 'mixed')).toContain('пункт правил — такая же норма');
+  });
+
   it('answer an act named outright, and ask only what changes the article', () => {
     expect(analysisPrompt(PACKS.tverskoi, 'quick', 'law')).toMatch(/если действие названо прямо.+только если от ответа зависит, какая статья/);
   });
