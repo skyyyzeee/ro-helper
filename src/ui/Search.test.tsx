@@ -41,7 +41,7 @@ describe('finding an article by number', () => {
     expect(within(view).getByRole('region', { name: 'Часть 2' })).toHaveAttribute('aria-current', 'true');
     expect(within(view).getByRole('region', { name: 'Часть 1' })).not.toHaveAttribute('aria-current');
     expect(view).toHaveTextContent('Примечание');
-    expect(view).toHaveTextContent('Актуально на 20.10.2026');
+    expect(view).toHaveTextContent('Актуально на 02.11.2026');
 
     await user.click(within(view).getByRole('button', { name: /Тема на форуме/ }));
     expect(platform.calls.at(-1)).toEqual({ method: 'openExternal', args: ['https://forum.russia.online/threads/ugolovnyi-kodeks.1176/'] });

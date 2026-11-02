@@ -25,7 +25,7 @@ describe('the intents of queries (roadmap 2Б, ADR 0004): query → intent → f
     expect(ask(ARBATSKIY_PACK, 'сколько штраф за превышение скорости')).toEqual({ intent: 'punishment', first: ['КоАП ст. 24.1'] });
     expect(ask(ARBATSKIY_PACK, 'сколько штраф за парковку', 2).first).toContain('КоАП ст. 17.1');
     expect(ask(ARBATSKIY_PACK, 'можно ли по правилам сервера убивать').intent).toBe('server-rules');
-    expect(ask(ARBATSKIY_PACK, 'имеет ли право мент обыскать')).toEqual({ intent: 'rights', first: ['Устав ст. 15'] });
+    expect(ask(ARBATSKIY_PACK, 'имеет ли право мент обыскать')).toEqual({ intent: 'rights', first: ['Устав ст. 16'] });
   });
 
   it('Кутузовский', () => {

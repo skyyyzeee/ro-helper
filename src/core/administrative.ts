@@ -99,7 +99,8 @@ function choiceOf(sanction: Sanction): Choice | null {
 /** The article's alternatives for this offender; one the law names for them replaces a general one. */
 function sanctionsFor(item: AdministrativeItem, offender: Offender): Map<Choice, Sanction> {
   const result = new Map<Choice, Sanction>();
-  for (const sanction of item.part.punishment?.alternatives ?? []) {
+  // A repealed article («Утратила силу») has no parts at all: nothing to punish with.
+  for (const sanction of item.part?.punishment?.alternatives ?? []) {
     const choice = choiceOf(sanction);
     if (!choice || (sanction.subject && sanction.subject !== offender)) continue;
     if (!result.has(choice) || sanction.subject === offender) result.set(choice, sanction);
@@ -161,7 +162,7 @@ export function calculateAdministrative<T extends AdministrativeItem>(
       choice,
       fine,
       arrest,
-      additional: item.part.punishment?.additional ?? [],
+      additional: item.part?.punishment?.additional ?? [],
     };
   });
 
