@@ -45,9 +45,12 @@ export interface BuildResult {
 /**
  * Builds a server pack from `<serverDir>/sources/*.txt` snapshots and their metadata,
  * then lays the manual fixes from `<serverDir>/overrides.json` over the parser output.
+ * A document the whole project shares (the rules are the same on every server) is kept once, in
+ * `<serverDir>/../_shared/sources` — read from there when the server has no snapshot of its own.
  */
 export function buildPack(serverDir: string, server: ServerSources): BuildResult {
   const sourcesDir = join(serverDir, 'sources');
+  const sharedDir = join(serverDir, '..', '_shared', 'sources');
   const readJson = <T,>(file: string, fallback: T): T => (existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : fallback);
   const overrides = readJson<Overrides>(join(serverDir, 'overrides.json'), {});
   const synonyms = readJson<Record<string, string[]>>(join(serverDir, 'synonyms.json'), {});
@@ -57,14 +60,22 @@ export function buildPack(serverDir: string, server: ServerSources): BuildResult
   // A server whose codes have not been described yet is searched without a calculator.
   const calculatorFile = join(serverDir, 'calculator.json');
   const calculator = existsSync(calculatorFile) ? (JSON.parse(readFileSync(calculatorFile, 'utf8')) as CalculatorRules) : undefined;
-  const available = new Set(readdirSync(sourcesDir).filter((f) => f.endsWith('.meta.json')).map((f) => f.replace('.meta.json', '')));
+  // The server's own snapshot wins; one of the whole project is read from _shared.
+  const snapshot = (id: string, ext: string): string | undefined => {
+    const own = join(sourcesDir, `${id}.${ext}`);
+    if (existsSync(own)) return own;
+    const shared = join(sharedDir, `${id}.${ext}`);
+    return existsSync(shared) ? shared : undefined;
+  };
+  const idsOf = (dir: string) => (existsSync(dir) ? readdirSync(dir) : []).filter((f) => f.endsWith('.meta.json')).map((f) => f.replace('.meta.json', ''));
+  const available = new Set([...idsOf(sourcesDir), ...idsOf(sharedDir)]);
   const issues: BuildResult['issues'] = [];
   const documents: LawDocument[] = [];
 
   for (const id of server.documents) {
     if (!available.has(id)) continue;
-    const meta = JSON.parse(readFileSync(join(sourcesDir, `${id}.meta.json`), 'utf8')) as SourceMeta;
-    const text = readFileSync(join(sourcesDir, `${id}.txt`), 'utf8');
+    const meta = JSON.parse(readFileSync(snapshot(id, 'meta.json')!, 'utf8')) as SourceMeta;
+    const text = readFileSync(snapshot(id, 'txt')!, 'utf8');
     const parsed = parseLawText(text, meta.id, meta.format, { subpoints: meta.subpoints, subheadings: meta.subheadings, points: meta.points, headings: meta.headings });
     const fixed = applyOverrides(parsed.articles, parsed.issues, overrides);
     issues.push(...[...fixed.issues, ...fixed.stale].map((issue) => ({ ...issue, document: id })));
