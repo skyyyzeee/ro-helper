@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { PACKS } from '../data/bundled';
 import { analysisPrompt } from './prompt';
-import { withoutClaimedArticles } from './pipeline';
+import { searchTerms, withoutClaimedArticles } from './pipeline';
+import type { AiProvider } from './provider';
 
 /**
  * The AI server cuts the instructions at 16 000 characters (8000 before 25.10.2026): past it the end — the answer's
@@ -31,8 +32,38 @@ describe('the instructions to the AI', () => {
     expect(analysisPrompt(PACKS.tverskoi, 'full', 'mixed')).not.toContain(both);
   });
 
+  it('treats an officer insult as insulting an authority, never the general article', () => {
+    const prompt = analysisPrompt(PACKS.tverskoi, 'quick', 'law');
+    expect(prompt).toContain('ОСКОРБЛЕНИЕ СОТРУДНИКА ПОЛИЦИИ');
+    expect(prompt).toContain('неважно, сказан мат в лицо или в чат');
+    expect(prompt).toContain('даже если про исполнение прямо не сказано');
+  });
+
   it('answer an act named outright, and ask only what changes the article', () => {
     expect(analysisPrompt(PACKS.tverskoi, 'quick', 'law')).toMatch(/если действие названо прямо.+только если от ответа зависит, какая статья/);
+  });
+
+  it('checks a claim about the law outright instead of asking back (мне сказали…, это же статья N)', () => {
+    expect(analysisPrompt(PACKS.tverskoi, 'quick', 'law')).toContain('проверь утверждение по источникам и ответь прямо');
+    expect(analysisPrompt(PACKS.tverskoi, 'quick', 'law')).toContain('такой статьи в законах сервера нет');
+  });
+
+  it('keeps the norm direct when only the severity hangs on the facts (сумма, публичность)', () => {
+    const prompt = analysisPrompt(PACKS.tverskoi, 'quick', 'law');
+    expect(prompt).toContain('не повод для "partial"');
+    expect(prompt).toContain('"questions" пустой');
+  });
+
+  it('takes a bare legal topic for a legal question, not an unclear one («стадии применения силы»)', async () => {
+    const seen: string[] = [];
+    const provider: AiProvider = {
+      complete: async (request) => {
+        seen.push(request.system);
+        return '{"intent": "legal", "phrases": []}';
+      },
+    };
+    await searchTerms(provider, 'стадии применения силы', 'law', true);
+    expect(seen[0]).toMatch(/тема закона или процедуры/);
   });
 });
 

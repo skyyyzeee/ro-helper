@@ -96,24 +96,34 @@ const figuresOf = (source: Source) => [
 ];
 
 function checkNorm(pack: ServerPack, sources: Map<string, Source>, norm: AnswerNorm, scope?: Scope): CheckedNorm {
-  const source = sources.get(norm.source);
+  let source = sources.get(norm.source);
   if (!source) {
     const issue = articleExists(pack, norm.ref)
       ? `${norm.ref}: ИИ сослался на норму, которой не было среди найденных, — её текст он не видел`
       : `${norm.ref || norm.source}: такой нормы нет в базе сервера «${pack.server.name}»`;
     return { norm, issues: [issue] };
   }
-  const { article, document } = source.hit;
   const issues: string[] = [];
   const named = parseRef(norm.ref);
-  if (named && (named.number !== article.number || !(document.short.toLowerCase() === named.short || document.aliases.includes(named.short)))) {
-    // Which of the two the AI meant, its own words tell: «why» closer to the source it gave than to the article
-    // the label names — the label is a slip, the source is the norm.
-    const meant = articleExists(pack, norm.ref) ? namedArticle(pack, norm.ref) : undefined;
-    if (meant && overlap(norm.why, meant) > overlap(norm.why, article)) {
-      issues.push(`${norm.ref}: ИИ указал не тот номер — источник ${norm.source} это ${document.short} ${article.number}`);
-    } else norm = { ...norm, ref: `${document.short} ${articleLabel(article, undefined, document.unit)}` };
+  const namedIs = (hit: SearchHit) =>
+    !!named && named.number === hit.article.number && (hit.document.short.toLowerCase() === named.short || hit.document.aliases.includes(named.short));
+  if (named && !namedIs(source.hit)) {
+    // The article the label names may be among the sources itself, under another id: then the id is the slip —
+    // the norm belongs to the source that holds the article it names.
+    const holds = [...sources.values()].find((s) => namedIs(s.hit));
+    if (holds) {
+      norm = { ...norm, source: holds.id };
+      source = holds;
+    } else {
+      // Which of the two the AI meant, its own words tell: «why» closer to the source it gave than to the article
+      // the label names — the label is a slip, the source is the norm.
+      const meant = articleExists(pack, norm.ref) ? namedArticle(pack, norm.ref) : undefined;
+      if (meant && overlap(norm.why, meant) > overlap(norm.why, source.hit.article)) {
+        issues.push(`${norm.ref}: ИИ указал не тот номер — источник ${norm.source} это ${source.hit.document.short} ${source.hit.article.number}`);
+      } else norm = { ...norm, ref: `${source.hit.document.short} ${articleLabel(source.hit.article, undefined, source.hit.document.unit)}` };
+    }
   }
+  const { article, document } = source.hit;
   if (scope && !inScope(source.type, scope)) {
     issues.push(`${norm.ref || norm.source}: это ${SOURCE_TYPE_LABELS[source.type].toLowerCase()}, а вопрос — о другом`);
   }

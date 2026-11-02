@@ -155,20 +155,23 @@ export function gradeCase(c: EvalCase, outcome: Outcome): Grade {
   if (hallucinations.length) hardGates.push(`подтверждённая выдумка: ${hallucinations.join('; ')}`);
 
   const valid = analysis.validation.norms.filter((n) => n.hit && !n.issues.length);
-  const direct = valid.filter((n) => n.norm.fit === 'direct').map((n) => n.hit!);
+  // A claim-check («мне сказали, что…») is answered by the norm that really covers the act. The model often marks
+  // every severity branch «partial» — the publicity, the sum — though it names the charge outright; for a false
+  // claim a charged norm counts as the answer, as a direct one does elsewhere.
+  const applied = valid.filter((n) => n.norm.fit === 'direct' || (c.category === 'FALSE_CLAIM' && n.norm.charge)).map((n) => n.hit!);
   const cited = valid.map((n) => n.hit!);
-  const forbidden = (c.forbid ?? []).filter((f) => matchesRef(f, direct));
+  const forbidden = (c.forbid ?? []).filter((f) => matchesRef(f, applied));
   if (forbidden.length) hardGates.push(`применена запрещённая статья: ${forbidden.join(', ')}`);
 
   const sources = analysis.sources.map((s) => s.hit);
   const expect = c.expect ?? [];
   const searched = expect.length ? expect.every((e) => matchesRef(e, sources)) : undefined;
-  const found: Grade['found'] = !expect.length ? 'n/a' : expect.every((e) => matchesRef(e, direct)) ? 'right' : expect.every((e) => matchesRef(e, cited)) ? 'partly' : 'missed';
+  const found: Grade['found'] = !expect.length ? 'n/a' : expect.every((e) => matchesRef(e, applied)) ? 'right' : expect.every((e) => matchesRef(e, cited)) ? 'partly' : 'missed';
   const classified =
     behavior === 'answer' ? true : behavior === 'clarify' ? analysis.validation.status === 'clarify' || analysis.answer.questions.length > 0 : false;
 
   const detail = [
-    `ИИ: ${direct.map(refOf).join(', ') || '—'}${cited.length > direct.length ? ` (ещё ${cited.filter((h) => !direct.includes(h)).map(refOf).join(', ')})` : ''}`,
+    `ИИ: ${applied.map(refOf).join(', ') || '—'}${cited.length > applied.length ? ` (ещё ${cited.filter((h) => !applied.includes(h)).map(refOf).join(', ')})` : ''}`,
     `статус: ${analysis.validation.status}${analysis.validation.needsReview ? ', требует проверки' : ''}`,
     searched === false ? 'поиск не нашёл нужную статью' : '',
     analysis.validation.issues.length ? `проверки: ${analysis.validation.issues.slice(0, 3).join('; ')}` : '',

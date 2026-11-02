@@ -7,6 +7,7 @@
 // (scripts/laws-check-page.js): this helper gives it the list of threads with the checksums of our texts, and
 // takes back the texts that differ. It writes them to data/<server>/sources/<doc>.txt, with the date of the edit
 // and of the snapshot in the .meta.json beside, and stops. Then, as always: npm run import.
+// The rules of the whole project are kept once, in data/_shared/sources — it is walked as one more «server».
 import { createServer } from 'node:http';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -16,6 +17,8 @@ const PORT = 8788;
 const BASE = `http://127.0.0.1:${PORT}`;
 const FORUM = 'https://forum.russia.online/';
 const SERVERS = ['tverskoi', 'arbatskiy', 'kutuzovskiy'];
+/** Snapshot folders to walk: the servers' own and the one shared by the whole project. */
+const DIRS = [...SERVERS, '_shared'];
 
 const fnv = (text) => {
   let h = 0x811c9dc5;
@@ -38,12 +41,12 @@ const SAMPLE = 300;
  * anew — so that hardly a line of ours is left: their text is taken all the same, the author's post (or posts) as
  * the forum shows them. `npm run laws:check -- --accept tverskoi/fz12,arbatskiy/ch-fsb`
  */
-const ACCEPT = new Set((process.argv[process.argv.indexOf('--accept') + 1] ?? '').split(',').filter((d) => process.argv.includes('--accept') && /^[a-z]+\/[a-z0-9-]+$/.test(d)));
+const ACCEPT = new Set((process.argv[process.argv.indexOf('--accept') + 1] ?? '').split(',').filter((d) => process.argv.includes('--accept') && /^[a-z_]+\/[a-z0-9-]+$/.test(d)));
 
 /** Every document we keep a snapshot of: its thread and the checksum of our text. */
 function snapshots() {
   const docs = [];
-  for (const server of SERVERS) {
+  for (const server of DIRS) {
     for (const file of readdirSync(sourceDir(server)).filter((f) => f.endsWith('.meta.json'))) {
       const meta = JSON.parse(readFileSync(join(sourceDir(server), file), 'utf8'));
       if (!meta.thread) continue;
@@ -71,7 +74,7 @@ const words = (text) => text.replace(/[​-‍﻿]/g, '').replace(/\s+/g, ' ').t
 
 /** The new text of a document, and its dates in the meta — changed in place, the rest of the file as it was. */
 function save({ server, doc, text, edited }) {
-  if (!SERVERS.includes(server) || !/^[a-z0-9-]+$/.test(doc) || typeof text !== 'string' || !text.trim()) throw new Error(`bad document ${server}/${doc}`);
+  if (!DIRS.includes(server) || !/^[a-z0-9-]+$/.test(doc) || typeof text !== 'string' || !text.trim()) throw new Error(`bad document ${server}/${doc}`);
   const dir = sourceDir(server);
   const metaFile = join(dir, `${doc}.meta.json`);
   // Only a document we already keep is rewritten: nothing new is made from what a page sent.

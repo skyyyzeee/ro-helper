@@ -19,7 +19,7 @@ export const TVERSKOI: ServerSources = {
     'ch-mvd', 'ch-gibdd', 'ch-fso', 'ch-army', 'ch-army-discipline', 'ch-army-guard', 'ch-army-structure', 'ch-army-id',
     'sk-main', 'sk-gsu', 'sk-inspections', 'sk-uniform', 'sk-ethics', 'sk-kso', 'sk-appeals', 'sk-ranks',
     'ch-gov', 'ch-hospital', 'ch-news',
-    // Правила проекта
+    // Правила проекта — снимки хранятся один раз, в data/_shared/sources (кроме rules-server: он свой у каждого сервера)
     'rules-main', 'rules-gov', 'rules-crime',
     'rules-leaders', 'rules-martial', 'rules-supply', 'rules-robbery', 'rules-business', 'rules-bank',
     'rules-workshops', 'rules-war', 'rules-fort', 'rules-server', 'rules-software', 'rules-forum',
@@ -42,7 +42,7 @@ export const ARBATSKIY: ServerSources = {
     'ch-mvd', 'ch-gibdd', 'ch-gibdd-discipline', 'ch-gibdd-osb', 'ch-fsb', 'ch-fsb-usb', 'ch-fso',
     'ch-army', 'ch-army-discipline', 'ch-army-guard',
     'sk-charter', 'ch-gov', 'ch-hospital', 'ch-news', 'ch-news-ads', 'ch-news-edit',
-    // Правила проекта (общие для всех серверов)
+    // Правила проекта — снимки хранятся один раз, в data/_shared/sources (кроме rules-server: он свой у каждого сервера)
     'rules-main', 'rules-gov', 'rules-crime',
     'rules-leaders', 'rules-martial', 'rules-supply', 'rules-robbery', 'rules-business', 'rules-bank',
     'rules-workshops', 'rules-war', 'rules-fort', 'rules-server', 'rules-software', 'rules-forum',
@@ -64,7 +64,7 @@ export const KUTUZOVSKIY: ServerSources = {
     // Уставы и положения организаций
     'ch-mvd', 'ch-mvd-units', 'ch-gibdd', 'ch-fsb', 'ch-fso', 'ch-army', 'ch-army-discipline', 'ch-army-guard',
     'sk-main', 'sk-ranks', 'sk-appeals', 'ch-hospital', 'ch-news', 'ch-news-edit',
-    // Правила проекта (общие для всех серверов)
+    // Правила проекта — снимки хранятся один раз, в data/_shared/sources (кроме rules-server: он свой у каждого сервера)
     'rules-main', 'rules-gov', 'rules-crime',
     'rules-leaders', 'rules-martial', 'rules-supply', 'rules-robbery', 'rules-business', 'rules-bank',
     'rules-workshops', 'rules-war', 'rules-fort', 'rules-server', 'rules-software', 'rules-forum',

@@ -70,6 +70,14 @@ describe('the exam\'s hard gates', () => {
     expect(gradeCase({ server: 'tverskoi', situation: '…', behavior: 'system' }, asked)).toMatchObject({ pass: true, hardGates: [] });
   });
 
+  it('counts a charged norm as the answer to a false claim, though only a severity branch fits directly', () => {
+    const branched = analysisOf(answer({ norms: [{ ...answer().norms[0], fit: 'partial' }] }));
+    expect(gradeCase({ server: 'tverskoi', situation: '…', category: 'FALSE_CLAIM', expect: ['УК 65'] }, branched)).toMatchObject({ pass: true, found: 'right' });
+    expect(gradeCase({ server: 'tverskoi', situation: '…', expect: ['УК 65'] }, branched).found).toBe('partly');
+    const forbidden = analysisOf(answer({ norms: [...answer().norms, { ...answer().norms[0], source: 'S2', ref: 'УК ст. 66', fit: 'partial', part: undefined }] }));
+    expect(gradeCase({ server: 'tverskoi', situation: '…', category: 'FALSE_CLAIM', expect: ['УК 65'], forbid: ['УК 66'] }, forbidden).hardGates).toEqual(['применена запрещённая статья: УК 66']);
+  });
+
   it('wants a question back for an ambiguous case, not a guess', () => {
     expect(gradeCase({ server: 'tverskoi', situation: '…', behavior: 'clarify' }, analysisOf(answer())).pass).toBe(false);
     const asks = analysisOf(answer({ norms: [], questions: [{ question: 'Что он сделал?', options: ['Украл', 'Ударил'] }] }));

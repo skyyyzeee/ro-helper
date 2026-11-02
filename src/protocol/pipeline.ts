@@ -45,7 +45,7 @@ const TERMS_TASK: Record<Scope, string> = {
 
 function termsPrompt(scope: Scope, askIntent: boolean): string {
   const intent = askIntent
-    ? ' Ещё определи, о чём вопрос: "legal" — о законах и правонарушениях в игре; "server_rule" — о правилах игрового проекта (nonRP, DM, наказания администрации); "mixed" — о том и другом; "out_of_scope" — не об игре (реальный мир, реальные законы РФ, новости, погода); "nonsense" — бессмыслица; "unclear" — непонятно. Ответь только JSON: {"intent": "…", "phrases": ["…", "…"]}.'
+    ? ' Ещё определи, о чём вопрос: "legal" — о законах и правонарушениях в игре; "server_rule" — о правилах игрового проекта (nonRP, DM, наказания администрации); "mixed" — о том и другом; "out_of_scope" — не об игре (реальный мир, реальные законы РФ, новости, погода); "nonsense" — бессмыслица; "unclear" — непонятно. Названная тема закона или процедуры, даже без ситуации («стадии применения силы», «права задержанного», «сроки содержания под стражей»), — "legal", а не "unclear"; "unclear" — только когда совсем не понять, о чём речь. Ответь только JSON: {"intent": "…", "phrases": ["…", "…"]}.'
     : ' Ответь только JSON: {"phrases": ["…", "…"]}.';
   return `Игрок описал ситуацию на RP-сервере своими словами. Перескажи её 4–8 короткими поисковыми фразами (2–4 слова) ${TERMS_TASK[scope]}. Не называй номеров статей и названий документов.${intent}`;
 }
@@ -169,6 +169,27 @@ export interface Analysis {
   violation?: boolean;
 }
 
+/**
+ * A server's rule the answer already stands on — among the sources of what is broken, of the punishment or of a
+ * step — is a norm of the answer, though the model left it out of the list: added as one (no charge: the codes
+ * alone charge), so the rule shows as the norm it is, not as a bare line of the punishment.
+ */
+export function rulesAsNorms(answer: LegalAnswer, sources: Source[]): LegalAnswer {
+  const cited = new Set(answer.norms.map((n) => n.source));
+  const claims = [answer.violation, answer.punishment, ...answer.procedure].filter((claim) => !!claim);
+  const missing = new Map<string, Source>();
+  for (const claim of claims)
+    for (const id of claim.sources) {
+      const source = sources.find((s) => s.id === id);
+      if (source && source.type === 'server_rule' && !cited.has(id)) missing.set(id, source);
+    }
+  if (!missing.size) return answer;
+  return {
+    ...answer,
+    norms: [...answer.norms, ...[...missing.values()].map((s) => ({ source: s.id, ref: sourceLabel(s.hit), why: 'правило сервера, на которое опирается ответ', fit: 'direct' as const, charge: false, stage: 'done' as const }))],
+  };
+}
+
 /** The analysis of a situation in a scope: sources from the base, the AI's answer, the checks, the calculator. */
 export async function analyse(input: AnalyseInput): Promise<Analysis> {
   const { provider, pack, organization, message, previous, perspective, depth } = input;
@@ -226,6 +247,8 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
     }
   }
 
+  // A rule the answer stands on is a norm, though the model listed it nowhere; the codes alone charge.
+  if (scope !== 'law') answer = rulesAsNorms(answer, sources);
   // The player's own figures of the case («предложил 50 000») may stand in what is broken.
   const validation = validateAnswer(pack, sources, answer, scope, searchText);
   // The side's points are shown only where they stand on the sources: one that does not is left out, not flagged —

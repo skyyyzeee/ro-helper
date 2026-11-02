@@ -194,7 +194,6 @@ function SourceCard({
         {part?.jurisdiction && <JurisdictionPill jurisdiction={part.jurisdiction} />}
       </div>
       <span className="source__doc">{hit.document.title}</span>
-      {norm.why && !named && <p className="source__why">{norm.why}</p>}
       {punishment && (
         <p className="source__punishment">
           <span className="demand__label">По базе:</span> {punishment}
@@ -216,6 +215,7 @@ function SourceCard({
       ))}
       <details className="source__text">
         <summary>Текст статьи</summary>
+        {norm.why && !named && <p className="source__why">{norm.why}</p>}
         <p>{articleText(hit.article)}</p>
       </details>
       <div className="source__actions">
@@ -337,10 +337,6 @@ export function AnswerView({
       {/* The gist in a sentence or two, before the side's points and the articles: what a short answer is. */}
       {answer.situation && <p className="ai__line ai__gist">{answer.situation}</p>}
 
-      {answer.guide && answer.guide.length > 0 && analysis.perspective && (
-        <Guide items={answer.guide} perspective={analysis.perspective} sources={byId} onOpen={onOpen} />
-      )}
-
       {/* The punishment and the articles stay at hand; the rest of the analysis folds away. */}
       {(answer.punishment || calculation) && (
         <Block title="Наказание">
@@ -384,10 +380,13 @@ export function AnswerView({
         </Block>
       ))}
 
-      {/* What was broken, the steps and what is unsure: for whoever reads on — none of it, no fold at all. */}
-      {(answer.violation || answer.procedure.length > 0 || answer.uncertainty.length > 0 || answer.assumptions.length > 0) && (
+      {/* The side's steps, what was broken, the procedure and what is unsure: for whoever reads on — none of it, no fold at all. */}
+      {((answer.guide && answer.guide.length > 0 && analysis.perspective) || answer.violation || answer.procedure.length > 0 || answer.uncertainty.length > 0 || answer.assumptions.length > 0) && (
         <details className="answer__more">
           <summary>Подробный разбор</summary>
+          {answer.guide && answer.guide.length > 0 && analysis.perspective && (
+            <Guide items={answer.guide} perspective={analysis.perspective} sources={byId} onOpen={onOpen} />
+          )}
           {answer.violation && (
             <Block title="Нарушение">
               <p className="ai__line">

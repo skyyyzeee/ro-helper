@@ -16,8 +16,8 @@ const FORUM_COUNTS: Record<string, number> = {
   // УПК lost its part three, «Судебное производство», to 4-ФКЗ on 21 September.
   const: 117, upk: 130, tk: 40, ethics: 27,
   fkz1: 46, fkz2: 35, fkz3: 14, fkz4: 136,
-  fz1: 42, fz2: 23, fz3: 37, fz4: 20, fz5: 26, fz6: 32, fz7: 31,
-  fz8: 40, fz9: 20, fz10: 4, fz11: 18, fz12: 17, fz13: 71, fz14: 15, fz15: 7, fz16: 13, 'fz16-fsvng': 36,
+  fz1: 42, fz2: 23, fz3: 51, fz4: 20, fz5: 26, fz6: 32, fz7: 31,
+  fz8: 40, fz9: 20, fz10: 4, fz11: 18, fz12: 17, fz13: 72, fz14: 15, fz15: 7, fz16: 13, 'fz16-fsvng': 36,
   'msk-charter': 21, 'msk-health': 17, 'msk-news': 26, 'msk-property': 51,
 };
 
@@ -59,11 +59,11 @@ describe('laws without punishments (real Тверской forum text)', () => {
   it('a section without chapters stands in for one, and a new section closes the last chapter (3-ФЗ)', () => {
     const prosecutors = parse('fz3');
     expect(prosecutors.chapters.map((c) => [c.number, c.kind ?? 'chapter'])).toEqual([
-      ['I', 'section'], ['II', 'section'], ['1', 'chapter'], ['2', 'chapter'], ['3', 'chapter'], ['IV', 'section'], ['V', 'section'],
+      ['I', 'section'], ['II', 'section'], ['1', 'chapter'], ['1.1', 'chapter'], ['2', 'chapter'], ['3', 'chapter'], ['V', 'section'], ['VI', 'section'],
     ]);
     expect(prosecutors.chapters[2].section).toBe('Раздел III. ПРОКУРОРСКИЙ НАДЗОР');
     expect(article('fz3', '1').chapter).toBe('I');
-    expect(article('fz3', '27').chapter).toBe('IV'); // not left in chapter 3
+    expect(article('fz3', '29').chapter).toBe('V'); // not left in chapter 3
   });
 
   it('«Раздел 1.» inside a chapter is a sub-heading of its articles (13-ФЗ)', () => {
@@ -118,6 +118,29 @@ describe('an article written with no title (backlog 01)', () => {
     // A heading over articles of its own stays a title, however long; so does a short one.
     expect(heading.title).toMatch(/^Направления деятельности/);
     expect(titled.title).toBe('Порядок вступления в силу');
+  });
+
+  it('reads a long sentence over sub-articles as text, but keeps a noun-phrase title', () => {
+    const law = parseLawText(
+      [
+        'Статья 2.1. Административным правонарушением признается противоправное, виновное действие (бездействие) физического или юридического лица, за которое настоящим Кодексом установлена ответственность.',
+        'Статья 2.1.1. Рецидив административных правонарушений влечет более строгое наказание на основании настоящего Кодекса.',
+        'Статья 3.8. Категории водительских прав подлежат аннулированию в следующих случаях:',
+        'Статья 3.8.1. Утрата водительских прав.',
+        'Статья 4.4. Возмещение имущественного ущерба и морального вреда, причиненных административным правонарушением',
+        'Статья 4.4.1. Возмещение производится в полном объеме.',
+      ].join('\n'),
+      'koap',
+      'law',
+    );
+    const [sentence, , introduction, , noun] = law.articles;
+    // A sentence or an introduction over sub-articles is the article's own text (КоАП, ТК Арбатского).
+    expect(sentence.title).toBe('');
+    expect(sentence.parts[0].text).toMatch(/^Административным правонарушением .* ответственность\.$/);
+    expect(introduction.title).toBe('');
+    expect(introduction.parts[0].text).toMatch(/^Категории водительских прав .* случаях:$/);
+    // A noun phrase stays a title even over sub-articles of its own.
+    expect(noun.title).toBe('Возмещение имущественного ущерба и морального вреда, причиненных административным правонарушением');
   });
 });
 

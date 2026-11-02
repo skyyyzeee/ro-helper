@@ -15,10 +15,11 @@ const article = (number: string) => {
 describe('Уголовный кодекс Тверского (real forum text)', () => {
   it('reads every chapter and article, and reports nothing unparsed', () => {
     expect(uk.chapters).toHaveLength(22);
-    expect(uk.articles).toHaveLength(124);
+    expect(uk.articles).toHaveLength(125);
     expect(uk.articles.filter((a) => a.parts.some((p) => p.punishment))).toHaveLength(69);
-    // Only ст. 85.1 and 101.1, whose fines are written in words: the server's manual fixes (overrides.json) give their punishments.
-    expect(new Set(uk.issues.map((i) => i.article))).toEqual(new Set(['uk-85.1', 'uk-101.1']));
+    // Only ст. 85.1 and 101.1, whose fines are written in words, and ст. 73.1 and 106.1, whose sanctions are written
+    // through «влечет наложение…» (one wrapped to the next line): the server's manual fixes (overrides.json) give their punishments.
+    expect(new Set(uk.issues.map((i) => i.article))).toEqual(new Set(['uk-85.1', 'uk-101.1', 'uk-73.1', 'uk-106.1']));
   });
 
   it('keeps dotted article numbers and chapter placement', () => {

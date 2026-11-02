@@ -2,7 +2,10 @@
 // AI's analysis → the checks against the laws), and scored against the article that is the right answer. It tells
 // the search's misses from the AI's, so a model or a prompt can be compared with another on the same questions.
 //
-//   npm run eval                                   — through the app's AI server (counts against its daily limits)
+//   npm run eval                                   — through the app's AI server; with the admins' key in
+//                                                    AI_ADMIN_TOKEN the run is off the day's limits (its cost
+//                                                    still counts against the server's budget), without it the
+//                                                    run counts as one player's day and stops at the limit
 //   npm run eval -- --limit 3 --server tverskoi    — a few only
 //   npm run eval -- --url https://openrouter.ai/api/v1 --model some/model   — any OpenAI-compatible AI;
 //                                                    its key, if it needs one, in the AI_EVAL_KEY environment variable
@@ -18,7 +21,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ServerPack } from '../src/core';
 import { trialProvider, type Tokens } from './eval-trial';
-import { AiError, answerQuestion, checkDemands, detentionSources, gradeCase, gradeOfficerCheck, lawyerSources, openaiProvider, reviewDetention, serverProvider, type AiProvider, type Category, type Depth, type EvalCase, type Grade, type QueryAlias } from '../src/protocol';
+import { AiError, answerQuestion, checkDemands, detentionSources, gradeCase, gradeOfficerCheck, lawyerSources, openaiProvider, refOf, reviewDetention, serverProvider, type AiProvider, type Category, type Depth, type EvalCase, type Grade, type QueryAlias } from '../src/protocol';
 
 // about.ts reads the version Vite puts in at build time; outside Vite it is set here, before about.ts is loaded.
 (globalThis as { __APP_VERSION__?: string }).__APP_VERSION__ = 'eval';
@@ -101,7 +104,7 @@ const service: AiProvider = trial
     ? await gigachat(process.env.GIGACHAT_AUTH_KEY!, model ?? 'GigaChat-2')
     : url
       ? openaiProvider({ url, model: model!, key: process.env.AI_EVAL_KEY ?? '' })
-      : serverProvider(AI_SERVER, `deval${Math.random().toString(36).slice(2, 12)}`);
+      : serverProvider(AI_SERVER, `deval${Math.random().toString(36).slice(2, 12)}`, async () => process.env.AI_ADMIN_TOKEN?.trim() || null);
 /** The model's last answers, to show what it said when an answer could not be read. */
 const said: string[] = [];
 const provider: AiProvider = {
@@ -166,6 +169,8 @@ interface Row {
   error?: string;
 }
 const rows: Row[] = [];
+/** The failed analyses' raw answers, kept beside the run: a miss is read, not guessed. */
+const misses: { number: number; situation: string; detail: string; sources?: string[]; answer: unknown }[] = [];
 
 console.log(`Экзамен ИИ: ${cases.length} ситуаций, ${depth === 'full' ? 'полный' : 'быстрый'} разбор, ${via}\n`);
 for (const c of cases) {
@@ -178,12 +183,16 @@ for (const c of cases) {
     if (c.mode === 'lawyer') {
       // The lawyer's demands: one AI call over its own search; the exam weighs what each demand stands on.
       const answer = await checkDemands(provider, p, c.situation);
-      row.grade = gradeOfficerCheck(c, answer.demands, lawyerSources(p, c.situation), said.length);
+      const sources = lawyerSources(p, c.situation);
+      row.grade = gradeOfficerCheck(c, answer.demands, sources, said.length);
+      if (!row.grade.pass) misses.push({ number: c.number, situation: c.situation, detail: row.grade.detail, sources: sources.map((s) => `${s.id}: ${refOf(s.hit)}`), answer: answer.demands });
     } else if (c.mode === 'detention') {
       // A detention's steps, and the duties missed — a missed one counts as «missed» among the verdicts.
       const review = await reviewDetention(provider, p, c.situation);
       const items = [...review.steps, ...review.missed.map((m) => ({ verdict: 'missed', sources: m.sources }))];
-      row.grade = gradeOfficerCheck(c, items, detentionSources(p, c.situation), said.length);
+      const sources = detentionSources(p, c.situation);
+      row.grade = gradeOfficerCheck(c, items, sources, said.length);
+      if (!row.grade.pass) misses.push({ number: c.number, situation: c.situation, detail: row.grade.detail, sources: sources.map((s) => `${s.id}: ${refOf(s.hit)}`), answer: items });
     } else {
       const base = { provider, pack: p, depth, choice: c.choice ?? 'auto', aliases: fromServer.aliases } as const;
       let outcome = await answerQuestion({ ...base, message: c.situation });
@@ -194,6 +203,15 @@ for (const c of cases) {
         if (outcome.kind === 'analysis') outcome.analysis.aiCalls = (outcome.analysis.aiCalls ?? 0) + first;
       }
       row.grade = gradeCase(c, outcome);
+      if (!row.grade.pass && outcome.kind === 'analysis') {
+        misses.push({
+          number: c.number,
+          situation: c.followUp ? `${c.situation} → ${c.followUp}` : c.situation,
+          detail: row.grade.detail,
+          sources: outcome.analysis.sources.map((s) => `${s.id}: ${refOf(s.hit)}`),
+          answer: outcome.analysis.answer,
+        });
+      }
     }
   } catch (error) {
     row.error = error instanceof AiError ? `${error.kind}: ${error.message}` : String(error);
@@ -254,6 +272,7 @@ const result = {
   cases: Object.fromEntries(rows.map((r) => [r.number, { pass: !!r.grade?.pass, hard: r.grade?.hardGates ?? [], category: r.category }])),
 };
 writeFileSync(join(resultsDir, 'last.json'), JSON.stringify(result, null, 2));
+writeFileSync(join(resultsDir, 'misses.json'), JSON.stringify(misses, null, 2));
 const baselineFile = join(resultsDir, 'baseline.json');
 if (args.includes('--save-baseline')) {
   writeFileSync(baselineFile, JSON.stringify(result, null, 2));

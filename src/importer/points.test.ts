@@ -1,12 +1,17 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseLawText, type LawFormat } from './lawText';
 import type { PointsOptions } from './points';
 
 const root = join(import.meta.dirname, '..', '..');
+// The project rules are kept once, in data/_shared; a server's own snapshot, when there is one, wins.
+const source = (id: string) => {
+  const own = join(root, 'data', 'tverskoi', 'sources', `${id}.txt`);
+  return existsSync(own) ? own : join(root, 'data', '_shared', 'sources', `${id}.txt`);
+};
 const parse = (id: string, format: LawFormat = 'points', options: PointsOptions = {}) =>
-  parseLawText(readFileSync(join(root, 'data', 'tverskoi', 'sources', `${id}.txt`), 'utf8'), id, format, options);
+  parseLawText(readFileSync(source(id), 'utf8'), id, format, options);
 const point = (id: string, number: string, chapter?: string) => {
   const found = parse(id).articles.find((a) => a.number === number && (chapter === undefined || a.chapter === chapter));
   if (!found) throw new Error(`${id} п. ${number} not parsed`);
@@ -32,9 +37,9 @@ const OLD_GIBDD = [
 ].join('\n');
 
 const COUNTS: [string, LawFormat, number][] = [
-  ['ch-mvd', 'points', 247], ['ch-gibdd', 'points', 88], ['ch-fso', 'points', 97], ['ch-hospital', 'points', 223], ['ch-news', 'points', 90],
+  ['ch-mvd', 'points', 247], ['ch-gibdd', 'points', 88], ['ch-fso', 'points', 97], ['ch-hospital', 'points', 225], ['ch-news', 'points', 90],
   ['sk-main', 'points', 39], ['sk-gsu', 'points', 51], ['sk-inspections', 'points', 20], ['sk-ranks', 'points', 12],
-  ['rules-main', 'points', 98], ['rules-gov', 'points', 119], ['rules-crime', 'points', 52],
+  ['rules-main', 'points', 98], ['rules-gov', 'points', 120], ['rules-crime', 'points', 52],
   ['ch-army', 'law', 65], ['ch-army-discipline', 'law', 45], ['ch-army-guard', 'law', 44],
   ['sk-uniform', 'law', 11], ['sk-ethics', 'law', 10], ['sk-kso', 'law', 10], ['sk-appeals', 'law', 14],
 ];
@@ -175,11 +180,11 @@ const parseOn = (server: string, id: string, format: LawFormat, options: PointsO
 
 describe('charters of Арбатский and Кутузовский (real forum text)', () => {
   const CHARTERS: [string, string, LawFormat, number][] = [
-    ['arbatskiy', 'ch-mvd', 'law', 85], ['arbatskiy', 'ch-gibdd', 'law', 33],
-    ['arbatskiy', 'ch-army', 'points', 198], ['arbatskiy', 'sk-charter', 'law', 88],
+    ['arbatskiy', 'ch-mvd', 'law', 111], ['arbatskiy', 'ch-gibdd', 'law', 33],
+    ['arbatskiy', 'ch-army', 'points', 238], ['arbatskiy', 'sk-charter', 'law', 88],
     ['arbatskiy', 'ch-army-discipline', 'points', 123], ['arbatskiy', 'ch-army-guard', 'points', 71],
     ['arbatskiy', 'ch-hospital', 'points', 143], ['arbatskiy', 'ch-news', 'points', 221],
-    ['kutuzovskiy', 'ch-mvd', 'points', 337], ['kutuzovskiy', 'ch-gibdd', 'law', 33], ['kutuzovskiy', 'ch-army-discipline', 'points', 103],
+    ['kutuzovskiy', 'ch-mvd', 'points', 331], ['kutuzovskiy', 'ch-gibdd', 'law', 33], ['kutuzovskiy', 'ch-army-discipline', 'points', 103],
     ['kutuzovskiy', 'ch-hospital', 'points', 165], ['kutuzovskiy', 'ch-news', 'points', 138], ['kutuzovskiy', 'sk-appeals', 'law', 29],
   ];
 
@@ -213,7 +218,7 @@ describe('charters of Арбатский and Кутузовский (real forum 
 
 describe('the other rules of the project (real forum text, the same on every server)', () => {
   const RULES: [string, number, number][] = [
-    ['rules-leaders', 40, 26], ['rules-martial', 20, 11], ['rules-supply', 63, 52], ['rules-robbery', 52, 40], ['rules-business', 14, 11],
+    ['rules-leaders', 41, 27], ['rules-martial', 20, 11], ['rules-supply', 63, 52], ['rules-robbery', 52, 40], ['rules-business', 14, 11],
     ['rules-bank', 19, 14], ['rules-workshops', 15, 14], ['rules-fort', 35, 30], ['rules-software', 14, 6], ['rules-forum', 37, 26],
   ];
 
@@ -246,5 +251,65 @@ describe('sections that hold chapters (Положение о структуре 
   it('keeps a chapter of text alone, with no points, in its place', () => {
     expect(structure.chapters[0].preface.length).toBeGreaterThan(0);
     expect(structure.chapters.map((c) => c.number)).toEqual(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII']);
+  });
+});
+
+describe('a section titled «1.Название.» with no space after the number (ch-news Тверского, backlog 02)', () => {
+  it('titles the sections and leaves the points under them', () => {
+    const doc = parseLawText(
+      [
+        '1.Общее положение.',
+        '1.1. Вести Москвы – это ведущая новостная организация штата.',
+        '1.2. Устав — это свод правил.',
+        '2.Основные обязанности сотрудника Вестей Москвы.',
+        '2.1. Каждый сотрудник обязан ознакомиться с Законом «О Средствах Массовой Информации».',
+        '2.14 Каждый сотрудник обязан оставить отчет в разделе своего отдела.',
+        '3. Сотрудникам запрещено',
+        '3.1. Нарушать действующее законодательство города.',
+      ].join('\n'),
+      'ch-news',
+      'points',
+    );
+    expect(doc.chapters.map((c) => [c.number, c.title])).toEqual([
+      ['1', 'Общее положение'],
+      ['2', 'Основные обязанности сотрудника Вестей Москвы'],
+      ['3', 'Сотрудникам запрещено'],
+    ]);
+    // «2.14 Каждый…» is a point, not the title of section 2 written again.
+    expect(doc.articles.map((a) => a.number)).toEqual(['1.1', '1.2', '2.1', '2.14', '3.1']);
+  });
+});
+
+describe('a title-like point repeated with the same number (ch-mvd Кутузовского, backlog 08)', () => {
+  it('reads the first as the sub-heading of the second, not as a point of its own', () => {
+    const doc = parseLawText(
+      [
+        'Глава IX. Служебная проверка',
+        '9.7. По вызову УСБ сотрудник обязан явиться.',
+        '9.8. Понятие и цели служебной проверки',
+        '9.8. Служебная проверка — это внутреннее разбирательство, проводимое в целях установления факта НВС.',
+        '9.9. Служебная проверка проводится по решению уполномоченного руководителя.',
+      ].join('\n'),
+      'ch-mvd',
+      'points',
+    );
+    expect(doc.articles.map((a) => a.number)).toEqual(['9.7', '9.8', '9.9']);
+    const point = doc.articles.find((a) => a.number === '9.8')!;
+    expect(point.id).toBe('ch-mvd-9.8');
+    expect(point.group).toBe('Понятие и цели служебной проверки');
+    expect(point.parts[0].text).toMatch(/^Служебная проверка — это/);
+  });
+
+  it('leaves two full-text points with one number (a forum typo) side by side', () => {
+    const doc = parseLawText(
+      [
+        '4. Личный состав — совокупность всех сотрудников, стажеров и иных лиц, состоящих в штате подразделения.',
+        '4. Управление — структурное подразделение, осуществляющее руководство определенным направлением деятельности.',
+      ].join('\n'),
+      'ch-fsb',
+      'points',
+    );
+    expect(doc.articles).toHaveLength(2);
+    expect(new Set(doc.articles.map((a) => a.id)).size).toBe(2);
   });
 });

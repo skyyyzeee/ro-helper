@@ -175,10 +175,12 @@ function rollDay() {
  * Why this request may not go on today, or nothing when it may. A signed-in player's questions are counted on their
  * account, not on the computer; the address's limit stands for everyone, against a flood of accounts.
  */
-function refusal(device, ip, kind, account, leader = false) {
+function refusal(device, ip, kind, account, leader = false, admin = false) {
   rollDay();
   // Past the budget GigaChat, free, goes on answering; only with no GigaChat does the AI rest.
   if (state.spent >= CONFIG.budgetPerDay && !CONFIG.gigachat.key) return 'На сегодня ИИ Кремлёвского Ассистента исчерпал общий лимит. Он снова заработает после полуночи по Москве.';
+  // The admins' exam answers past the computer's, the address's and the account's limits; the day's budget still counts.
+  if (admin) return null;
   if ((state.ips[ip] ?? 0) >= CONFIG.requestsPerIp) return 'Слишком много вопросов с вашего адреса за сегодня. Попробуйте завтра.';
   if (account) {
     const mine = state.accounts?.[account] ?? { questions: 0 };
@@ -1016,18 +1018,25 @@ const server = createServer(async (request, response) => {
     const hit = key ? cached(key) : null;
     if (hit) {
       rollDay();
-      if ((state.ips[ip] ?? 0) >= CONFIG.requestsPerIp) return send(response, 429, { error: 'Слишком много вопросов с вашего адреса за сегодня. Попробуйте завтра.' });
-      state.ips[ip] = (state.ips[ip] ?? 0) + 1;
+      if (!isAdmin(request_)) {
+        if ((state.ips[ip] ?? 0) >= CONFIG.requestsPerIp) return send(response, 429, { error: 'Слишком много вопросов с вашего адреса за сегодня. Попробуйте завтра.' });
+        state.ips[ip] = (state.ips[ip] ?? 0) + 1;
+      }
       state.answered.cached = (state.answered.cached ?? 0) + 1;
       dirty = true;
       return send(response, 200, { text: hit.text, cached: true });
     }
     // A leader's or deputy's role is asked only for a question, the counted kind: a step is no question.
     const leader = kind === 'question' ? await leaderOf(account, request_) : false;
-    const why = refusal(device, ip, kind, account, leader);
+    const admin = isAdmin(request_);
+    const why = refusal(device, ip, kind, account, leader, admin);
     if (why) return send(response, 429, { error: why });
     const { text, rubles } = await chat(request, kind);
-    count(device, ip, kind, rubles, account);
+    // The exam's cost counts against the day, its questions against no one's limit — an exam would use up the admin's own.
+    if (admin) {
+      state.spent += rubles;
+      dirty = true;
+    } else count(device, ip, kind, rubles, account);
     if (key && keepable(text, request.json)) rememberAnswer(key, text, question);
     return send(response, 200, { text });
   } catch (error) {

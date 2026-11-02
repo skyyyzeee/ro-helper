@@ -46,7 +46,7 @@ describe('the analysis on screen', () => {
   });
 
   it('shows no fold when the analysis has nothing more to tell', async () => {
-    await ask('у меня украли телефон', { violation: null, procedure: [], uncertainty: [], assumptions: [] });
+    await ask('у меня украли телефон', { violation: null, procedure: [], uncertainty: [], assumptions: [], guide: [], punishment: null });
     expect(screen.getByRole('log').querySelector('details.answer__more')).toBeNull();
   });
 
@@ -150,14 +150,20 @@ describe('the analysis on screen', () => {
     expect(within(alert).getByRole('button', { name: 'поиск по законам' })).toBeInTheDocument();
   });
 
-  it('answers an officer with what to do first, and shows the other sides in tabs — each asked once', async () => {
+  it('answers an officer with what to do first under the fold, and shows the other sides in tabs — each asked once', async () => {
     const bodies: string[] = [];
     const fetch = vi.fn(fakeGeminiFetch({}, bodies));
     vi.stubGlobal('fetch', fetch);
     const app = await renderApp({ settings: GEMINI, profile: { organization: 'mvd' } });
     await app.user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
     await app.user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'у меня украли телефон{Enter}');
+    // The quick answer stays short: the gist and the cards at hand, the officer's steps folded away.
+    await screen.findByText('Применимые нормы');
+    const more = screen.getByRole('log').querySelector<HTMLDetailsElement>('details.answer__more')!;
+    expect(more.open).toBe(false);
+    await app.user.click(within(more).getByText('Подробный разбор'));
     const guide = await screen.findByRole('region', { name: 'Что делать' });
+    expect(more).toContainElement(guide);
     expect(guide).toHaveTextContent('Потребуйте объяснения и составьте протокол');
     expect(within(guide).getByRole('button', { name: /УК/ })).toBeInTheDocument();
 

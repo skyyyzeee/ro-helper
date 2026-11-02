@@ -47,7 +47,7 @@ describe('search by article number (real Тверской data)', () => {
 
   it('ranks the exact number above its sub-articles and above numbers that only start with it', () => {
     expect(labels('50').slice(0, 2)).toEqual(['УК ст. 50', 'УК ст. 50.1']);
-    expect(labels('ук 73').slice(0, 2)).toEqual(['УК ст. 73', 'УК ст. 73.1']);
+    expect(labels('ук 73').slice(0, 2)).toEqual(['УК ст. 73', 'УК ст. 73.1 ч. 1']);
     expect(labels('ук 6')[0]).toBe('УК ст. 6');
     expect(labels('ук 6')).toContain('УК ст. 65 ч. 1');
   });
