@@ -1,12 +1,17 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseLawText, type LawFormat } from './lawText';
 import type { PointsOptions } from './points';
 
 const root = join(import.meta.dirname, '..', '..');
+// The project rules are kept once, in data/_shared; a server's own snapshot, when there is one, wins.
+const source = (id: string) => {
+  const own = join(root, 'data', 'tverskoi', 'sources', `${id}.txt`);
+  return existsSync(own) ? own : join(root, 'data', '_shared', 'sources', `${id}.txt`);
+};
 const parse = (id: string, format: LawFormat = 'points', options: PointsOptions = {}) =>
-  parseLawText(readFileSync(join(root, 'data', 'tverskoi', 'sources', `${id}.txt`), 'utf8'), id, format, options);
+  parseLawText(readFileSync(source(id), 'utf8'), id, format, options);
 const point = (id: string, number: string, chapter?: string) => {
   const found = parse(id).articles.find((a) => a.number === number && (chapter === undefined || a.chapter === chapter));
   if (!found) throw new Error(`${id} п. ${number} not parsed`);

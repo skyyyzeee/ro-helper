@@ -1,8 +1,33 @@
+import { mkdtempSync, mkdirSync, copyFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { TVERSKOI_PACK } from '../data/bundled';
 import { buildPack } from './buildPack';
 import { TVERSKOI } from './servers';
+
+describe('the documents of the whole project, kept once', () => {
+  it('reads a rules document from data/_shared when the server has no snapshot of its own', () => {
+    const root = join(import.meta.dirname, '..', '..');
+    const dir = mkdtempSync(join(tmpdir(), 'build-pack-'));
+    const serverDir = join(dir, 'one');
+    const sharedDir = join(dir, '_shared', 'sources');
+    mkdirSync(join(serverDir, 'sources'), { recursive: true });
+    mkdirSync(sharedDir, { recursive: true });
+    for (const ext of ['txt', 'meta.json']) {
+      copyFileSync(join(root, 'data', '_shared', 'sources', `rules-main.${ext}`), join(sharedDir, `rules-main.${ext}`));
+    }
+    const { pack, issues } = buildPack(serverDir, { id: 'one', name: 'Один', status: 'active', documents: ['rules-main'] });
+    expect(issues).toEqual([]);
+    expect(pack.documents.map((d) => d.id)).toEqual(['rules-main']);
+    // A server's own snapshot of the same document wins over the shared one.
+    mkdirSync(join(serverDir, 'sources'), { recursive: true });
+    copyFileSync(join(root, 'data', '_shared', 'sources', 'rules-gov.txt'), join(serverDir, 'sources', 'rules-main.txt'));
+    copyFileSync(join(root, 'data', '_shared', 'sources', 'rules-gov.meta.json'), join(serverDir, 'sources', 'rules-main.meta.json'));
+    const own = buildPack(serverDir, { id: 'one', name: 'Один', status: 'active', documents: ['rules-main'] });
+    expect(own.pack.documents[0].title).not.toBe(pack.documents[0].title);
+  });
+});
 
 describe('bundled Тверской pack', () => {
   it('is exactly what the importer builds from the saved snapshots (run `npm run import` after changing sources)', () => {
