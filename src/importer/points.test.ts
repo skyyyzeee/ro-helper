@@ -37,9 +37,9 @@ const OLD_GIBDD = [
 ].join('\n');
 
 const COUNTS: [string, LawFormat, number][] = [
-  ['ch-mvd', 'points', 247], ['ch-gibdd', 'points', 88], ['ch-fso', 'points', 97], ['ch-hospital', 'points', 223], ['ch-news', 'points', 90],
+  ['ch-mvd', 'points', 247], ['ch-gibdd', 'points', 88], ['ch-fso', 'points', 97], ['ch-hospital', 'points', 225], ['ch-news', 'points', 90],
   ['sk-main', 'points', 39], ['sk-gsu', 'points', 51], ['sk-inspections', 'points', 20], ['sk-ranks', 'points', 12],
-  ['rules-main', 'points', 98], ['rules-gov', 'points', 119], ['rules-crime', 'points', 52],
+  ['rules-main', 'points', 98], ['rules-gov', 'points', 120], ['rules-crime', 'points', 52],
   ['ch-army', 'law', 65], ['ch-army-discipline', 'law', 45], ['ch-army-guard', 'law', 44],
   ['sk-uniform', 'law', 11], ['sk-ethics', 'law', 10], ['sk-kso', 'law', 10], ['sk-appeals', 'law', 14],
 ];
@@ -180,8 +180,8 @@ const parseOn = (server: string, id: string, format: LawFormat, options: PointsO
 
 describe('charters of Арбатский and Кутузовский (real forum text)', () => {
   const CHARTERS: [string, string, LawFormat, number][] = [
-    ['arbatskiy', 'ch-mvd', 'law', 85], ['arbatskiy', 'ch-gibdd', 'law', 33],
-    ['arbatskiy', 'ch-army', 'points', 198], ['arbatskiy', 'sk-charter', 'law', 88],
+    ['arbatskiy', 'ch-mvd', 'law', 111], ['arbatskiy', 'ch-gibdd', 'law', 33],
+    ['arbatskiy', 'ch-army', 'points', 238], ['arbatskiy', 'sk-charter', 'law', 88],
     ['arbatskiy', 'ch-army-discipline', 'points', 123], ['arbatskiy', 'ch-army-guard', 'points', 71],
     ['arbatskiy', 'ch-hospital', 'points', 143], ['arbatskiy', 'ch-news', 'points', 221],
     ['kutuzovskiy', 'ch-mvd', 'points', 331], ['kutuzovskiy', 'ch-gibdd', 'law', 33], ['kutuzovskiy', 'ch-army-discipline', 'points', 103],
@@ -218,7 +218,7 @@ describe('charters of Арбатский and Кутузовский (real forum 
 
 describe('the other rules of the project (real forum text, the same on every server)', () => {
   const RULES: [string, number, number][] = [
-    ['rules-leaders', 40, 26], ['rules-martial', 20, 11], ['rules-supply', 63, 52], ['rules-robbery', 52, 40], ['rules-business', 14, 11],
+    ['rules-leaders', 41, 27], ['rules-martial', 20, 11], ['rules-supply', 63, 52], ['rules-robbery', 52, 40], ['rules-business', 14, 11],
     ['rules-bank', 19, 14], ['rules-workshops', 15, 14], ['rules-fort', 35, 30], ['rules-software', 14, 6], ['rules-forum', 37, 26],
   ];
 

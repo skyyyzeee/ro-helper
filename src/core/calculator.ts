@@ -58,16 +58,17 @@ export interface CriminalResult {
 
 /** Term of the charge's part before any reduction; a term set by the wanted level uses the chosen level. */
 function baseTerm(item: ChargeItem): number | null {
-  const sanctions: Sanction[] = item.part.punishment?.alternatives ?? [];
+  // A repealed article («Утратила силу») has no parts at all: no term.
+  const sanctions: Sanction[] = item.part?.punishment?.alternatives ?? [];
   for (const s of sanctions) {
     if (s.kind === 'imprisonment') return s.months;
-    if (s.kind === 'imprisonment-by-stars') return (item.wantedLevel ?? item.part.stars?.max ?? 1) * s.monthsPerStar;
+    if (s.kind === 'imprisonment-by-stars') return (item.wantedLevel ?? item.part?.stars?.max ?? 1) * s.monthsPerStar;
   }
   return null;
 }
 
 function baseFine(item: ChargeItem): FineRange | null {
-  const fine = item.part.punishment?.alternatives.find((s) => s.kind === 'fine');
+  const fine = item.part?.punishment?.alternatives.find((s) => s.kind === 'fine');
   return fine?.kind === 'fine' ? { min: fine.min, max: fine.max } : null;
 }
 
@@ -85,7 +86,7 @@ export function crimeCategory(item: ChargeItem, rules: CalculatorRules): { name:
 
 /** «ст. 65 ч. 1», or «ст. 104» for an article with a single punished part. */
 export const chargeLabel = (item: Pick<ChargeItem, 'article' | 'part'>) =>
-  articleLabel(item.article, item.article.parts.filter((p) => p.punishment).length > 1 ? item.part : undefined);
+  articleLabel(item.article, item.part && item.article.parts.filter((p) => p.punishment).length > 1 ? item.part : undefined);
 const labelOf = chargeLabel;
 
 /** A part that brings a criminal record: marked with `minStars` stars or more, or adding «запись о судимости». */
