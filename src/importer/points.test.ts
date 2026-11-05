@@ -40,7 +40,7 @@ const COUNTS: [string, LawFormat, number][] = [
   ['ch-mvd', 'points', 247], ['ch-gibdd', 'points', 88], ['ch-fso', 'points', 97], ['ch-hospital', 'points', 225], ['ch-news', 'points', 90],
   ['sk-main', 'points', 39], ['sk-gsu', 'points', 51], ['sk-inspections', 'points', 20], ['sk-ranks', 'points', 12],
   ['rules-main', 'points', 98], ['rules-gov', 'points', 120], ['rules-crime', 'points', 52],
-  ['ch-army', 'law', 65], ['ch-army-discipline', 'law', 45], ['ch-army-guard', 'law', 44],
+  ['ch-army', 'law', 65], ['ch-army-discipline', 'law', 47], ['ch-army-guard', 'law', 45],
   ['sk-uniform', 'law', 11], ['sk-ethics', 'law', 10], ['sk-kso', 'law', 10], ['sk-appeals', 'law', 14],
 ];
 
@@ -185,7 +185,7 @@ describe('charters of Арбатский and Кутузовский (real forum 
     ['arbatskiy', 'ch-army-discipline', 'points', 123], ['arbatskiy', 'ch-army-guard', 'points', 71],
     ['arbatskiy', 'ch-hospital', 'points', 143], ['arbatskiy', 'ch-news', 'points', 221],
     ['kutuzovskiy', 'ch-mvd', 'points', 331], ['kutuzovskiy', 'ch-gibdd', 'law', 33], ['kutuzovskiy', 'ch-army-discipline', 'points', 103],
-    ['kutuzovskiy', 'ch-hospital', 'points', 165], ['kutuzovskiy', 'ch-news', 'points', 138], ['kutuzovskiy', 'sk-appeals', 'law', 29],
+    ['kutuzovskiy', 'ch-hospital', 'points', 166], ['kutuzovskiy', 'ch-news', 'points', 138], ['kutuzovskiy', 'sk-appeals', 'law', 29],
   ];
 
   it('reads every point and article, with nothing left unparsed', () => {
@@ -238,19 +238,31 @@ describe('the other rules of the project (real forum text, the same on every ser
 });
 
 describe('sections that hold chapters (Положение о структуре ВС и ФСВНГ, Тверской)', () => {
-  const structure = parse('ch-army-structure');
+  // Bare «1.» points beside «2.1» ones, grouped by the chapters (meta: points: 'numbered').
+  const structure = parse('ch-army-structure', 'points', { points: 'numbered' });
 
   it('makes «ГЛАВА» the chapters and «РАЗДЕЛ» their section', () => {
     expect(structure.chapters.slice(0, 3).map((c) => [c.number, c.title, c.section])).toEqual([
       ['I', 'ОБЩИЕ ПОЛОЖЕНИЯ', 'Раздел I. ОБЩИЕ ПОЛОЖЕНИЯ И ШТАБ'],
       ['II', 'ШТАБ АРМИИ', 'Раздел I. ОБЩИЕ ПОЛОЖЕНИЯ И ШТАБ'],
-      ['III', 'ВОЕННАЯ ПОЛИЦИЯ', 'Раздел II. ПОДРАЗДЕЛЕНИЯ ВООРУЖЁННЫХ СИЛ'],
+      ['III', 'ГАРНИЗОННАЯ КОМЕНДАТУРА', 'Раздел II. ПОДРАЗДЕЛЕНИЯ ВООРУЖЁННЫХ СИЛ'],
     ]);
   });
 
   it('keeps a chapter of text alone, with no points, in its place', () => {
     expect(structure.chapters[0].preface.length).toBeGreaterThan(0);
-    expect(structure.chapters.map((c) => c.number)).toEqual(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII']);
+    expect(structure.chapters.map((c) => c.number)).toEqual(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI']);
+  });
+
+  it('reads the bare «1.» points of every chapter beside the «2.1» ones of chapter III', () => {
+    expect(structure.articles).toHaveLength(60);
+    expect(structure.issues).toEqual([]);
+    const staff = structure.articles.find((a) => a.chapter === 'II' && a.number === '2')!;
+    expect(staff.parts[0].text).toBe('Состав и подчинённость');
+    expect(staff.parts.map((p) => p.text).join(' ')).toMatch(/генерал армии \(ГА\)/);
+    expect(structure.articles.filter((a) => a.chapter === 'III').map((a) => a.number)).toEqual([
+      '1', '2', '2.1', '2.2', '2.3', '3', '4', '4.1', '4.2', '4.3', '5', '6', '7', '8', '9',
+    ]);
   });
 });
 
