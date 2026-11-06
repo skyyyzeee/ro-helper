@@ -4,8 +4,7 @@ export const TVERSKOI: ServerSources = {
   id: 'tverskoi',
   name: 'Тверской',
   status: 'active',
-  // Every document of the server, in menu order. Only those with a saved snapshot go into the pack;
-  // the rest are here so organisations can already refer to them.
+  // Every document required in the server pack, in menu order.
   documents: [
     // Кодексы и Конституция
     'const', 'uk', 'koap', 'pdd', 'upk', 'tk', 'ethics',

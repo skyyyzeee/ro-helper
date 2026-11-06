@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, copyFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -7,6 +7,23 @@ import { buildPack } from './buildPack';
 import { TVERSKOI } from './servers';
 
 describe('the documents of the whole project, kept once', () => {
+  it('reports a missing snapshot or a local snapshot with no text', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'build-pack-incomplete-'));
+    const serverDir = join(dir, 'one');
+    const server = { id: 'one', name: 'Один', status: 'active' as const, documents: ['rules-main'] };
+    expect(buildPack(serverDir, server).issues).toMatchObject([{ document: 'rules-main' }]);
+    const shared = join(dir, '_shared', 'sources');
+    const local = join(serverDir, 'sources');
+    mkdirSync(shared, { recursive: true });
+    mkdirSync(local, { recursive: true });
+    const fixtures = join(import.meta.dirname, '..', '..', 'data', '_shared', 'sources');
+    for (const ext of ['txt', 'meta.json']) {
+      copyFileSync(join(fixtures, `rules-main.${ext}`), join(shared, `rules-main.${ext}`));
+    }
+    copyFileSync(join(shared, 'rules-main.meta.json'), join(local, 'rules-main.meta.json'));
+    expect(buildPack(serverDir, server).issues).toMatchObject([{ document: 'rules-main' }]);
+  });
+
   it('reads a rules document from data/_shared when the server has no snapshot of its own', () => {
     const root = join(import.meta.dirname, '..', '..');
     const dir = mkdtempSync(join(tmpdir(), 'build-pack-'));
@@ -23,9 +40,11 @@ describe('the documents of the whole project, kept once', () => {
     // A server's own snapshot of the same document wins over the shared one.
     mkdirSync(join(serverDir, 'sources'), { recursive: true });
     copyFileSync(join(root, 'data', '_shared', 'sources', 'rules-gov.txt'), join(serverDir, 'sources', 'rules-main.txt'));
-    copyFileSync(join(root, 'data', '_shared', 'sources', 'rules-gov.meta.json'), join(serverDir, 'sources', 'rules-main.meta.json'));
+    const meta = JSON.parse(readFileSync(join(sharedDir, 'rules-main.meta.json'), 'utf8'));
+    writeFileSync(join(serverDir, 'sources', 'rules-main.meta.json'), JSON.stringify({ ...meta, title: 'Правила сервера' }));
     const own = buildPack(serverDir, { id: 'one', name: 'Один', status: 'active', documents: ['rules-main'] });
-    expect(own.pack.documents[0].title).not.toBe(pack.documents[0].title);
+    expect(own.issues).toEqual([]);
+    expect(own.pack.documents[0].title).toBe('Правила сервера');
   });
 });
 

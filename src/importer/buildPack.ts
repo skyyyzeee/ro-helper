@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PACK_FORMAT, type CalculatorRules, type ChangeEntry, type Dictionary, type DocumentCategory, type DocumentKind, type LawDocument, type Organization, type ServerPack } from '../core/model';
 import { parseLawText, type LawFormat, type ParseIssue } from './lawText';
@@ -60,22 +60,26 @@ export function buildPack(serverDir: string, server: ServerSources): BuildResult
   // A server whose codes have not been described yet is searched without a calculator.
   const calculatorFile = join(serverDir, 'calculator.json');
   const calculator = existsSync(calculatorFile) ? (JSON.parse(readFileSync(calculatorFile, 'utf8')) as CalculatorRules) : undefined;
-  // The server's own snapshot wins; one of the whole project is read from _shared.
-  const snapshot = (id: string, ext: string): string | undefined => {
-    const own = join(sourcesDir, `${id}.${ext}`);
-    if (existsSync(own)) return own;
-    const shared = join(sharedDir, `${id}.${ext}`);
-    return existsSync(shared) ? shared : undefined;
-  };
-  const idsOf = (dir: string) => (existsSync(dir) ? readdirSync(dir) : []).filter((f) => f.endsWith('.meta.json')).map((f) => f.replace('.meta.json', ''));
-  const available = new Set([...idsOf(sourcesDir), ...idsOf(sharedDir)]);
   const issues: BuildResult['issues'] = [];
   const documents: LawDocument[] = [];
 
   for (const id of server.documents) {
-    if (!available.has(id)) continue;
-    const meta = JSON.parse(readFileSync(snapshot(id, 'meta.json')!, 'utf8')) as SourceMeta;
-    const text = readFileSync(snapshot(id, 'txt')!, 'utf8');
+    // Keep each snapshot with its own metadata. A half-written local pair must not borrow the shared half.
+    const ownMeta = join(sourcesDir, `${id}.meta.json`);
+    const ownText = join(sourcesDir, `${id}.txt`);
+    const dir = existsSync(ownMeta) || existsSync(ownText) ? sourcesDir : sharedDir;
+    const metaFile = join(dir, `${id}.meta.json`);
+    const textFile = join(dir, `${id}.txt`);
+    if (!existsSync(metaFile) || !existsSync(textFile)) {
+      issues.push({ document: id, line: id, reason: 'Не найдена полная пара исходников (.txt и .meta.json)' });
+      continue;
+    }
+    const meta = JSON.parse(readFileSync(metaFile, 'utf8')) as SourceMeta;
+    const text = readFileSync(textFile, 'utf8');
+    if (meta.id !== id || !text.trim()) {
+      issues.push({ document: id, line: id, reason: 'Пустой текст или неверный id в метаданных' });
+      continue;
+    }
     const parsed = parseLawText(text, meta.id, meta.format, { subpoints: meta.subpoints, subheadings: meta.subheadings, points: meta.points, headings: meta.headings });
     const fixed = applyOverrides(parsed.articles, parsed.issues, overrides);
     issues.push(...[...fixed.issues, ...fixed.stale].map((issue) => ({ ...issue, document: id })));
