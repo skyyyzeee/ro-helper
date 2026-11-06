@@ -13,13 +13,13 @@ function fakeAi(points: (theft: string) => unknown[], fix = '') {
     complete: vi.fn(async (request: AiRequest) => {
       const context = request.turns.at(-1)!.parts.map((p) => ('text' in p ? p.text : '')).join('\n');
       if (!/ОТВЕТ ИГРОКА/.test(context)) return JSON.stringify({ phrases: ['кража'] });
-      const theft = context.match(/\[([SRCO]\d+)\] УК ст\. 65/)?.[1] ?? 'S1';
+      const theft = context.match(/\[([SRCO]\d+)\] УК ст\. 87/)?.[1] ?? 'S1';
       return JSON.stringify({ points: points(theft), fix });
     }),
   };
   return provider;
 }
-const check = (provider: AiProvider, answer = 'Это кража по УК ст. 65, задержу его') =>
+const check = (provider: AiProvider, answer = 'Это кража по УК ст. 87, задержу его') =>
   checkMyAnswer({ provider, pack, situation: 'Игрок незаметно вытащил у прохожего телефон из кармана', answer });
 
 describe('checking the player\'s answer against the base', () => {
@@ -80,7 +80,7 @@ describe('the AI\'s slips in a check', () => {
       ]),
       'Это кража, дать ему 5 лет',
     );
-    expect(result.points[0].why).toBe('УК ст. 65 — тайное хищение, это кража.');
+    expect(result.points[0].why).toBe('УК ст. 87 — тайное хищение, это кража.');
     expect(result.points[1].verdict).toBe('unconfirmed');
     expect(result.issues.join(' ')).toMatch(/объяснение говорит обратное/);
     expect(result.verdict).toBe('partly');
@@ -94,10 +94,10 @@ describe('only what the player said', () => {
         { point: 'это кража', verdict: 'matches', why: `УК ${theft}: тайное хищение.`, sources: [theft] },
         { point: 'напомнить о процедурах полиции', verdict: 'unconfirmed', why: '', sources: [] },
       ]),
-      'Это кража по УК ст. 65',
+      'Это кража по УК ст. 87',
     );
     expect(result.points.map((p) => p.point)).toEqual(['это кража']);
-    expect(result.points[0].why).toBe('УК ст. 65: тайное хищение.');
+    expect(result.points[0].why).toBe('УК ст. 87: тайное хищение.');
     expect(result.verdict).toBe('right');
   });
 });
@@ -105,10 +105,10 @@ describe('only what the player said', () => {
 it('a point repeated by the model is checked once', async () => {
   const result = await check(
     fakeAi((theft) => [
-      { point: 'Это кража по УК ст. 65', verdict: 'matches', why: 'Тайное хищение — кража.', sources: [theft] },
-      { point: 'это кража по УК ст. 65', verdict: 'unconfirmed', why: '', sources: [] },
+      { point: 'Это кража по УК ст. 87', verdict: 'matches', why: 'Тайное хищение — кража.', sources: [theft] },
+      { point: 'это кража по УК ст. 87', verdict: 'unconfirmed', why: '', sources: [] },
     ]),
-    'Это кража по УК ст. 65',
+    'Это кража по УК ст. 87',
   );
   expect(result.points).toHaveLength(1);
   expect(result.verdict).toBe('right');

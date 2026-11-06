@@ -165,6 +165,7 @@ const ADMIN_ADDITIONS: [RegExp, string][] = [
   [/\s+с\s+лишением\s+права\s+(?:на\s+)?управлени\S*\s+(?:транспортным\s+средством|транспортными\s+средствами|ТС)$/i, 'лишение права управления ТС'],
   [/\s+и\s+изъяти\S*\s+лицензии$/i, 'изъятие лицензии'],
 ];
+const ADMIN_ALT_LICENSE = /\s+и\s+лишени\S+\s+права\s+(?:на\s+)?управлени\S*\s+(?:транспортными\s+средствами|ТС)$/i;
 
 /**
  * Кутузовский hangs what else follows the fine on the same line: «… с обязанностью возместить ущерб»,
@@ -264,8 +265,14 @@ export function parseAdministrativeSanction(clause: string): ParsedPunishment {
       continue;
     }
 
-    for (const rawAlt of segment.split(/\s*,?\s+(?:или|либо|и\/или)\s+/)) {
-      const alt = rawAlt.trim().replace(/[.;,\s]+$/, '');
+    for (const rawAlt of segment.split(/\s*,?\s+(?:или|либо|и\/или|и\s*\(или\))\s+/)) {
+      let alt = rawAlt.trim().replace(/[.;,\s]+$/, '');
+      // «… штрафа … и лишение права управления …, либо арест … и лишение права управления …»: one add-on to each.
+      const license = alt.match(ADMIN_ALT_LICENSE);
+      if (license && license.index !== undefined) {
+        if (!additional.includes('лишение права управления ТС')) additional.push('лишение права управления ТС');
+        alt = alt.slice(0, license.index);
+      }
       if (!alt) continue;
       const sanction = readAdministrativeAlternative(alt);
       if (sanction) alternatives.push(subject ? { ...sanction, subject } : sanction);

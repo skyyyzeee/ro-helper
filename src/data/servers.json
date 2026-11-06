@@ -75,12 +75,9 @@
         "documents": [
           "fz4",
           "upk",
-          "sk-main",
-          "sk-gsu",
-          "sk-inspections",
-          "sk-uniform",
+          "sk-structure",
+          "sk-service",
           "sk-ethics",
-          "sk-kso",
           "sk-appeals",
           "sk-ranks"
         ]

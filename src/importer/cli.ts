@@ -44,11 +44,13 @@ const describe = (changes: DocumentChange[]) => {
   }
 };
 
-for (const server of servers) {
+const imports = servers.map((server) => ({ server, ...buildPack(join(root, 'data', server.id), server) }));
+const canSave = !check && imports.every(({ issues }) => issues.length === 0);
+
+for (const { server, pack, issues } of imports) {
   const serverDir = join(root, 'data', server.id);
   const out = join(root, 'src', 'data', `${server.id}.json`);
   const previous = existsSync(out) ? (JSON.parse(readFileSync(out, 'utf8')) as ServerPack) : undefined;
-  const { pack, issues } = buildPack(serverDir, server);
 
   console.log(`\n══ ${server.name} ══`);
   for (const doc of pack.documents) {
@@ -77,8 +79,8 @@ for (const server of servers) {
     console.log('\nВсё разобрано.');
   }
 
-  if (check) {
-    console.log(`\nПроверка: пакет ${pack.server.name}, версия ${pack.version}, не сохранён.`);
+  if (!canSave) {
+    console.log(`\nПакет ${pack.server.name}, версия ${pack.version}, не сохранён.`);
   } else {
     // Laws edited before the version already out (found late, next to a later edit) would join its entry, and whoever
     // has seen that version would never see them: they get an entry and a version of their own, the import's time.
@@ -96,7 +98,7 @@ for (const server of servers) {
 
 // What installed copies look at first: each server's pack and when it was built. They download a pack only
 // when it is newer than theirs and written in a shape they read.
-if (!check) {
+if (canSave) {
   const packs: Record<string, { built?: string; version: string }> = {};
   // What the app needs of every server before its laws are loaded (the server picker, the factions, the account):
   // the server and its organisations, a few kilobytes — the packs themselves are loaded one at a time, when used.

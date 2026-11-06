@@ -8,14 +8,14 @@ const koap = TVERSKOI_PACK.documents.find((d) => d.id === 'koap')!;
 const article = (number: string) => uk.articles.find((a) => a.number === number)!;
 const pack = (...documents: LawDocument[]): Pick<ServerPack, 'documents'> => ({ documents });
 
-/** The criminal code with ст. 65 reworded, ст. 113 gone and a new ст. 114. */
+/** The criminal code with ст. 87 reworded, ст. 113 gone and a new ст. 999. */
 function editedUk(): LawDocument {
   const next = structuredClone(uk);
-  const theft = next.articles.find((a) => a.id === 'uk-65')!;
+  const theft = next.articles.find((a) => a.id === 'uk-87')!;
   theft.parts[0].text = 'Кража, то есть тайное хищение чужого имущества или денег';
   theft.parts[0].punishment!.alternatives[0] = { kind: 'fine', max: 60000 };
   next.articles = next.articles.filter((a) => a.id !== 'uk-113');
-  next.articles.push({ ...structuredClone(article('112')), id: 'uk-114', number: '114', title: 'Новое преступление' });
+  next.articles.push({ ...structuredClone(article('112')), id: 'uk-999', number: '999', title: 'Новое преступление' });
   return next;
 }
 
@@ -29,15 +29,15 @@ describe('comparing two versions of the laws', () => {
     expect(changes).toHaveLength(1);
     expect(changes[0]).toMatchObject({ documentId: 'uk', short: 'УК', kind: 'changed' });
     expect(changes[0].articles.map((c) => [c.kind, c.articleId])).toEqual([
-      ['changed', 'uk-65'],
-      ['added', 'uk-114'],
+      ['changed', 'uk-87'],
+      ['added', 'uk-999'],
       ['removed', 'uk-113'],
     ]);
     const [changed, added, removed] = changes[0].articles;
-    expect(changed.before).toBe(article('65'));
+    expect(changed.before).toBe(article('87'));
     expect(articleText(changed.after!)).toContain('тайное хищение чужого имущества или денег');
     expect(articleText(changed.after!)).toContain('Наказание: штраф до 60 000 ₽');
-    expect(added).toMatchObject({ after: { number: '114' } });
+    expect(added).toMatchObject({ after: { number: '999' } });
     expect(added.before).toBeUndefined();
     expect(removed).toMatchObject({ before: article('113') });
     expect(removed.after).toBeUndefined();
@@ -50,17 +50,17 @@ describe('comparing two versions of the laws', () => {
 
   it('notices a new title, a new punishment and a new note', () => {
     const retitled = structuredClone(uk);
-    retitled.articles.find((a) => a.id === 'uk-66')!.title = 'Открытое хищение';
+    retitled.articles.find((a) => a.id === 'uk-90')!.title = 'Открытое хищение';
     const noted = structuredClone(uk);
-    noted.articles.find((a) => a.id === 'uk-66')!.notes.push({ label: 'Примечание', text: 'Новое примечание' });
-    expect(diffPacks(pack(uk), pack(retitled))[0].articles.map((c) => c.articleId)).toEqual(['uk-66']);
-    expect(diffPacks(pack(uk), pack(noted))[0].articles.map((c) => c.articleId)).toEqual(['uk-66']);
+    noted.articles.find((a) => a.id === 'uk-90')!.notes.push({ label: 'Примечание', text: 'Новое примечание' });
+    expect(diffPacks(pack(uk), pack(retitled))[0].articles.map((c) => c.articleId)).toEqual(['uk-90']);
+    expect(diffPacks(pack(uk), pack(noted))[0].articles.map((c) => c.articleId)).toEqual(['uk-90']);
   });
 });
 
 describe('the article as text', () => {
   it('puts parts with their numbers, lists, punishments and notes on their own lines', () => {
-    const text = articleText(article('104'));
+    const text = articleText(article('159'));
     expect(text.split('\n')).toEqual([
       '1. Публичное оскорбление представителя власти при исполнении им своих должностных обязанностей или в связи с их исполнением',
       expect.stringMatching(/^Наказание: /),
@@ -92,9 +92,9 @@ describe('the changelog', () => {
       { version: '2026-09-10T10:00:00+03:00', documents: [document] },
       { version: '2026-08-20T10:00:00+03:00', documents: [older] },
     ]);
-    expect([...marked.keys()]).toEqual(['uk-65', 'uk-114']);
-    expect(marked.get('uk-65')?.entry.version).toBe('2026-09-10T10:00:00+03:00');
-    expect(marked.get('uk-65')?.document.short).toBe('УК');
+    expect([...marked.keys()]).toEqual(['uk-87', 'uk-999']);
+    expect(marked.get('uk-87')?.entry.version).toBe('2026-09-10T10:00:00+03:00');
+    expect(marked.get('uk-87')?.document.short).toBe('УК');
   });
 });
 

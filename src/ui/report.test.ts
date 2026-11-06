@@ -12,7 +12,7 @@ const NOW = new Date('2026-10-06T18:40:00Z');
 
 describe('a report out of the calculator (issue #40)', () => {
   it('fills in the charges and what the calculator counted, and leaves the rest to the officer', () => {
-    const result = calculateDetention([charge('ук 65 ч 1')], { mode: 'custody', offender: 'citizen' }, pack.calculator!);
+    const result = calculateDetention([charge('ук 87 ч 1')], { mode: 'custody', offender: 'citizen' }, pack.calculator!);
     const text = reportText({ result, server: 'Тверской', organization: 'МВД', player: { gameName: 'Ivan_Petrov', position: 'Сержант' }, now: NOW });
     expect(text.split('\n')).toEqual([
       'РАПОРТ',
@@ -32,7 +32,7 @@ describe('a report out of the calculator (issue #40)', () => {
   });
 
   it('leaves the officer a blank where the profile has no name', () => {
-    const result = calculateDetention([charge('ук 65 ч 1')], { mode: 'custody', offender: 'citizen' }, pack.calculator!);
+    const result = calculateDetention([charge('ук 87 ч 1')], { mode: 'custody', offender: 'citizen' }, pack.calculator!);
     const text = reportText({ result, server: 'Тверской', organization: 'МВД', now: NOW });
     expect(text).toContain('Составил: ____________________');
   });

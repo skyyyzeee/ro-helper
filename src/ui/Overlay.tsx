@@ -1227,7 +1227,7 @@ export function Overlay({
                     : 'Опишите ситуацию своими словами…'
             : scope
               ? `Поиск: ${scope.title}`
-              : 'Номер или слова: 65, коап 8.6, кража'
+              : 'Номер или слова: 65, коап 9.8, кража'
         }
         autoComplete="off"
         spellCheck={aiMode}

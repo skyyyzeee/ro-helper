@@ -73,8 +73,9 @@ const today = () => now().slice(0, 10);
 const words = (text) => text.replace(/[​-‍﻿]/g, '').replace(/\s+/g, ' ').trim();
 
 /** The new text of a document, and its dates in the meta — changed in place, the rest of the file as it was. */
-function save({ server, doc, text, edited }) {
+function save({ server, doc, text, edited, fnv: checksum }) {
   if (!DIRS.includes(server) || !/^[a-z0-9-]+$/.test(doc) || typeof text !== 'string' || !text.trim()) throw new Error(`bad document ${server}/${doc}`);
+  if (checksum !== fnv(text)) throw new Error('Контрольная сумма текста не совпала');
   const dir = sourceDir(server);
   const metaFile = join(dir, `${doc}.meta.json`);
   // Only a document we already keep is rewritten: nothing new is made from what a page sent.
@@ -154,6 +155,7 @@ createServer((request, response) => {
         if (result?.kind !== 'laws-result') throw new Error('not a result');
         result.changed = Array.isArray(result.changed) ? result.changed : [];
         result.failed = Array.isArray(result.failed) ? result.failed : [];
+        result.unsure = Array.isArray(result.unsure) ? result.unsure : [];
       } catch {
         return response.writeHead(400).end('Это не итог проверки.');
       }
@@ -172,15 +174,18 @@ createServer((request, response) => {
       for (const line of lines) console.log(`  изменён: ${line}`);
       for (const f of result.failed) console.log(`  не прочитан: ${f.server} · ${f.doc} — ${f.error}`);
       for (const u of result.unsure ?? []) console.log(`  проверить вручную: ${u.server} · ${u.doc} — ${u.why}`);
-      console.log(lines.length ? '\nДальше: npm run import, затем npm run charters:check.' : '\nВсе законы совпадают с форумом.');
+      const incomplete = result.failed.length > 0 || result.unsure.length > 0;
+      if (incomplete) console.log('\nСверка неполная. Проверьте отмеченные темы вручную.');
+      else if (!lines.length) console.log('\nВсе проверенные документы совпадают с форумом.');
+      if (lines.length) console.log('\nДальше: npm run import, затем npm run charters:check.');
       response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(
         `<p>Проверено тем: <b>${result.checked}</b>. Изменилось документов: <b>${lines.length}</b>.</p>` +
-          (lines.length ? `<ul>${lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul><p>Тексты сохранены. Дальше: <code>npm run import</code>, затем <code>npm run charters:check</code>.</p>` : '<p>Все законы совпадают с форумом — делать ничего не нужно.</p>') +
+          (lines.length ? `<ul>${lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul><p>Тексты сохранены. Дальше: <code>npm run import</code>, затем <code>npm run charters:check</code>.</p>` : incomplete ? '<p>Сверка неполная. Проверьте отмеченные темы вручную.</p>' : '<p>Все проверенные документы совпадают с форумом.</p>') +
           ((result.unsure ?? []).length ? `<p class="bad">Не сохранены — тема сильно изменилась или в ней несколько похожих сообщений; откройте и проверьте вручную:</p><ul>${result.unsure.map((u) => `<li class="bad">${esc(`${u.server} · ${u.doc} — ${u.why}`)}</li>`).join('')}</ul>` : '') +
           (result.failed.length ? `<p class="bad">Не прочитаны (проверьте вручную):</p><ul>${result.failed.map((f) => `<li class="bad">${esc(`${f.server} · ${f.doc} — ${f.error}`)}</li>`).join('')}</ul>` : '') +
           '<p>Окно можно закрыть.</p>',
       );
-      setTimeout(() => process.exit(0), 500);
+      setTimeout(() => process.exit(incomplete ? 1 : 0), 500);
     });
     return;
   }

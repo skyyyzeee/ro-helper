@@ -37,17 +37,17 @@ describe('marking an answer', () => {
     expect(await screen.findByText('Спасибо за оценку!')).toBeInTheDocument();
     expect(marks).toHaveLength(1);
     expect(marks[0].body).toMatchObject({ vote: 'up', question: 'у меня украли телефон', server: 'tverskoi', scope: 'law', status: 'confirmed' });
-    expect(marks[0].body.norms).toEqual(['УК 65']);
+    expect(marks[0].body.norms).toEqual(['УК 87']);
     expect(screen.queryByLabelText('Оценить ответ')).not.toBeInTheDocument();
   });
 
   it('«Исправить» sends the player\'s words with 👎; nothing about the player is in the mark', async () => {
     const { user, marks, bar } = await answered();
     await user.click(within(bar()).getByRole('button', { name: 'Исправить' }));
-    await user.type(screen.getByLabelText(/Как правильно/), 'это грабёж, ст. 66');
+    await user.type(screen.getByLabelText(/Как правильно/), 'это грабёж, ст. 90');
     await user.click(screen.getByRole('button', { name: 'Отправить' }));
     expect(await screen.findByText(/Спасибо — разберёмся/)).toBeInTheDocument();
-    expect(marks[0].body).toMatchObject({ vote: 'down', correction: 'это грабёж, ст. 66' });
+    expect(marks[0].body).toMatchObject({ vote: 'down', correction: 'это грабёж, ст. 90' });
     // The computer's id goes in the header for the daily limit only, never in the mark itself.
     expect(Object.keys(marks[0].body).sort()).toEqual(['app', 'correction', 'norms', 'question', 'scope', 'server', 'status', 'type', 'vote']);
   });

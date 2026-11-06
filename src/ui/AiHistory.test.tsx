@@ -42,7 +42,7 @@ describe('cases: the analyses kept (ADR 0003)', () => {
     await user.click(within(cases()).getByRole('button', { name: /^у меня украли телефон/ }));
     expect(await screen.findByText(/Это кража/)).toBeInTheDocument();
     // Its article is found again in the laws and checked again: it still opens, still stands, nothing changed.
-    expect(screen.getAllByRole('button', { name: /^УК ст\. 65/ }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /^УК ст\. 87/ }).length).toBeGreaterThan(0);
     expect(screen.getByText('Подтверждено')).toBeInTheDocument();
     expect(screen.queryByText(/Изменилось после создания дела/)).not.toBeInTheDocument();
   });
@@ -60,7 +60,7 @@ describe('cases: the analyses kept (ADR 0003)', () => {
     const { platform, user } = await asked({ [historyKey('tverskoi')]: [old] });
     await user.click(screen.getByRole('button', { name: 'Дела' }));
     await user.click(within(cases()).getByRole('button', { name: /^у меня украли телефон/ }));
-    expect((await screen.findByText(/Изменилось после создания дела:/)).closest('[role=status]')).toHaveTextContent(/УК ст\. 65/);
+    expect((await screen.findByText(/Изменилось после создания дела:/)).closest('[role=status]')).toHaveTextContent(/УК ст\. 87/);
 
     await user.click(screen.getByRole('button', { name: 'Проверить по текущей базе' }));
     await vi.waitFor(() => expect(screen.queryByText(/Изменилось после создания дела/)).not.toBeInTheDocument());

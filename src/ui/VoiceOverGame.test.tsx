@@ -46,7 +46,7 @@ describe('a question over the game', () => {
     expect(card.heading).toBe('у меня украли телефон');
     // The article's punishment comes from the laws and the total from the calculator, not from the AI's words.
     expect(card.lines[0]).toBe('Суть: Это кража телефона.');
-    expect(card.lines[1]).toMatch(/^УК ст\. 65 ч\. 1 — штраф до 50\s000\s₽ либо 30\sмес$/);
+    expect(card.lines[1]).toMatch(/^УК ст\. 87 ч\. 1 — штраф до 50\s000\s₽ либо 30\sмес$/);
     expect(card.lines.some((line) => /^Итог: 30\sмес/.test(line))).toBe(true);
     expect(card.lines.at(-1)).toBe('Что делать: заявить в полицию');
     const saved = platform.settings.get(historyKey('tverskoi')) as StoredConversation[];

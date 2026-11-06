@@ -267,12 +267,14 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
       continue;
     }
 
-    if (format === 'criminal-code' && TAGGED.test(line)) {
+    const criminalPart = format === 'criminal-code' ? line.match(NUMBERED) : null;
+    const taggedLine = criminalPart?.[2] ?? line;
+    if (format === 'criminal-code' && TAGGED.test(taggedLine)) {
       lastNote = undefined;
-      const tags = parseLeadingTags(line);
+      const tags = parseLeadingTags(taggedLine);
       const { offence, clause } = splitPenalty(tags.rest);
       const part: Part = {
-        number: tags.number ?? String(article.parts.filter((p) => p.number !== undefined).length + 1),
+        number: criminalPart?.[1] ?? tags.number ?? String(article.parts.filter((p) => p.number !== undefined).length + 1),
         text: offence,
         points: [],
         jurisdiction: tags.jurisdiction,
@@ -282,8 +284,9 @@ export function parseLawText(text: string, documentId: string, format: LawFormat
       // «[Ф] Те же деяния: а) …; б) …; в) …, - наказывается …»: the sanction stands on its own line under the points.
       let after = i + 1;
       while (POINT.test(lines[after] ?? '')) after++;
-      const tail = !clause && after > i + 1 ? (lines[after] ?? '').match(/^[-—–]\s*(наказыва(?:ется|ются)\s.*)$/) : null;
+      const tail = !clause ? (lines[after] ?? '').match(/^(?:[-—–]\s*)?(наказыва(?:ется|ются)\s.*)$/i) : null;
       if (tail) {
+        part.text = stripTrailingDash(part.text);
         for (let j = i + 1; j < after; j++) {
           const point = lines[j].match(POINT)!;
           part.points.push({ marker: point[1], text: point[2] });

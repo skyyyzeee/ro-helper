@@ -38,6 +38,23 @@ describe('sanction parsing', () => {
     expect(unparsed).toEqual([]);
   });
 
+  it('reads «и (или)» between alternatives (КоАП Тверского 9.7 ч. 1 from 6 November)', () => {
+    const { punishment, unparsed } = parseAdministrativeSanction(
+      'наложение административного штрафа в размере от 10 000 до 30 000 рублей и (или) лишение права управления транспортными средствами.',
+    );
+    expect(punishment.alternatives).toEqual([{ kind: 'fine', min: 10000, max: 30000 }, { kind: 'license-revocation' }]);
+    expect(unparsed).toEqual([]);
+  });
+
+  it('takes «и лишение права управления» after each alternative for one add-on (КоАП Тверского 9.7 ч. 3 from 6 November)', () => {
+    const { punishment, unparsed } = parseAdministrativeSanction(
+      'наложение административного штрафа в размере от 20 000 до 30 000 рублей и лишение права управления транспортными средствами, либо административный арест на срок до 20 суток и лишение права управления транспортными средствами.',
+    );
+    expect(punishment.alternatives).toEqual([{ kind: 'fine', min: 20000, max: 30000 }, { kind: 'arrest', max: 20 }]);
+    expect(punishment.additional).toEqual(['лишение права управления ТС']);
+    expect(unparsed).toEqual([]);
+  });
+
   it('splits offence from sanction with or without «наказывается»', () => {
     expect(splitPenalty('Деяние, — наказывается штрафом в размере 5.000 рублей.')).toEqual({
       offence: 'Деяние',

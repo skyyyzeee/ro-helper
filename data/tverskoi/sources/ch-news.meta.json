@@ -2,14 +2,16 @@
   "id": "ch-news",
   "short": "Устав",
   "title": "Устав «Вести Москвы»",
-  "aliases": ["увм"],
+  "aliases": [
+    "увм"
+  ],
   "kind": "charter",
   "category": "charters",
   "format": "points",
   "unit": "point",
-  "thread": 36375,
-  "url": "https://forum.russia.online/threads/ustav-vesti-moskvy.36375/",
-  "posted": "2026-08-21T17:57:06+03:00",
-  "lastEdited": "2026-10-14T21:54:12+03:00",
-  "snapshotAt": "2026-10-24"
+  "thread": 44059,
+  "url": "https://forum.russia.online/threads/ustav-vesti-moskvy.44059/",
+  "posted": "2026-11-02T21:12:17+03:00",
+  "lastEdited": "2026-11-02T21:53:16+03:00",
+  "snapshotAt": "2026-11-06"
 }

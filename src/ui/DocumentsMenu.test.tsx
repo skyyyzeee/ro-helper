@@ -34,11 +34,11 @@ describe('documents menu', () => {
       'Уставы организаций',
       'Правила проекта',
     ]);
-    expect(documentRows()).toHaveLength(66);
+    expect(documentRows()).toHaveLength(65);
     expect(documentRows().slice(0, 3).map((row) => row.textContent)).toEqual([
       'КонституцияКонституция РО117',
-      'УКУголовный кодекс125',
-      'КоАПКодекс об административных правонарушениях151',
+      'УКУголовный кодекс170',
+      'КоАПКодекс об административных правонарушениях150',
     ]);
     const tags = within(menu()).getByRole('group', { name: 'Виды документов' });
     expect(within(tags).getAllByRole('button').map((b) => b.textContent)).toEqual(['Все', 'Кодексы', 'ФКЗ', 'ФЗ', 'Москва', 'Уставы', 'Правила']);
@@ -77,6 +77,7 @@ describe('documents menu', () => {
       '2-ФКЗО Государственной Думе35',
       '3-ФКЗО вводимых правовых режимах14',
       '4-ФКЗО судебной системе и судопроизводстве136',
+      'ФКЗО Конституционном Собрании9',
     ]);
   });
 
@@ -87,9 +88,9 @@ describe('documents menu', () => {
     expect(own).toHaveAccessibleName('ГИБДД · ваша организация');
     expect(within(own).getAllByRole('button').map((b) => b.textContent)).toEqual([
       'ПДДПравила дорожного движения123',
-      'КоАПКодекс об административных правонарушениях151',
+      'КоАПКодекс об административных правонарушениях150',
       '15-ФЗОб организации дорожного движения7',
-      'УставУстав ГИБДД88',
+      'УставУстав ГИБДД84',
       '6-ФЗО полиции32',
     ]);
 
@@ -104,12 +105,12 @@ describe('documents menu', () => {
     expect(groups()[0]).toHaveAccessibleName('Кодексы и Конституция');
   });
 
-  it('gives the Следственный комитет its laws and all eight regulations', async () => {
+  it('gives the Следственный комитет its laws and all five regulations', async () => {
     const { user } = await renderApp({ profile: { organization: 'sk' } });
     await openMenu(user);
     const [own] = groups();
     expect(own).toHaveAccessibleName('Следственный комитет · ваша организация');
-    expect(within(own).getAllByRole('button')).toHaveLength(10);
+    expect(within(own).getAllByRole('button')).toHaveLength(7);
   });
 
   it('filters by name or badge', async () => {
@@ -195,10 +196,10 @@ describe('searching one document', () => {
     await pick(user, /^УКУголовный кодекс/);
 
     expect(search()).toHaveAttribute('placeholder', 'Поиск: Уголовный кодекс');
-    expect(screen.getByText('125 статей')).toBeInTheDocument();
+    expect(screen.getByText('170 статей')).toBeInTheDocument();
     const toc = screen.getByLabelText('Оглавление: Уголовный кодекс');
     const [first] = within(toc).getAllByRole('region');
-    expect(within(first).getByRole('heading')).toHaveTextContent('Глава 1. Задачи и принципы Уголовного кодекса РО');
+    expect(within(first).getByRole('heading')).toHaveTextContent('Глава 1. Задачи и принципы Уголовного кодекса Российского Округа');
     expect(within(toc).getAllByRole('region', { name: /^Глава / }).length).toBeGreaterThan(10);
 
     await user.keyboard('{ArrowDown}{ArrowRight}');
@@ -215,8 +216,8 @@ describe('searching one document', () => {
     expect(screen.getByText('Кодекс об административных правонарушениях')).toBeInTheDocument();
 
     await user.clear(search());
-    await user.type(search(), 'ук 65');
-    expect(results()[0]).toHaveTextContent('УКст. 65 ч. 1');
+    await user.type(search(), 'ук 87');
+    expect(results()[0]).toHaveTextContent('УКст. 87 ч. 1');
   });
 
   it('steps back with Esc: the query, then the document', async () => {
@@ -240,6 +241,6 @@ describe('searching one document', () => {
 
     await pick(user, /^ПДД/);
     await user.click(screen.getByRole('button', { name: /только в ПДД/ }));
-    expect(search()).toHaveAttribute('placeholder', 'Номер или слова: 65, коап 8.6, кража');
+    expect(search()).toHaveAttribute('placeholder', 'Номер или слова: 65, коап 9.8, кража');
   });
 });

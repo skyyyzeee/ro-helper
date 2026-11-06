@@ -4,7 +4,7 @@
   {"id": "fsb", "name": "ФСБ", "kind": "state", "force": true, "documents": ["fz5", "fz14", "fz12", "upk"]},
   {"id": "fso", "name": "ФСО", "kind": "state", "force": true, "documents": ["fz7", "ch-fso"]},
   {"id": "army", "name": "Армия / Росгвардия", "kind": "state", "force": true, "documents": ["fz2", "fz16-fsvng", "ch-army", "ch-army-discipline", "ch-army-guard", "ch-army-structure", "ch-army-id"]},
-  {"id": "sk", "name": "Следственный комитет", "kind": "state", "force": true, "documents": ["fz4", "upk", "sk-main", "sk-gsu", "sk-inspections", "sk-uniform", "sk-ethics", "sk-kso", "sk-appeals", "sk-ranks"]},
+  {"id": "sk", "name": "Следственный комитет", "kind": "state", "force": true, "documents": ["fz4", "upk", "sk-structure", "sk-service", "sk-ethics", "sk-appeals", "sk-ranks"]},
   {"id": "prosecutor", "name": "Прокуратура", "kind": "state", "force": true, "documents": ["fz3", "upk"]},
   {"id": "court", "name": "Суд", "kind": "state", "documents": ["fkz4", "upk"]},
   {"id": "government", "name": "Правительство", "kind": "state", "force": true, "documents": ["fkz1", "fz1", "ethics", "ch-gov"]},

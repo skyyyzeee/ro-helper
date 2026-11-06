@@ -80,7 +80,7 @@ describe('the analysis on screen', () => {
   it('puts the found charges into the calculator with a press', async () => {
     const { user } = await ask('у меня украли телефон');
     await user.click(screen.getByRole('button', { name: 'Открыть в калькуляторе' }));
-    expect(await screen.findByRole('complementary', { name: 'Калькулятор' })).toHaveTextContent(/65/);
+    expect(await screen.findByRole('complementary', { name: 'Калькулятор' })).toHaveTextContent(/87/);
   });
 
   it('asks the clarifying questions as buttons, and a press answers them', async () => {
@@ -120,7 +120,7 @@ describe('the analysis on screen', () => {
     expect(platform.calls.at(-1)?.method).toBe('openExternal');
     expect(String(platform.calls.at(-1)?.args[0])).toMatch(/^https:\/\/forum\.russia\.online\//);
     await user.click(screen.getByRole('button', { name: 'Скопировать обвинение' }));
-    expect(platform.state.clipboard).toBe('ст. 65 ч. 1 УК');
+    expect(platform.state.clipboard).toBe('ст. 87 ч. 1 УК');
   });
 
   it('answers short, and gives the full analysis of the same case on «Подробнее»', async () => {
