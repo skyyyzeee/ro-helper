@@ -208,7 +208,7 @@ describe('changing only the organisation', () => {
 
 describe('organisation in search', () => {
   it('lifts the organisation’s documents', async () => {
-    // «Оскорбление» is a title in both УК 159 and КоАП 5.4; ГИБДД works with КоАП.
+    // «Оскорбление» is a title in both УК 159 and КоАП 5.5; ГИБДД works with КоАП.
     const first = async (organization: string) => {
       const { user } = await renderApp({ profile: { organization } });
       await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'оскорбление ');
@@ -217,6 +217,6 @@ describe('organisation in search', () => {
       return text;
     };
     expect(await first('mvd')).toContain('ст. 159');
-    expect(await first('gibdd')).toContain('ст. 5.4 ч. 1');
+    expect(await first('gibdd')).toContain('ст. 5.5 ч. 1');
   });
 });

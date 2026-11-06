@@ -70,7 +70,7 @@ describe('hard gates: what the model makes up never comes out confirmed', () => 
   });
 
   it('a figure from another source than the one the statement cites', () => {
-    const koap = labelSources([THEFT, hit('koap', '8.6')]);
+    const koap = labelSources([THEFT, hit('koap', '9.8')]);
     const theft = new Set(figures(articleText(THEFT.article)));
     const fromSpeeding = figures(articleText(koap[1].hit.article)).find((n) => n >= 2 && !theft.has(n));
     expect(fromSpeeding).toBeTruthy();

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TVERSKOI_PACK } from '../data/bundled';
-import { articleLabel, formatPunishment, leadPart, penalParts } from './format';
+import { articleLabel, formatPunishment, penalParts } from './format';
 import { documentContents, searchArticles } from './search';
 
 const labels = (query: string) =>
@@ -34,16 +34,16 @@ describe('search by article number (real Тверской data)', () => {
   it('accepts a document alias and «ст.» before the number', () => {
     expect(labels('ук 87')).toEqual(['УК ст. 87 ч. 1', 'УК ст. 87 ч. 2']);
     expect(labels('УК ст. 87')[0]).toBe('УК ст. 87 ч. 1');
-    expect(labels('коап 8.6')).toEqual(['КоАП ст. 8.6 ч. 1', 'КоАП ст. 8.6 ч. 2', 'КоАП ст. 8.6 ч. 3']);
+    expect(labels('коап 9.8')).toEqual(['КоАП ст. 9.8 ч. 1', 'КоАП ст. 9.8 ч. 2', 'КоАП ст. 9.8 ч. 3']);
     expect(labels('пдд 10.1')).toEqual(['ПДД ст. 10.1']);
   });
 
   it('narrows to one part with «ч N», «ч. N», «часть N» or «ч1»', () => {
-    expect(labels('коап 8.6 ч 1')).toEqual(['КоАП ст. 8.6 ч. 1']);
-    expect(labels('8.6 ч. 2')).toEqual(['КоАП ст. 8.6 ч. 2']);
+    expect(labels('коап 9.8 ч 1')).toEqual(['КоАП ст. 9.8 ч. 1']);
+    expect(labels('9.8 ч. 2')).toEqual(['КоАП ст. 9.8 ч. 2']);
     expect(labels('ук 87 часть 2')).toEqual(['УК ст. 87 ч. 2']);
-    expect(labels('коап 8.6 ч3')).toEqual(['КоАП ст. 8.6 ч. 3']);
-    expect(labels('коап 8.6 ч 7')).toEqual([]);
+    expect(labels('коап 9.8 ч3')).toEqual(['КоАП ст. 9.8 ч. 3']);
+    expect(labels('коап 9.8 ч 7')).toEqual([]);
   });
 
   it('ranks the exact number above its sub-articles and above numbers that only start with it', () => {
@@ -71,9 +71,9 @@ describe('search by article number (real Тверской data)', () => {
     const contents = documentContents(koap);
     expect(contents.map((g) => g.chapter?.number)).toEqual(koap.chapters.map((c) => c.number).filter((n) => contents.some((g) => g.chapter?.number === n)));
     expect(contents[0].chapter?.number).toBe('1');
-    const chapter8 = contents.find((g) => g.chapter?.number === '8')!;
-    const labels86 = chapter8.hits.filter((hit) => hit.article.number === '8.6').map((hit) => articleLabel(hit.article, hit.part));
-    expect(labels86).toEqual(['ст. 8.6 ч. 1', 'ст. 8.6 ч. 2', 'ст. 8.6 ч. 3']);
+    const chapter9 = contents.find((g) => g.chapter?.number === '9')!;
+    const labels98 = chapter9.hits.filter((hit) => hit.article.number === '9.8').map((hit) => articleLabel(hit.article, hit.part));
+    expect(labels98).toEqual(['ст. 9.8 ч. 1', 'ст. 9.8 ч. 2', 'ст. 9.8 ч. 3']);
     expect(contents.flatMap((g) => g.hits).filter((hit) => !hit.part)).toHaveLength(koap.articles.filter((a) => penalParts(a).length <= 1).length);
   });
 
@@ -86,9 +86,9 @@ describe('search by article number (real Тверской data)', () => {
   it('summarises a punishment for a citizen, naming the subject when only others are punished', () => {
     const [kraja] = searchArticles(TVERSKOI_PACK, 'ук 87 ч 1');
     expect(formatPunishment(kraja.part!.punishment!)).toBe('штраф до 50 000 ₽ либо 30 мес');
-    const [insult] = searchArticles(TVERSKOI_PACK, 'коап 5.4 ч 1');
+    const [insult] = searchArticles(TVERSKOI_PACK, 'коап 5.5 ч 1');
     expect(formatPunishment(insult.part!.punishment!)).toBe('штраф от 10 000 до 25 000 ₽ либо арест до 20 сут');
-    const [slander] = searchArticles(TVERSKOI_PACK, 'коап 5.5');
-    expect(formatPunishment(leadPart(slander.article)!.punishment!)).toBe('юридическим лицам: штраф от 100 000 до 200 000 ₽');
+    const [business] = searchArticles(TVERSKOI_PACK, 'коап 10.3 ч 2');
+    expect(formatPunishment(business.part!.punishment!)).toBe('юридическим лицам: штраф от 100 000 до 150 000 ₽');
   });
 });

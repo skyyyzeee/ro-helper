@@ -9,14 +9,14 @@ export const TVERSKOI: ServerSources = {
     // Кодексы и Конституция
     'const', 'uk', 'koap', 'pdd', 'upk', 'tk', 'ethics',
     // Федеральные конституционные законы
-    'fkz1', 'fkz2', 'fkz3', 'fkz4',
+    'fkz1', 'fkz2', 'fkz3', 'fkz4', 'fkz-assembly',
     // Федеральные законы (16-ФЗ на форуме у двух законов: о собраниях и о Росгвардии)
-    'fz1', 'fz2', 'fz3', 'fz4', 'fz5', 'fz6', 'fz7', 'fz8', 'fz9', 'fz10', 'fz11', 'fz12', 'fz13', 'fz14', 'fz15', 'fz16', 'fz16-fsvng',
+    'fz1', 'fz2', 'fz3', 'fz4', 'fz5', 'fz6', 'fz7', 'fz8', 'fz9', 'fz10', 'fz11', 'fz12', 'fz13', 'fz14', 'fz15', 'fz16', 'fz16-fsvng', 'fz17',
     // Законы Москвы
     'msk-charter', 'msk-health', 'msk-news', 'msk-property',
     // Уставы организаций
     'ch-mvd', 'ch-gibdd', 'ch-fso', 'ch-army', 'ch-army-discipline', 'ch-army-guard', 'ch-army-structure', 'ch-army-id',
-    'sk-main', 'sk-gsu', 'sk-inspections', 'sk-uniform', 'sk-ethics', 'sk-kso', 'sk-appeals', 'sk-ranks',
+    'sk-structure', 'sk-service', 'sk-ethics', 'sk-appeals', 'sk-ranks',
     'ch-gov', 'ch-hospital', 'ch-news',
     // Правила проекта — снимки хранятся один раз, в data/_shared/sources (кроме rules-server: он свой у каждого сервера)
     'rules-main', 'rules-gov', 'rules-crime',

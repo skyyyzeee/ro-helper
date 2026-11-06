@@ -38,7 +38,7 @@ describe('an open article', () => {
 
   it('calls КоАП stars the wanted level for an arrest, not a term in months', async () => {
     const { user } = await renderApp();
-    await openFromSearch(user, 'коап 5.4 ч 1');
+    await openFromSearch(user, 'коап 5.5 ч 1');
     await user.click(within(article()).getByRole('button', { name: 'Подробнее' }));
     const koap = within(article()).getByRole('region', { name: 'Часть 1' });
     expect(koap).toHaveTextContent('уровень розыска');
@@ -171,35 +171,35 @@ describe('favourites and recent articles', () => {
 
     await openFromSearch(user, 'ук 136 ч 1');
     await user.clear(search());
-    await user.type(search(), 'коап 8.6 ч 1');
+    await user.type(search(), 'коап 9.8 ч 1');
     await user.keyboard('{Enter}'); // added to the calculator counts as recent too
     await user.keyboard('{Escape}');
 
     expect(list('Избранное').map((row) => row.textContent)).toEqual([expect.stringContaining('ст. 87 ч. 1')]);
     const recent = list('Недавние');
     expect(recent).toHaveLength(2);
-    expect(recent[0]).toHaveTextContent('ст. 8.6 ч. 1');
+    expect(recent[0]).toHaveTextContent('ст. 9.8 ч. 1');
     expect(recent[1]).toHaveTextContent('ст. 136 ч. 1');
 
     expect(platform.settings.get('favorites:tverskoi')).toEqual(['uk-87#1']);
-    expect(platform.settings.get('recent:tverskoi')).toEqual(['koap-8.6#1', 'uk-136#1', 'uk-87#1']);
+    expect(platform.settings.get('recent:tverskoi')).toEqual(['koap-9.8#1', 'uk-136#1', 'uk-87#1']);
   });
 
   it('walks both lists with ↑↓, adds with Enter and opens with →, going back to them', async () => {
     const { user } = await renderApp({
-      settings: { 'favorites:tverskoi': ['uk-87#1'], 'recent:tverskoi': ['uk-136#1', 'uk-87#1', 'koap-8.6#1'] },
+      settings: { 'favorites:tverskoi': ['uk-87#1'], 'recent:tverskoi': ['uk-136#1', 'uk-87#1', 'koap-9.8#1'] },
     });
     await screen.findByRole('list', { name: 'Избранное' });
     expect(list('Недавние')).toHaveLength(2);
     expect(selectedRow()).toHaveTextContent('ст. 87 ч. 1');
 
     await user.keyboard('{ArrowDown}{ArrowDown}');
-    expect(selectedRow()).toHaveTextContent('ст. 8.6 ч. 1');
+    expect(selectedRow()).toHaveTextContent('ст. 9.8 ч. 1');
     await user.keyboard('{Enter}');
-    expect(within(screen.getByRole('list', { name: 'Статьи КоАП в калькуляторе' })).getByRole('listitem')).toHaveTextContent('ст. 8.6 ч. 1');
+    expect(within(screen.getByRole('list', { name: 'Статьи КоАП в калькуляторе' })).getByRole('listitem')).toHaveTextContent('ст. 9.8 ч. 1');
     // Added, it moves to the top of the recent articles, and the selection goes with it.
-    expect(list('Недавние')[0]).toHaveTextContent('ст. 8.6 ч. 1');
-    expect(selectedRow()).toHaveTextContent('ст. 8.6 ч. 1');
+    expect(list('Недавние')[0]).toHaveTextContent('ст. 9.8 ч. 1');
+    expect(selectedRow()).toHaveTextContent('ст. 9.8 ч. 1');
 
     await user.keyboard('{ArrowDown}{ArrowRight}');
     expect(article()).toHaveAccessibleName('Статья 136. Халатность');

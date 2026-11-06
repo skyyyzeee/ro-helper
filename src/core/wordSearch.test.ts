@@ -23,8 +23,8 @@ describe('search by words (real Тверской data)', () => {
     expect(labels('наркота')[0]).toBe('УК ст. 111 ч. 1');
     expect(labels('теракт')[0]).toBe('УК ст. 98');
     // «Оскорбление» (5.4, its three parts) speaks of «нецензурных слов» and «бранной лексики» in its note too.
-    expect(labels('мат').slice(0, 4)).toContain('КоАП ст. 11.1');
-    expect(labels('парковка')[0]).toBe('КоАП ст. 8.12 ч. 1');
+    expect(labels('мат').slice(0, 4)).toContain('КоАП ст. 12.1');
+    expect(labels('парковка')[0]).toBe('КоАП ст. 9.18 ч. 1');
   });
 
   it('every synonym in the data leads somewhere', () => {
@@ -34,7 +34,7 @@ describe('search by words (real Тверской data)', () => {
 
   it('forgives a typo, but only in a word the laws do not contain', () => {
     expect(labels('крожа')[0]).toBe('УК ст. 87 ч. 1');
-    expect(labels('превышене скорасти')[0]).toBe('КоАП ст. 8.6 ч. 1');
+    expect(labels('превышене скорасти')[0]).toBe('КоАП ст. 9.8 ч. 1');
     // «кража» exists, so «край» («по правому краю») is not taken for a typo of it.
     expect(labels('кража').filter((l) => l.startsWith('ПДД'))).toEqual([]);
   });
@@ -46,11 +46,11 @@ describe('search by words (real Тверской data)', () => {
 
   it('needs every word, and narrows a multi-part article to the matching part', () => {
     expect(labels('кража группой')).toEqual(['УК ст. 87 ч. 2']);
-    expect(labels('превышение скорости').slice(0, 3)).toEqual(['КоАП ст. 8.6 ч. 1', 'КоАП ст. 8.6 ч. 2', 'КоАП ст. 8.6 ч. 3']);
+    expect(labels('превышение скорости').slice(0, 3)).toEqual(['КоАП ст. 9.8 ч. 1', 'КоАП ст. 9.8 ч. 2', 'КоАП ст. 9.8 ч. 3']);
   });
 
   it('combines a number with words', () => {
-    expect(labels('8.6 скорость').slice(0, 3)).toEqual(['КоАП ст. 8.6 ч. 1', 'КоАП ст. 8.6 ч. 2', 'КоАП ст. 8.6 ч. 3']);
+    expect(labels('9.8 скорость').slice(0, 3)).toEqual(['КоАП ст. 9.8 ч. 1', 'КоАП ст. 9.8 ч. 2', 'КоАП ст. 9.8 ч. 3']);
     expect(labels('8.6 кража')).toEqual([]);
   });
 
@@ -62,8 +62,8 @@ describe('search by words (real Тверской data)', () => {
   });
 
   it('lifts the documents of the user’s organisation', () => {
-    // «Оскорбление» is a title in both УК 159 and КоАП 5.4; the organisation decides which comes first.
+    // «Оскорбление» is a title in both УК 159 and КоАП 5.5; the organisation decides which comes first.
     expect(labels('оскорбление ')[0]).toBe('УК ст. 159');
-    expect(labels('оскорбление ', ['koap'])[0]).toBe('КоАП ст. 5.4 ч. 1');
+    expect(labels('оскорбление ', ['koap'])[0]).toBe('КоАП ст. 5.5 ч. 1');
   });
 });

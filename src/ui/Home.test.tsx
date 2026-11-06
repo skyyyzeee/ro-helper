@@ -47,12 +47,12 @@ describe('the article counts, sent', () => {
 
   it('sends what gathered at most once an hour, the most opened first, and nothing once the counts are turned off', async () => {
     const platform = createFakePlatform();
-    platform.settings.set('usage.articles', { '2026-10-23|tverskoi|uk-87#1': 2, '2026-10-23|tverskoi|koap-8.6#1': 5, '2026-09-01|tverskoi|uk-87#1': 9 });
+    platform.settings.set('usage.articles', { '2026-10-23|tverskoi|uk-87#1': 2, '2026-10-23|tverskoi|koap-9.8#1': 5, '2026-09-01|tverskoi|uk-87#1': 9 });
     const sent: unknown[] = [];
     await sendArticleCounts(platform, async (counts) => void sent.push(counts), at('2026-10-23T12:00:00'));
     expect(sent).toEqual([
       [
-        { day: '2026-10-23', server: 'tverskoi', article: 'koap-8.6#1', count: 5 },
+        { day: '2026-10-23', server: 'tverskoi', article: 'koap-9.8#1', count: 5 },
         { day: '2026-10-23', server: 'tverskoi', article: 'uk-87#1', count: 2 },
       ],
     ]);

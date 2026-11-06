@@ -37,11 +37,11 @@ const OLD_GIBDD = [
 ].join('\n');
 
 const COUNTS: [string, LawFormat, number][] = [
-  ['ch-mvd', 'points', 247], ['ch-gibdd', 'points', 88], ['ch-fso', 'points', 97], ['ch-hospital', 'points', 225], ['ch-news', 'points', 90],
-  ['sk-main', 'points', 39], ['sk-gsu', 'points', 51], ['sk-inspections', 'points', 20], ['sk-ranks', 'points', 12],
+  ['ch-mvd', 'points', 247], ['ch-gibdd', 'points', 84], ['ch-fso', 'points', 97], ['ch-hospital', 'points', 225], ['ch-news', 'points', 90],
+  ['sk-structure', 'points', 69], ['sk-service', 'points', 21], ['sk-ranks', 'points', 12],
   ['rules-main', 'points', 98], ['rules-gov', 'points', 120], ['rules-crime', 'points', 52],
-  ['ch-army', 'law', 65], ['ch-army-discipline', 'law', 47], ['ch-army-guard', 'law', 45],
-  ['sk-uniform', 'law', 11], ['sk-ethics', 'law', 10], ['sk-kso', 'law', 10], ['sk-appeals', 'law', 14],
+  ['ch-army', 'law', 65], ['ch-army-discipline', 'law', 48], ['ch-army-guard', 'law', 45],
+  ['sk-ethics', 'law', 10], ['sk-appeals', 'law', 17],
 ];
 
 describe('charters, regulations and project rules (real Тверской forum text)', () => {
@@ -110,14 +110,12 @@ describe('charters, regulations and project rules (real Тверской forum t
     expect(point('ch-hospital', '5.41').notes.map((n) => n.label)).toEqual(['Наказание', 'Исключение', 'Исключение']);
   });
 
-  it('regulations in sections and numbered paragraphs, signed at the end (Положение о СК)', () => {
-    const sk = parse('sk-main');
-    expect(sk.chapters.map((c) => [c.number, c.kind])).toEqual([['I', 'section'], ['II', 'section'], ['III', 'section'], ['IV', 'section']]);
-    expect(point('sk-main', '1').chapter).toBe('I');
-    expect(sk.footer[0]).toBe('Председатель');
-    // «Раздел II» written twice (служебные проверки): the second is III by its points.
-    expect(parse('sk-inspections').chapters.map((c) => c.number)).toEqual(['I', 'II', 'III', 'IV', 'V', 'VI']);
-    expect(point('sk-inspections', '3.1').chapter).toBe('III');
+  it('regulations in chapters and numbered paragraphs (Положение о структуре СК)', () => {
+    const sk = parse('sk-structure');
+    expect(sk.chapters.map((c) => c.number)).toEqual(['1', '2', '3', '4', '5', '6', '7']);
+    expect(sk.chapters[0].title).toBe('Общие положения');
+    expect(point('sk-structure', '1.1').chapter).toBe('1');
+    expect(point('sk-structure', '1.1').parts[0].text.startsWith('Настоящее Положение определяет организационную структуру')).toBe(true);
   });
 
   it('project rules: sections by the points’ first number, titled by the line before them', () => {
@@ -137,11 +135,13 @@ describe('charters, regulations and project rules (real Тверской forum t
     expect(crime.preface[0].startsWith('Захват территории - способ')).toBe(true);
   });
 
-  it('Army charters and four СК regulations are written in articles', () => {
+  it('Army charters and two СК regulations are written in articles', () => {
     expect(parse('ch-army', 'law').articles[0]).toMatchObject({ id: 'ch-army-1.1', title: 'Соблюдение Устава' });
     expect(parse('ch-army-guard', 'law').articles[0]).toMatchObject({ number: '1', title: '' });
-    // A line under «РАЗДЕЛ II» before its first article is the section’s introduction.
-    expect(parse('sk-uniform', 'law').chapters[1].preface).toEqual(['Для личного состава СК РО устанавливаются следующие образцы служебной формы одежды:']);
+    // «РАЗДЕЛ I» and on are sections, their articles numbered through the document.
+    const appeals = parse('sk-appeals', 'law');
+    expect(appeals.chapters.map((c) => [c.number, c.kind])).toEqual([['I', 'section'], ['II', 'section'], ['III', 'section'], ['IV', 'section'], ['V', 'section'], ['VI', 'section']]);
+    expect(appeals.articles[0]).toMatchObject({ id: 'sk-appeals-1', title: 'Предмет регулирования', chapter: 'I' });
   });
 });
 

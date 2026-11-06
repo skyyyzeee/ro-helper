@@ -52,12 +52,12 @@ describe('finding an article by number', () => {
 
   it('finds one КоАП part with «ч N» and lists sanctions by who they apply to', async () => {
     const { user } = await renderApp();
-    await user.type(search(), 'коап 5.4 ч 1');
+    await user.type(search(), 'коап 5.5 ч 1');
 
     const [only] = results();
     expect(results()).toHaveLength(1);
     expect(only).toHaveTextContent('КоАП');
-    expect(only).toHaveTextContent('ст. 5.4 ч. 1');
+    expect(only).toHaveTextContent('ст. 5.5 ч. 1');
     expect(only).toHaveTextContent('штраф от 10 000 до 25 000 ₽ либо арест до 20 сут');
 
     await user.click(within(only).getByRole('button', { name: /^КоАП/ }));
@@ -91,7 +91,7 @@ describe('finding an article by number', () => {
 
   it('moves the selection with ↑↓ and starts again from the top on a new query', async () => {
     const { user } = await renderApp();
-    await user.type(search(), 'коап 8.6');
+    await user.type(search(), 'коап 9.8');
     const current = () => results().findIndex((item) => item.querySelector('[aria-current="true"]') !== null);
     expect(current()).toBe(0);
 

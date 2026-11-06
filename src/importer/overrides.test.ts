@@ -7,11 +7,11 @@ import { parseLawText } from './lawText';
 import { applyOverrides, type Overrides } from './overrides';
 
 const root = join(import.meta.dirname, '..', '..');
-const koapText = readFileSync(join(root, 'data', 'tverskoi', 'sources', 'koap.txt'), 'utf8');
+const ukText = readFileSync(join(root, 'data', 'tverskoi', 'sources', 'uk.txt'), 'utf8');
 const overrides = JSON.parse(readFileSync(join(root, 'data', 'tverskoi', 'overrides.json'), 'utf8')) as Overrides;
 
 function parseAndFix() {
-  const parsed = parseLawText(koapText, 'koap', 'administrative-code');
+  const parsed = parseLawText(ukText, 'uk', 'criminal-code');
   const result = applyOverrides(parsed.articles, parsed.issues, overrides);
   return { articles: parsed.articles, ...result };
 }
@@ -19,10 +19,10 @@ function parseAndFix() {
 describe('manual fixes', () => {
   it('fill in what the parser could not read and clear its issue', () => {
     const { articles, issues, stale } = parseAndFix();
-    const fixed = articles.find((a) => a.id === 'koap-8.17')!.parts[0];
+    const fixed = articles.find((a) => a.id === 'uk-153')!.parts[0];
     expect(fixed.punishment).toEqual({
-      alternatives: [{ kind: 'evacuation' }],
-      additional: ['оплата повышенного штрафа по тарифам спецстоянки'],
+      alternatives: [{ kind: 'imprisonment-by-stars', monthsPerStar: 10 }],
+      additional: [],
     });
     expect(issues).toEqual([]);
     expect(stale).toEqual([]);
@@ -33,9 +33,9 @@ describe('manual fixes', () => {
   });
 
   it('report a fix for a part that no longer exists', () => {
-    const parsed = parseLawText(koapText, 'koap', 'administrative-code');
-    const { stale } = applyOverrides(parsed.articles, parsed.issues, { 'koap-8.6': { reason: 'test', parts: { '9': { text: 'x' } } } });
-    expect(stale).toEqual([{ article: 'koap-8.6', line: '9', reason: 'Правка для несуществующей части «9»' }]);
+    const parsed = parseLawText(ukText, 'uk', 'criminal-code');
+    const { stale } = applyOverrides(parsed.articles, parsed.issues, { 'uk-153': { reason: 'test', parts: { '9': { text: 'x' } } } });
+    expect(stale).toEqual([{ article: 'uk-153', line: '9', reason: 'Правка для несуществующей части «9»' }]);
   });
 });
 

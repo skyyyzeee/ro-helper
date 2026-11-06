@@ -14,8 +14,8 @@ const ask = (pack: ServerPack, query: string, count = 1) => {
 describe('the intents of queries (roadmap 2Б, ADR 0004): query → intent → first article', () => {
   it('Тверской', () => {
     expect(ask(TVERSKOI_PACK, 'что ему впаяют за кражу')).toEqual({ intent: 'punishment', first: ['УК ст. 87 ч. 1'] });
-    expect(ask(TVERSKOI_PACK, 'сколько штраф за превышение скорости')).toEqual({ intent: 'punishment', first: ['КоАП ст. 8.6 ч. 1'] });
-    expect(ask(TVERSKOI_PACK, 'сколько штраф за парковку')).toEqual({ intent: 'punishment', first: ['КоАП ст. 8.12 ч. 1'] });
+    expect(ask(TVERSKOI_PACK, 'сколько штраф за превышение скорости')).toEqual({ intent: 'punishment', first: ['КоАП ст. 9.8 ч. 1'] });
+    expect(ask(TVERSKOI_PACK, 'сколько штраф за парковку')).toEqual({ intent: 'punishment', first: ['КоАП ст. 9.18 ч. 1'] });
     expect(ask(TVERSKOI_PACK, 'чела приняли')).toEqual({ intent: 'detention', first: ['УПК ст. 51'] });
     expect(ask(TVERSKOI_PACK, 'что мне положено при задержании').intent).toBe('rights');
     expect(ask(TVERSKOI_PACK, 'по серверу можно стрелять в зеленой зоне')).toEqual({ intent: 'server-rules', first: ['Правила ст. 1.10'] });

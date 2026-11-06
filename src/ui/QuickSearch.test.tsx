@@ -275,7 +275,7 @@ describe('the quick search, in the player’s words (roadmap 2Б)', () => {
     await user.type(field(), 'сколько штраф за парковку ');
     const note = await screen.findByRole('note', { name: 'Как понят запрос' });
     expect(note).toHaveTextContent('Понял как: Наказание');
-    expect(within(results()).getAllByRole('listitem')[0]).toHaveTextContent('ст. 8.12');
+    expect(within(results()).getAllByRole('listitem')[0]).toHaveTextContent('ст. 9.18');
     await user.click(within(note).getByRole('button', { name: 'Искать везде' }));
     expect(screen.queryByRole('note', { name: 'Как понят запрос' })).not.toBeInTheDocument();
   });

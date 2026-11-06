@@ -61,7 +61,7 @@ describe('pinning an article', () => {
 describe('the punishment on the card', () => {
   it('carries every line of it — whom it is for included — and what comes on top', async () => {
     const { platform, user } = await renderApp();
-    await open(user, 'коап 5.4 ч 1');
+    await open(user, 'коап 5.5 ч 1');
     await pinArticle(user);
     expect(pinnedCards(platform)[0].punishment).toEqual([
       { who: 'Гражданам', text: 'штраф от 10 000 до 25 000 ₽ либо арест до 20 сут' },
@@ -100,7 +100,7 @@ describe('the punishment on the card', () => {
               {
                 id: 'a',
                 kind: 'article',
-                heading: 'КоАП ст. 5.4 ч. 1',
+                heading: 'КоАП ст. 5.5 ч. 1',
                 punishment: [
                   { who: 'Гражданам', text: 'штраф от 10 000 ₽' },
                   { who: 'Должностным лицам', text: 'штраф от 30 000 ₽' },
@@ -140,7 +140,7 @@ describe('pinning the calculator', () => {
   it('pins the total, the charges and the КоАП total, and follows the calculator', async () => {
     const { platform, user } = await renderApp();
     await add(user, 'ук 87 ч 1');
-    await add(user, 'коап 8.6 ч 1');
+    await add(user, 'коап 9.8 ч 1');
     await pinCalculator(user);
 
     expect(platform.state.overlayVisible).toBe(false);
@@ -150,7 +150,7 @@ describe('pinning the calculator', () => {
         kind: 'calculator',
         heading: '30 мес',
         stars: 3,
-        lines: ['ст. 87 ч. 1 УК; ст. 8.6 ч. 1 КоАП', 'КоАП: штраф 10 000 ₽'],
+        lines: ['ст. 87 ч. 1 УК; ст. 9.8 ч. 1 КоАП', 'КоАП: штраф 10 000 ₽'],
       },
     ]);
 
@@ -167,10 +167,10 @@ describe('pinning the calculator', () => {
 
   it('shows the fine when the officer picked one, and the КоАП total when there is no УК', async () => {
     const { platform, user } = await renderApp();
-    await add(user, 'коап 5.4 ч 1');
+    await add(user, 'коап 5.5 ч 1');
     await user.click(within(panel()).getByRole('radio', { name: 'арест' }));
     await pinCalculator(user);
-    expect(pinnedCards(platform)[0]).toMatchObject({ heading: 'арест 20 сут', stars: 2, lines: ['ст. 5.4 ч. 1 КоАП'] });
+    expect(pinnedCards(platform)[0]).toMatchObject({ heading: 'арест 20 сут', stars: 2, lines: ['ст. 5.5 ч. 1 КоАП'] });
 
     await add(user, 'ук 76');
     await user.click(within(panel()).getByRole('radio', { name: 'Штраф' }));

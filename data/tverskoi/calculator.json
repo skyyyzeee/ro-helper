@@ -68,7 +68,7 @@
   "administrative": {
     "code": "koap",
     "sum": {
-      "basis": "КоАП ст. 4.5"
+      "basis": "КоАП ст. 4.6"
     },
     "fine": {
       "min": 500,
@@ -80,11 +80,11 @@
     },
     "arrest": {
       "maxDays": 24,
-      "basis": "КоАП ст. 3.6"
+      "basis": "КоАП ст. 3.8"
     },
     "bail": {
       "perDay": 4000,
-      "basis": "КоАП ст. 4.2.1 ч. 3"
+      "basis": "КоАП ст. 4.3 ч. 3"
     }
   }
 }

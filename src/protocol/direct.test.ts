@@ -20,7 +20,7 @@ describe('«что будет за …», answered by the base alone', () => {
     expect(titles(TVERSKOI_PACK, 'Что будет за кражу?')).toEqual(['УК 87']);
     expect(titles(TVERSKOI_PACK, 'сколько дают за 87')).toEqual(['УК 87']);
     expect(titles(TVERSKOI_PACK, 'наказание за угон')).toEqual(['УК 93']);
-    expect(titles(TVERSKOI_PACK, 'штраф за превышение скорости')).toEqual(['КоАП 8.6']);
+    expect(titles(TVERSKOI_PACK, 'штраф за превышение скорости')).toEqual(['КоАП 9.8']);
     expect(titles(ARBATSKIY_PACK, 'что будет за мошенничество')).toEqual(['УК 10.1']);
     expect(titles(KUTUZOVSKIY_PACK, 'что будет за взятку')).toContain('УК 15.4');
   });
@@ -29,7 +29,7 @@ describe('«что будет за …», answered by the base alone', () => {
     const murder = titles(TVERSKOI_PACK, 'что грозит за убийство')!;
     expect(murder).toEqual(['УК 70', 'УК 71']);
     expect(murder).not.toContain('УК 76'); // «Угроза убийством»
-    expect(titles(TVERSKOI_PACK, 'что будет за хулиганство')).toEqual(['УК 105', 'КоАП 11.1']); // and «Мелкое хулиганство»
+    expect(titles(TVERSKOI_PACK, 'что будет за хулиганство')).toEqual(['УК 105', 'КоАП 12.1']); // and «Мелкое хулиганство»
   });
 
   it('leaves to the AI a deed no title names, or a number the codes do not have', () => {

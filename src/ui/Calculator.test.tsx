@@ -130,8 +130,8 @@ describe('criminal calculator', () => {
 
   it('offers articles of both codes, and nothing without a punishment', async () => {
     const { user } = await renderApp();
-    await find(user, 'коап 8.6');
-    expect(screen.getByRole('button', { name: 'Добавить ст. 8.6 ч. 1 в калькулятор' })).toBeInTheDocument();
+    await find(user, 'коап 9.8');
+    expect(screen.getByRole('button', { name: 'Добавить ст. 9.8 ч. 1 в калькулятор' })).toBeInTheDocument();
     await find(user, 'пдд 2.1');
     expect(screen.queryByRole('button', { name: /в калькулятор$/ })).not.toBeInTheDocument();
   });
@@ -149,15 +149,15 @@ async function add(user: Awaited<ReturnType<typeof renderApp>>['user'], query: s
 describe('administrative charges', () => {
   it('adds up the fines at their limits, without the КПЗ / Штраф switch, and checks a typed one', async () => {
     const { user } = await renderApp();
-    await add(user, 'коап 8.6 ч 1');
-    await add(user, 'коап 8.2 ч 2');
+    await add(user, 'коап 9.8 ч 1');
+    await add(user, 'коап 9.3 ч 2');
 
     expect(within(panel()).queryByRole('radio', { name: 'КПЗ' })).not.toBeInTheDocument();
     expect(panel()).toHaveTextContent('КоАП · сложение');
     expect(within(adminTotal()).getByText('28 000 ₽')).toBeInTheDocument();
-    expect(panel()).toHaveTextContent('Наказание назначается за каждое нарушение и складывается — КоАП ст. 4.5');
+    expect(panel()).toHaveTextContent('Наказание назначается за каждое нарушение и складывается — КоАП ст. 4.6');
 
-    const amount = within(adminPanel()).getByRole('textbox', { name: 'Сумма штрафа по ст. 8.2 ч. 2' });
+    const amount = within(adminPanel()).getByRole('textbox', { name: 'Сумма штрафа по ст. 9.3 ч. 2' });
     await user.type(amount, '20000');
     expect(within(adminPanel()).getByRole('alert')).toHaveTextContent('Вне предела: от 5 000 до 18 000 ₽');
     await user.clear(amount);
@@ -168,7 +168,7 @@ describe('administrative charges', () => {
 
   it('switches the limits between a citizen and an official', async () => {
     const { user } = await renderApp();
-    await add(user, 'коап 5.4 ч 1');
+    await add(user, 'коап 5.5 ч 1');
     expect(adminPanel()).toHaveTextContent('от 10 000 до 25 000 ₽');
     await user.click(within(panel()).getByRole('radio', { name: 'должн. лицо' }));
     expect(adminPanel()).toHaveTextContent('от 30 000 до 50 000 ₽');
@@ -177,10 +177,10 @@ describe('administrative charges', () => {
 
   it('counts an arrest with its bail and stars when the officer picks it', async () => {
     const { user } = await renderApp();
-    await add(user, 'коап 5.4 ч 1');
+    await add(user, 'коап 5.5 ч 1');
     await user.click(within(adminPanel()).getByRole('radio', { name: 'арест' }));
 
-    expect(within(adminPanel()).getByRole('textbox', { name: 'Срок ареста по ст. 5.4 ч. 1' })).toHaveAttribute('placeholder', '20');
+    expect(within(adminPanel()).getByRole('textbox', { name: 'Срок ареста по ст. 5.5 ч. 1' })).toHaveAttribute('placeholder', '20');
     expect(adminTotal()).toHaveTextContent('Арест20 сут');
     expect(within(adminTotal()).getByRole('img', { name: 'Звёзд розыска: 2' })).toBeInTheDocument();
     expect(panel()).toHaveTextContent('Залог за арест(20 сут × 4 000 ₽)80 000 ₽');
@@ -188,7 +188,7 @@ describe('administrative charges', () => {
 
   it('keeps an article that does not punish the offender out of the total and the charges', async () => {
     const { user } = await renderApp();
-    await add(user, 'коап 5.5');
+    await add(user, 'коап 10.3 ч 2');
     expect(adminPanel()).toHaveTextContent('гражданину не назначается');
     expect(within(panel()).queryByLabelText('Итог КоАП')).not.toBeInTheDocument();
     expect(panel()).toHaveTextContent('Обвинять не в чем');
@@ -197,10 +197,10 @@ describe('administrative charges', () => {
 
   it('starts a new detention from the defaults once emptied', async () => {
     const { user } = await renderApp();
-    await add(user, 'коап 5.4 ч 1');
+    await add(user, 'коап 5.5 ч 1');
     await user.click(within(panel()).getByRole('radio', { name: 'должн. лицо' }));
     await user.click(within(panel()).getByRole('button', { name: 'Очистить' }));
-    await add(user, 'коап 5.4 ч 1');
+    await add(user, 'коап 5.5 ч 1');
     expect(within(panel()).getByRole('radio', { name: 'гражданин' })).toHaveAttribute('aria-checked', 'true');
   });
 });
@@ -222,13 +222,13 @@ describe('copying the charges', () => {
 
   it('writes both codes in one line with the button', async () => {
     const { platform, user } = await renderApp();
-    await add(user, 'коап 8.6 ч 1');
+    await add(user, 'коап 9.8 ч 1');
     await add(user, 'ук 136 ч 1');
     await add(user, 'ук 87 ч 1');
     await user.click(within(panel()).getAllByRole('button', { name: 'покушение' })[1]);
-    expect(panel()).toHaveTextContent('ст. 87 ч. 1 (покушение), 136 ч. 1 УК; ст. 8.6 ч. 1 КоАП');
+    expect(panel()).toHaveTextContent('ст. 87 ч. 1 (покушение), 136 ч. 1 УК; ст. 9.8 ч. 1 КоАП');
     await user.click(copyButton());
-    expect(platform.state.clipboard).toBe('ст. 87 ч. 1 (покушение), 136 ч. 1 УК; ст. 8.6 ч. 1 КоАП');
+    expect(platform.state.clipboard).toBe('ст. 87 ч. 1 (покушение), 136 ч. 1 УК; ст. 9.8 ч. 1 КоАП');
   });
 
   it('leaves Ctrl+C to selected text, and says when the clipboard fails', async () => {
