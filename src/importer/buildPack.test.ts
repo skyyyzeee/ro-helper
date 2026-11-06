@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, copyFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -40,9 +40,11 @@ describe('the documents of the whole project, kept once', () => {
     // A server's own snapshot of the same document wins over the shared one.
     mkdirSync(join(serverDir, 'sources'), { recursive: true });
     copyFileSync(join(root, 'data', '_shared', 'sources', 'rules-gov.txt'), join(serverDir, 'sources', 'rules-main.txt'));
-    copyFileSync(join(root, 'data', '_shared', 'sources', 'rules-gov.meta.json'), join(serverDir, 'sources', 'rules-main.meta.json'));
+    const meta = JSON.parse(readFileSync(join(sharedDir, 'rules-main.meta.json'), 'utf8'));
+    writeFileSync(join(serverDir, 'sources', 'rules-main.meta.json'), JSON.stringify({ ...meta, title: 'Правила сервера' }));
     const own = buildPack(serverDir, { id: 'one', name: 'Один', status: 'active', documents: ['rules-main'] });
-    expect(own.pack.documents[0].title).not.toBe(pack.documents[0].title);
+    expect(own.issues).toEqual([]);
+    expect(own.pack.documents[0].title).toBe('Правила сервера');
   });
 });
 
