@@ -18,7 +18,7 @@ describe('«Проверить мой ответ» (roadmap 6Б)', () => {
         const body = String(init.body);
         if (!body.includes('ОТВЕТ ИГРОКА')) return gemini(url, init);
         // The check: the point on the theft article stands, the made-up one does not.
-        const theft = body.match(/\[([SRCO]\d+)\] УК ст\. 65/)?.[1] ?? 'S1';
+        const theft = body.match(/\[([SRCO]\d+)\] УК ст\. 87/)?.[1] ?? 'S1';
         return reply(
           JSON.stringify({
             points: [
@@ -45,7 +45,7 @@ describe('«Проверить мой ответ» (roadmap 6Б)', () => {
     expect(check).toHaveTextContent('Частично верно');
     const [theft, made] = within(check).getAllByRole('listitem');
     expect(theft).toHaveTextContent('Соответствует');
-    expect(within(theft).getByRole('button', { name: /УК ст\. 65/ })).toBeInTheDocument();
+    expect(within(theft).getByRole('button', { name: /УК ст\. 87/ })).toBeInTheDocument();
     expect(made).toHaveTextContent('Не подтверждено');
     expect(check).toHaveTextContent('Что изменить: Наказание сверить с калькулятором.');
     expect(screen.getByText('Мой ответ')).toBeInTheDocument();

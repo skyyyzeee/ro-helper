@@ -12,7 +12,7 @@ const entry = (hit: SearchHit): Entry => ({ key: hitKey(hit), hit, stage: 'done'
 describe('useCharges (roadmap 2А)', () => {
   it('counts the charges by the server’s rules, and says which found articles it can take', () => {
     const { result } = renderHook(() => useCharges(pack.calculator));
-    const theft = found('ук 65 ч 1');
+    const theft = found('ук 87 ч 1');
     expect(result.current.addable(theft)).toBe(true);
     expect(result.current.calculatorOpen).toBe(false);
 
@@ -20,12 +20,12 @@ describe('useCharges (roadmap 2А)', () => {
     expect(result.current.inCalculator(theft)).toBe(true);
     expect(result.current.calculatorOpen).toBe(true);
     expect(result.current.result?.criminal).not.toBeNull();
-    expect(result.current.result?.charge).toContain('65');
+    expect(result.current.result?.charge).toContain('87');
   });
 
   it('keeps what the officer typed for a charge of the result', () => {
     const { result } = renderHook(() => useCharges(pack.calculator));
-    act(() => result.current.setCharges([entry(found('ук 65 ч 1'))]));
+    act(() => result.current.setCharges([entry(found('ук 87 ч 1'))]));
     const [{ item }] = result.current.result!.criminal!.items;
     act(() => result.current.updateCharge(item, { stage: 'attempt' }));
     expect(result.current.charges[0].stage).toBe('attempt');
@@ -34,7 +34,7 @@ describe('useCharges (roadmap 2А)', () => {
 
   it('starts an emptied calculator as a new detention: mode, offender, fine and priority go back', () => {
     const { result } = renderHook(() => useCharges(pack.calculator));
-    act(() => result.current.setCharges([entry(found('ук 65 ч 1'))]));
+    act(() => result.current.setCharges([entry(found('ук 87 ч 1'))]));
     act(() => {
       result.current.setMode('fine');
       result.current.setOffender('official');

@@ -8,9 +8,9 @@ const SKYZE = { id: 'user-1', name: 'Skyze', via: 'discord' as const };
 const search = () => screen.getByRole('searchbox', { name: 'Поиск по законам' });
 const stats = () => within(screen.getByRole('region', { name: 'Аккаунт' })).getByRole('group', { name: 'Статистика' });
 
-/** A search for УК 65, its article opened, and put into the calculator from it. */
+/** A search for УК 87, its article opened, and put into the calculator from it. */
 async function useTheHelper(user: Awaited<ReturnType<typeof renderApp>>['user']) {
-  await user.type(search(), 'ук 65');
+  await user.type(search(), 'ук 87');
   await user.keyboard('{ArrowRight}');
   await user.keyboard('{Enter}');
 }
@@ -23,7 +23,7 @@ describe('the player’s counts', () => {
 
     await user.keyboard('{Control>}6{/Control}');
     await vi.waitFor(() => expect(stats()).toHaveTextContent('1открыта статья1поиск1расчёт наказания'));
-    expect(within(stats()).getByRole('list', { name: 'Чаще всего' })).toHaveTextContent('УК ст. 65 ч. 1');
+    expect(within(stats()).getByRole('list', { name: 'Чаще всего' })).toHaveTextContent('УК ст. 87 ч. 1');
   });
 
   it('counts for the author only the day, the server and what was done', async () => {

@@ -20,8 +20,8 @@ async function pin(user: User, query: string) {
 describe('sets of pinned cards', () => {
   it('saves what is pinned as a set, and puts it back over the game with one button', async () => {
     const { platform, user } = await renderApp();
-    await pin(user, 'ук 65 ч 1');
-    await pin(user, 'ук 104');
+    await pin(user, 'ук 87 ч 1');
+    await pin(user, 'ук 159');
 
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
     expect(settings()).toHaveTextContent('2 карточки');
@@ -38,7 +38,7 @@ describe('sets of pinned cards', () => {
     expect(within(settings()).getByRole('button', { name: 'Сохранить набор' })).toBeDisabled();
 
     await user.click(within(list).getByRole('button', { name: 'Показать набор «Патруль»' }));
-    expect(pinnedCards(platform).map((card) => card.heading)).toEqual(['УК ст. 65 ч. 1. Кража', expect.stringMatching(/^УК ст\. 104\. /)]);
+    expect(pinnedCards(platform).map((card) => card.heading)).toEqual(['УК ст. 87 ч. 1. Кража', expect.stringMatching(/^УК ст\. 159\. /)]);
 
     await user.click(within(list).getByRole('button', { name: 'Удалить набор «Патруль»' }));
     expect(within(settings()).queryByRole('list', { name: 'Наборы закреплённых' })).not.toBeInTheDocument();
@@ -47,7 +47,7 @@ describe('sets of pinned cards', () => {
 
   it('names a set by itself when no name is given, and keeps the sets for the next launch', async () => {
     const { platform, user } = await renderApp();
-    await pin(user, 'ук 65 ч 1');
+    await pin(user, 'ук 87 ч 1');
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
     await user.click(within(settings()).getByRole('button', { name: 'Сохранить набор' }));
     expect(within(settings()).getByRole('list', { name: 'Наборы закреплённых' })).toHaveTextContent('Набор 1');
@@ -64,7 +64,7 @@ describe('the compact card', () => {
   const card: PinCard = {
     id: 'a',
     kind: 'article',
-    heading: 'УК ст. 65 ч. 1. Кража',
+    heading: 'УК ст. 87 ч. 1. Кража',
     punishment: [{ text: 'штраф до 50 000 ₽ либо 30 мес' }],
     extra: ['запись о судимости'],
     lines: ['Кража, то есть тайное хищение чужого имущества'],
@@ -83,7 +83,7 @@ describe('the compact card', () => {
     expect(compact[0].compact).toBe(true);
 
     rerender(<PinSurface groups={compact} live onChange={onChange} />);
-    expect(block()).toHaveTextContent('УК ст. 65 ч. 1. Кража');
+    expect(block()).toHaveTextContent('УК ст. 87 ч. 1. Кража');
     expect(block()).toHaveTextContent('штраф до 50 000 ₽ либо 30 мес');
     expect(block()).toHaveTextContent('федеральная подследственность');
     expect(block()).not.toHaveTextContent('тайное хищение');
@@ -94,7 +94,7 @@ describe('the compact card', () => {
   });
 
   it('is one switch for a whole block of several', () => {
-    const groups: PinGroup[] = [{ id: 'a', x: 0, y: 0, cards: [card, { ...card, id: 'b', heading: 'УК ст. 104' }] }];
+    const groups: PinGroup[] = [{ id: 'a', x: 0, y: 0, cards: [card, { ...card, id: 'b', heading: 'УК ст. 159' }] }];
     render(<PinSurface groups={groups} live onChange={() => {}} />);
     expect(screen.getAllByRole('button', { name: 'Компактный вид' })).toHaveLength(1);
   });

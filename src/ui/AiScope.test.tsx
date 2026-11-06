@@ -35,8 +35,8 @@ describe('the AI as a closed layer over the base', () => {
 
   it('opens an article named by its number, with no AI', async () => {
     const { ask, fetch, user } = await openAi();
-    await ask('ук 65');
-    const found = await within(screen.getByRole('log')).findByRole('button', { name: /^УК ст\. 65 Кража/ });
+    await ask('ук 87');
+    const found = await within(screen.getByRole('log')).findByRole('button', { name: /^УК ст\. 87 Кража/ });
     expect(fetch).not.toHaveBeenCalled();
     await user.click(found);
     expect(await screen.findByRole('heading', { name: /Кража/ })).toBeInTheDocument();
@@ -46,7 +46,7 @@ describe('the AI as a closed layer over the base', () => {
     const { ask, fetch, user } = await openAi();
     await ask('Что будет за кражу?');
     const log = screen.getByRole('log');
-    const article = await within(log).findByRole('button', { name: /^УК ст. 65 Кража/ });
+    const article = await within(log).findByRole('button', { name: /^УК ст. 87 Кража/ });
     expect(article.textContent).toMatch(/штраф|лишение свободы|мес/i);
     expect(within(log).getByText(/ответ из базы, без ИИ/)).toBeInTheDocument();
     expect(fetch).not.toHaveBeenCalled();

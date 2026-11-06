@@ -29,7 +29,7 @@ const pinCalculator = (user: User) => user.click(within(panel()).getByRole('butt
 describe('pinning an article', () => {
   it('pins the whole article under the part it was opened on, and the overlay stays open', async () => {
     const { platform, user } = await renderApp();
-    await user.type(search(), 'ук 65');
+    await user.type(search(), 'ук 87');
     await user.keyboard('{ArrowDown}{ArrowRight}');
     await pinArticle(user);
 
@@ -37,11 +37,11 @@ describe('pinning an article', () => {
     expect(screen.getByRole('article')).toBeInTheDocument();
     expect(pinnedCards(platform)[0]).toMatchObject({
       kind: 'article',
-      heading: 'УК ст. 65 ч. 2. Кража',
+      heading: 'УК ст. 87 ч. 2. Кража',
       punishment: [{ text: 'штраф до 90 000 ₽ либо 40 мес' }],
     });
     // Every part, to read over the game without the overlay (issue #19); the heading and the punishment are the part's.
-    expect(pinnedCards(platform)[0].lines).toEqual([expect.stringMatching(/^1. Кража, то есть/), expect.stringMatching(/^2. Кража, совершенная/)]);
+    expect(pinnedCards(platform)[0].lines).toEqual([expect.stringMatching(/^1. Кража, то есть/), expect.stringMatching(/^2. Кража, совершенная/), expect.stringMatching(/^а[)]/), expect.stringMatching(/^б[)]/)]);
   });
 
   it('pins every part of an article without a punishment, whole (issue #19: УПК ст. 4)', async () => {
@@ -70,7 +70,7 @@ describe('the punishment on the card', () => {
     ]);
 
     // A punishment that is the same for everyone is one line, without naming whom.
-    await open(user, 'ук 108 ч 1');
+    await open(user, 'ук 164 ч 1');
     await pinArticle(user);
     expect(pinnedCards(platform)[1]).toMatchObject({
       punishment: [{ text: 'штраф до 40 000 ₽ либо 20 мес' }],
@@ -139,7 +139,7 @@ describe('a point with its list (ФСО 5.1)', () => {
 describe('pinning the calculator', () => {
   it('pins the total, the charges and the КоАП total, and follows the calculator', async () => {
     const { platform, user } = await renderApp();
-    await add(user, 'ук 65 ч 1');
+    await add(user, 'ук 87 ч 1');
     await add(user, 'коап 8.6 ч 1');
     await pinCalculator(user);
 
@@ -150,15 +150,15 @@ describe('pinning the calculator', () => {
         kind: 'calculator',
         heading: '30 мес',
         stars: 3,
-        lines: ['ст. 65 ч. 1 УК; ст. 8.6 ч. 1 КоАП', 'КоАП: штраф 10 000 ₽'],
+        lines: ['ст. 87 ч. 1 УК; ст. 8.6 ч. 1 КоАП', 'КоАП: штраф 10 000 ₽'],
       },
     ]);
 
-    await add(user, 'ук 80 ч 1');
+    await add(user, 'ук 124 ч 1');
     expect(pinnedCards(platform)[0]).toMatchObject({
       heading: '40 мес',
       stars: 4,
-      warning: 'ст. 80 — федеральная подследственность — дело ФСБ',
+      warning: 'ст. 124 — федеральная подследственность — дело ФСБ',
     });
 
     await user.click(within(panel()).getByRole('button', { name: 'Очистить' }));
@@ -172,7 +172,7 @@ describe('pinning the calculator', () => {
     await pinCalculator(user);
     expect(pinnedCards(platform)[0]).toMatchObject({ heading: 'арест 20 сут', stars: 2, lines: ['ст. 5.4 ч. 1 КоАП'] });
 
-    await add(user, 'ук 57');
+    await add(user, 'ук 76');
     await user.click(within(panel()).getByRole('radio', { name: 'Штраф' }));
     expect(pinnedCards(platform)[0].heading).toBe('Штраф до 100 000 ₽');
     await user.type(within(panel()).getByRole('textbox', { name: 'Сумма штрафа' }), '50000');
@@ -187,11 +187,11 @@ describe('pinning the calculator', () => {
 describe('several cards at once', () => {
   it('pins each one beside the others, and keeps the articles for the next launch', async () => {
     const { platform, user } = await renderApp();
-    await open(user, 'ук 65 ч 1');
+    await open(user, 'ук 87 ч 1');
     await pinArticle(user);
-    await open(user, 'ук 104');
+    await open(user, 'ук 159');
     await pinArticle(user);
-    await add(user, 'ук 88 ч 1');
+    await add(user, 'ук 136 ч 1');
     await pinCalculator(user);
 
     expect(pinnedCards(platform).map((card) => card.kind)).toEqual(['article', 'article', 'calculator']);
@@ -206,7 +206,7 @@ describe('several cards at once', () => {
 
   it('takes back what the user did on the cards themselves and saves it', async () => {
     const { platform, user } = await renderApp();
-    await open(user, 'ук 65 ч 1');
+    await open(user, 'ук 87 ч 1');
     await pinArticle(user);
 
     const moved = platform.state.pins.map((group) => ({ ...group, x: 700, y: 120 }));
@@ -221,12 +221,12 @@ describe('several cards at once', () => {
 
   it('brings the saved cards back on the next launch', async () => {
     const saved: PinGroup[] = [
-      { id: 'uk-65#1', x: 100, y: 200, cards: [{ id: 'uk-65#1', kind: 'article', heading: 'УК ст. 65 ч. 1. Кража', lines: ['Кража'] }] },
+      { id: 'uk-87#1', x: 100, y: 200, cards: [{ id: 'uk-87#1', kind: 'article', heading: 'УК ст. 87 ч. 1. Кража', lines: ['Кража'] }] },
       { id: 'calculator', x: 300, y: 400, cards: [{ id: 'calculator', kind: 'calculator', heading: '30 мес', lines: [] }] },
     ];
     const { platform } = await renderApp({ settings: { 'pins:tverskoi': saved } });
     await vi.waitFor(() => expect(platform.state.pins.length).toBe(1));
-    expect(pinnedCards(platform)[0].heading).toBe('УК ст. 65 ч. 1. Кража');
+    expect(pinnedCards(platform)[0].heading).toBe('УК ст. 87 ч. 1. Кража');
   });
 });
 
@@ -267,7 +267,7 @@ const head = (group: HTMLElement) => group.querySelector('.pin__head') as HTMLEl
 describe('the cards over the game', () => {
   it('is moved and closed over the game too — with the cursor of «ё» — but resized and outlined only while the overlay is open (issue #22)', async () => {
     layOut();
-    const groups = [block('a', 40, 300, card('a', 'УК ст. 104. Оскорбление'))];
+    const groups = [block('a', 40, 300, card('a', 'УК ст. 159. Оскорбление'))];
     const onChange = vi.fn();
     const { rerender } = render(<PinSurface groups={groups} live={false} onChange={onChange} />);
     expect(screen.getByRole('region', { name: 'Закреплено' })).not.toHaveClass('pin--live');
@@ -285,7 +285,7 @@ describe('the cards over the game', () => {
 
   it('offers «Очистить» on the calculator’s card, over the game too (issue #23)', () => {
     const onClear = vi.fn();
-    const calculator = { id: 'calculator', kind: 'calculator' as const, heading: '40 мес', lines: ['ст. 88 ч. 1 УК'] };
+    const calculator = { id: 'calculator', kind: 'calculator' as const, heading: '40 мес', lines: ['ст. 136 ч. 1 УК'] };
     render(<PinSurface groups={[block('c', 40, 300, calculator), block('a', 40, 600, card('a', 'Кража'))]} live={false} onChange={() => {}} onClearCalculator={onClear} />);
     const buttons = screen.getAllByRole('button', { name: 'Очистить калькулятор' });
     expect(buttons).toHaveLength(1);
@@ -389,7 +389,7 @@ describe('the cards over the game', () => {
   });
 
   it('in its own window takes what was pinned before it loaded, and tells the overlay what changed', async () => {
-    const groups = [block('a', 40, 300, card('a', 'УК ст. 104. Оскорбление'))];
+    const groups = [block('a', 40, 300, card('a', 'УК ст. 159. Оскорбление'))];
     let sendGroups: (groups: PinGroup[]) => void = () => {};
     let sendLive: (live: boolean) => void = () => {};
     const bridge: PinBridge = {
@@ -406,11 +406,11 @@ describe('the cards over the game', () => {
       onLook: () => () => {},
     };
     render(<PinWindow bridge={bridge} />);
-    expect(await screen.findByText('УК ст. 104. Оскорбление')).toBeInTheDocument();
+    expect(await screen.findByText('УК ст. 159. Оскорбление')).toBeInTheDocument();
     // The window tells the native side where the cards are: everywhere else it lets the mouse through.
     expect(bridge.areas).toHaveBeenCalled();
 
-    act(() => sendGroups([block('b', 40, 300, { id: 'calculator', kind: 'calculator', heading: '40 мес', stars: 4, lines: ['ст. 88 ч. 1 УК'] })]));
+    act(() => sendGroups([block('b', 40, 300, { id: 'calculator', kind: 'calculator', heading: '40 мес', stars: 4, lines: ['ст. 136 ч. 1 УК'] })]));
     expect(screen.getByText('40 мес')).toBeInTheDocument();
 
     act(() => sendLive(true));

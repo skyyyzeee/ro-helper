@@ -7,7 +7,7 @@ import { calculateDetention, type Charge } from './detention';
 const rules = TVERSKOI_PACK.calculator!;
 const doc = (id: string) => TVERSKOI_PACK.documents.find((d) => d.id === id)!;
 
-/** «koap 8.6 ч1», «uk 65 ч1» → a charge from the real Тверской codes, with options. */
+/** «koap 8.6 ч1», «uk 87 ч1» → a charge from the real Тверской codes, with options. */
 function charge(ref: string, options: Partial<Omit<Charge, 'article' | 'document' | 'part'>> = {}): Charge {
   const [documentId, number, partRef] = ref.split(' ');
   const document = doc(documentId);
@@ -106,49 +106,49 @@ describe('administrative charges (real Тверской КоАП and rules)', ()
     expect(result.fineTotal).toBe(0);
   });
 
-  it('has no unpaid-fine multiple in the КоАП: ст. 10.2 is repealed, the multiple moved to УК ст. 101.1', () => {
+  it('has no unpaid-fine multiple in the КоАП: ст. 10.2 is repealed, the multiple moved to УК ст. 155', () => {
     const koap = doc('koap');
     expect(koap.articles.find((a) => a.number === '10.2')!.parts).toEqual([]);
     expect(koap.articles.flatMap((a) => a.parts).some((p) => p.punishment?.alternatives.some((alt) => alt.kind === 'fine-multiple'))).toBe(false);
-    expect(doc('uk').articles.find((a) => a.number === '101.1')!.parts[0].punishment?.alternatives).toContainEqual({ kind: 'fine-multiple', multiplier: 2, min: 3000 });
+    expect(doc('uk').articles.find((a) => a.number === '155')!.parts[0].punishment?.alternatives).toContainEqual({ kind: 'fine-multiple', multiplier: 2, min: 3000 });
   });
 });
 
 describe('detention: both codes together', () => {
   it('calculates each code on its own', () => {
-    const result = calc(['uk 65 ч1', 'koap 8.6 ч1']);
+    const result = calc(['uk 87 ч1', 'koap 8.6 ч1']);
     expect(result.criminal).toMatchObject({ term: 30 });
     expect(result.criminal!.items).toHaveLength(1);
     expect(result.administrative).toMatchObject({ fineTotal: 10000 });
-    expect(calc(['uk 65 ч1']).administrative).toBeNull();
+    expect(calc(['uk 87 ч1']).administrative).toBeNull();
     expect(calc(['koap 8.6 ч1']).criminal).toBeNull();
   });
 
   it('sets the most stars of the term and the arrests', () => {
-    expect(calc(['uk 65 ч1', charge('koap 5.4 ч1', { choice: 'arrest' })]).stars).toEqual({ count: 3, months: 30, from: 'criminal' });
+    expect(calc(['uk 87 ч1', charge('koap 5.4 ч1', { choice: 'arrest' })]).stars).toEqual({ count: 3, months: 30, from: 'criminal' });
     // КоАП ст. 11.8, whose arrest outranked a two-star term, is repealed: with the most an arrest gives now
     // being two stars, a tie keeps the criminal term.
-    expect(calc(['uk 56 ч1', charge('koap 6.1 ч1', { choice: 'arrest' })]).stars).toEqual({ count: 2, months: 20, from: 'criminal' });
+    expect(calc(['uk 81 ч1', charge('koap 6.1 ч1', { choice: 'arrest' })]).stars).toEqual({ count: 2, months: 20, from: 'criminal' });
     // Only an arrest is served: a fine sets no stars.
     expect(calc([charge('koap 5.4 ч1', { choice: 'arrest' })]).stars).toMatchObject({ count: 2, from: 'administrative' });
     expect(calc(['koap 5.4 ч1']).stars).toBeNull();
-    expect(calc(['uk 57'], 'citizen', 'fine').stars).toBeNull();
+    expect(calc(['uk 76'], 'citizen', 'fine').stars).toBeNull();
   });
 
   it('writes the charges criminal first, in article order, parts and stages included', () => {
     const line = calc([
       'koap 8.12',
       'koap 8.6 ч2',
-      charge('uk 88 ч1'),
-      charge('uk 65 ч1', { stage: 'attempt' }),
+      charge('uk 136 ч1'),
+      charge('uk 87 ч1', { stage: 'attempt' }),
       'koap 8.6 ч1',
-      charge('uk 104', { stage: 'preparation' }),
+      charge('uk 159', { stage: 'preparation' }),
     ]).charge;
-    expect(line).toBe('ст. 65 ч. 1 (покушение), 88 ч. 1, 104 (приготовление) УК; ст. 8.6 ч. 1, 8.6 ч. 2, 8.12 ч. 1 КоАП');
+    expect(line).toBe('ст. 87 ч. 1 (покушение), 136 ч. 1, 159 (приготовление) УК; ст. 8.6 ч. 1, 8.6 ч. 2, 8.12 ч. 1 КоАП');
   });
 
   it('keeps absorbed charges in the line and leaves out those that do not punish the offender', () => {
-    expect(calc(['uk 65 ч1', 'uk 88 ч1']).charge).toBe('ст. 65 ч. 1, 88 ч. 1 УК');
+    expect(calc(['uk 87 ч1', 'uk 136 ч1']).charge).toBe('ст. 87 ч. 1, 136 ч. 1 УК');
     expect(calc(['koap 5.5', 'koap 7.1']).charge).toBe('ст. 7.1 КоАП');
     expect(calc(['koap 5.5']).charge).toBe('');
   });

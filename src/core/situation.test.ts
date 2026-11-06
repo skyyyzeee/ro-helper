@@ -6,13 +6,13 @@ const labels = (text: string, limit = 12) => findForSituation(TVERSKOI_PACK, tex
 
 describe('articles for a situation told in free words (real Тверской data)', () => {
   it('finds the article a situation is about though no single article holds all its words', () => {
-    expect(labels('у меня на улице украли телефон, это кража?').join('\n')).toMatch(/УК ст\. 65 «Кража»/);
+    expect(labels('у меня на улице украли телефон, это кража?').join('\n')).toMatch(/УК ст\. 87 «Кража»/);
   });
 
   it('finds more with the situation retold in the words of the law', () => {
     const lawTerms = ['использование оружия', 'электрошоковое устройство', 'сокрытие лица маска', 'здание органов внутренних дел'];
     const hits = findForSituation(TVERSKOI_PACK, 'человек в маске с электродубинкой возле здания МВД', { lawTerms, limit: 8 });
-    expect(hits.map(sourceLabel).join('\n')).toMatch(/УК ст\. 74 /);
+    expect(hits.map(sourceLabel).join('\n')).toMatch(/УК ст\. 107 /);
   });
 
   it('gives whole articles, each once', () => {
