@@ -10,18 +10,18 @@ const search = () => screen.getByRole('searchbox', { name: 'Поиск по за
 describe('finding an article by number', () => {
   it('shows each punished part of an УК article on one line: its stars and punishment, the rest on its page', async () => {
     const { user } = await renderApp();
-    await user.type(search(), 'ук 65');
+    await user.type(search(), 'ук 87');
 
     const [first, second] = results();
     expect(first).toHaveTextContent('УК');
-    expect(first).toHaveTextContent('ст. 65 ч. 1');
+    expect(first).toHaveTextContent('ст. 87 ч. 1');
     expect(first).toHaveTextContent('Кража');
     // Direction C: the jurisdiction and the excerpt are on the article's page, not in the row.
     expect(first).not.toHaveTextContent('Р/Ф');
     expect(within(first).getByRole('img', { name: 'Звёзд розыска: 3' })).toBeInTheDocument();
     expect(first).toHaveTextContent('штраф до 50 000 ₽ либо 30 мес');
 
-    expect(second).toHaveTextContent('ст. 65 ч. 2');
+    expect(second).toHaveTextContent('ст. 87 ч. 2');
     expect(second).not.toHaveTextContent('Кража, совершенная');
     expect(within(second).getByRole('img', { name: 'Звёзд розыска: 4' })).toBeInTheDocument();
     expect(second).toHaveTextContent('штраф до 90 000 ₽ либо 40 мес');
@@ -29,19 +29,19 @@ describe('finding an article by number', () => {
 
   it('opens the article on the part that was clicked and goes back to the results', async () => {
     const { user, platform } = await renderApp();
-    await user.type(search(), 'ук 65');
-    await user.click(screen.getByRole('button', { name: /ст\. 65 ч\. 2\s*Кража/ }));
+    await user.type(search(), 'ук 87');
+    await user.click(screen.getByRole('button', { name: /ст\. 87 ч\. 2\s*Кража/ }));
 
-    const view = screen.getByRole('article', { name: 'Статья 65. Кража' });
-    expect(within(view).getByRole('heading', { name: 'Статья 65. Кража' })).toBeInTheDocument();
+    const view = screen.getByRole('article', { name: 'Статья 87. Кража' });
+    expect(within(view).getByRole('heading', { name: 'Статья 87. Кража' })).toBeInTheDocument();
     // The chapter is short in the header, whole under «Подробнее».
-    expect(view).toHaveTextContent('гл. 14');
+    expect(view).toHaveTextContent('гл. 19');
     await user.click(within(view).getByRole('button', { name: 'Подробнее' }));
-    expect(view).toHaveTextContent('Глава 14. Преступления против собственности');
+    expect(view).toHaveTextContent('Глава 19. Преступления против собственности');
     expect(within(view).getByRole('region', { name: 'Часть 2' })).toHaveAttribute('aria-current', 'true');
     expect(within(view).getByRole('region', { name: 'Часть 1' })).not.toHaveAttribute('aria-current');
-    expect(view).toHaveTextContent('Примечание');
-    expect(view).toHaveTextContent('Актуально на 02.11.2026');
+    expect(view).toHaveTextContent('с незаконным проникновением');
+    expect(view).toHaveTextContent('Актуально на 05.11.2026');
 
     await user.click(within(view).getByRole('button', { name: /Тема на форуме/ }));
     expect(platform.calls.at(-1)).toEqual({ method: 'openExternal', args: ['https://forum.russia.online/threads/ugolovnyi-kodeks.1176/'] });
@@ -85,7 +85,7 @@ describe('finding an article by number', () => {
   it('finds an article by a word in any form', async () => {
     const { user } = await renderApp();
     await user.type(search(), 'кражу');
-    expect(results()[0]).toHaveTextContent('ст. 65 ч. 1');
+    expect(results()[0]).toHaveTextContent('ст. 87 ч. 1');
     expect(results()[0]).toHaveTextContent('Кража');
   });
 
@@ -136,7 +136,7 @@ describe('a query in the player’s words (roadmap 2Б)', () => {
     await user.type(search(), 'что ему впаяют за кражу ');
     const note = screen.getByRole('note', { name: 'Как понят запрос' });
     expect(note).toHaveTextContent('Понял как: Наказание');
-    expect(results()[0]).toHaveTextContent('ст. 65 ч. 1');
+    expect(results()[0]).toHaveTextContent('ст. 87 ч. 1');
     expect(screen.getByText('УК, КоАП')).toBeInTheDocument();
 
     await user.click(within(note).getByRole('button', { name: 'Искать везде' }));

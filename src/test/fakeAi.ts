@@ -11,9 +11,9 @@ export function sourceIn(context: string, wanted = /\S+/): { id: string; ref: st
   return null;
 }
 
-/** An analysis of a stolen phone, citing УК ст. 65 when it was found, or saying nothing was. */
+/** An analysis of a stolen phone, citing УК ст. 87 when it was found, or saying nothing was. */
 export function analysisOf(context: string, patch: Partial<LegalAnswer> = {}, guide = false): string {
-  const found = sourceIn(context, /^УК ст\. 65$/) ?? sourceIn(context);
+  const found = sourceIn(context, /^УК ст\. 87$/) ?? sourceIn(context);
   const cited = found ? [found.id] : [];
   const answer: Partial<LegalAnswer> = {
     situation: 'Это кража телефона.',

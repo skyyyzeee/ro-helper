@@ -18,8 +18,8 @@ const MARK: KeptMark = {
   question: 'вытащил телефон из кармана',
   scope: 'law',
   status: 'confirmed',
-  norms: ['УК 66'],
-  correction: 'это кража, ст. 65',
+  norms: ['УК 90'],
+  correction: 'это кража, ст. 87',
 };
 
 describe('the admins read the players\' marks', () => {
@@ -45,7 +45,7 @@ describe('the admins read the players\' marks', () => {
 
     const list = await screen.findByRole('list', { name: 'Отзывы об ИИ' });
     expect(list).toHaveTextContent('вытащил телефон из кармана');
-    expect(list).toHaveTextContent('«это кража, ст. 65»');
+    expect(list).toHaveTextContent('«это кража, ст. 87»');
     expect(screen.getByText('Сегодня отзывов: 4')).toBeInTheDocument();
     const read = asked.find((a) => a.url.includes('/v1/feedback'))!;
     expect(read.url).toContain('filter=raw');
@@ -57,11 +57,11 @@ describe('the admins read the players\' marks', () => {
     await user.clear(within(form).getByLabelText('Выражение игрока'));
     await user.type(within(form).getByLabelText('Выражение игрока'), 'вытащил из кармана');
     await user.type(within(form).getByLabelText('Нормальная форма (слова закона)'), 'кража');
-    await user.type(within(form).getByLabelText('Правильные статьи'), 'УК 65');
+    await user.type(within(form).getByLabelText('Правильные статьи'), 'УК 87');
     await user.click(within(form).getByRole('button', { name: 'Утвердить' }));
     await vi.waitFor(() => expect(asked.some((a) => a.url.endsWith('/v1/feedback/review'))).toBe(true));
     const sent = JSON.parse(asked.find((a) => a.url.endsWith('/v1/feedback/review'))!.body!);
-    expect(sent).toEqual({ id: 'm-1', status: 'approved', phrase: 'вытащил из кармана', normalized: 'кража', scope: 'law', expected: ['УК 65'] });
+    expect(sent).toEqual({ id: 'm-1', status: 'approved', phrase: 'вытащил из кармана', normalized: 'кража', scope: 'law', expected: ['УК 87'] });
   });
 });
 
@@ -83,7 +83,7 @@ describe('the admin\'s debug view', () => {
     const view = debug.closest('details')!;
     expect(view).toHaveTextContent('legal');
     expect(view).toHaveTextContent('законы');
-    expect(view).toHaveTextContent(/S1 УК ст\. 65/);
+    expect(view).toHaveTextContent(/S1 УК ст\. 87/);
     expect(view).toHaveTextContent('всё прошло');
     expect(view).toHaveTextContent(/Сторона.*пунктов показано/);
   });

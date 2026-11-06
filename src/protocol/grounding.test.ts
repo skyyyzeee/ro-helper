@@ -23,7 +23,7 @@ const rule = (): SearchHit => {
   const doc = pack.documents.find((d) => d.kind === 'rules')!;
   return { document: doc, article: doc.articles.find((a) => a.parts.some((p) => p.text))! };
 };
-const THEFT = hit('uk', '65');
+const THEFT = hit('uk', '87');
 const sources: Source[] = labelSources([THEFT, rule()]);
 const ruleId = sources.find((s) => s.type === 'server_rule')!.id;
 
@@ -31,7 +31,7 @@ const good = (patch: Partial<LegalAnswer> = {}): LegalAnswer => ({
   situation: 'Кража телефона.',
   facts: ['украли телефон'],
   assumptions: [],
-  norms: [{ source: 'S1', ref: 'УК ст. 65', part: '1', why: 'тайное хищение', fit: 'direct', charge: true, stage: 'done' }],
+  norms: [{ source: 'S1', ref: 'УК ст. 87', part: '1', why: 'тайное хищение', fit: 'direct', charge: true, stage: 'done' }],
   violation: { text: 'кража', sources: ['S1'] },
   punishment: { text: 'штраф до 50 000 ₽ либо 30 мес', sources: ['S1'] },
   procedure: [],
@@ -115,15 +115,15 @@ describe('hard gates: what the model makes up never comes out confirmed', () => 
   });
 
   it('a label the AI miswrote over a source it gave is the source, under its own label — one naming a real article is not', () => {
-    const slip = validateAnswer(pack, sources, good({ norms: [{ ...good().norms[0], ref: '65 УК ст. 1' }] }), 'law');
+    const slip = validateAnswer(pack, sources, good({ norms: [{ ...good().norms[0], ref: '87 УК ст. 1' }] }), 'law');
     expect(slip).toMatchObject({ status: 'confirmed', needsReview: false });
-    expect(slip.norms[0].norm.ref).toBe('УК ст. 65');
+    expect(slip.norms[0].norm.ref).toBe('УК ст. 87');
     // A label of another real article: the reason the AI gave tells which it meant. «тайное хищение» is the source,
-    // УК 65 — the label is a slip; «открытое хищение» is УК 66 — the AI meant another article: to check.
-    const relabelled = validateAnswer(pack, sources, good({ norms: [{ ...good().norms[0], ref: 'УК ст. 66', why: 'тайное хищение чужого имущества' }] }), 'law');
-    expect(relabelled.norms[0].norm.ref).toBe('УК ст. 65');
+    // УК 87 — the label is a slip; «открытое хищение» is УК 90 — the AI meant another article: to check.
+    const relabelled = validateAnswer(pack, sources, good({ norms: [{ ...good().norms[0], ref: 'УК ст. 90', why: 'тайное хищение чужого имущества' }] }), 'law');
+    expect(relabelled.norms[0].norm.ref).toBe('УК ст. 87');
     expect(relabelled.needsReview).toBe(false);
-    expect(caught(good({ norms: [{ ...good().norms[0], ref: 'УК ст. 66', why: 'грабеж — открытое хищение чужого имущества' }] }))).toMatch(/не тот номер/);
+    expect(caught(good({ norms: [{ ...good().norms[0], ref: 'УК ст. 90', why: 'грабеж — открытое хищение чужого имущества' }] }))).toMatch(/не тот номер/);
   });
 });
 
@@ -194,7 +194,7 @@ describe('the classifier: what is no question of the base never reaches the AI',
     expect(provider.complete).toHaveBeenCalledTimes(2);
     expect(outcome.kind === 'analysis' && outcome.analysis.aiCalls).toBe(1);
     // The robbery is among what the AI was given for the follow-up.
-    expect(requests.at(-1)!.turns.at(-1)!.parts.map((p) => ('text' in p ? p.text : '')).join('')).toMatch(/УК ст\. 66 /);
+    expect(requests.at(-1)!.turns.at(-1)!.parts.map((p) => ('text' in p ? p.text : '')).join('')).toMatch(/УК ст\. 90 /);
   });
 
   it('stops at the AI\'s first call when it says the question is not about the game', async () => {

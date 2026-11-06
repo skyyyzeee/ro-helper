@@ -5,7 +5,7 @@ import { searchUnderstood, understand } from './intent';
 import type { ServerPack } from './model';
 import { searchArticles } from './search';
 
-/** The intent a query is understood by, and its first articles as «УК ст. 65 ч. 1». */
+/** The intent a query is understood by, and its first articles as «УК ст. 87 ч. 1». */
 const ask = (pack: ServerPack, query: string, count = 1) => {
   const { hits, intent } = searchUnderstood(pack, `${query} `);
   return { intent: intent?.id, first: hits.slice(0, count).map((hit) => `${hit.document.short} ${articleLabel(hit.article, hit.part)}`) };
@@ -13,7 +13,7 @@ const ask = (pack: ServerPack, query: string, count = 1) => {
 
 describe('the intents of queries (roadmap 2Б, ADR 0004): query → intent → first article', () => {
   it('Тверской', () => {
-    expect(ask(TVERSKOI_PACK, 'что ему впаяют за кражу')).toEqual({ intent: 'punishment', first: ['УК ст. 65 ч. 1'] });
+    expect(ask(TVERSKOI_PACK, 'что ему впаяют за кражу')).toEqual({ intent: 'punishment', first: ['УК ст. 87 ч. 1'] });
     expect(ask(TVERSKOI_PACK, 'сколько штраф за превышение скорости')).toEqual({ intent: 'punishment', first: ['КоАП ст. 8.6 ч. 1'] });
     expect(ask(TVERSKOI_PACK, 'сколько штраф за парковку')).toEqual({ intent: 'punishment', first: ['КоАП ст. 8.12 ч. 1'] });
     expect(ask(TVERSKOI_PACK, 'чела приняли')).toEqual({ intent: 'detention', first: ['УПК ст. 51'] });
@@ -36,7 +36,7 @@ describe('the intents of queries (roadmap 2Б, ADR 0004): query → intent → f
   });
 
   it('leaves a query in the words of the law, by number or naming a document as it was', () => {
-    for (const query of ['кража', 'правила дорожного движения', 'арест имущества', 'ук 65', '8.6']) {
+    for (const query of ['кража', 'правила дорожного движения', 'арест имущества', 'ук 87', '8.6']) {
       expect(understand(TVERSKOI_PACK, query)).toBeNull();
       expect(searchUnderstood(TVERSKOI_PACK, query).hits).toEqual(searchArticles(TVERSKOI_PACK, query));
     }

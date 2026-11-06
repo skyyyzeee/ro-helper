@@ -13,74 +13,56 @@ const article = (number: string) => {
 };
 
 describe('Уголовный кодекс Тверского (real forum text)', () => {
-  it('reads every chapter and article, and reports nothing unparsed', () => {
-    expect(uk.chapters).toHaveLength(22);
-    expect(uk.articles).toHaveLength(125);
-    expect(uk.articles.filter((a) => a.parts.some((p) => p.punishment))).toHaveLength(69);
-    // Only ст. 85.1 and 101.1, whose fines are written in words, and ст. 73.1 and 106.1, whose sanctions are written
-    // through «влечет наложение…» (one wrapped to the next line): the server's manual fixes (overrides.json) give their punishments.
-    expect(new Set(uk.issues.map((i) => i.article))).toEqual(new Set(['uk-85.1', 'uk-101.1', 'uk-73.1', 'uk-106.1']));
+  it('reads every chapter and article in the 5 November edition', () => {
+    expect(uk.chapters).toHaveLength(28);
+    expect(uk.articles).toHaveLength(170);
+    expect(new Set(uk.issues.map((issue) => issue.article))).toEqual(new Set(['uk-153', 'uk-155']));
   });
 
-  it('keeps dotted article numbers and chapter placement', () => {
-    expect(uk.articles.map((a) => a.number)).toEqual(expect.arrayContaining(['50.1', '73.1', '95.1', '100.1']));
-    expect(article('65').chapter).toBe('14');
-    expect(uk.chapters.find((c) => c.number === '14')?.title).toBe('Преступления против собственности');
-    expect(uk.chapters.find((c) => c.number === '14.1')).toBeDefined();
+  it('preserves numbered parts and lettered points of ст. 87 Кража', () => {
+    const theft = article('87');
+    expect(theft).toMatchObject({ title: 'Кража', chapter: '19' });
+    expect(theft.parts.map((part) => part.number)).toEqual(['1', '2']);
+    expect(theft.parts[1].points.map((point) => point.marker)).toEqual(['а', 'б']);
+    expect(theft.parts[1].punishment?.alternatives).toEqual([
+      { kind: 'fine', max: 90000 },
+      { kind: 'imprisonment', months: 40 },
+    ]);
   });
 
-  it('parses ст. 65 Кража: tags, stars, both parts with alternatives, and the note', () => {
-    const kraja = article('65');
-    expect(kraja.title).toBe('Кража');
-    expect(kraja.parts).toHaveLength(2);
-    expect(kraja.parts[0]).toMatchObject({
+  it('reads Бандитизм under ст. 102 with federal jurisdiction and a 50-month term', () => {
+    expect(article('102')).toMatchObject({ title: 'Бандитизм' });
+    expect(article('102').parts[0]).toMatchObject({
       number: '1',
-      jurisdiction: ['Р', 'Ф'],
-      stars: { min: 3, max: 3 },
-      punishment: { alternatives: [{ kind: 'fine', max: 50000 }, { kind: 'imprisonment', months: 30 }], additional: [] },
+      jurisdiction: ['Ф'],
+      stars: { min: 5, max: 5 },
+      punishment: { alternatives: [{ kind: 'imprisonment', months: 50 }] },
     });
-    expect(kraja.parts[0].text.startsWith('Кража, то есть тайное хищение чужого имущества')).toBe(true);
-    expect(kraja.parts[1]).toMatchObject({
-      number: '2',
-      stars: { min: 4, max: 4 },
-      punishment: { alternatives: [{ kind: 'fine', max: 90000 }, { kind: 'imprisonment', months: 40 }] },
-    });
-    expect(kraja.notes).toHaveLength(1);
-    expect(kraja.notes[0].label).toBe('Примечание');
+    expect(article('157').title).toBe('Посягательство на жизнь сотрудника правоохранительного органа');
   });
+});
 
-  it('reads every fine form: «до N», «от N до M» and a fixed amount', () => {
-    expect(article('55').parts[0].punishment?.alternatives[0]).toEqual({ kind: 'fine', min: 35000, max: 60000 });
-    expect(article('74').parts[0].punishment?.alternatives[0]).toEqual({ kind: 'fine', min: 50000, max: 50000 });
-  });
-
-  it('handles the odd lines', () => {
-    // Fine only, no stars.
-    expect(article('60').parts[0]).toMatchObject({ jurisdiction: ['Р'], punishment: { alternatives: [{ kind: 'fine', min: 5000, max: 30000 }] } });
-    expect(article('60').parts[0].stars).toBeUndefined();
-    // Both parts of ст. 51 carry the jurisdiction tag since the 20 October edition.
-    expect(article('51').parts[1]).toMatchObject({ number: '2', stars: { min: 5, max: 5 }, jurisdiction: ['Р', 'Ф'] });
-    // Star range and a term set by the wanted level.
-    expect(article('100.1').parts[0]).toMatchObject({
-      stars: { min: 1, max: 5 },
-      punishment: { alternatives: [{ kind: 'imprisonment-by-stars', monthsPerStar: 10 }] },
-    });
-    // Military: mandatory add-on; ст. 112 has no «наказывается».
-    expect(article('108').parts[0].punishment?.additional).toEqual(['лишение воинского звания']);
-    expect(article('112').parts[0].punishment?.alternatives).toEqual([{ kind: 'imprisonment', months: 40 }]);
-    // Explicit part numbers after the tag (ч. 1 of ст. 113 is repealed: «Утратила силу.» — a plain paragraph without a number).
-    expect(article('113').parts.map((p) => p.number)).toEqual([undefined, '2']);
-  });
-
-  it('keeps general-part structure: numbered parts with lettered points', () => {
-    const kinds = article('33').parts[0];
-    expect(kinds.number).toBe('1');
-    expect(kinds.points.map((p) => p.marker)).toEqual(['а', 'б', 'в', 'г', 'д', 'е']);
-  });
-
-  it('puts the chapter preface and the adoption footer where they belong', () => {
-    expect(uk.chapters.find((c) => c.number === '21')?.preface[0]).toBe('Понятие преступлений против военной службы');
-    expect(uk.footer).toHaveLength(2);
-    expect(article('113').parts).toHaveLength(2);
+describe('УК with sanctions on the next line', () => {
+  it('keeps jurisdiction, stars and punishment together for numbered and unnumbered offences', () => {
+    const source = [
+      'Статья 71. Убийство',
+      '[Р/Ф] [★★★] Убийство -',
+      'наказывается лишением свободы на срок до 30 месяцев.',
+      'Статья 102. Бандитизм',
+      '1. [Ф] [★★★★★] Создание банды -',
+      'наказываются лишением свободы на срок до 50 месяцев.',
+    ].join('\n');
+    const parsed = parseLawText(source, 'uk', 'criminal-code');
+    expect(parsed.issues).toEqual([]);
+    expect(parsed.articles.map((article) => article.parts)).toEqual([
+      [expect.objectContaining({
+        number: '1', text: 'Убийство', jurisdiction: ['Р', 'Ф'], stars: { min: 3, max: 3 },
+        punishment: { alternatives: [{ kind: 'imprisonment', months: 30 }], additional: [] },
+      })],
+      [expect.objectContaining({
+        number: '1', text: 'Создание банды', jurisdiction: ['Ф'], stars: { min: 5, max: 5 },
+        punishment: { alternatives: [{ kind: 'imprisonment', months: 50 }], additional: [] },
+      })],
+    ]);
   });
 });

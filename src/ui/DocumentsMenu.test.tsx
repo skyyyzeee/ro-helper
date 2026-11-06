@@ -37,7 +37,7 @@ describe('documents menu', () => {
     expect(documentRows()).toHaveLength(66);
     expect(documentRows().slice(0, 3).map((row) => row.textContent)).toEqual([
       'КонституцияКонституция РО117',
-      'УКУголовный кодекс125',
+      'УКУголовный кодекс170',
       'КоАПКодекс об административных правонарушениях151',
     ]);
     const tags = within(menu()).getByRole('group', { name: 'Виды документов' });
@@ -195,10 +195,10 @@ describe('searching one document', () => {
     await pick(user, /^УКУголовный кодекс/);
 
     expect(search()).toHaveAttribute('placeholder', 'Поиск: Уголовный кодекс');
-    expect(screen.getByText('125 статей')).toBeInTheDocument();
+    expect(screen.getByText('170 статей')).toBeInTheDocument();
     const toc = screen.getByLabelText('Оглавление: Уголовный кодекс');
     const [first] = within(toc).getAllByRole('region');
-    expect(within(first).getByRole('heading')).toHaveTextContent('Глава 1. Задачи и принципы Уголовного кодекса РО');
+    expect(within(first).getByRole('heading')).toHaveTextContent('Глава 1. Задачи и принципы Уголовного кодекса Российского Округа');
     expect(within(toc).getAllByRole('region', { name: /^Глава / }).length).toBeGreaterThan(10);
 
     await user.keyboard('{ArrowDown}{ArrowRight}');
@@ -215,8 +215,8 @@ describe('searching one document', () => {
     expect(screen.getByText('Кодекс об административных правонарушениях')).toBeInTheDocument();
 
     await user.clear(search());
-    await user.type(search(), 'ук 65');
-    expect(results()[0]).toHaveTextContent('УКст. 65 ч. 1');
+    await user.type(search(), 'ук 87');
+    expect(results()[0]).toHaveTextContent('УКст. 87 ч. 1');
   });
 
   it('steps back with Esc: the query, then the document', async () => {

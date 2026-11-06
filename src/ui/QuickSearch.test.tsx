@@ -50,12 +50,12 @@ describe('the quick search', () => {
     await user.type(field(), 'кража');
     const rows = within(results()).getAllByRole('listitem');
     expect(rows.length).toBeLessThanOrEqual(8);
-    expect(rows[0]).toHaveTextContent('ст. 65 ч. 1');
+    expect(rows[0]).toHaveTextContent('ст. 87 ч. 1');
 
     await user.keyboard('{ArrowDown}{Enter}');
-    expect(requests).toEqual([{ kind: 'charge', key: 'uk-65#2' }]);
+    expect(requests).toEqual([{ kind: 'charge', key: 'uk-87#2' }]);
     // What is in the calculator is the assistant's to say.
-    await tell({ charges: ['uk-65#2'], recent: [] });
+    await tell({ charges: ['uk-87#2'], recent: [] });
     expect(screen.getByRole('button', { name: /В калькуляторе: 1/ })).toBeInTheDocument();
     await user.keyboard('{Enter}');
     expect(requests).toHaveLength(1);
@@ -66,11 +66,11 @@ describe('the quick search', () => {
 
   it('opens an article in the bar with →, adding it to the recent ones; Esc steps back, then hides the bar', async () => {
     const { requests, hidden, user } = renderBar();
-    await user.type(field(), 'ук 65{ArrowRight}');
-    expect(requests).toEqual([{ kind: 'remember', key: 'uk-65#1' }]);
-    const article = screen.getByRole('article', { name: 'Статья 65. Кража' });
+    await user.type(field(), 'ук 87{ArrowRight}');
+    expect(requests).toEqual([{ kind: 'remember', key: 'uk-87#1' }]);
+    const article = screen.getByRole('article', { name: 'Статья 87. Кража' });
     await user.click(within(article).getAllByRole('button', { name: 'В калькулятор' })[1]);
-    expect(requests.at(-1)).toEqual({ kind: 'charge', key: 'uk-65#2' });
+    expect(requests.at(-1)).toEqual({ kind: 'charge', key: 'uk-87#2' });
 
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('article')).not.toBeInTheDocument();
@@ -82,9 +82,9 @@ describe('the quick search', () => {
 
   it('puts the part an article was opened at into the calculator with Enter', async () => {
     const { requests, user } = renderBar();
-    await user.type(field(), 'ук 65 ч 2{ArrowRight}');
+    await user.type(field(), 'ук 87 ч 2{ArrowRight}');
     await user.keyboard('{Enter}');
-    expect(requests.at(-1)).toEqual({ kind: 'charge', key: 'uk-65#2' });
+    expect(requests.at(-1)).toEqual({ kind: 'charge', key: 'uk-87#2' });
   });
 
   it('tells over the game where it looked, and offers what does find something (roadmap 1В)', async () => {
@@ -110,10 +110,10 @@ describe('the quick search', () => {
 
   it('lists the recent articles, which can be cleared (issue #20)', async () => {
     const { requests, tell, user } = renderBar();
-    await tell({ charges: [], recent: ['uk-66#1', 'uk-65#1'] });
+    await tell({ charges: [], recent: ['uk-90#1', 'uk-87#1'] });
     await user.click(screen.getByRole('radio', { name: 'Недавние' }));
     const recent = screen.getByRole('list', { name: 'Недавние' });
-    expect(within(recent).getAllByRole('listitem').map((li) => li.textContent)).toEqual([expect.stringMatching(/ст\. 66 ч\. 1/), expect.stringMatching(/ст\. 65 ч\. 1/)]);
+    expect(within(recent).getAllByRole('listitem').map((li) => li.textContent)).toEqual([expect.stringMatching(/ст\. 90 ч\. 1/), expect.stringMatching(/ст\. 87 ч\. 1/)]);
     await user.click(screen.getByRole('button', { name: 'Очистить недавние' }));
     expect(requests).toEqual([{ kind: 'clear-recent' }]);
   });
@@ -144,17 +144,17 @@ async function openApp() {
 describe('the overlay, for the quick search', () => {
   it('registers the quick search key, puts into the calculator what the bar sends — pinned over the game — and tells the bar', async () => {
     const { platform } = await openApp();
-    act(() => platform.quickRequest({ kind: 'charge', key: 'uk-65#1' }));
-    expect(await screen.findByRole('complementary', { name: 'Калькулятор' }, { timeout: 4000 })).toHaveTextContent('ст. 65 ч. 1');
+    act(() => platform.quickRequest({ kind: 'charge', key: 'uk-87#1' }));
+    expect(await screen.findByRole('complementary', { name: 'Калькулятор' }, { timeout: 4000 })).toHaveTextContent('ст. 87 ч. 1');
     await vi.waitFor(() => expect(platform.state.pins.flatMap((group) => group.cards).map((card) => card.id)).toContain('calculator'));
-    await vi.waitFor(() => expect(platform.state.quickState?.charges).toEqual(['uk-65#1']), { timeout: 4000 });
+    await vi.waitFor(() => expect(platform.state.quickState?.charges).toEqual(['uk-87#1']), { timeout: 4000 });
   });
 
   it('empties the calculator when the bar or its card over the game asks, and the card goes (issue #23)', async () => {
     const { platform } = await openApp();
     const pinned = () => platform.state.pins.some((group) => group.cards.some((card) => card.id === 'calculator'));
     for (const clear of [() => platform.quickRequest({ kind: 'clear-charges' }), () => platform.clearCalculatorFromPin()]) {
-      act(() => platform.quickRequest({ kind: 'charge', key: 'uk-65#1' }));
+      act(() => platform.quickRequest({ kind: 'charge', key: 'uk-87#1' }));
       await vi.waitFor(() => expect(pinned()).toBe(true), { timeout: 4000 });
       act(clear);
       await vi.waitFor(() => expect(platform.state.quickState?.charges).toEqual([]), { timeout: 4000 });
@@ -165,7 +165,7 @@ describe('the overlay, for the quick search', () => {
   it('pins the calculator back where the player last left it (issue #22)', async () => {
     const { platform } = await openApp();
     const calculator = () => platform.state.pins.find((group) => group.cards.some((card) => card.id === 'calculator'));
-    act(() => platform.quickRequest({ kind: 'charge', key: 'uk-65#1' }));
+    act(() => platform.quickRequest({ kind: 'charge', key: 'uk-87#1' }));
     await vi.waitFor(() => expect(calculator()).toBeDefined(), { timeout: 4000 });
     // Dragged over the game, then closed there.
     act(() => platform.changePins(platform.state.pins.map((group) => (group === calculator() ? { ...group, x: 300, y: 90 } : group))));
@@ -173,15 +173,15 @@ describe('the overlay, for the quick search', () => {
     act(() => platform.changePins(platform.state.pins.filter((group) => group !== calculator())));
     await vi.waitFor(() => expect(calculator()).toBeUndefined());
 
-    act(() => platform.quickRequest({ kind: 'charge', key: 'uk-66#1' }));
+    act(() => platform.quickRequest({ kind: 'charge', key: 'uk-90#1' }));
     await vi.waitFor(() => expect(calculator()).toMatchObject({ x: 300, y: 90 }), { timeout: 4000 });
   });
 
   it('keeps the recent articles the bar opened, and clears them when it asks', async () => {
     const { platform } = await openApp();
-    act(() => platform.quickRequest({ kind: 'remember', key: 'uk-66#1' }));
-    await vi.waitFor(() => expect(platform.state.quickState?.recent).toEqual(['uk-66#1']), { timeout: 4000 });
-    expect(platform.settings.get('recent:tverskoi')).toEqual(['uk-66#1']);
+    act(() => platform.quickRequest({ kind: 'remember', key: 'uk-90#1' }));
+    await vi.waitFor(() => expect(platform.state.quickState?.recent).toEqual(['uk-90#1']), { timeout: 4000 });
+    expect(platform.settings.get('recent:tverskoi')).toEqual(['uk-90#1']);
     act(() => platform.quickRequest({ kind: 'clear-recent' }));
     await vi.waitFor(() => expect(platform.state.quickState?.recent).toEqual([]), { timeout: 4000 });
   });
@@ -222,7 +222,7 @@ describe('commands in the quick search (roadmap 2В)', () => {
     expect(commands()).not.toContain('Команда: Тренажёр по законам');
     expect(commands()).not.toContain('Команда: Очистить калькулятор');
 
-    await tell({ charges: ['uk-65#1'], recent: [], can: ['ai.analysis', 'ai.practice'] });
+    await tell({ charges: ['uk-87#1'], recent: [], can: ['ai.analysis', 'ai.practice'] });
     expect(commands()).toContain('Команда: Тренажёр по законам');
     expect(commands()).toContain('Команда: Очистить калькулятор');
   });

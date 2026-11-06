@@ -16,64 +16,64 @@ async function find(user: Awaited<ReturnType<typeof renderApp>>['user'], query: 
 describe('criminal calculator', () => {
   it('copies a report out of the charges for an officer of the state; a citizen has none to write (issue #40)', async () => {
     const { platform, user } = await renderApp({ profile: { organization: 'mvd' }, settings: { player: { gameName: 'Ivan_Petrov', position: 'Сержант' } } });
-    await find(user, 'ук 65 ч 1');
+    await find(user, 'ук 87 ч 1');
     await user.keyboard('{Enter}');
     await user.click(within(panel()).getByRole('button', { name: 'Рапорт' }));
     const lines = platform.state.clipboard.split('\n');
     expect(lines[0]).toBe('РАПОРТ');
     expect(lines[1]).toMatch(/ · Тверской · МВД$/);
     expect(lines[3]).toBe('Составил: Сержант Ivan_Petrov');
-    expect(platform.state.clipboard).toContain('Обвинение: ст. 65 ч. 1 УК');
+    expect(platform.state.clipboard).toContain('Обвинение: ст. 87 ч. 1 УК');
     expect(platform.state.clipboard).toContain('Наказание: лишение свободы на 30 мес');
     expect(await within(panel()).findByRole('button', { name: 'Скопирован' })).toBeInTheDocument();
   });
 
   it('offers no report without a service of the state', async () => {
     const { user } = await renderApp();
-    await find(user, 'ук 65 ч 1');
+    await find(user, 'ук 87 ч 1');
     await user.keyboard('{Enter}');
     expect(within(panel()).queryByRole('button', { name: 'Рапорт' })).not.toBeInTheDocument();
   });
 
   it('opens beside the results with the first charge, marks it in the results and closes when emptied', async () => {
     const { platform, user } = await renderApp();
-    await find(user, 'ук 65');
+    await find(user, 'ук 87');
     expect(queryPanel()).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Добавить ст. 65 ч. 1 в калькулятор' }));
+    await user.click(screen.getByRole('button', { name: 'Добавить ст. 87 ч. 1 в калькулятор' }));
     expect(panel()).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Убрать ст. 65 ч. 1 из калькулятора' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Убрать ст. 87 ч. 1 из калькулятора' })).toHaveAttribute('aria-pressed', 'true');
     expect(platform.calls.some((c) => c.method === 'extendWindow')).toBe(true);
     expect(total()).toHaveTextContent('30 мес');
     expect(within(total()).getByRole('img', { name: 'Звёзд розыска: 3' })).toBeInTheDocument();
     expect(panel()).toHaveTextContent('Залог(средней тяжести)75 000 ₽');
 
-    await user.click(within(panel()).getByRole('button', { name: 'Убрать ст. 65 ч. 1' }));
+    await user.click(within(panel()).getByRole('button', { name: 'Убрать ст. 87 ч. 1' }));
     expect(queryPanel()).not.toBeInTheDocument();
     expect(platform.calls.at(-1)?.method).toBe('retractWindow');
   });
 
   it('adds the selected result with Enter and takes it out with Enter again', async () => {
     const { user } = await renderApp();
-    await find(user, 'ук 65');
+    await find(user, 'ук 87');
     await user.keyboard('{ArrowDown}{Enter}');
     expect(inCalculator()).toHaveLength(1);
-    expect(inCalculator()[0]).toHaveTextContent('ст. 65 ч. 2');
+    expect(inCalculator()[0]).toHaveTextContent('ст. 87 ч. 2');
     await user.keyboard('{Enter}');
     expect(queryPanel()).not.toBeInTheDocument();
   });
 
   it('shows absorption, the stars to set and the federal warning; «Очистить» empties it', async () => {
     const { user } = await renderApp();
-    await find(user, 'ук 65 ч 1');
+    await find(user, 'ук 87 ч 1');
     await user.keyboard('{Enter}');
-    await find(user, 'ук 80 ч 1');
+    await find(user, 'ук 124 ч 1');
     await user.keyboard('{Enter}');
 
     expect(total()).toHaveTextContent('40 мес');
     expect(within(total()).getByRole('img', { name: 'Звёзд розыска: 4' })).toBeInTheDocument();
-    expect(panel()).toHaveTextContent('ст. 80 поглощает ст. 65 ч. 1 — УК ст. 41 ч. 2');
-    expect(within(panel()).getByRole('alert')).toHaveTextContent('ст. 80 — федеральная подследственность — дело ФСБ');
+    expect(panel()).toHaveTextContent('ст. 124 поглощает ст. 87 ч. 1 — УК ст. 59 ч. 2');
+    expect(within(panel()).getByRole('alert')).toHaveTextContent('ст. 124 — федеральная подследственность — дело ФСБ');
     expect(panel()).toHaveTextContent('Залог(тяжкое)не предусмотрен');
     expect(inCalculator()[0]).toHaveClass('ci--absorbed');
 
@@ -83,17 +83,17 @@ describe('criminal calculator', () => {
 
   it('reduces a charge for an attempt', async () => {
     const { user } = await renderApp();
-    await find(user, 'ук 65 ч 1');
+    await find(user, 'ук 87 ч 1');
     await user.keyboard('{Enter}');
     await user.click(within(panel()).getByRole('button', { name: 'покушение' }));
     expect(total()).toHaveTextContent('22 мес');
     expect(total()).toHaveTextContent('= 20 мес');
-    expect(panel()).toHaveTextContent('ст. 65 ч. 1: покушение — не более ¾ наказания, УК ст. 45 ч. 3');
+    expect(panel()).toHaveTextContent('ст. 87 ч. 1: покушение — не более ¾ наказания, УК ст. 56 ч. 3');
   });
 
   it('says a jurisdiction shared by the charges once, and keeps the stage out of sight until one is chosen', async () => {
     const { user } = await renderApp();
-    await find(user, 'ук 65 ч 1');
+    await find(user, 'ук 87 ч 1');
     await user.keyboard('{Enter}');
     await find(user, 'ук 73');
     await user.keyboard('{Enter}');
@@ -109,7 +109,7 @@ describe('criminal calculator', () => {
 
   it('switches to a fine, checks the amount against the limit, and refuses a fine when a charge has none', async () => {
     const { user } = await renderApp();
-    await find(user, 'ук 57');
+    await find(user, 'ук 76');
     await user.keyboard('{Enter}');
     await user.click(within(panel()).getByRole('radio', { name: 'Штраф' }));
 
@@ -121,11 +121,11 @@ describe('criminal calculator', () => {
     await user.type(amount, '50000');
     expect(within(total()).queryByRole('alert')).not.toBeInTheDocument();
 
-    await find(user, 'ук 88 ч 2');
+    await find(user, 'ук 136 ч 2');
     await user.keyboard('{Enter}');
     expect(within(panel()).getByRole('radio', { name: 'Штраф' })).toBeDisabled();
     expect(within(panel()).getByRole('radio', { name: 'КПЗ' })).toHaveAttribute('aria-checked', 'true');
-    expect(panel()).toHaveTextContent('Штраф недоступен: у ст. 88 ч. 2 нет штрафа');
+    expect(panel()).toHaveTextContent('Штраф недоступен: у ст. 136 ч. 2 нет штрафа');
   });
 
   it('offers articles of both codes, and nothing without a punishment', async () => {
@@ -208,11 +208,11 @@ describe('administrative charges', () => {
 describe('copying the charges', () => {
   it('goes hotkey → number → Enter → Ctrl+C → Esc without the mouse', async () => {
     const { platform, user } = await renderApp();
-    await user.type(search(), '65');
+    await user.type(search(), '87');
     await user.keyboard('{Enter}');
     await user.keyboard('{Control>}c{/Control}');
 
-    expect(platform.state.clipboard).toBe('ст. 65 ч. 1 УК');
+    expect(platform.state.clipboard).toBe('ст. 87 ч. 1 УК');
     expect(copyButton()).toHaveTextContent('Скопировано');
     // The calculator stays for the pinned card; Esc clears the search, then hides the overlay.
     await user.keyboard('{Escape}{Escape}');
@@ -223,17 +223,17 @@ describe('copying the charges', () => {
   it('writes both codes in one line with the button', async () => {
     const { platform, user } = await renderApp();
     await add(user, 'коап 8.6 ч 1');
-    await add(user, 'ук 88 ч 1');
-    await add(user, 'ук 65 ч 1');
+    await add(user, 'ук 136 ч 1');
+    await add(user, 'ук 87 ч 1');
     await user.click(within(panel()).getAllByRole('button', { name: 'покушение' })[1]);
-    expect(panel()).toHaveTextContent('ст. 65 ч. 1 (покушение), 88 ч. 1 УК; ст. 8.6 ч. 1 КоАП');
+    expect(panel()).toHaveTextContent('ст. 87 ч. 1 (покушение), 136 ч. 1 УК; ст. 8.6 ч. 1 КоАП');
     await user.click(copyButton());
-    expect(platform.state.clipboard).toBe('ст. 65 ч. 1 (покушение), 88 ч. 1 УК; ст. 8.6 ч. 1 КоАП');
+    expect(platform.state.clipboard).toBe('ст. 87 ч. 1 (покушение), 136 ч. 1 УК; ст. 8.6 ч. 1 КоАП');
   });
 
   it('leaves Ctrl+C to selected text, and says when the clipboard fails', async () => {
     const { platform, user } = await renderApp();
-    await add(user, 'ук 65 ч 1');
+    await add(user, 'ук 87 ч 1');
     (search() as HTMLInputElement).setSelectionRange(0, 2);
     await user.keyboard('{Control>}c{/Control}');
     expect(platform.calls.some((c) => c.method === 'writeClipboard')).toBe(false);

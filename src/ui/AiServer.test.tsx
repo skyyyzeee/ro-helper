@@ -53,7 +53,7 @@ describe('the AI through the AI server', () => {
     expect(calls.every((c) => c.device === device)).toBe(true);
     expect(calls.map((c) => c.body.counts)).toEqual([true]);
     // The found articles go along, in the messages the server passes on.
-    expect(calls[0].body.messages?.at(-1)?.content).toMatch(/\[S\d+\] УК ст\. 65/);
+    expect(calls[0].body.messages?.at(-1)?.content).toMatch(/\[S\d+\] УК ст\. 87/);
   });
 
   it('says why when the day\'s questions are out', async () => {

@@ -7,7 +7,7 @@ import { AUTHOR_KEY } from './documents';
 /** These tests talk to Gemini with a key, the way a player outside Russia may. */
 const GEMINI = { [AI_PROVIDER_SETTING]: 'gemini', [AI_KEY_SETTING]: 'test-key' };
 
-const REPORT = 'РАПОРТ\nЯ, лейтенант полиции Иван Петров, задержал гражданина {ФИО задержанного}.\nКвалификация: УК ст. 65 «Кража».';
+const REPORT = 'РАПОРТ\nЯ, лейтенант полиции Иван Петров, задержал гражданина {ФИО задержанного}.\nКвалификация: УК ст. 87 «Кража».';
 
 /** Gemini as the tests see it: the document (and law terms, were any asked); every request kept to look at. */
 function fakeGemini() {
@@ -43,11 +43,11 @@ describe('writing a document with the AI', () => {
     expect(await within(view).findByText(/задержал гражданина/)).toBeInTheDocument();
     // The author and the found articles went to the AI; the gap it could not fill is marked.
     expect(bodies.at(-1)).toContain('лейтенант полиции');
-    expect(bodies.at(-1)).toContain('УК ст. 65');
+    expect(bodies.at(-1)).toContain('УК ст. 87');
     // One AI call: the search takes the player's words with the hints, no phrases asked first.
     expect(bodies).toHaveLength(1);
     expect(within(view).getByText('{ФИО задержанного}')).toHaveClass('doc__gap');
-    expect(within(view).getByRole('button', { name: /УК ст\. 65 «Кража»/ })).toBeInTheDocument();
+    expect(within(view).getByRole('button', { name: /УК ст\. 87 «Кража»/ })).toBeInTheDocument();
 
     await user.click(within(view).getByRole('button', { name: 'Скопировать для форума' }));
     expect(platform.state.clipboard).toBe(REPORT);

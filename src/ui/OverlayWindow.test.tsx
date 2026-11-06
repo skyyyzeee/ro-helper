@@ -24,9 +24,9 @@ describe('overlay window', () => {
 
   it('steps back one layer per Esc: article → search text → hidden overlay', async () => {
     const { platform, user } = await renderApp();
-    await user.type(search(), 'ук 104');
-    await user.click(screen.getByRole('button', { name: /ст\. 104\s*Оскорбление/ }));
-    expect(screen.getByRole('article', { name: /Статья 104/ })).toBeInTheDocument();
+    await user.type(search(), 'ук 159');
+    await user.click(screen.getByRole('button', { name: /ст\. 159\s*Оскорбление/ }));
+    expect(screen.getByRole('article', { name: /Статья 159/ })).toBeInTheDocument();
 
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('article')).not.toBeInTheDocument();
