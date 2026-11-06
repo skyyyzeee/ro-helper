@@ -7,6 +7,23 @@ import { buildPack } from './buildPack';
 import { TVERSKOI } from './servers';
 
 describe('the documents of the whole project, kept once', () => {
+  it('reports a missing snapshot or a local snapshot with no text', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'build-pack-incomplete-'));
+    const serverDir = join(dir, 'one');
+    const server = { id: 'one', name: 'Один', status: 'active' as const, documents: ['rules-main'] };
+    expect(buildPack(serverDir, server).issues).toMatchObject([{ document: 'rules-main' }]);
+    const shared = join(dir, '_shared', 'sources');
+    const local = join(serverDir, 'sources');
+    mkdirSync(shared, { recursive: true });
+    mkdirSync(local, { recursive: true });
+    const fixtures = join(import.meta.dirname, '..', '..', 'data', '_shared', 'sources');
+    for (const ext of ['txt', 'meta.json']) {
+      copyFileSync(join(fixtures, `rules-main.${ext}`), join(shared, `rules-main.${ext}`));
+    }
+    copyFileSync(join(shared, 'rules-main.meta.json'), join(local, 'rules-main.meta.json'));
+    expect(buildPack(serverDir, server).issues).toMatchObject([{ document: 'rules-main' }]);
+  });
+
   it('reads a rules document from data/_shared when the server has no snapshot of its own', () => {
     const root = join(import.meta.dirname, '..', '..');
     const dir = mkdtempSync(join(tmpdir(), 'build-pack-'));
