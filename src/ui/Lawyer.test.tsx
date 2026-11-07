@@ -48,7 +48,7 @@ describe('the lawyer\'s demands', () => {
     expect(demands).toHaveLength(2);
     // A lawful demand is said to be one, with what the officer must do — and no ground to refuse.
     expect(demands[0]).toHaveTextContent('Законно — нужно выполнить');
-    expect(demands[0]).toHaveTextContent('Предоставить свидание наедине до допроса.');
+    expect(demands[0]).toHaveTextContent('Что сделать сейчас: Предоставить свидание наедине до допроса.');
     expect(demands[0]).not.toHaveTextContent('Можно отказать');
     expect(demands[1]).toHaveTextContent('Незаконно — можно отказать');
     // Its basis is a found article of the server's laws, opened with a click.
@@ -89,9 +89,26 @@ describe('the lawyer\'s demands', () => {
     });
     const view = screen.getByRole('region', { name: 'Требования адвоката' });
     const [demand] = await within(view).findAllByRole('listitem');
-    expect(demand).toHaveTextContent('В законах сервера не нашлось');
+    expect(demand).toHaveTextContent('Нужна проверка');
     expect(demand).not.toHaveTextContent('Законно — нужно выполнить');
     expect(within(view).getByRole('alert')).toHaveTextContent(/нет источника/);
+  });
+
+  it('returns the original description to the input when the player wants to clarify', async () => {
+    const question = 'Задержание оформлялось письменно?';
+    const text = JSON.stringify({ demands: [{ demand: 'Показать протокол', verdict: 'unclear', question }] });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ text }), { status: 200 })));
+    const { user } = await renderApp({ settings: SERVER, profile: { organization: 'mvd' } });
+    await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
+    await user.click(screen.getByRole('radio', { name: 'Проверка' }));
+    const input = screen.getByRole('searchbox', { name: 'Поиск по законам' });
+    const description = 'Адвокат просит показать протокол задержания';
+    await user.type(input, description + '{Enter}');
+    const view = screen.getByRole('region', { name: 'Требования адвоката' });
+    expect(await within(view).findByText(question, { exact: false })).toBeVisible();
+    await user.click(within(view).getByRole('button', { name: 'Дополнить описание' }));
+    expect(input).toHaveValue(description + ' ');
+    expect(input).toHaveFocus();
   });
 
   it('gives the reply as it is said, without a lead-in', () => {

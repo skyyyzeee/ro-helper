@@ -1,6 +1,6 @@
 // The officer's checks over a model that slips the format: what it meant still counts, what it did not say does not.
 import { describe, expect, it, vi } from 'vitest';
-import { TVERSKOI_PACK } from '../data/bundled';
+import { KUTUZOVSKIY_PACK, TVERSKOI_PACK } from '../data/bundled';
 import { checkDemands, reviewDetention } from './officerChecks';
 import type { AiProvider, AiRequest } from './provider';
 
@@ -61,5 +61,37 @@ describe('a lawyer\'s demand judged in a slipped format', () => {
       'Адвокат требует немедленно отпустить задержанного, прошло 20 минут',
     );
     expect(answer.demands[0]).toMatchObject({ verdict: 'unlawful', refusal: 'Срок не истёк.' });
+  });
+});
+
+describe('a lawyer check with a missing fact or a conflicting verdict', () => {
+  it('asks for the missing fact and suppresses instructions until it is known', async () => {
+    const question = 'Задержание оформлялось письменно?';
+    const answer = await checkDemands(
+      fakeAi(() => ({
+        demands: [{ demand: 'Показать протокол', verdict: 'unclear', question, officer: 'Показать протокол.', refusal: 'Отказать.' }],
+        reply: 'Я покажу протокол.',
+      })),
+      pack,
+      'Адвокат просит показать протокол задержания',
+    );
+    expect(answer.demands[0]).toMatchObject({ verdict: 'unclear', question, officer: '', refusal: '' });
+    expect(answer.reply).toBe('');
+  });
+
+  it.each([[10, 'lawful'], [30, 'unclear']])('checks a lawful verdict for a wait of %i minutes', async (minutes, verdict) => {
+    const answer = await checkDemands(
+      fakeAi((id) => ({
+        demands: [{ demand: 'Дождаться адвоката', verdict: 'lawful', sources: [id(/ПК ст\. 3\.3/)], officer: 'Ждать.' }],
+        reply: 'Я подожду.',
+      })),
+      KUTUZOVSKIY_PACK,
+      'Задержанный попросил частного адвоката, адвокат требует ждать его ' + minutes + ' минут, пока он едет',
+    );
+    expect(answer.demands[0].verdict).toBe(verdict);
+    if (minutes === 30) {
+      expect(answer.reply).toBe('');
+      expect(answer.issues).toContain('Запрошенное ожидание частного адвоката превышает предел по ПК ст. 3.3');
+    }
   });
 });

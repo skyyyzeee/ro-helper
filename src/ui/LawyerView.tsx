@@ -10,7 +10,7 @@ const VERDICTS: Record<Verdict, { title: string; className: string }> = {
   lawful: { title: 'Законно — нужно выполнить', className: 'demand--lawful' },
   unlawful: { title: 'Незаконно — можно отказать', className: 'demand--unlawful' },
   partly: { title: 'Законно частично', className: 'demand--partly' },
-  unclear: { title: 'В законах сервера не нашлось', className: 'demand--unclear' },
+  unclear: { title: 'Нужна проверка', className: 'demand--unclear' },
 };
 
 /** A text that names an article of the sources opens it; any other is plain. */
@@ -33,10 +33,12 @@ export function LawyerView({
   lawyer,
   onOpen,
   onTab,
+  onDraft,
 }: {
   lawyer: LawyerCheck;
   onOpen: (hit: SearchHit) => void;
   onTab: (tab: AiTab) => void;
+  onDraft: (text: string) => void;
 }) {
   const platform = usePlatform();
   const [copied, setCopied] = useState(false);
@@ -95,6 +97,16 @@ export function LawyerView({
                   <span className="demand__verdict">{VERDICTS[d.verdict].title}</span>
                   <b className="demand__what">{d.demand}</b>
                 </div>
+                {d.question && (
+                  <>
+                    <p className="demand__row"><strong>Уточните:</strong> {d.question}</p>
+                    <p className="demand__row">
+                      <button type="button" className="ai__cite" onClick={() => onDraft(result.said + ' ')}>
+                        Дополнить описание
+                      </button>
+                    </p>
+                  </>
+                )}
                 {d.basis && (
                   <p className="demand__row">
                     <span className="demand__label">Основание:</span> <Cited text={d.basis} sources={result.sources} onOpen={onOpen} />
@@ -102,7 +114,7 @@ export function LawyerView({
                 )}
                 {d.officer && (
                   <p className="demand__row">
-                    <span className="demand__label">Что сделать:</span> {d.officer}
+                    <strong>Что сделать сейчас:</strong> {d.officer}
                   </p>
                 )}
                 {d.refusal && (
