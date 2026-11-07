@@ -3,7 +3,7 @@
 // detention the officer tells, against the laws and the project's rules for the state's factions (ПГО: the charges
 // and rights said aloud, no abuse of the state's functions). One AI call each: the search takes the officer's words
 // with the hints and the words of the matter (hints.ts), not phrases asked of the AI first.
-import { findForSituation, type SearchHit, type ServerPack } from '../core';
+import { articleText, findForSituation, type SearchHit, type ServerPack } from '../core';
 import { groundItems, idsOf, textIssues } from './check';
 import { sourcesBlock } from './context';
 import { hintTerms } from './hints';
@@ -21,6 +21,8 @@ export interface Demand {
   /** The demand, as the AI understood it. */
   demand: string;
   verdict: Verdict;
+  /** One missing fact that can change the verdict. */
+  question?: string;
   /** The article it rests on, as the sources label it. */
   basis: string;
   /** What the officer must do about it. */
@@ -47,13 +49,14 @@ const LAWYER_PROMPT = (pack: ServerPack) =>
   [
     coreRules(pack, 'law'),
     'ЗАДАЧА: ты — независимый юрист.',
-    'Сотрудник государственной организации (МВД, ФСБ и т.п.) пересказывает, что от него требует адвокат. Разбери КАЖДОЕ требование отдельно по источникам ниже.',
+    'Сотрудник государственной организации (МВД, ФСБ и т.п.) пересказывает, что от него требует адвокат. Разбери КАЖДОЕ требование отдельно по источникам ниже. Если из сообщения понятно, что требует адвокат, обязательно добавь это требование в массив demands, даже если вердикт будет "unclear".',
     'БУДЬ БЕСПРИСТРАСТЕН: ты не на стороне сотрудника и не на стороне адвоката. Если требование адвоката законно — прямо скажи это и что сотрудник ОБЯЗАН сделать; не ищи повода отказать. Если незаконно — назови основание для отказа. Если законно лишь частично — объясни, в какой части.',
     'СТРОГИЕ ПРАВИЛА: опирайся только на статьи из источников и ссылайся на них в точности как они подписаны (например «УПК ст. 50»). Никаких законов РФ. Не придумывай статей, прав и сроков, которых нет в источниках. Если по требованию в источниках ничего нет — verdict "unclear" и так и напиши. У каждого требования — "sources": id источников, на которых стоит вывод; без них verdict засчитан не будет.',
-    'КАК РЕШАТЬ: сначала найди в источниках статью про это требование и прочитай, что в ней сказано, — потом ставь verdict, и он должен совпадать с этой статьёй. Если статья прямо даёт адвокату или задержанному это право — verdict "lawful", даже если сотруднику это неудобно. Адвокат действует в уголовном процессе: основание ищи в процессуальном кодексе (УПК) и в законе о полиции; КоАП — про административное задержание, к адвокату он не относится. Одно право дают несколько статей — бери ту, что прямо о требовании (про срок задержания — статью, которая сам срок и даёт, а не об адвокате). СРОКИ СРАВНИВАЙ ЧИСЛАМИ: если адвокат ссылается на время (например «прошло 30 минут»), а статья даёт больший срок (например 1 час = 60 минут), то срок НЕ истёк и требование на этом основании незаконно. Требование отпустить из-за прошедшего времени проверяй по сроку самого задержания из статьи, которая этот срок даёт: сроки ожидания адвоката и процедур — не основание отпускать. Не пиши в тексте слово verdict и не рассуждай вслух.',
+    'КАК РЕШАТЬ: сначала найди в источниках статью про это требование и прочитай, что в ней сказано, — потом ставь verdict, и он должен совпадать с этой статьёй. Если статья прямо даёт адвокату или задержанному это право — verdict "lawful", даже если сотруднику это неудобно. Адвокат действует в уголовном процессе: основание ищи в процессуальном кодексе (УПК) и в законе о полиции; КоАП — про административное задержание, к адвокату он не относится. Одно право дают несколько статей — бери ту, что прямо о требовании (про срок задержания — статью, которая сам срок и даёт, а не об адвокате). СРОКИ СРАВНИВАЙ ЧИСЛАМИ: если адвокат ссылается на время (например «прошло 30 минут»), а статья даёт больший срок (например 1 час = 60 минут), то срок НЕ истёк и требование на этом основании незаконно. Требование отпустить из-за прошедшего времени проверяй по сроку самого задержания из статьи, которая этот срок даёт: сроки ожидания адвоката и процедур — не основание отпускать. Если адвокат требует ждать его прибытия, сравни запрошенное время с пределом ожидания защитника по источникам этого сервера. Отдельно скажи, когда сотрудник может продолжить действия и что делать, если защитник всё же прибудет до итогового решения, если это указано в источнике. Не пиши в тексте слово verdict и не рассуждай вслух.',
+    'Если вердикт зависит от отсутствующего факта, поставь "unclear", задай один конкретный вопрос в "question" и оставь "officer", "refusal" и "reply" пустыми. Например, если от формы производства зависит доступ к запрошенному протоколу, спроси, оформлялось ли задержание письменно. Если фактов достаточно, оставь "question" пустым.',
     'ПИШИ КОРОТКО: «basis» — одна статья и одно предложение (до 25 слов), что в ней сказано по этому требованию; «officer» и «refusal» — по одному предложению до 20 слов; «note» — до 12 слов.',
     '«reply» — ГОТОВАЯ ПРЯМАЯ РЕЧЬ сотрудника адвокату от первого лица, 2–4 предложения, вежливо и по делу, со ссылками на статьи, — её сразу говорят в игре. Начинай прямо с сути, без вступлений вроде «Сотрудник адвокату:». Если требование законно — сотрудник в ответе соглашается его выполнить.',
-    'Ответь JSON: {"demands": [{"demand": "требование, 3–7 слов", "basis": "УПК ст. 26 — что в ней сказано", "verdict": "lawful" | "unlawful" | "partly" | "unclear", "officer": "что сотрудник должен сделать", "refusal": "на каком основании можно отказать, или пустая строка, если отказывать нельзя", "sources": ["S3"]}], "reply": "прямая речь сотрудника", "note": "вывод для сотрудника, например: Два требования выполнить, отпускать рано"}.',
+    'Ответь JSON: {"demands": [{"demand": "требование, 3–7 слов", "basis": "УПК ст. 26 — что в ней сказано", "verdict": "lawful" | "unlawful" | "partly" | "unclear", "question": "один уточняющий вопрос или пустая строка", "officer": "что сотрудник должен сделать", "refusal": "на каком основании можно отказать, или пустая строка, если отказывать нельзя", "sources": ["S3"]}], "reply": "прямая речь сотрудника", "note": "вывод для сотрудника, например: Два требования выполнить, отпускать рано"}.',
   ].join('\n\n');
 
 /** The words of a lawyer's demands in the laws: what a defender may ask, and what a detainee is owed. */
@@ -102,6 +105,17 @@ export function lawyerSources(pack: ServerPack, text: string, boostDocuments?: s
   );
 }
 
+/** Checks the specific waiting period in the Kutuzovskiy private-defender provision. */
+function privateDefenderWaitIssue(text: string, found: Source[]): string | undefined {
+  const requested = text.match(/требу[а-яё]*\s+(?:ждать|ожидать)[^.!?;]{0,35}?(\d+)\s*минут/iu);
+  if (!requested || !/частн[а-яё]*\s+адвокат/iu.test(text)) return;
+  const rule = found.find(({ hit }) => hit.article.id === 'upk-II-3.3');
+  const limit = rule && articleText(rule.hit.article).match(/не более чем на (\d+) минут/iu);
+  if (limit && Number(requested[1]) > Number(limit[1])) {
+    return 'Запрошенное ожидание частного адвоката превышает предел по ПК ст. 3.3';
+  }
+}
+
 /** Each demand of a lawyer, as an officer tells them, weighed against the laws — one AI call. */
 export async function checkDemands(provider: AiProvider, pack: ServerPack, said: string, boostDocuments?: string[]): Promise<LawyerAnswer> {
   const text = said.trim();
@@ -119,21 +133,37 @@ export async function checkDemands(provider: AiProvider, pack: ServerPack, said:
     .filter((d) => d.demand)
     .map((d) => {
       const { verdict, sources } = verdictOf(d, LAWYER_VERDICTS);
-      return { demand: d.demand!, verdict: verdict ?? ('unclear' as const), basis: d.basis ?? '', officer: d.officer ?? '', refusal: d.refusal ?? '', sources };
+      const question = verdict === 'unclear' && typeof d.question === 'string' ? d.question.trim() : '';
+      return {
+        demand: d.demand!,
+        verdict: verdict ?? ('unclear' as const),
+        ...(question && { question }),
+        basis: question ? '' : d.basis ?? '',
+        officer: question ? '' : d.officer ?? '',
+        refusal: question ? '' : d.refusal ?? '',
+        sources,
+      };
     });
   if (!told.length) throw new AiError('ИИ не разобрал требования — перескажите их подробнее.');
   // A verdict with no source given behind it is no verdict: «not found», and nothing to do or refuse on it.
   const issues: string[] = [];
+  const waitIssue = pack.server.id === 'kutuzovskiy' && told.length === 1 ? privateDefenderWaitIssue(text, found) : undefined;
+  let withholdReply = told.some((demand) => demand.question);
   const demands = groundItems(told, found, 'law').map(({ item, sources, issues: wrong }) => {
+    if (item.verdict === 'lawful' && waitIssue) {
+      issues.push(waitIssue);
+      withholdReply = true;
+      return { ...item, verdict: 'unclear' as const, basis: '', officer: '', refusal: '' };
+    }
     const stray = textIssues(`${item.basis} ${item.refusal}`, found);
     if (item.verdict === 'unclear' || (sources.length && !stray.length)) return item;
     issues.push(`«${item.demand}»: ${[...wrong, ...stray].join('; ')}`);
     return { ...item, verdict: 'unclear' as const, officer: '', refusal: '' };
   });
-  const reply = spoken(parsed.reply ?? '');
+  const reply = withholdReply ? '' : spoken(parsed.reply ?? '');
   const replyIssues = textIssues(reply, found);
   if (replyIssues.length) issues.push(`Ответ адвокату: ${replyIssues.join('; ')}`);
-  return { said: text, demands, reply, note: aboutTheCase(parsed.note ?? ''), sources: found.map((source) => source.hit), issues };
+  return { said: text, demands, reply, note: withholdReply ? '' : aboutTheCase(parsed.note ?? ''), sources: found.map((source) => source.hit), issues };
 }
 
 // ——— Разбор задержания ———

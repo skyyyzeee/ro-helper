@@ -1725,6 +1725,10 @@ export function Overlay({
           <LawyerView
             lawyer={lawyer}
             onOpen={openHit}
+            onDraft={(text) => {
+              setAiDraft(text);
+              searchRef.current?.focus();
+            }}
             onTab={(tab) => {
               setAiTab(tab);
               searchRef.current?.focus();
