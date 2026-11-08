@@ -16,7 +16,8 @@ export interface Shift {
   /** Epoch ms. */
   startedAt: number;
   endedAt: number;
-  earned: number;
+  earned: number | null;
+  fromBalance?: boolean;
   /** A bonus hour of the job was on when it started or ended. */
   bonus?: boolean;
 }
@@ -26,6 +27,8 @@ export interface ActiveShift {
   job: string;
   server: string;
   startedAt: number;
+  endedAt?: number;
+  openingBalance?: number;
 }
 
 export const SHIFT_KEY = 'earn.shift';
@@ -51,14 +54,14 @@ export const minutesOf = (from: number, to: number) => Math.max(0, Math.round((t
 /** Rubles an hour of a shift. */
 export const perHour = (shift: Pick<Shift, 'startedAt' | 'endedAt' | 'earned'>) => {
   const minutes = minutesOf(shift.startedAt, shift.endedAt);
-  return minutes ? Math.round((shift.earned / minutes) * 60) : 0;
+  return minutes && shift.earned !== null ? Math.round((shift.earned / minutes) * 60) : 0;
 };
 
 /** What this player's own shifts at a job paid an hour on average, and how many there were. */
 export function myRate(shifts: Shift[], job: string, server: string): { perHour: number; shifts: number } | null {
-  const mine = shifts.filter((s) => s.job === job && s.server === server && minutesOf(s.startedAt, s.endedAt) >= 1);
+  const mine = shifts.filter((s) => s.earned !== null && s.job === job && s.server === server && minutesOf(s.startedAt, s.endedAt) >= 1);
   if (!mine.length) return null;
-  const earned = mine.reduce((sum, s) => sum + s.earned, 0);
+  const earned = mine.reduce((sum, s) => sum + (s.earned ?? 0), 0);
   const minutes = mine.reduce((sum, s) => sum + minutesOf(s.startedAt, s.endedAt), 0);
   return { perHour: Math.round((earned / minutes) * 60), shifts: mine.length };
 }
@@ -91,8 +94,8 @@ export function useShifts() {
   }, [platform]);
 
   const start = useCallback(
-    (job: string, server: string) => {
-      const shift = { job, server, startedAt: Date.now() };
+    (job: string, server: string, openingBalance?: number) => {
+      const shift = { job, server, startedAt: Date.now(), openingBalance };
       setActive(shift);
       void platform.writeSetting(SHIFT_KEY, shift);
     },
@@ -102,10 +105,24 @@ export function useShifts() {
     setActive(null);
     void platform.writeSetting(SHIFT_KEY, null);
   }, [platform]);
+  const stop = useCallback(() => {
+    if (!active || active.endedAt !== undefined) return;
+    const stopped = { ...active, endedAt: Date.now() };
+    setActive(stopped);
+    void platform.writeSetting(SHIFT_KEY, stopped);
+  }, [active, platform]);
+  const completeAmount = useCallback((shift: Shift, earned: number) => {
+    setShifts((now) => {
+      const next = now.map((item) => item === shift && item.earned === null ? { ...item, earned } : item);
+      void platform.writeSetting(SHIFTS_KEY, next);
+      return next;
+    });
+  }, [platform]);
   const finish = useCallback(
-    (earned: number, bonus: boolean) => {
+    (earned: number | null, bonus: boolean, fromBalance = false) => {
       if (!active) return null;
-      const shift: Shift = { ...active, endedAt: Date.now(), earned, ...(bonus ? { bonus } : {}) };
+      const { job, server, startedAt, endedAt = Date.now() } = active;
+      const shift: Shift = { job, server, startedAt, endedAt, earned, ...(bonus ? { bonus } : {}), ...(fromBalance ? { fromBalance } : {}) };
       setActive(null);
       void platform.writeSetting(SHIFT_KEY, null);
       setShifts((now) => {
@@ -114,7 +131,7 @@ export function useShifts() {
         return next;
       });
       // Too short to tell an hour's pay: kept here, not sent.
-      if (share && minutesOf(shift.startedAt, shift.endedAt) >= 10) void shareShift(platform, shift).catch(() => undefined);
+      if (share && !fromBalance && earned !== null && earned > 0 && minutesOf(shift.startedAt, shift.endedAt) >= 10) void shareShift(platform, shift).catch(() => undefined);
       return shift;
     },
     [active, platform, share],
@@ -126,7 +143,7 @@ export function useShifts() {
     },
     [platform],
   );
-  return { active, shifts, share, start, finish, cancel, setShare };
+  return { active, shifts, share, start, stop, finish, cancel, completeAmount, setShare };
 }
 
 /**

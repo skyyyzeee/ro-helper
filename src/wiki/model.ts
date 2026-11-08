@@ -55,6 +55,7 @@ export interface WikiEntry {
   priceNote?: string;
   /** What the scrapyard pays, in rubles. */
   sellPrice?: number;
+  tuning?: WikiTuning;
   /** What it is, in pairs: «Макс. скорость» — «275 км/ч». */
   facts: [string, string][];
   /** «Новое», «Можно передать», «Разрешено в госструктурах», «Эксклюзив»… */
@@ -77,6 +78,14 @@ export interface WikiEntry {
 }
 
 /** One batch of a recipe or a craft. */
+export interface WikiTuning {
+  stockSpeed?: number;
+  fullSpeed?: number;
+  engineGain?: number;
+  levels: { part: 'engine' | 'brakes' | 'transmission' | 'turbo'; prices: number[] }[];
+  suspension: { axle: 'front' | 'rear'; option: 'camber' | 'height'; price: number }[];
+}
+
 export interface WikiMake {
   /** How long one batch takes. */
   minutes?: number;

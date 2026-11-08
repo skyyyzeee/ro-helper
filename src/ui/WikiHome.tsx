@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useState, type ReactNode } from 'react';
 import { usePlatform } from '../platform/PlatformContext';
 import { FRESH, type WikiBlock, type WikiCatalogId, type WikiChange, type WikiData, type WikiEntry } from '../wiki/model';
 import { JobsBlock, type Earn } from './WikiTools';
@@ -78,14 +78,21 @@ export function ChangeCounts({ entry }: { entry: WikiEntry }) {
 }
 
 /** The home of the wiki: the articles and the updates, the catalogs in four groups, the pages opened last. */
-export function WikiHome({ data, recent, onCatalog, onOpen, picture, earn }: { data: WikiData; recent: WikiEntry[]; onCatalog: (id: WikiCatalogId) => void; onOpen: (entry: WikiEntry) => void; picture: (src: string | undefined, className: string) => ReactNode; earn?: Earn }) {
+export function WikiHome({ data, recent, onCatalog, onMap, onOpen, picture, earn }: { data: WikiData; recent: WikiEntry[]; onCatalog: (id: WikiCatalogId) => void; onMap: () => void; onOpen: (entry: WikiEntry) => void; picture: (src: string | undefined, className: string) => ReactNode; earn?: Earn }) {
   const titleOf = (id: WikiCatalogId) => data.catalogs.find((c) => c.id === id);
   const latest = data.entries.filter((e) => e.catalog === 'updates').sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))[0];
   const posts = titleOf('posts');
   return (
     <div className="wiki__home">
-      <JobsBlock data={data} onOpen={onOpen} earn={earn} />
-      <div className="wiki__links" role="group" aria-label="Статьи и обновления">
+      <header className="wiki__welcome">
+        <h2 className="wiki__heading">Вики Russia Online</h2>
+        <p>Транспорт, предметы, работы и путеводитель по игровому миру</p>
+      </header>
+      <div className="wiki__links" role="group" aria-label="Быстрый переход">
+        <button type="button" className="wiki__link" onClick={onMap}>
+          <b>Карта</b>
+          <span>Локации, поиск и слои официальной карты</span>
+        </button>
         {posts && posts.count > 0 && (
           <button type="button" className="wiki__link" onClick={() => onCatalog('posts')}>
             <b>Статьи</b>
@@ -105,6 +112,7 @@ export function WikiHome({ data, recent, onCatalog, onOpen, picture, earn }: { d
         )}
       </div>
 
+      <h3 className="wiki__h3">Каталоги</h3>
       <div className="wiki__groups-home">
         {GROUPS.map((group) => {
           const catalogs = group.catalogs.map(titleOf).filter((c) => !!c && c.count > 0);
@@ -124,6 +132,8 @@ export function WikiHome({ data, recent, onCatalog, onOpen, picture, earn }: { d
           );
         })}
       </div>
+
+      <JobsBlock data={data} onOpen={onOpen} earn={earn} />
 
       {recent.length > 0 && (
         <>
@@ -146,17 +156,24 @@ export function WikiHome({ data, recent, onCatalog, onOpen, picture, earn }: { d
 }
 
 /** The articles by the wiki's sections: «Подготовка», «Начало игры», «Работы», «Фракции». */
-export function PostsView({ data, onOpen, picture }: { data: WikiData; onOpen: (entry: WikiEntry) => void; picture: (src: string | undefined, className: string) => ReactNode }) {
+export function PostsView({ data, sectionId, onSection, onOpen, picture }: { data: WikiData; sectionId?: string; onSection: (id?: string) => void; onOpen: (entry: WikiEntry) => void; picture: (src: string | undefined, className: string) => ReactNode }) {
   const catalog = data.catalogs.find((c) => c.id === 'posts');
   const posts = data.entries.filter((e) => e.catalog === 'posts');
+  const groups = catalog?.groups ?? [];
   return (
     <div className="wiki__posts">
-      {catalog?.groups.map((section) => (
+      <div className="wiki__groups" role="group" aria-label="Разделы статей">
+        <button type="button" className={!sectionId ? 'wiki__group wiki__group--on' : 'wiki__group'} aria-pressed={!sectionId} onClick={() => onSection()}>Все</button>
+        {groups.map((section) => (
+          <button key={section.id} type="button" className={sectionId === section.id ? 'wiki__group wiki__group--on' : 'wiki__group'} aria-pressed={sectionId === section.id} onClick={() => onSection(section.id)}>{section.label} <small>{section.count}</small></button>
+        ))}
+      </div>
+      {groups.filter((section) => !sectionId || sectionId === section.id).map((section) => (
         <section key={section.id} aria-label={section.label}>
           <h3 className="wiki__h3">
             {section.label} <small>{section.count}</small>
           </h3>
-          <div className="wiki__row wiki__row--wide">
+          <div className="wiki__grid wiki__post-grid">
             {posts
               .filter((e) => e.group === section.id)
               .map((entry) => (
@@ -199,14 +216,30 @@ export function UpdatesView({ entries, onOpen }: { entries: WikiEntry[]; onOpen:
 }
 
 /** An article or an update as written: headings, paragraphs, lists by depth (an update's marked), quotes, tables, pictures. */
-export function Blocks({ blocks, picture }: { blocks: WikiBlock[]; picture: (src: string | undefined, className: string) => ReactNode }) {
+export function Blocks({ blocks, picture, contents = false }: { blocks: WikiBlock[]; contents?: boolean; picture: (src: string | undefined, className: string) => ReactNode }) {
+  const prefix = useId();
+  const headings = contents ? blocks.flatMap((block, index) => block.type === 'heading' ? [{ index, title: block.text }] : []) : [];
   return (
     <div className="wiki__doc">
+      {headings.length > 1 && (
+        <details className="wiki__toc" open>
+          <summary>Оглавление</summary>
+          <nav aria-label="Оглавление статьи">
+            {headings.map(({ index, title }) => (
+              <button key={index} className="link" type="button" onClick={() => {
+                const heading = document.getElementById(prefix + index);
+                heading?.focus();
+                heading?.scrollIntoView({ block: 'start' });
+              }}>{title}</button>
+            ))}
+          </nav>
+        </details>
+      )}
       {blocks.map((block, i) => {
         switch (block.type) {
           case 'heading':
             return (
-              <h3 key={i} className="wiki__h3">
+              <h3 key={i} id={prefix + i} tabIndex={-1} className="wiki__h3">
                 {block.text}
               </h3>
             );
@@ -232,10 +265,13 @@ export function Blocks({ blocks, picture }: { blocks: WikiBlock[]; picture: (src
             return (
               <div key={i} className="wiki__table-wrap">
                 <table className="wiki__table">
+                  {block.header && block.rows.length > 0 && (
+                    <thead><tr>{block.rows[0].map((cell, index) => <th key={index} scope="col">{cell}</th>)}</tr></thead>
+                  )}
                   <tbody>
-                    {block.rows.map((row, r) => (
+                    {block.rows.slice(block.header ? 1 : 0).map((row, r) => (
                       <tr key={r}>
-                        {row.map((cell, c) => (r === 0 && block.header ? <th key={c}>{cell}</th> : <td key={c}>{cell}</td>))}
+                        {row.map((cell, c) => <td key={c}>{cell}</td>)}
                       </tr>
                     ))}
                   </tbody>

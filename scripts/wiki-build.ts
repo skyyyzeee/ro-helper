@@ -1,9 +1,9 @@
 // Builds src/data/wiki.json — every catalog of data/wiki/ (npm run wiki:import) in the one form of src/wiki/model.ts,
 // its codes said in the wiki's own words (data/wiki/messages.json).
 //   npm run wiki:build
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Gender, WikiCatalog, WikiCatalogId, WikiData, WikiEntry, WikiJobEntry, WikiManifest } from '../src/wiki/model';
+import type { Gender, WikiCatalog, WikiCatalogId, WikiData, WikiEntry, WikiJobEntry, WikiManifest, WikiTuning } from '../src/wiki/model';
 import { FRESH, STATE_ALLOWED, WIKI_FORMAT } from '../src/wiki/model';
 import { changeCounts, docBlocks } from '../src/wiki/doc';
 import { JOBS_GROUP, JOBS_OVERVIEW, jobOf } from '../src/wiki/jobs';
@@ -50,6 +50,30 @@ const add = (entry: WikiEntry) =>
   entries.push(Object.fromEntries(Object.entries(entry).filter(([k, v]) => REQUIRED.has(k) || (v !== undefined && v !== '' && !(Array.isArray(v) && !v.length)))) as WikiEntry);
 
 // ——— Vehicles ———
+const upgradesFile = join(root, 'data', 'wiki', 'vehicle-upgrades.json');
+const upgradeSnapshot = existsSync(upgradesFile) ? raw('vehicle-upgrades') : undefined;
+const upgrades = new Map<number, Raw>(upgradeSnapshot?.items.map((item) => [item.id, item.upgrades]));
+function tuningOf(vehicle: Raw): WikiTuning | undefined {
+  const source = upgrades.get(vehicle.id);
+  if (!source) return;
+  const parts = ['engine', 'brakes', 'transmission', 'turbo'] as const;
+  const levels = parts.flatMap((part) => {
+    const prices = source[part]?.levels;
+    return Array.isArray(prices) && prices.length > 0 && prices.every((price) => Number.isFinite(price) && price >= 0)
+      ? [{ part, prices: prices as number[] }]
+      : [];
+  });
+  const suspension: WikiTuning['suspension'] = [];
+  for (const axle of ['front', 'rear'] as const) {
+    const data = source[axle + 'WheelBase'];
+    for (const [option, key] of [['camber', 'negativeCamber'], ['height', 'heightPosition']] as const) {
+      const price = money(data?.[key]);
+      if (price) suspension.push({ axle, option, price });
+    }
+  }
+  if (!levels.length && !suspension.length) return;
+  return { stockSpeed: money(vehicle.maxSpeed), fullSpeed: money(vehicle.maxSpeedFT), engineGain: money(source.engine?.speedGain), levels, suspension };
+}
 for (const r of raw('vehicles').items) {
   add({
     id: `vehicles:${r.id}`,
@@ -62,6 +86,7 @@ for (const r of raw('vehicles').items) {
     price: money(r.price),
     priceNote: money(r.mcPrice) && !money(r.price) ? word('donate', M.vehiclesPage) : undefined,
     sellPrice: money(r.sellPrice),
+    tuning: tuningOf(r),
     facts: [
       ...fact('Класс', word(r.vehicleClass, M.vehiclesPage)),
       ...fact('Макс. скорость', r.maxSpeed, ' км/ч'),
@@ -73,7 +98,7 @@ for (const r of raw('vehicles').items) {
       ...fact('Обвесов', (r.modkits ?? []).length || ''),
       ...fact('Служебных обвесов', (r.fractionKits ?? []).length || ''),
     ],
-    tags: tags(r, [r.modkits?.length && 'Есть обвесы']),
+    tags: tags(r, [r.modkits?.length && 'Есть обвесы', r.hasMarketplace === true && 'Маркетплейс']),
     sources: sources(r.sources),
     url: `${WIKI}/vehicles/${r.type}/${r.model}`,
     createdAt: r.createdAt,
@@ -219,7 +244,7 @@ for (const r of raw('wheels').items) {
 // ——— Modkits ———
 for (const r of raw('modkits').items) {
   add({
-    id: `modkits:${r.id}`,
+    id: `modkits:${r.vehicleModel}:${r.id}`,
     catalog: 'modkits',
     title: `${r.vehicleName} — ${r.name}`,
     subtitle: r.release ? `Вышел ${r.release}` : undefined,
@@ -403,7 +428,8 @@ for (const e of entries) {
   if (!e.image) delete e.image;
 }
 
-const data: WikiData = { format: WIKI_FORMAT, takenAt: raw('vehicles').takenAt, source: WIKI, catalogs, entries };
+const takenAt = [raw('vehicles').takenAt, upgradeSnapshot?.takenAt ?? ''].sort().at(-1)!;
+const data: WikiData = { format: WIKI_FORMAT, takenAt, source: WIKI, catalogs, entries };
 const file = join(root, 'src', 'data', 'wiki.json');
 writeFileSync(file, `${JSON.stringify(data)}\n`);
 // Beside it, a few bytes the installed apps read to see whether a newer wiki is out (src/ui/wiki.ts).

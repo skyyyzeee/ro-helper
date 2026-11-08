@@ -6,6 +6,25 @@ import { AUTO_KEY } from './updates';
 import { WIKI_MANIFEST_URL, WIKI_URL, readWiki } from './wiki';
 
 describe('the wiki of Russia Online', () => {
+  it('loads the official map only while its section is open', async () => {
+    const { platform, user } = await renderApp();
+    await user.click(screen.getByRole('button', { name: 'Вики Russia Online' }));
+    const wiki = within(await screen.findByRole('region', { name: 'Вики' }, { timeout: 5000 }));
+    expect(wiki.queryByTitle('Карта Russia Online')).not.toBeInTheDocument();
+
+    const scroll = wiki.getByRole('navigation', { name: 'Разделы вики' }).closest('.overlay__content')!;
+    scroll.scrollTop = 36;
+    await user.click(within(wiki.getByRole('navigation', { name: 'Разделы вики' })).getByRole('button', { name: /^Карта$/ }));
+    expect(scroll.scrollTop).toBe(0);
+    expect(wiki.getByTitle('Карта Russia Online')).toHaveAttribute('src', 'https://wiki.russia.online/ru/map');
+    expect(wiki.queryByRole('searchbox', { name: 'Поиск по вики' })).not.toBeInTheDocument();
+    await user.click(wiki.getByRole('button', { name: 'Открыть в браузере' }));
+    expect(platform.calls.at(-1)).toEqual({ method: 'openExternal', args: ['https://wiki.russia.online/ru/map'] });
+
+    await user.click(wiki.getByRole('button', { name: /^Главная$/ }));
+    expect(wiki.queryByTitle('Карта Russia Online')).not.toBeInTheDocument();
+  });
+
   it('opens from the side column: its catalogs, a search of the whole wiki, a thing\'s page with its source', async () => {
     const { platform, user } = await renderApp();
     await user.click(screen.getByRole('button', { name: 'Вики Russia Online' }));
@@ -22,6 +41,60 @@ describe('the wiki of Russia Online', () => {
     await user.click(within(page).getByRole('button', { name: /Открыть на вики/ }));
     expect(platform.calls.at(-1)).toEqual({ method: 'openExternal', args: ['https://wiki.russia.online/ru/vehicles/car/samara'] });
   });
+
+  it('shows the stock and tuned speeds, and switches from the vehicle photo to its kit', async () => {
+    const { user } = await renderApp();
+    await user.click(screen.getByRole('button', { name: 'Вики Russia Online' }));
+    const wiki = await screen.findByRole('region', { name: 'Вики' }, { timeout: 5000 });
+    await user.type(within(wiki).getByRole('searchbox', { name: 'Поиск по вики' }), 'Adel Rose J GTC');
+    const scroll = wiki.closest('.overlay__content')!;
+    scroll.scrollTop = 90;
+    await user.click(await within(wiki).findByRole('button', { name: 'Adel Rose J GTC' }));
+    expect(scroll.scrollTop).toBe(0);
+    const page = within(wiki).getByRole('article', { name: 'Adel Rose J GTC' });
+    expect(page).toHaveTextContent('Скорость в стоке200 км/ч');
+    expect(page).toHaveTextContent('С полным тюнингом212 км/ч');
+    const tuning = within(page).getByRole('region', { name: 'Улучшения транспорта' });
+    await user.click(within(tuning).getByRole('button', { name: 'Двигатель — уровень 1' }));
+    expect(tuning).toHaveTextContent('10 560 ₽');
+    expect(tuning).toHaveTextContent('203 км/ч');
+    await user.click(within(tuning).getByRole('button', { name: 'Максимум' }));
+    expect(tuning).toHaveTextContent('160 800 ₽');
+    expect(tuning).toHaveTextContent('212 км/ч');
+    await user.click(within(tuning).getByRole('button', { name: 'Сток' }));
+    expect(tuning).toHaveTextContent('200 км/ч');
+    await user.click(within(page).getByRole('button', { name: 'Увеличить фото' }));
+    expect(within(page).getByRole('button', { name: 'Уменьшить фото' })).toHaveAttribute('aria-expanded', 'true');
+    await user.click(within(page).getByRole('button', { name: 'Следующее фото' }));
+    expect(within(page).getByRole('img', { name: 'Adel Rose J GTC — JDS' })).toBeInTheDocument();
+    scroll.scrollTop = 160;
+    await user.click(within(within(page).getByRole('region', { name: 'Обвесы этой машины' })).getByRole('button', { name: 'Adel Rose J GTC — JDS' }));
+    expect(within(wiki).getByRole('article', { name: 'Adel Rose J GTC — JDS' })).toBeInTheDocument();
+    expect(scroll.scrollTop).toBe(0);
+    await user.click(within(within(wiki).getByRole('article', { name: 'Adel Rose J GTC — JDS' })).getByRole('button', { name: 'Adel Rose J GTC' }));
+    expect(within(wiki).getByRole('article', { name: 'Adel Rose J GTC' })).toBeInTheDocument();
+    expect(scroll.scrollTop).toBe(160);
+    await user.click(within(wiki).getByRole('button', { name: 'Результаты' }));
+    expect(scroll.scrollTop).toBe(90);
+  });
+
+  it('narrows the transport catalog by price and full-tuning speed', async () => {
+    const { user } = await renderApp();
+    await user.click(screen.getByRole('button', { name: 'Вики Russia Online' }));
+    const wiki = await screen.findByRole('region', { name: 'Вики' }, { timeout: 5000 });
+    await user.click(within(within(wiki).getByRole('navigation', { name: 'Разделы вики' })).getByRole('button', { name: /^Транспорт/ }));
+    await user.type(within(wiki).getByRole('searchbox', { name: 'Поиск в разделе' }), 'Adel Rose J GTC');
+    await user.click(within(wiki).getByText('Характеристики транспорта'));
+    await user.type(within(wiki).getByRole('spinbutton', { name: 'ФТ от, км/ч' }), '213');
+    expect(within(wiki).queryByRole('button', { name: 'Adel Rose J GTC' })).not.toBeInTheDocument();
+    await user.click(within(wiki).getByRole('button', { name: 'Сбросить характеристики' }));
+    await user.type(within(wiki).getByRole('spinbutton', { name: 'Госцена до, ₽' }), '800000');
+    const car = within(wiki).getByRole('button', { name: 'Adel Rose J GTC' });
+    await user.click(within(wiki).getByRole('button', { name: 'Список' }));
+    expect(car).toHaveTextContent('С полным тюнингом 212 км/ч');
+    await user.click(within(wiki).getByRole('button', { name: 'Сетка' }));
+    expect(car).not.toHaveTextContent('С полным тюнингом');
+  });
 });
 
 describe('the wiki’s home, articles and updates', () => {
@@ -34,27 +107,32 @@ describe('the wiki’s home, articles and updates', () => {
   it('opens on its home: the articles, the latest update, the catalogs in four groups that lead to them', async () => {
     const { user, wiki } = await openWiki();
     for (const group of ['Транспорт', 'Персонаж', 'Имущество', 'Предметы и крафт']) expect(within(wiki).getByRole('region', { name: group })).toBeInTheDocument();
-    expect(within(within(wiki).getByRole('group', { name: 'Статьи и обновления' })).getByRole('button', { name: /^Статьи/ })).toHaveTextContent(/\d+ стат/);
-    expect(within(within(wiki).getByRole('group', { name: 'Статьи и обновления' })).getByRole('button', { name: /^Обновления/ })).toHaveTextContent(/Сборка/);
+    expect(within(within(wiki).getByRole('group', { name: 'Быстрый переход' })).getByRole('button', { name: /^Статьи/ })).toHaveTextContent(/\d+ стат/);
+    expect(within(within(wiki).getByRole('group', { name: 'Быстрый переход' })).getByRole('button', { name: /^Обновления/ })).toHaveTextContent(/Сборка/);
     await user.click(within(within(wiki).getByRole('region', { name: 'Персонаж' })).getByRole('button', { name: 'Причёски' }));
     expect(within(wiki).getByRole('heading', { name: /^Причёски/ })).toBeInTheDocument();
   });
 
   it('shows the articles by the wiki’s sections, and an article as written, with the pages seen on the home after', async () => {
     const { user, wiki } = await openWiki();
-    await user.click(within(within(wiki).getByRole('group', { name: 'Статьи и обновления' })).getByRole('button', { name: /^Статьи/ }));
+    await user.click(within(within(wiki).getByRole('group', { name: 'Быстрый переход' })).getByRole('button', { name: /^Статьи/ }));
     for (const section of ['Подготовка', 'Начало игры', 'Работы', 'Фракции']) expect(within(wiki).getByRole('region', { name: section })).toBeInTheDocument();
+    const sections = within(within(wiki).getByRole('group', { name: 'Разделы статей' }));
+    await user.click(sections.getByRole('button', { name: /^Фракции/ }));
     await user.click(within(within(wiki).getByRole('region', { name: 'Фракции' })).getByRole('button', { name: 'МВД' }));
     const page = within(wiki).getByRole('article', { name: 'МВД' });
     expect(page).toHaveTextContent('Министерство внутренних дел');
     expect(page).toHaveTextContent(/мин чтения/);
+    expect(within(page).getByRole('navigation', { name: 'Оглавление статьи' })).toBeInTheDocument();
+    await user.click(within(page).getByRole('button', { name: /Статьи/ }));
+    expect(within(wiki).queryByRole('region', { name: 'Подготовка' })).not.toBeInTheDocument();
     await user.click(within(within(wiki).getByRole('navigation', { name: 'Разделы вики' })).getByRole('button', { name: 'Главная' }));
     expect(within(within(wiki).getByRole('region', { name: 'Вы смотрели' })).getByRole('button', { name: 'МВД' })).toBeInTheDocument();
   });
 
   it('lists the updates with what each added, changed and fixed', async () => {
     const { user, wiki } = await openWiki();
-    await user.click(within(within(wiki).getByRole('group', { name: 'Статьи и обновления' })).getByRole('button', { name: /^Обновления/ }));
+    await user.click(within(within(wiki).getByRole('group', { name: 'Быстрый переход' })).getByRole('button', { name: /^Обновления/ }));
     const list = within(wiki).getByRole('list', { name: 'Обновления' });
     expect(within(list).getByRole('button', { name: /Сборка 4\.3760\.2057/ })).toHaveTextContent(/добавлено 3.*изменено 3.*исправлено 15/);
   });
@@ -151,6 +229,31 @@ describe('the shifts at a job (earning, part two)', () => {
     expect(platform.settings.get('earn.shifts')).toEqual([expect.objectContaining({ job: 'Шахтёр', server: 'tverskoi', earned: 60000 })]);
     expect(within(wiki).getByText(/У меня:/).parentElement).toHaveTextContent('У меня: 40 000 ₽/ч (1 смена)');
     expect(sent.mock.calls.some(([url]) => String(url).endsWith('/v1/earnings'))).toBe(false);
+    vi.unstubAllGlobals();
+  });
+
+  it('saves the balance difference locally and shows it in the shift history', async () => {
+    const sent = vi.fn(async (_url: string, _init?: RequestInit) => new Response('{"jobs":{}}'));
+    vi.stubGlobal('fetch', sent);
+    const { user, wiki, platform } = await openMiner({ 'earn.share': true });
+    await user.type(within(wiki).getByRole('textbox', { name: 'Баланс до смены, ₽' }), '500000');
+    await user.click(within(wiki).getByRole('button', { name: 'Начать смену' }));
+    const endedAt = Date.now() + 80 * 60_000;
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(endedAt);
+    await user.click(within(wiki).getByRole('button', { name: 'Закончить смену' }));
+    clock.mockReturnValue(endedAt + 10 * 60_000);
+    await user.type(within(wiki).getByRole('textbox', { name: 'Баланс после смены, ₽' }), '560000{Enter}');
+    expect(within(wiki).getByText(/Смена записана/)).toHaveTextContent('45 000 ₽/ч');
+    expect(platform.settings.get('earn.shifts')).toEqual([expect.objectContaining({ endedAt, earned: 60000, fromBalance: true })]);
+    expect(JSON.stringify(platform.settings.get('earn.shifts'))).not.toContain('500000');
+    expect(sent.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
+    const toggleWiki = screen.getByRole('button', { name: 'Вики Russia Online' });
+    await user.click(toggleWiki);
+    expect(wiki).not.toBeInTheDocument();
+    await user.click(toggleWiki);
+    const reopened = within(await screen.findByRole('region', { name: 'Вики' }));
+    await user.click(reopened.getByText('История смен · бета'));
+    expect(await reopened.findByText(/по балансу/)).toHaveTextContent('60 000 ₽ · 45 000 ₽/ч');
     vi.unstubAllGlobals();
   });
 
