@@ -10,7 +10,8 @@ export function loadWiki(): Promise<WikiData> {
   return loading;
 }
 
-export type WikiSort = 'new' | 'cheap' | 'expensive' | 'name';
+export type WikiSort = 'new' | 'cheap' | 'expensive' | 'name' | 'fastest';
+export type VehicleFilters = { maxPrice?: number; minStockSpeed?: number; minFullSpeed?: number; minTrunk?: number };
 
 export interface WikiQuery {
   /** A catalog, or all of them (searching the whole wiki). */
@@ -21,6 +22,19 @@ export interface WikiQuery {
   tags?: string[];
   words?: string;
   sort?: WikiSort;
+  vehicle?: VehicleFilters;
+}
+
+const vehicleFact = (entry: WikiEntry, label: string) => {
+  const value = entry.facts.find(([name]) => name === label)?.[1];
+  return value ? Number.parseFloat(value.replace(',', '.')) : NaN;
+};
+
+function meetsVehicleFilters(entry: WikiEntry, filters: VehicleFilters): boolean {
+  return (filters.maxPrice === undefined || (entry.price !== undefined && entry.price <= filters.maxPrice))
+    && (filters.minStockSpeed === undefined || vehicleFact(entry, 'Макс. скорость') >= filters.minStockSpeed)
+    && (filters.minFullSpeed === undefined || vehicleFact(entry, 'С полным тюнингом') >= filters.minFullSpeed)
+    && (filters.minTrunk === undefined || vehicleFact(entry, 'Багажник') >= filters.minTrunk);
 }
 
 const normal = (text: string) => text.toLowerCase().replace(/ё/g, 'е');
@@ -45,6 +59,7 @@ export function pick(data: WikiData, query: WikiQuery): WikiEntry[] {
       (!query.group || e.group === query.group) &&
       (!query.gender || !e.gender || e.gender === query.gender) &&
       (query.tags ?? []).every((tag) => e.tags.includes(tag)) &&
+      (!query.vehicle || meetsVehicleFilters(e, query.vehicle)) &&
       words.every((word) => textOf(e).includes(word)),
   );
   const price = (e: WikiEntry) => e.price ?? 0;
@@ -53,6 +68,8 @@ export function pick(data: WikiData, query: WikiQuery): WikiEntry[] {
       return found.sort((a, b) => (price(a) || Infinity) - (price(b) || Infinity));
     case 'expensive':
       return found.sort((a, b) => price(b) - price(a));
+    case 'fastest':
+      return found.sort((a, b) => (vehicleFact(b, 'Макс. скорость') || 0) - (vehicleFact(a, 'Макс. скорость') || 0));
     case 'name':
       return found.sort((a, b) => a.title.localeCompare(b.title, 'ru'));
     default:

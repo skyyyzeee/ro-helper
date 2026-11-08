@@ -5,7 +5,7 @@
 //
 //   npm run wiki:import                — every catalog
 //   npm run wiki:import -- vehicles    — some of them
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { decodeTurboStream } from './wiki/turbo';
 
@@ -27,7 +27,7 @@ const pause = () => new Promise((resolve) => setTimeout(resolve, PAUSE_MS));
 async function loadRoutes(path: string, query: Record<string, string | number> = {}): Promise<Json> {
   const search = new URLSearchParams(Object.entries(query).map(([k, v]) => [k, String(v)])).toString();
   const url = `${WIKI}/${path}.data${search ? `?${search}` : ''}`;
-  const response = await fetch(url, { headers: { 'User-Agent': 'KremlinAssistant-wiki-import (+https://github.com/skyyyzeee/ro-helper)' } });
+  const response = await fetch(url, { headers: { 'User-Agent': 'KremlinAssistant-wiki-import (+https://github.com/skyyyzeee/ro-helper)' }, signal: AbortSignal.timeout(15_000) });
   if (!response.ok) throw new Error(`${url}: ${response.status}`);
   const decoded = decodeTurboStream(await response.text()) as Json;
   if (Array.isArray(decoded)) throw new Error(`${url}: redirected — ${JSON.stringify(decoded).slice(0, 120)}`);
@@ -94,10 +94,41 @@ async function posts(): Promise<unknown[]> {
   return all;
 }
 
+/** Upgrade tariffs live on each public vehicle detail page. Reuse unchanged vehicle records. */
+async function vehicleUpgrades(): Promise<unknown[]> {
+  const previousPath = join(out, 'vehicle-upgrades.json');
+  const previous = existsSync(previousPath) ? (JSON.parse(readFileSync(previousPath, 'utf8')).items as Json[]) : [];
+  const byId = new Map(previous.map((item) => [item.id, item]));
+  const vehicles = JSON.parse(readFileSync(join(out, 'vehicles.json'), 'utf8')).items as Json[];
+  const items = [];
+  for (const vehicle of vehicles) {
+    if (vehicle.isPrivate || typeof vehicle.type !== 'string' || typeof vehicle.model !== 'string') continue;
+    const kept = byId.get(vehicle.id);
+    if (kept && vehicle.updatedAt && kept.updatedAt === vehicle.updatedAt) {
+      items.push(kept);
+      continue;
+    }
+    await pause();
+    const path = ['vehicles', vehicle.type, vehicle.model].map(encodeURIComponent).join('/');
+    try {
+      const { data } = await load(path);
+      const detail = data as Json | undefined;
+      if (detail?.id !== vehicle.id) throw new Error('Vehicle detail does not match the catalog');
+      items.push({ id: vehicle.id, updatedAt: vehicle.updatedAt, upgrades: detail.upgrades ?? null });
+    } catch (error) {
+      console.warn(`Vehicle ${vehicle.model}: ${error instanceof Error ? error.message : String(error)}`);
+      if (kept) items.push(kept);
+    }
+  }
+  if (vehicles.length && !items.length) throw new Error('No vehicle details could be read');
+  return items;
+}
+
 const CATALOGS: Record<string, () => Promise<unknown[]>> = {
   posts,
   messages,
   vehicles: () => paged('vehicles', results),
+  'vehicle-upgrades': vehicleUpgrades,
   'clothes-male': () => paged('clothes/male', results),
   'clothes-female': () => paged('clothes/female', results),
   'haircuts-male': () => paged('haircuts/male', results),

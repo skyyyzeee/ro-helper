@@ -5749,6 +5749,66 @@ select option {
 .wiki__entry { display: flex; flex-direction: column; gap: 12px; }
 .wiki__hero { display: flex; gap: 16px; padding: 14px; border-radius: var(--radius-card); background: var(--surface); }
 .wiki__big { width: 300px; max-width: 45%; aspect-ratio: 4 / 3; object-fit: contain; border-radius: 12px; background: rgb(0 0 0 / 0.22); flex: none; }
+.wiki__zoom { position: relative; width: 300px; max-width: 45%; align-self: flex-start; border-radius: 12px; flex: none; }
+.wiki__zoom .wiki__big { display: block; width: 100%; max-width: none; }
+.wiki__zoom-label { position: absolute; right: 8px; bottom: 8px; padding: 3px 8px; border-radius: 6px; background: rgb(0 0 0 / 0.72); color: white; font-size: 12px; }
+.wiki__hero--large { flex-direction: column; }
+.wiki__hero--large .wiki__zoom { width: 100%; max-width: none; }
+.wiki__hero--large .wiki__big { max-height: 62vh; }
+.wiki__gallery { display: grid; gap: 6px; min-width: 0; }
+.wiki__gallery-nav { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 13px; }
+.wiki__facts.wiki__speeds { display: flex; flex-wrap: wrap; }
+.wiki__vehicle-filters, .wiki__history { border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
+.wiki__vehicle-filters > summary, .wiki__history > summary { padding: 9px 12px; cursor: pointer; font-size: 13px; font-weight: 600; }
+.wiki__vehicle-filters[open] > summary, .wiki__history[open] > summary { border-bottom: 1px solid var(--line); }
+.wiki__history-body { display: grid; gap: 8px; padding: 10px 12px; }
+.wiki__history-body > :first-child { justify-self: start; }
+.wiki__history-list { display: grid; margin: 0; padding: 0; list-style: none; }
+.wiki__history-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 8px 0; font-size: 13px; }
+.wiki__history-row + .wiki__history-row { border-top: 1px solid var(--line); }
+.wiki__history-main { display: grid; gap: 2px; }
+.wiki__history-main small, .wiki__history-result { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.wiki__history-result b { color: var(--text); }
+.wiki__history-row form { flex-basis: 100%; }
+.wiki__vehicle-filters .wiki__filters { padding: 10px 12px; gap: 8px 12px; align-items: end; }
+.wiki__vehicle-filters label { display: grid; gap: 4px; font-size: 12px; color: var(--text-muted); }
+.wiki__vehicle-filters input { width: 120px; min-height: 32px; font: inherit; font-size: 13px; font-variant-numeric: tabular-nums; }
+.wiki__tuning { display: grid; gap: 12px; container: wiki-tuning / inline-size; }
+.wiki__tuning-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.wiki__tuning-heading span, .wiki__tuning small, .wiki__tuning p, .wiki__tuning-level { color: var(--text-muted); font-size: 12px; }
+.wiki__tuning-parts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 235px), 1fr)); gap: 12px; }
+.wiki__tuning-parts > .wiki__fact { padding: 12px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+.wiki__tuning-part-head { display: flex; align-items: center; gap: 9px; }
+.wiki__tuning-part-head > span:last-child { margin-left: auto; color: var(--text-muted); text-align: right; font-size: 12px; }
+.wiki__tuning-icon { display: grid; place-items: center; flex: none; width: 33px; height: 33px; color: var(--accent-text); border: 1px solid var(--line); border-radius: 9px; background: var(--surface-active); }
+.wiki__tuning h4 { margin: 0; font-size: 14px; font-weight: 700; line-height: 1.25; }
+.wiki__tuning p { margin: 0; }
+.wiki__tuning-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.wiki__tuning-controls .btn { min-width: 32px; min-height: 32px; }
+.wiki__tuning-step { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 5px; }
+.wiki__tuning-step span { width: 20px; height: 5px; border-radius: 6px; background: var(--line); }
+.wiki__tuning-step[data-filled="true"] span { background: var(--accent); }
+.wiki__tuning-step:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.wiki__tuning-step:hover { background: var(--surface-hover); }
+.wiki__tuning-option { display: flex; flex: 1 1 118px; align-items: center; gap: 5px; padding: 5px 7px; border: 1px solid var(--line); border-radius: 7px; cursor: pointer; }
+.wiki__tuning-option small { margin-left: auto; white-space: nowrap; }
+.wiki__tuning-option:has(:checked) { border-color: var(--accent); background: var(--surface-active); }
+.wiki__tuning-option input { accent-color: var(--accent); }
+.wiki__tuning-chassis { display: none; width: 100%; max-height: 250px; color: var(--text-muted); }
+.wiki__tuning-chassis rect, .wiki__tuning-chassis circle { fill: var(--surface-active); stroke: currentColor; }
+.wiki__tuning-chassis .wiki__tuning-node--active { fill: var(--accent); stroke: var(--accent); }
+.wiki__tuning-total { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface-active); }
+.wiki__tuning-total > p { flex: 1 1 155px; }
+.wiki__tuning-stat { display: grid; gap: 1px; font-variant-numeric: tabular-nums; }
+.wiki__tuning-stat b { font-size: 18px; line-height: 1.2; white-space: nowrap; }
+@container wiki-tuning (min-width: 690px) {
+  .wiki__tuning-parts--chassis { grid-template-columns: minmax(0, 1fr) 112px minmax(0, 1fr); }
+  .wiki__tuning-chassis { display: block; grid-area: 1 / 2 / 3 / 3; align-self: center; }
+  .wiki__tuning-parts--chassis [data-tuning-part="engine"] { grid-area: 1 / 1; }
+  .wiki__tuning-parts--chassis [data-tuning-part="front"] { grid-area: 1 / 3; }
+  .wiki__tuning-parts--chassis [data-tuning-part="rear"] { grid-area: 2 / 1; }
+  .wiki__tuning-parts--chassis [data-tuning-part="brakes"] { grid-area: 2 / 3; }
+}
 .wiki__about { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .wiki__title { margin: 0; font-size: 24px; font-weight: 700; line-height: 1.2; }
 .wiki__subtitle { margin: 0; color: var(--text-muted); font-size: 13.5px; }
@@ -5805,8 +5865,9 @@ select option {
 /* A shift going on (shifts.ts): its job and time, and finishing it with the sum earned. */
 .wiki__shift { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0; padding: 8px 10px; border-radius: 10px; font-size: 13.5px; background: oklch(0.78 0.1 var(--accent-hue) / 0.14); }
 .wiki__shift--done { background: var(--now-bg); color: var(--now-text); }
-.wiki__shift-end { display: inline-flex; align-items: center; gap: 8px; }
-.wiki__shift-end input { width: 140px; }
+.wiki__shift-end { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.wiki__shift-end input { width: min(100%, 210px); min-height: 32px; font-variant-numeric: tabular-nums; }
+.wiki__shift-end output { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .wiki__shift-start { justify-self: start; }
 .wiki__rates { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; font-size: 13px; color: var(--text-muted); }
 .wiki__rates b { color: var(--text); font-variant-numeric: tabular-nums; }
@@ -5816,6 +5877,7 @@ select option {
   .wiki__nav { position: static; width: auto; flex-direction: row; overflow-x: auto; }
   .wiki__navitem { flex: none; }
   .wiki__hero { flex-direction: column; }
+  .wiki__zoom { max-width: 100%; }
   .wiki__big { width: 100%; max-width: none; }
 }
 
@@ -6350,3 +6412,48 @@ select option {
   flex-direction: column;
   gap: 6px;
 }
+
+.wiki__map { display: grid; gap: 12px; }
+.wiki__map-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
+.wiki__map-head p { margin: 3px 0 0; font-size: 12px; color: var(--text-faint); }
+.wiki__map-frame { display: block; box-sizing: border-box; width: 100%; height: clamp(260px, calc(100dvh - 180px), 920px); border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
+
+.wiki__welcome { padding: 18px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
+.wiki__welcome p { margin: 5px 0 0; color: var(--text-muted); font-size: 13px; }
+.wiki__links { grid-template-columns: repeat(auto-fit, minmax(min(100%, 165px), 1fr)); }
+.wiki__home > .wiki__h3 { margin-bottom: 0; }
+.wiki__section-head { justify-content: space-between; flex-wrap: wrap; }
+.wiki__layout { flex: none; }
+.wiki__tools { flex-wrap: wrap; }
+.wiki__grid--list { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.wiki__grid--list .wiki__card { display: grid; grid-template-columns: 76px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 12px; align-items: center; contain-intrinsic-size: auto 75px; }
+.wiki__grid--list .wiki__thumb { grid-column: 1; grid-row: 1 / span 2; align-self: start; }
+.wiki__grid--list .wiki__name, .wiki__grid--list .wiki__meta { grid-column: 2; }
+.wiki__grid--list .wiki__meta b { margin-left: auto; white-space: nowrap; }
+.wiki__card-facts { display: flex; grid-column: 2; flex-wrap: wrap; gap: 4px 12px; color: var(--text-muted); font-size: 11.5px; }
+.wiki__card-facts b { color: var(--text); font-weight: 600; }
+.wiki__post-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); }
+.wiki__toc { padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
+.wiki__toc summary { cursor: pointer; font-weight: 600; }
+.wiki__toc nav { display: flex; align-items: flex-start; flex-direction: column; gap: 4px; margin-top: 8px; }
+.wiki__toc button { text-align: left; }
+.wiki__doc h3 { scroll-margin-top: 12px; }
+
+.wiki__details .wiki__facts { margin: 0; }
+.wiki__make > .wiki__h3 { margin: 0 0 8px; }
+.wiki__make-steps h4 { margin: 0; font-size: 13px; color: var(--text); }
+.wiki__make-steps ol { margin: 4px 0 0; padding-left: 22px; }
+
+.wiki__card, .wiki__about, .wiki__doc, .wiki__table-wrap { min-width: 0; }
+.wiki__name, .wiki__title, .wiki__fact, .wiki__doc { overflow-wrap: anywhere; }
+.wiki__grid--list .wiki__meta { margin-top: 0; }
+.wiki__grid--list .wiki__thumb { grid-row: 1 / span 3; }
+.wiki__card-facts { align-items: baseline; }
+.wiki__card-tag { padding: 2px 6px; border: 1px solid var(--line); border-radius: 6px; }
+.wiki__table-wrap { max-width: 100%; border: 1px solid var(--line); border-radius: 10px; }
+.wiki__table { width: 100%; }
+.wiki__table td, .wiki__table th { min-width: 72px; }
+.wiki__table tr:nth-child(even) td { background: var(--surface); }
+.wiki__make-parts { grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); }
+.wiki__make-parts li > span { min-width: 0; overflow-wrap: anywhere; }
+.wiki__make-parts li > b { white-space: nowrap; }

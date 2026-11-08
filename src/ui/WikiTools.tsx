@@ -42,6 +42,7 @@ export function MakeCalculator({ make }: { make: WikiMake }) {
   const batches = Math.ceil(count / make.output);
   return (
     <section className="wiki__make" aria-label="Калькулятор">
+      <h3 className="wiki__h3">Состав и расчёт</h3>
       <div className="wiki__make-head">
         <label className="wiki__make-want">
           <span>Сколько нужно</span>
@@ -62,7 +63,12 @@ export function MakeCalculator({ make }: { make: WikiMake }) {
           </li>
         ))}
       </ul>
-      {make.steps?.length ? <p className="wiki__make-steps">Как готовить: {make.steps.join(' → ')}</p> : null}
+      {make.steps?.length ? (
+        <div className="wiki__make-steps">
+          <h4>Как готовить</h4>
+          <ol>{make.steps.map((step, index) => <li key={index}>{step}</li>)}</ol>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -71,13 +77,23 @@ export function MakeCalculator({ make }: { make: WikiMake }) {
 export function JobInfo({ job, title, earn, jobs }: { job: WikiJob; title: string; earn?: Earn; jobs?: (WikiEntry & { job: WikiJob })[] }) {
   const now = useMoscowClock();
   const on = bonusNow(job, now);
+  const [opening, setOpening] = useState('');
   return (
     <section className="wiki__job" aria-label="О работе">
       {earn && jobs && <ShiftBar earn={earn} jobs={jobs} />}
       {earn && !earn.active && (
-        <button className="btn btn--primary btn--sm wiki__shift-start" type="button" onClick={() => earn.start(title, earn.server)}>
-          Начать смену
-        </button>
+        <form className="wiki__shift-end" onSubmit={(event) => {
+          event.preventDefault();
+          const balance = parseShiftMoney(opening);
+          if (Number.isNaN(balance) || earn.active) return;
+          earn.start(title, earn.server, balance ?? undefined);
+          setOpening('');
+        }}>
+          <input className="presets__input" aria-label="Баланс до смены, ₽" placeholder="Баланс до смены, ₽ (необязательно)" inputMode="numeric" value={opening} onChange={(event) => setOpening(event.target.value)} />
+          <button className="btn btn--primary btn--sm wiki__shift-start" type="submit" disabled={Number.isNaN(parseShiftMoney(opening))}>
+            Начать смену
+          </button>
+        </form>
       )}
       {earn && <JobRates earn={earn} job={title} />}
       <p className="wiki__job-line">
@@ -175,6 +191,7 @@ export function JobsBlock({ data, onOpen, earn }: { data: WikiData; onOpen: (ent
           Дальше: {next.map((j) => `${j.title} (${j.job.level} ур.)`).join(', ')}
         </p>
       )}
+      {earn && <ShiftHistory earn={earn} />}
       {earn && <ShareChoice earn={earn} />}
       <p className="wiki__jobs-note">Бонусы — по московскому времени, как в игре. Ранги работы открывают следующие раньше уровня — см. статью о работе.</p>
     </section>
@@ -201,57 +218,106 @@ function useNow(): number {
  * The shift going on, over the jobs and on the job's page: how long, and finishing it with the sum earned — then what
  * that made an hour. A bonus hour of the job on at its start or end is noted with it.
  */
+function parseShiftMoney(raw: string, signed = false): number | null {
+  const value = raw.trim().replace(/\s/g, '');
+  if (!value) return null;
+  return (signed ? /^[+-]?\d+$/ : /^\d+$/).test(value) && Number.isSafeInteger(Number(value)) ? Number(value) : NaN;
+}
+
 export function ShiftBar({ earn, jobs }: { earn: Earn; jobs: (WikiEntry & { job: WikiJob })[] }) {
   const now = useNow();
-  const [ending, setEnding] = useState(false);
+  const [closing, setClosing] = useState('');
   const [sum, setSum] = useState('');
   const [done, setDone] = useState<Shift | null>(null);
   const { active } = earn;
   if (!active) {
     return done ? (
       <p className="wiki__shift wiki__shift--done" role="status">
-        Смена записана: {done.job} — {perHour(done) ? <b>{rateText(perHour(done))}</b> : 'меньше минуты, в час не посчитать'}
-        {earn.share && minutesOf(done.startedAt, done.endedAt) >= 10 ? ' · отправлено в общую статистику' : ''}
+        Смена записана: {done.job} — {shiftResult(done)}
+        {earn.share && !done.fromBalance && (done.earned ?? 0) > 0 && minutesOf(done.startedAt, done.endedAt) >= 10 ? ' · отправлено в общую статистику' : ''}
       </p>
     ) : null;
   }
-  const job = jobs.find((j) => j.title === active.job)?.job;
+  const manual = parseShiftMoney(sum, true);
+  const closingBalance = parseShiftMoney(closing);
+  const difference = active.openingBalance != null && closingBalance != null ? closingBalance - active.openingBalance : null;
+  const earned = manual ?? difference;
   const finish = () => {
-    const earned = Number(sum.replace(/\D/g, ''));
-    if (!earned) return;
-    const bonus = !!job && (!!bonusNow(job, moscowMinutes(new Date(active.startedAt))) || !!bonusNow(job, moscowMinutes()));
-    setDone(earn.finish(earned, bonus));
-    setEnding(false);
+    if (Number.isNaN(earned) || active.endedAt === undefined) return;
+    const job = jobs.find((j) => j.title === active.job)?.job;
+    const bonus = !!job && (!!bonusNow(job, moscowMinutes(new Date(active.startedAt))) || !!bonusNow(job, moscowMinutes(new Date(active.endedAt))));
+    setDone(earn.finish(earned, bonus, manual === null && difference !== null));
+    setClosing('');
     setSum('');
   };
   return (
     <section className="wiki__shift" aria-label="Смена">
-      <span>
-        Смена: <b>{active.job}</b> · {timeLeft(minutesOf(active.startedAt, now))}
-      </span>
+      <span>Смена: <b>{active.job}</b> · {timeLeft(minutesOf(active.startedAt, active.endedAt ?? now))}</span>
       <span className="sp" />
-      {ending ? (
-        <form
-          className="wiki__shift-end"
-          onSubmit={(e) => {
-            e.preventDefault();
-            finish();
-          }}
-        >
-          <input className="presets__input" inputMode="numeric" aria-label="Заработано за смену, ₽" placeholder="Заработано, ₽" value={sum} autoFocus onChange={(e) => setSum(e.target.value.replace(/[^\d\s]/g, ''))} />
-          <button className="btn btn--primary btn--sm" type="submit" disabled={!Number(sum.replace(/\D/g, ''))}>
-            Записать
+      {active.endedAt !== undefined ? (
+        <form className="wiki__shift-end" onSubmit={(event) => { event.preventDefault(); finish(); }}>
+          {active.openingBalance != null && <>
+            <input className="presets__input" inputMode="numeric" aria-label="Баланс после смены, ₽" placeholder="Баланс после смены, ₽" value={closing} autoFocus onChange={(event) => setClosing(event.target.value)} />
+            <span className="wiki__jobs-note">Используй тот же счёт, если на нём были только операции этой смены.</span>
+          </>}
+          <input className="presets__input" inputMode="numeric" aria-label="Заработано за смену, ₽" placeholder="Заработано, ₽" value={sum} autoFocus={active.openingBalance == null} onChange={(event) => setSum(event.target.value)} />
+          {manual === null && difference !== null && !Number.isNaN(difference) && <output>Разница {difference.toLocaleString('ru-RU')} ₽</output>}
+          <button className="btn btn--primary btn--sm" type="submit" disabled={Number.isNaN(earned)}>
+            {earned === null ? 'Записать без суммы' : 'Записать'}
           </button>
-          <button className="link-btn" type="button" onClick={earn.cancel}>
+          <button className="link-btn" type="button" onClick={() => { earn.cancel(); setClosing(''); setSum(''); }}>
             Отменить смену
           </button>
         </form>
       ) : (
-        <button className="btn btn--sm" type="button" onClick={() => setEnding(true)}>
-          Закончить смену
-        </button>
+        <button className="btn btn--sm" type="button" onClick={earn.stop}>Закончить смену</button>
       )}
     </section>
+  );
+}
+
+function shiftResult(shift: Shift): string {
+  if (shift.earned === null) return 'без суммы';
+  return minutesOf(shift.startedAt, shift.endedAt) ? rateText(perHour(shift)) : 'меньше минуты, в час не посчитать';
+}
+
+function ShiftHistory({ earn }: { earn: Earn }) {
+  const [job, setJob] = useState('');
+  const shifts = earn.shifts.filter((shift) => shift.server === earn.server);
+  const jobs = [...new Set(shifts.map((shift) => shift.job))];
+  return (
+    <details className="wiki__history">
+      <summary>История смен · бета</summary>
+      <div className="wiki__history-body">
+      {shifts.length ? <>
+        <Dropdown variant="pill" label="Работа в истории смен" value={job} onChange={setJob}
+          options={[{ value: '', label: 'Все работы' }, ...jobs.map((title) => ({ value: title, label: title }))]} />
+        <ul className="wiki__history-list">
+          {shifts.filter((shift) => !job || shift.job === job).map((shift) => (
+            <li className="wiki__history-row" key={shift.startedAt}>
+              <div className="wiki__history-main">
+                <b>{shift.job}</b>
+                <small>{new Date(shift.endedAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })} · {timeLeft(minutesOf(shift.startedAt, shift.endedAt))}</small>
+              </div>
+              <div className="wiki__history-result">
+                {shift.earned === null ? 'Без суммы' : <b>{shift.earned.toLocaleString('ru-RU')} ₽</b>}
+                {shift.earned !== null && minutesOf(shift.startedAt, shift.endedAt) > 0 && ' · ' + rateText(perHour(shift))}
+                {shift.fromBalance && ' · по балансу'}
+              </div>
+              {shift.earned === null && <form className="wiki__shift-end" onSubmit={(event) => {
+                event.preventDefault();
+                const earned = parseShiftMoney(String(new FormData(event.currentTarget).get('amount') ?? ''), true);
+                if (earned !== null && !Number.isNaN(earned)) earn.completeAmount(shift, earned);
+              }}>
+                <input name="amount" className="presets__input" inputMode="numeric" aria-label="Сумма за сохранённую смену, ₽" placeholder="Сумма, ₽" required />
+                <button className="btn btn--sm" type="submit">Дополнить</button>
+              </form>}
+            </li>
+          ))}
+        </ul>
+      </> : <p className="wiki__jobs-note">Здесь появятся смены на этом сервере.</p>}
+      </div>
+    </details>
   );
 }
 

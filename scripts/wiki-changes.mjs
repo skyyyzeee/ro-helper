@@ -13,6 +13,7 @@ const NAMES = {
   updates: 'Сборки (обновления игры)',
   posts: 'Статьи',
   vehicles: 'Транспорт',
+  'vehicle-upgrades': 'Тюнинг транспорта',
   'clothes-male': 'Мужская одежда',
   'clothes-female': 'Женская одежда',
   'haircuts-male': 'Мужские причёски',
