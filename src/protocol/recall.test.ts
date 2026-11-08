@@ -6,7 +6,7 @@ import { PACKS } from '../data/bundled';
 import { matchesRef } from './grade';
 import { hintTerms } from './hints';
 import { detentionSources, lawyerSources } from './officerChecks';
-import { SOURCES } from './pipeline';
+import { QUICK_SOURCES, SOURCES } from './pipeline';
 import { packInScope } from './sources';
 
 interface Case {
@@ -24,24 +24,24 @@ const { cases } = JSON.parse(readFileSync(join(import.meta.dirname, '../../eval/
  * The exam's situations searched with no AI at all — the player's words and the hints: what the search alone brings
  * to the AI. A miss here is the AI's phrases to make up, so it should stay rare.
  */
-function missed(withHints: boolean): string[] {
+function missed(withHints: boolean, limit: number): string[] {
   return cases
     .filter((c) => c.expect?.length && !c.followUp && c.category !== 'MIXED' && (c.mode ?? 'analysis') === 'analysis')
     .filter((c) => {
       const pack = PACKS[c.server ?? 'tverskoi'];
       const scope = c.category === 'SERVER_RULE' ? 'server_rule' : 'law';
-      const hits = findForSituation(packInScope(pack, scope), c.situation, { limit: SOURCES, lawTerms: withHints ? hintTerms(c.situation) : [] });
+      const hits = findForSituation(packInScope(pack, scope), c.situation, { limit, lawTerms: withHints ? hintTerms(c.situation) : [] });
       return !c.expect!.every((e) => matchesRef(e, hits));
     })
     .map((c) => c.situation);
 }
 
 describe('the search alone, before the AI', () => {
-  it('brings the right article for nearly every situation of the exam, the hints helping', () => {
-    const before = missed(false).length;
-    const after = missed(true);
+  it.each([QUICK_SOURCES, SOURCES])('finds the expected articles within the first %i sources', (limit) => {
+    const before = missed(false, limit).length;
+    const after = missed(true, limit);
     expect(after.length).toBeLessThan(before);
-    expect(after.length).toBeLessThanOrEqual(2);
+    expect(after).toEqual([]);
   });
 
   it('brings the right article and rule for every check of an officer: demands of a lawyer, a detention', () => {
