@@ -101,6 +101,7 @@ function Source({ url }: { url: string }) {
 }
 
 function EntryPage({ data, entry, onOpen, onBack, backLabel, earn }: { data: WikiData; entry: WikiEntry; onOpen: (entry: WikiEntry) => void; onBack: () => void; backLabel: string; earn?: Earn }) {
+  const platform = usePlatform();
   const [view, setView] = useState(0);
   const [large, setLarge] = useState(false);
   const isVehicle = entry.catalog === 'vehicles';
@@ -179,6 +180,11 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel, earn }: { data: Wik
               </span>
             ) : null}
           </div> : null}
+          {isVehicle && entry.tags.includes('Маркетплейс') && (
+            <button className="btn btn--sm" type="button" onClick={() => void platform.openExternal(entry.url)}>
+              Цены по серверам на вики <ExternalIcon />
+            </button>
+          )}
           {entry.sources.length > 0 && <p className="wiki__where">Где получить: {entry.sources.join(', ')}</p>}
         </div>
       </div>
