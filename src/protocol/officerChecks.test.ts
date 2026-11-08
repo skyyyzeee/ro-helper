@@ -79,6 +79,20 @@ describe('a lawyer check with a missing fact or a conflicting verdict', () => {
     expect(answer.reply).toBe('');
   });
 
+  it('hides a ready-to-copy reply that cites an article outside the sources', async () => {
+    const answer = await checkDemands(
+      fakeAi((id) => ({
+        demands: [{ demand: 'Допустить к подзащитному', verdict: 'unlawful', sources: [id(/УПК ст\. 28/)] }],
+        reply: 'Отказываю на основании УПК ст. 99999.',
+      })),
+      pack,
+      'Адвокат пришёл без удостоверения адвоката и требует пустить его к подзащитному',
+    );
+    expect(answer.demands[0].verdict).toBe('unlawful');
+    expect(answer.reply).toBe('');
+    expect(answer.issues.join(' ')).toContain('99999');
+  });
+
   it.each([[10, 'lawful'], [30, 'unclear']])('checks a lawful verdict for a wait of %i minutes', async (minutes, verdict) => {
     const answer = await checkDemands(
       fakeAi((id) => ({

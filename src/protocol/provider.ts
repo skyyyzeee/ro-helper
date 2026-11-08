@@ -103,7 +103,7 @@ export interface CustomAi {
 }
 
 /** The player's own OpenAI-compatible service, asked straight from this computer with their key. */
-export function openaiProvider({ url, key, model }: CustomAi): AiProvider {
+export function openaiProvider({ url, key, model }: CustomAi, schema?: Record<string, unknown>): AiProvider {
   const base = url.trim().replace(/\/+$/, '').replace(/\/chat\/completions$/, '');
   const send = (request: AiRequest, json: boolean) =>
     post(
@@ -114,7 +114,7 @@ export function openaiProvider({ url, key, model }: CustomAi): AiProvider {
         body: JSON.stringify({
           model,
           messages: [{ role: 'system', content: request.system }, ...asMessages(request.turns)],
-          ...(json ? { response_format: { type: 'json_object' } } : {}),
+          ...(json ? { response_format: schema ? { type: 'json_schema', schema, strict: true } : { type: 'json_object' } } : {}),
         }),
       },
       request.think ? 150 : 90,
@@ -124,7 +124,7 @@ export function openaiProvider({ url, key, model }: CustomAi): AiProvider {
     async complete(request) {
       let response = await send(request, !!request.json);
       // Not every service knows the JSON mode; the prompt asks for JSON anyway.
-      if ((response.status === 400 || response.status === 422) && request.json) response = await send(request, false);
+      if (!schema && (response.status === 400 || response.status === 422) && request.json) response = await send(request, false);
       const body = (await response.json().catch(() => null)) as {
         choices?: { message?: { content?: string } }[];
         error?: { message?: string } | string;

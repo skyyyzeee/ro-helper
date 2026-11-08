@@ -365,6 +365,18 @@ describe('the AI services and their failures', () => {
     expect(new Headers(fetch.mock.calls.at(-1)![1].headers).has('Authorization')).toBe(false);
   });
 
+  it('reports a rejected GigaChat schema without retrying in another format', async () => {
+    const transport = vi.fn(async (_url: string, _init: RequestInit) =>
+      new Response(JSON.stringify({ error: { message: 'schema is not supported' } }), { status: 400 }),
+    );
+    vi.stubGlobal('fetch', transport);
+    const schema = { type: 'object', properties: { reply: { type: 'string' } }, required: ['reply'] };
+    const provider = openaiProvider({ url: 'https://ai.example/v1', key: '', model: 'test-model' }, schema);
+    await expect(provider.complete({ ...request, json: true })).rejects.toMatchObject({ kind: 'failed' });
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(transport.mock.calls[0][1].body)).response_format).toEqual({ type: 'json_schema', schema, strict: true });
+  });
+
   it('gives up on a request that hangs', async () => {
     vi.useFakeTimers();
     vi.stubGlobal(

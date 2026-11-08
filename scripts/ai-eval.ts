@@ -17,6 +17,7 @@
 //                                                    dictionary, from the AI server; the admins' key in AI_ADMIN_TOKEN
 //   --trial gpt-4.1-mini                           — through the AI server, that model only (or «gigachat»): to compare
 //                                                    models before a change; the admins' key in AI_ADMIN_TOKEN
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ServerPack } from '../src/core';
@@ -39,7 +40,35 @@ const arg = (name: string) => {
  * GigaChat (Sber): the authorization key is exchanged for a token that lasts 30 minutes, and the questions are asked
  * with the token. Its servers are signed by the Russian root certificate: run with NODE_EXTRA_CA_CERTS pointing to it.
  */
-const GIGACHAT = { oauth: 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth', api: 'https://gigachat.devices.sberbank.ru/api/v1' };
+const stringField = { type: 'string' };
+const lawyerSchema = {
+  type: 'object',
+  required: ['demands', 'reply', 'note'],
+  additionalProperties: false,
+  properties: {
+    demands: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['demand', 'verdict', 'basis', 'question', 'officer', 'refusal', 'sources'],
+        properties: {
+          demand: stringField,
+          verdict: { type: 'string', enum: ['lawful', 'unlawful', 'partly', 'unclear'] },
+          basis: stringField,
+          question: stringField,
+          officer: stringField,
+          refusal: stringField,
+          sources: { type: 'array', items: stringField },
+        },
+      },
+    },
+    reply: stringField,
+    note: stringField,
+  },
+};
+
+const GIGACHAT = { oauth: 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth', api: 'https://api.giga.chat/v1' };
 /**
  * The authorization key as Sber gives it: base64 of «Client ID:Client Secret». What was copied around it — «Basic »,
  * spaces, line breaks — is dropped; what cannot be one is said without showing the key.
@@ -73,13 +102,13 @@ async function gigachatToken(raw: string): Promise<string> {
   return body.access_token;
 }
 /** The OpenAI-compatible provider over GigaChat, with a fresh token every 25 minutes. */
-async function gigachat(key: string, model: string): Promise<AiProvider> {
+async function gigachat(key: string, model: string, schema?: Record<string, unknown>): Promise<AiProvider> {
   let token = await gigachatToken(key);
   let at = Date.now();
   return {
     async complete(request) {
       if (Date.now() - at > 25 * 60_000) [token, at] = [await gigachatToken(key), Date.now()];
-      return openaiProvider({ url: GIGACHAT.api, key: token, model }).complete(request);
+      return openaiProvider({ url: GIGACHAT.api, key: token, model }, schema).complete(request);
     },
   };
 }
@@ -87,6 +116,8 @@ async function gigachat(key: string, model: string): Promise<AiProvider> {
 const url = arg('url');
 const model = arg('model');
 const giga = args.includes('--gigachat');
+const structured = args.includes('--gigachat-schema');
+if (structured && ((!giga && !url) || args.includes('--trial'))) throw new Error('--gigachat-schema требует прямой вызов GigaChat или --url для тестового сервера.');
 if (url && !model) throw new Error('С --url нужен и --model.');
 if (giga && !process.env.GIGACHAT_AUTH_KEY) throw new Error('Для GigaChat задайте ключ авторизации в переменной GIGACHAT_AUTH_KEY.');
 if (giga && args.includes('--models')) {
@@ -101,14 +132,16 @@ const tokens: Tokens = { input: 0, output: 0 };
 const service: AiProvider = trial
   ? trialProvider((arg('ai-server') ?? AI_SERVER).replace(/\/$/, ''), trial, process.env.AI_ADMIN_TOKEN!.trim(), tokens)
   : giga
-    ? await gigachat(process.env.GIGACHAT_AUTH_KEY!, model ?? 'GigaChat-2')
+    ? await gigachat(process.env.GIGACHAT_AUTH_KEY!, model ?? 'GigaChat-2', structured ? lawyerSchema : undefined)
     : url
-      ? openaiProvider({ url, model: model!, key: process.env.AI_EVAL_KEY ?? '' })
+      ? openaiProvider({ url, model: model!, key: process.env.AI_EVAL_KEY ?? '' }, structured ? lawyerSchema : undefined)
       : serverProvider(AI_SERVER, `deval${Math.random().toString(36).slice(2, 12)}`, async () => process.env.AI_ADMIN_TOKEN?.trim() || null);
 /** The model's last answers, to show what it said when an answer could not be read. */
 const said: string[] = [];
+let attempts = 0;
 const provider: AiProvider = {
   async complete(request) {
+    attempts += 1;
     const text = await service.complete(request);
     said.push(text);
     return text;
@@ -147,6 +180,7 @@ const category = arg('category');
 const picked = arg('cases')?.split(',').map(Number);
 const numbered = all.map((c, i) => ({ ...c, number: i + 1 }));
 const cases = numbered
+  .filter((c) => !structured || c.mode === 'lawyer')
   .filter(
     (c) =>
       (!only || c.server === only) &&
@@ -156,9 +190,16 @@ const cases = numbered
   )
   .slice(0, Number(arg('limit') ?? Infinity));
 
+if (structured && !cases.length) throw new Error('Для проверки JSON-схемы выберите хотя бы один сценарий проверки требований адвоката.');
+
 const packs = new Map<string, ServerPack>();
+const packHashes: Record<string, string> = {};
 const pack = (id: string) => {
-  if (!packs.has(id)) packs.set(id, JSON.parse(readFileSync(join(root, 'src', 'data', `${id}.json`), 'utf8')) as ServerPack);
+  if (!packs.has(id)) {
+    const data = readFileSync(join(root, 'src', 'data', id + '.json'), 'utf8');
+    packs.set(id, JSON.parse(data) as ServerPack);
+    packHashes[id] = createHash('sha256').update(data).digest('hex');
+  }
   return packs.get(id)!;
 };
 
@@ -166,6 +207,8 @@ interface Row {
   number: number;
   category: Category;
   grade: Grade | null;
+  elapsedMs: number;
+  attempts: number;
   error?: string;
 }
 const rows: Row[] = [];
@@ -176,8 +219,9 @@ console.log(`Экзамен ИИ: ${cases.length} ситуаций, ${depth === 
 for (const c of cases) {
   const started = Date.now();
   const categoryOf: Category = c.category ?? 'LAW';
-  const row: Row = { number: c.number, category: categoryOf, grade: null };
+  const row: Row = { number: c.number, category: categoryOf, grade: null, elapsedMs: 0, attempts: 0 };
   said.length = 0;
+  attempts = 0;
   try {
     const p = pack(c.server);
     if (c.mode === 'lawyer') {
@@ -218,12 +262,14 @@ for (const c of cases) {
     // What the model said instead of an answer: a refusal reads differently from broken JSON.
     if (args.includes('--debug')) row.error += said.map((text) => `\n      ИИ ответил: ${text.replace(/\s+/g, ' ').slice(0, 300)}`).join('');
   }
+  row.elapsedMs = Date.now() - started;
+  row.attempts = attempts;
   rows.push(row);
   const g = row.grade;
   const icon = !g ? '!' : g.hardGates.length ? '⛔' : g.pass ? '✓' : g.found === 'partly' ? '½' : '✗';
-  const seconds = ((Date.now() - started) / 1000).toFixed(1);
+  const seconds = (row.elapsedMs / 1000).toFixed(1);
   console.log(`${icon} ${String(c.number).padStart(2)}. [${c.server} · ${categoryOf}] ${c.followUp ? `${c.situation} → ${c.followUp}` : c.situation}`);
-  console.log(`      ${c.expect?.length ? `нужно ${c.expect.join(', ')} → ` : ''}${g ? g.detail : row.error} · вызовов ИИ ${g?.aiCalls ?? '?'} · ${seconds} с`);
+  console.log(`      ${c.expect?.length ? `нужно ${c.expect.join(', ')} → ` : ''}${g ? g.detail : row.error} · вызовов ИИ ${row.attempts} · ${seconds} с`);
   if (g?.hardGates.length) console.log(`      ЖЁСТКИЕ ВОРОТА: ${g.hardGates.join(' | ')}`);
   // The server's per-IP limit counts requests: a pause keeps a long run from looking like a flood.
   if (!url && !giga && !trial) await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -241,9 +287,11 @@ for (const r of rows) {
   const entry = byCategory.get(r.category) ?? { total: 0, passed: 0, calls: 0 };
   entry.total += 1;
   if (r.grade?.pass) entry.passed += 1;
-  entry.calls += r.grade?.aiCalls ?? 0;
+  entry.calls += r.attempts;
   byCategory.set(r.category, entry);
 }
+const latency = graded.filter((row) => row.attempts > 0).map((row) => row.elapsedMs).sort((a, b) => a - b);
+const percentile = (fraction: number) => (latency[Math.ceil(latency.length * fraction) - 1] / 1000).toFixed(2);
 const rate = analyses.length ? Math.round((hallucinated / analyses.length) * 1000) / 10 : 0;
 console.log(
   [
@@ -254,6 +302,7 @@ console.log(
     `Нужная статья применена: ${expectsArticle.filter((r) => r.grade!.found === 'right').length} из ${expectsArticle.length}; поиск её нашёл: ${expectsArticle.filter((r) => r.grade!.searched).length} из ${expectsArticle.length}`,
     `Вопрос понят верно (тип): ${graded.filter((r) => r.grade!.classified).length} из ${graded.length}`,
     '',
+    ...(latency.length ? ['Время ответа с ИИ: p50 ' + percentile(0.5) + ' с, p95 ' + percentile(0.95) + ' с (ответов: ' + latency.length + ')'] : []),
     'По категориям — прошло / всего · вызовов ИИ:',
     ...[...byCategory].map(([name, e]) => `  ${name.padEnd(19)} ${e.passed}/${e.total} · ${e.calls}`),
     ...(trial && tokens.input
@@ -268,8 +317,10 @@ mkdirSync(resultsDir, { recursive: true });
 const result = {
   at: new Date().toISOString(),
   via,
+  format: structured ? 'lawyer-json-schema' : 'default',
   depth,
-  cases: Object.fromEntries(rows.map((r) => [r.number, { pass: !!r.grade?.pass, hard: r.grade?.hardGates ?? [], category: r.category }])),
+  packHashes,
+  cases: Object.fromEntries(rows.map((r) => [r.number, { pass: !!r.grade?.pass, hard: r.grade?.hardGates ?? [], category: r.category, elapsedMs: r.elapsedMs, attempts: r.attempts }])),
 };
 writeFileSync(join(resultsDir, 'last.json'), JSON.stringify(result, null, 2));
 writeFileSync(join(resultsDir, 'misses.json'), JSON.stringify(misses, null, 2));
