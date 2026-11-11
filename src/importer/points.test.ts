@@ -219,7 +219,7 @@ describe('charters of Арбатский and Кутузовский (real forum 
 describe('the other rules of the project (real forum text, the same on every server)', () => {
   const RULES: [string, number, number][] = [
     ['rules-leaders', 41, 27], ['rules-martial', 20, 11], ['rules-supply', 63, 52], ['rules-robbery', 52, 40], ['rules-business', 14, 11],
-    ['rules-bank', 19, 14], ['rules-workshops', 15, 14], ['rules-fort', 35, 30], ['rules-software', 14, 6], ['rules-forum', 37, 26],
+    ['rules-bank', 19, 14], ['rules-workshops', 15, 14], ['rules-fort', 35, 30], ['rules-software', 14, 6], ['rules-forum', 42, 30],
   ];
 
   it('reads every point, and every punishment after «|»', () => {
