@@ -71,47 +71,49 @@ describe('bundled Тверской pack', () => {
     // The laws and charters checked on 27 September were edited from 21 to 26 September — before the version already
     // out (the project rules, dated by the check at 21:58) — so their entry, and the version, are the time of the import;
     // so are the documents of the organisations added after them, posted long before.
-    expect(TVERSKOI_PACK.version).toBe('2026-11-06T17:00:00+03:00');
+    expect(TVERSKOI_PACK.version).toBe('2026-11-08T13:54:26+03:00');
     expect(TVERSKOI_PACK.documents.find((d) => d.id === 'ch-mvd')?.source).toMatchObject({ thread: 27660 });
     expect(TVERSKOI_PACK.changes.map((c) => c.version)).toEqual([
-      '2026-11-06T17:00:00+03:00', '2026-11-05T20:28:38+03:00', '2026-11-05T18:37:46+03:00', '2026-11-02T07:07:02+03:00', '2026-10-24T09:57:39+03:00', '2026-10-24T07:05:08+03:00', '2026-10-20T06:27:48+03:00', '2026-10-12T17:39:07+03:00', '2026-10-08T03:59:49+03:00', '2026-09-27T23:04:03+03:00', '2026-09-27T22:38:20+03:00', '2026-09-27T21:58:06+03:00', '2026-09-24T15:52:15+03:00', '2026-09-11T12:14:23+03:00',
+      '2026-11-08T13:54:26+03:00', '2026-11-06T17:00:00+03:00', '2026-11-05T20:28:38+03:00', '2026-11-05T18:37:46+03:00', '2026-11-02T07:07:02+03:00', '2026-10-24T09:57:39+03:00', '2026-10-24T07:05:08+03:00', '2026-10-20T06:27:48+03:00', '2026-10-12T17:39:07+03:00', '2026-10-08T03:59:49+03:00', '2026-09-27T23:04:03+03:00', '2026-09-27T22:38:20+03:00', '2026-09-27T21:58:06+03:00', '2026-09-24T15:52:15+03:00', '2026-09-11T12:14:23+03:00',
     ]);
+    // Checked on 11 November: four of the project rules edited on 8 November (the forum rules got points 2.6.1–2.6.5).
+    expect(TVERSKOI_PACK.changes[0].documents.map((d) => `${d.documentId}:${d.kind}`)).toEqual(['rules-main:changed', 'rules-gov:changed', 'rules-bank:changed', 'rules-forum:changed']);
     // Checked on 6 November: a new edition of the КоАП (a chapter on transport, the chapters after it renumbered) and of
     // 4-ФЗ with no edit date on the forum — dated by the check; the army charters edited; the ГИБДД and «Вести Москвы»
     // charters in new threads; the СК regulations posted anew (two new, «обращения граждан» rewritten, five gone);
     // two laws of the base not taken before.
-    expect(TVERSKOI_PACK.changes[0].documents.map((d) => `${d.documentId}:${d.kind}`)).toEqual([
+    expect(TVERSKOI_PACK.changes[1].documents.map((d) => `${d.documentId}:${d.kind}`)).toEqual([
       'koap:changed', 'fkz-assembly:added', 'fz4:changed', 'fz17:added', 'ch-gibdd:changed', 'ch-army:changed', 'ch-army-discipline:changed',
       'sk-structure:added', 'sk-service:added', 'sk-appeals:changed', 'ch-news:changed',
       'sk-main:removed', 'sk-gsu:removed', 'sk-inspections:removed', 'sk-uniform:removed', 'sk-kso:removed',
     ]);
-    expect(TVERSKOI_PACK.changes[1].documents.map((d) => d.documentId)).toEqual(['uk']);
+    expect(TVERSKOI_PACK.changes[2].documents.map((d) => d.documentId)).toEqual(['uk']);
     // Checked again on 5 November: the УПК heavily rewritten (10 articles added), the disciplinary codes and the army
     // charters edited; the forum gives no edit date — dated by the check.
-    expect(TVERSKOI_PACK.changes[2].documents.map((d) => d.documentId)).toEqual(['upk', 'ethics', 'fkz2', 'fz8', 'fz10', 'ch-army', 'ch-army-discipline', 'ch-army-guard', 'ch-army-structure']);
+    expect(TVERSKOI_PACK.changes[3].documents.map((d) => d.documentId)).toEqual(['upk', 'ethics', 'fkz2', 'fz8', 'fz10', 'ch-army', 'ch-army-discipline', 'ch-army-guard', 'ch-army-structure']);
     // Checked again on 2 November: the codes, 3-ФЗ and 13-ФЗ, «О собственности», the hospital charter and three of
     // the project rules rewritten; the forum gives no edit date — dated by the check.
-    expect(TVERSKOI_PACK.changes[3].documents.map((d) => d.documentId)).toEqual(['const', 'uk', 'koap', 'upk', 'fz3', 'fz13', 'msk-property', 'ch-hospital', 'rules-main', 'rules-gov', 'rules-leaders']);
+    expect(TVERSKOI_PACK.changes[4].documents.map((d) => d.documentId)).toEqual(['const', 'uk', 'koap', 'upk', 'fz3', 'fz13', 'msk-property', 'ch-hospital', 'rules-main', 'rules-gov', 'rules-leaders']);
     // Checked again on 24 October: the army and «Вести Москвы» charters rewritten, «Вести Москвы» in a new thread, and ФЗ-8
     // back in its old thread, which the forum gives no edit date — dated by the check.
-    expect(TVERSKOI_PACK.changes[4].documents.map((d) => d.documentId)).toEqual(['fz8', 'ch-army', 'ch-news']);
+    expect(TVERSKOI_PACK.changes[5].documents.map((d) => d.documentId)).toEqual(['fz8', 'ch-army', 'ch-news']);
     // Checked on 24 October: the МВД charter (6 points added) and the server's rules were edited.
-    expect(TVERSKOI_PACK.changes[5].documents.map((d) => d.documentId)).toEqual(['ch-mvd', 'rules-server']);
+    expect(TVERSKOI_PACK.changes[6].documents.map((d) => d.documentId)).toEqual(['ch-mvd', 'rules-server']);
     // Checked on 20 October: the УК (new ст. 13.1 and 101.1, ст. 107 repealed), КоАП (ст. 10.2 repealed), ПДД, charters and project rules were edited.
-    expect(TVERSKOI_PACK.changes[6].documents.map((d) => d.documentId)).toEqual(
+    expect(TVERSKOI_PACK.changes[7].documents.map((d) => d.documentId)).toEqual(
       expect.arrayContaining(['uk', 'koap', 'pdd', 'fz16-fsvng', 'msk-property', 'ch-mvd', 'ch-army-discipline', 'ch-hospital', 'rules-main', 'rules-gov', 'rules-martial', 'rules-supply', 'rules-robbery', 'rules-fort']),
     );
-    expect(TVERSKOI_PACK.changes[6].documents).toHaveLength(14);
+    expect(TVERSKOI_PACK.changes[7].documents).toHaveLength(14);
     // Checked on 12 October: the ГИБДД charter lost its point 2.6 (the office uniform), the guard charter and the project rules were edited.
-    expect(TVERSKOI_PACK.changes[7].documents.map((d) => d.documentId)).toEqual(expect.arrayContaining(['ch-gibdd', 'ch-army-guard', 'rules-main', 'rules-gov']));
+    expect(TVERSKOI_PACK.changes[8].documents.map((d) => d.documentId)).toEqual(expect.arrayContaining(['ch-gibdd', 'ch-army-guard', 'rules-main', 'rules-gov']));
     // Checked on 8 October: the УК's new ст. 64.1 came with no later edit date on the forum — dated by the check.
-    expect(TVERSKOI_PACK.changes[8].documents.map((d) => d.documentId)).toEqual(expect.arrayContaining(['uk', 'koap', 'ch-hospital', 'rules-main']));
-    expect(TVERSKOI_PACK.changes[9].documents.map((d) => d.documentId)).toEqual(['ch-army-structure', 'ch-army-id', 'ch-gov']);
-    expect(TVERSKOI_PACK.changes[10].documents.some((d) => d.documentId === 'uk')).toBe(true);
-    expect(TVERSKOI_PACK.changes[11].documents.every((d) => d.documentId.startsWith('rules-'))).toBe(true);
-    expect(TVERSKOI_PACK.changes[12].documents.map((d) => d.documentId)).toEqual(['ch-mvd']);
-    expect(TVERSKOI_PACK.changes[13].documents.every((d) => d.kind === 'added' && d.documentId.startsWith('rules-'))).toBe(true);
-    expect(TVERSKOI_PACK.changes[13].documents).toHaveLength(10);
+    expect(TVERSKOI_PACK.changes[9].documents.map((d) => d.documentId)).toEqual(expect.arrayContaining(['uk', 'koap', 'ch-hospital', 'rules-main']));
+    expect(TVERSKOI_PACK.changes[10].documents.map((d) => d.documentId)).toEqual(['ch-army-structure', 'ch-army-id', 'ch-gov']);
+    expect(TVERSKOI_PACK.changes[11].documents.some((d) => d.documentId === 'uk')).toBe(true);
+    expect(TVERSKOI_PACK.changes[12].documents.every((d) => d.documentId.startsWith('rules-'))).toBe(true);
+    expect(TVERSKOI_PACK.changes[13].documents.map((d) => d.documentId)).toEqual(['ch-mvd']);
+    expect(TVERSKOI_PACK.changes[14].documents.every((d) => d.kind === 'added' && d.documentId.startsWith('rules-'))).toBe(true);
+    expect(TVERSKOI_PACK.changes[14].documents).toHaveLength(10);
   });
 
   it('holds the legislative base, the charters of the organisations and the project rules: 65 documents', () => {
