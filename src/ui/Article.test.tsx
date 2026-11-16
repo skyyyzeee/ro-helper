@@ -83,17 +83,17 @@ describe('an open article', () => {
 
     expect(pinnedCards(platform)[0]).toMatchObject({
       kind: 'article',
-      heading: 'УК ст. 124. Разглашение государственной тайны',
+      heading: 'УК ст. 124 ч. 1. Разглашение государственной тайны',
       punishment: [{ text: '40 мес' }],
       warning: 'федеральная подследственность — дело ФСБ',
     });
-    expect(pinnedCards(platform)[0].lines).toEqual([expect.stringMatching(/^Разглашение сведений, составляющих государственную тайну/)]);
+    expect(pinnedCards(platform)[0].lines[0]).toMatch(/^1\. Разглашение сведений, составляющих государственную тайну/);
 
     // Another article is pinned beside the first, not instead of it.
     await openFromSearch(user, 'ук 159');
     await user.click(within(article()).getByRole('button', { name: 'Закрепить' }));
     expect(pinnedCards(platform).map((card) => card.heading)).toEqual([
-      'УК ст. 124. Разглашение государственной тайны',
+      'УК ст. 124 ч. 1. Разглашение государственной тайны',
       expect.stringMatching(/^УК ст\. 159\. /),
     ]);
     expect(pinnedCards(platform)[1].warning).toBeUndefined();
@@ -101,7 +101,7 @@ describe('an open article', () => {
     // The same article again unpins it: the button says so.
     expect(within(article()).queryByRole('button', { name: 'Закрепить' })).not.toBeInTheDocument();
     await user.click(within(article()).getByRole('button', { name: 'Открепить' }));
-    expect(pinnedCards(platform).map((card) => card.heading)).toEqual(['УК ст. 124. Разглашение государственной тайны']);
+    expect(pinnedCards(platform).map((card) => card.heading)).toEqual(['УК ст. 124 ч. 1. Разглашение государственной тайны']);
   });
 
   it('opens with → only once the caret is at the end, and Esc goes back to the results', async () => {

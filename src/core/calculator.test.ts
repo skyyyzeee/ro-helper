@@ -43,7 +43,7 @@ describe('criminal calculator (real Тверской УК and rules)', () => {
     expect(result).toMatchObject({ stars: 5, starsMonths: 50 });
 
     expect(calc(['159']).term).toBe(30); // alone it is just the strictest charge
-    expect(calc(['81 ч1', '159', '87 ч1']).explanation[0]).toBe('ст. 87 ч. 1 поглощает ст. 81 — УК ст. 59 ч. 2');
+    expect(calc(['81 ч1', '159', '87 ч1']).explanation[0]).toBe('ст. 87 ч. 1 поглощает ст. 81 ч. 1 — УК ст. 59 ч. 2');
   });
 
   it('reduces an attempt to ¾ and a preparation to ½, rounding down (УК ст. 56)', () => {
@@ -65,10 +65,10 @@ describe('criminal calculator (real Тверской УК and rules)', () => {
   });
 
   it('turns months into stars by the rules (1 ★ = 10 мес)', () => {
-    expect(calc(['81 ч1'])).toMatchObject({ term: 20, stars: 2 });
+    expect(calc(['81 ч3'])).toMatchObject({ term: 20, stars: 2 });
     expect(calc(['70 ч1'])).toMatchObject({ term: 50, stars: 5 });
     const tenStars = { ...rules, stars: { ...rules.stars!, monthsPerStar: 5, max: 10 } };
-    expect(calc(['81 ч1'], 'custody', tenStars)).toMatchObject({ stars: 4, starsMonths: 20 });
+    expect(calc(['81 ч3'], 'custody', tenStars)).toMatchObject({ stars: 4, starsMonths: 20 });
   });
 
   it('takes the term of ст. 153 from the wanted level', () => {
@@ -96,7 +96,7 @@ describe('criminal calculator (real Тверской УК and rules)', () => {
   });
 
   it('warns about federal and military jurisdiction, not about shared jurisdiction', () => {
-    expect(calc(['124 ч1', '87 ч1']).warnings).toEqual(['ст. 124 — федеральная подследственность — дело ФСБ']);
+    expect(calc(['124 ч1', '87 ч1']).warnings).toEqual(['ст. 124 ч. 1 — федеральная подследственность — дело ФСБ']);
     expect(calc(['164']).warnings).toEqual(['ст. 164 — военная подследственность — дело военной полиции']);
     expect(calc(['87 ч1']).warnings).toEqual([]);
   });
@@ -104,6 +104,6 @@ describe('criminal calculator (real Тверской УК and rules)', () => {
   it('knows the crime categories of УК ст. 13 from the articles’ terms', () => {
     const name = (ref: string) => crimeCategory(charge(ref), rules).label;
     expect(['81 ч1', '87 ч1', '87 ч2', '70 ч1'].map(name)).toEqual(['небольшой тяжести', 'средней тяжести', 'тяжкое', 'особо тяжкое']);
-    expect(calc(['81 ч1']).bail).toEqual({ category: 'небольшой тяжести', amount: 50000 });
+    expect(calc(['81 ч3']).bail).toEqual({ category: 'небольшой тяжести', amount: 50000 });
   });
 });

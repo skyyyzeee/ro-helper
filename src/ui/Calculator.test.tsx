@@ -72,8 +72,8 @@ describe('criminal calculator', () => {
 
     expect(total()).toHaveTextContent('40 мес');
     expect(within(total()).getByRole('img', { name: 'Звёзд розыска: 4' })).toBeInTheDocument();
-    expect(panel()).toHaveTextContent('ст. 124 поглощает ст. 87 ч. 1 — УК ст. 59 ч. 2');
-    expect(within(panel()).getByRole('alert')).toHaveTextContent('ст. 124 — федеральная подследственность — дело ФСБ');
+    expect(panel()).toHaveTextContent('ст. 124 ч. 1 поглощает ст. 87 ч. 1 — УК ст. 59 ч. 2');
+    expect(within(panel()).getByRole('alert')).toHaveTextContent('ст. 124 ч. 1 — федеральная подследственность — дело ФСБ');
     expect(panel()).toHaveTextContent('Залог(тяжкое)не предусмотрен');
     expect(inCalculator()[0]).toHaveClass('ci--absorbed');
 

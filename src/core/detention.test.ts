@@ -125,7 +125,7 @@ describe('detention: both codes together', () => {
   it('sets the most stars of the term and the arrests', () => {
     expect(calc(['uk 87 ч1', charge('koap 5.5 ч1', { choice: 'arrest' })]).stars).toEqual({ count: 3, months: 30, from: 'criminal' });
     // With the most an arrest gives being two stars, a tie keeps the criminal term.
-    expect(calc(['uk 81 ч1', charge('koap 5.5 ч1', { choice: 'arrest' })]).stars).toEqual({ count: 2, months: 20, from: 'criminal' });
+    expect(calc(['uk 81 ч3', charge('koap 5.5 ч1', { choice: 'arrest' })]).stars).toEqual({ count: 2, months: 20, from: 'criminal' });
     // Only an arrest is served: a fine sets no stars.
     expect(calc([charge('koap 5.5 ч1', { choice: 'arrest' })]).stars).toMatchObject({ count: 2, from: 'administrative' });
     expect(calc(['koap 5.5 ч1']).stars).toBeNull();

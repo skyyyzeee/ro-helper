@@ -61,7 +61,7 @@ const LAWYER_PROMPT = (pack: ServerPack) =>
   ].join('\n\n');
 
 /** The words of a lawyer's demands in the laws: what a defender may ask, and what a detainee is owed. */
-const LAWYER_TERMS = ['права защитника', 'адвокат защитник', 'права задержанного', 'срок задержания', 'ознакомление с протоколом'];
+const LAWYER_TERMS = ['права защитника', 'адвокат защитник', 'права задержанного', 'срок задержания', 'основания освобождения подозреваемого', 'ознакомление с протоколом'];
 
 const LAWYER_VERDICTS = new Set<Verdict>(['lawful', 'unlawful', 'partly', 'unclear']);
 
