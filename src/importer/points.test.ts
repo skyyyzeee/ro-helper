@@ -37,9 +37,9 @@ const OLD_GIBDD = [
 ].join('\n');
 
 const COUNTS: [string, LawFormat, number][] = [
-  ['ch-mvd', 'points', 247], ['ch-gibdd', 'points', 84], ['ch-fso', 'points', 97], ['ch-hospital', 'points', 225], ['ch-news', 'points', 90],
+  ['ch-mvd', 'points', 233], ['ch-gibdd', 'points', 84], ['ch-fso', 'points', 97], ['ch-hospital', 'points', 225], ['ch-news', 'points', 90],
   ['sk-structure', 'points', 69], ['sk-service', 'points', 21], ['sk-ranks', 'points', 12],
-  ['rules-main', 'points', 98], ['rules-gov', 'points', 120], ['rules-crime', 'points', 52],
+  ['rules-main', 'points', 99], ['rules-gov', 'points', 118], ['rules-crime', 'points', 51],
   ['ch-army', 'law', 65], ['ch-army-discipline', 'law', 48], ['ch-army-guard', 'law', 45],
   ['sk-ethics', 'law', 10], ['sk-appeals', 'law', 17],
 ];
@@ -70,7 +70,7 @@ describe('charters, regulations and project rules (real Тверской forum t
     // The title right under a chapter's heading, one after a finished sentence, after a numbered line, and «Часть 1. …».
     expect(at('2.1').group).toBe('Обязанности сотрудника');
     expect(at('6.5').group).toBe('Отделы МВД');
-    expect(at('6.4').parts.map((p) => p.text)).toEqual(['Старший состав МВД образуют:', '- Полковник полиции МВД;', '- Подполковник полиции МВД;']);
+    expect(at('6.4').parts.map((p) => p.text)).toEqual(['Старший состав МВД образуют:', '- Генерал-Майор МВД;', '- Полковник полиции МВД;', '- Подполковник полиции МВД;']);
     expect(at('15.2').group).toBe('Субординация');
     expect(at('7.4').group).toBe('Часть 1. Отдел собственной безопасности (ОСБ)');
     expect(mvd.chapters.every((c) => !c.preface.length)).toBe(true);
@@ -183,7 +183,7 @@ describe('charters of Арбатский and Кутузовский (real forum 
     ['arbatskiy', 'ch-mvd', 'law', 111], ['arbatskiy', 'ch-gibdd', 'law', 33],
     ['arbatskiy', 'ch-army', 'points', 238], ['arbatskiy', 'sk-charter', 'law', 88],
     ['arbatskiy', 'ch-army-discipline', 'points', 123], ['arbatskiy', 'ch-army-guard', 'points', 71],
-    ['arbatskiy', 'ch-hospital', 'points', 143], ['arbatskiy', 'ch-news', 'points', 221],
+    ['arbatskiy', 'ch-hospital', 'points', 144], ['arbatskiy', 'ch-news', 'points', 221],
     ['kutuzovskiy', 'ch-mvd', 'points', 331], ['kutuzovskiy', 'ch-gibdd', 'law', 33], ['kutuzovskiy', 'ch-army-discipline', 'points', 103],
     ['kutuzovskiy', 'ch-hospital', 'points', 166], ['kutuzovskiy', 'ch-news', 'points', 138], ['kutuzovskiy', 'sk-appeals', 'law', 29],
   ];

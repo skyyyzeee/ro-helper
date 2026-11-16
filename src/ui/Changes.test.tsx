@@ -14,8 +14,8 @@ vi.mock('../data', async (importOriginal) => {
   theft.parts[0].text = 'Кража, то есть скрытое хищение имущества';
   uk.articles = uk.articles.filter((a) => a.id !== 'uk-113');
   uk.articles.push({ ...structuredClone(theft), id: 'uk-999', number: '999', title: 'Отменённое преступление' });
-  const changes = [{ version: TVERSKOI_PACK.version, documents: diffPacks(earlier, TVERSKOI_PACK) }];
-  const pack = { ...TVERSKOI_PACK, changes };
+  const changes = [{ version: '2026-11-08T13:54:26+03:00', documents: diffPacks(earlier, TVERSKOI_PACK) }];
+  const pack = { ...TVERSKOI_PACK, version: changes[0].version, changes };
   // The app loads its server's pack when it is used: that load gives the pack with the update.
   return { ...actual, loadPack: async () => pack, loadedPack: () => pack };
 });
