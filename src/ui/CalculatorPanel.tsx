@@ -62,6 +62,8 @@ export interface CalculatorPanelProps {
   fieldsOf: (item: ChargeItem) => ChargeFields;
   onUpdate: (item: ChargeItem, patch: ChargePatch) => void;
   onRemove: (item: ChargeItem) => void;
+  /** Opens the exact source part without removing the charge. */
+  onOpenSource: (item: ChargeItem) => void;
   onClear: () => void;
   fineInput: string;
   onFineInput: (value: string) => void;
@@ -98,6 +100,7 @@ export function CalculatorPanel(props: CalculatorPanelProps) {
       </div>
 
       <div className="calc__copy">
+        <span className="calc__copy-label">Обвинение для копирования</span>
         {result.charge ? <div className="copy-str">{result.charge}</div> : <div className="copy-str copy-str--empty">Обвинять не в чем</div>}
         <div className="calc__copy-row">
           <button className="btn btn--primary calc__copy-btn" type="button" disabled={!result.charge} onClick={onCopy}>
@@ -133,7 +136,7 @@ export function CalculatorPanel(props: CalculatorPanelProps) {
   );
 }
 
-function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, fineInput, onFineInput, priority }: CalculatorPanelProps & { criminal: CriminalResult }) {
+function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, onOpenSource, fineInput, onFineInput, priority }: CalculatorPanelProps & { criminal: CriminalResult }) {
   const { items, mode } = criminal;
   const noFine = criminal.fineUnavailable;
   const noCustody = criminal.custodyUnavailable.length === items.length;
@@ -168,20 +171,22 @@ function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, fineInp
           const byStars = r.item.part.punishment?.alternatives.some((s) => s.kind === 'imprisonment-by-stars');
           const partStars = r.item.part.stars;
           const ownJurisdiction = !shared && r.item.part.jurisdiction;
-          // Nothing chosen and nothing to tell in the second line: it shows on pointing at the charge or tabbing into it.
-          const quiet = r.item.stage === 'done' && !(byStars && partStars) && !ownJurisdiction;
           return (
             <li key={`${r.item.article.id}#${r.item.part.number ?? ''}`} className={r.absorbed ? 'ci ci--absorbed' : r.stacked ? 'ci ci--stacked' : 'ci'}>
               <div className="ci__row">
-                <span className="num">{label}</span>
-                <span className="ttl">{articleTitle(r.item.article)}</span>
+                <button className="ci__source" type="button" aria-label={`Открыть ${label} УК`} onClick={() => onOpenSource(r.item)}>
+                  <span className="num">{label}</span>
+                  <span className="ttl">{articleTitle(r.item.article)}</span>
+                </button>
                 <span className="sp" />
                 <span className="val">{valueText(r, mode)}</span>
                 <button className="x" type="button" aria-label={`Убрать ${label}`} title="Убрать" onClick={() => onRemove(r.item)}>
                   <CloseIcon size={14} />
                 </button>
               </div>
-              <div className={quiet ? 'ci__mods ci__mods--quiet' : 'ci__mods'}>
+              {r.absorbed && <span className="ci__status">Поглощено более строгим наказанием</span>}
+              {r.stacked && <span className="ci__status">Добавляется к основному наказанию</span>}
+              <div className="ci__mods">
                 {(['attempt', 'preparation'] as const).map((stage) => (
                   <button
                     key={stage}
@@ -322,7 +327,7 @@ function AmountField({ label, unit, value, placeholder, onChange }: { label: str
   );
 }
 
-function AdministrativeRow({ r, offender, fieldsOf, onUpdate, onRemove }: CalculatorPanelProps & { r: AdministrativeItemResult<Charge>; offender: Offender }) {
+function AdministrativeRow({ r, offender, fieldsOf, onUpdate, onRemove, onOpenSource }: CalculatorPanelProps & { r: AdministrativeItemResult<Charge>; offender: Offender }) {
   const label = chargeLabel(r.item);
   const fields = fieldsOf(r.item);
   const { fine, arrest } = r;
@@ -368,8 +373,10 @@ function AdministrativeRow({ r, offender, fieldsOf, onUpdate, onRemove }: Calcul
   return (
     <li className={r.applicable ? 'ci' : 'ci ci--off'}>
       <div className="ci__row">
-        <span className="num">{label}</span>
-        <span className="ttl">{articleTitle(r.item.article)}</span>
+        <button className="ci__source" type="button" aria-label={`Открыть ${label} КоАП`} onClick={() => onOpenSource(r.item)}>
+          <span className="num">{label}</span>
+          <span className="ttl">{articleTitle(r.item.article)}</span>
+        </button>
         <span className="sp" />
         {value}
         <button className="x" type="button" aria-label={`Убрать ${label}`} title="Убрать" onClick={() => onRemove(r.item)}>

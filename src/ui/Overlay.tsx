@@ -1356,6 +1356,10 @@ export function Overlay({
       {calculatorOpen && result && (
         <CalculatorPanel
           result={result}
+          onOpenSource={(item) => {
+            openSection('search');
+            openHit({ article: item.article, document: item.document, part: item.part });
+          }}
           onMode={setMode}
           onOffender={setOffender}
           priority={priorityLevels ? { value: priority, levels: priorityLevels, onChange: setPriority } : undefined}

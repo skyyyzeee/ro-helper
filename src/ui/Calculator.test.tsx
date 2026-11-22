@@ -14,6 +14,23 @@ async function find(user: Awaited<ReturnType<typeof renderApp>>['user'], query: 
 }
 
 describe('criminal calculator', () => {
+  it('opens the exact source part from a charge and preserves the calculation on return', async () => {
+    const { user } = await renderApp();
+    await find(user, 'ук 87 ч 2');
+    await user.keyboard('{Enter}');
+    await find(user, 'ук 124 ч 1');
+    await user.keyboard('{Enter}');
+    const before = total().textContent;
+    await user.click(within(panel()).getByRole('button', { name: 'Открыть ст. 87 ч. 2 УК' }));
+    expect(screen.getByRole('article')).toHaveTextContent('Кража');
+    expect(screen.getByRole('region', { name: 'Часть 2' })).toHaveAttribute('aria-current', 'true');
+    expect(total().textContent).toBe(before);
+    expect(inCalculator()).toHaveLength(2);
+    await user.keyboard('{Escape}');
+    expect(search()).toHaveValue('ук 124 ч 1');
+    expect(inCalculator()).toHaveLength(2);
+  });
+
   it('copies a report out of the charges for an officer of the state; a citizen has none to write (issue #40)', async () => {
     const { platform, user } = await renderApp({ profile: { organization: 'mvd' }, settings: { player: { gameName: 'Ivan_Petrov', position: 'Сержант' } } });
     await find(user, 'ук 87 ч 1');
@@ -76,6 +93,7 @@ describe('criminal calculator', () => {
     expect(within(panel()).getByRole('alert')).toHaveTextContent('ст. 124 ч. 1 — федеральная подследственность — дело ФСБ');
     expect(panel()).toHaveTextContent('Залог(тяжкое)не предусмотрен');
     expect(inCalculator()[0]).toHaveClass('ci--absorbed');
+    expect(inCalculator()[0]).toHaveTextContent('Поглощено более строгим наказанием');
 
     await user.click(within(panel()).getByRole('button', { name: 'Очистить' }));
     expect(queryPanel()).not.toBeInTheDocument();
@@ -91,7 +109,7 @@ describe('criminal calculator', () => {
     expect(panel()).toHaveTextContent('ст. 87 ч. 1: покушение — не более ¾ наказания, УК ст. 56 ч. 3');
   });
 
-  it('says a jurisdiction shared by the charges once, and keeps the stage out of sight until one is chosen', async () => {
+  it('says a shared jurisdiction once and keeps stage controls visible', async () => {
     const { user } = await renderApp();
     await find(user, 'ук 87 ч 1');
     await user.keyboard('{Enter}');
@@ -102,7 +120,7 @@ describe('criminal calculator', () => {
     expect(within(theft).queryByText('Р/Ф')).not.toBeInTheDocument();
 
     const stage = () => within(theft).getByRole('button', { name: 'покушение' }).parentElement!;
-    expect(stage()).toHaveClass('ci__mods--quiet');
+    expect(stage()).not.toHaveClass('ci__mods--quiet');
     await user.click(within(theft).getByRole('button', { name: 'покушение' }));
     expect(stage()).not.toHaveClass('ci__mods--quiet');
   });
@@ -147,6 +165,19 @@ async function add(user: Awaited<ReturnType<typeof renderApp>>['user'], query: s
 }
 
 describe('administrative charges', () => {
+
+  it('opens an administrative source from settings without losing a typed fine', async () => {
+    const { user } = await renderApp();
+    await add(user, 'коап 9.3 ч 2');
+    await user.type(within(adminPanel()).getByRole('textbox', { name: 'Сумма штрафа по ст. 9.3 ч. 2' }), '6000');
+    await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await user.click(within(panel()).getByRole('button', { name: 'Открыть ст. 9.3 ч. 2 КоАП' }));
+    expect(screen.getByRole('article')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Часть 2' })).toHaveAttribute('aria-current', 'true');
+    expect(within(adminPanel()).getByRole('textbox', { name: 'Сумма штрафа по ст. 9.3 ч. 2' })).toHaveValue('6000');
+    expect(adminTotal()).toHaveTextContent('6 000 ₽');
+  });
+
   it('adds up the fines at their limits, without the КПЗ / Штраф switch, and checks a typed one', async () => {
     const { user } = await renderApp();
     await add(user, 'коап 9.8 ч 1');
