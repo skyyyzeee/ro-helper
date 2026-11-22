@@ -6579,3 +6579,35 @@ select option {
   .settings .setnav__account :is(.avatar, .setnav__nobody, .setnav__via) { display: none; }
   .settings__body { padding: 18px 14px 24px; }
 }
+/* Document catalogue: persistent categories and room for full law names. */
+.drawer.documents-catalog { inset: 0; width: auto; display: grid; grid-template-columns: 180px minmax(0, 1fr); grid-template-rows: 54px minmax(0, 1fr); background: #17191d; border: 0; backdrop-filter: none; animation: none; }
+.documents-catalog .drawer__head { grid-column: 1 / -1; height: auto; padding: 0 14px 0 20px; border-bottom: 1px solid var(--line); }
+.documents-catalog .drawer__title { font-size: 15px; font-weight: 600; }
+.documents-catalog__server { font-size: 12px; color: var(--text-muted); margin-left: 8px; }
+.documents-catalog > .tags { grid-column: 1; grid-row: 2; display: flex; flex-direction: column; flex-wrap: nowrap; overflow-y: auto; min-height: 0; gap: 4px; padding: 14px 10px; border-right: 1px solid var(--line); }
+.documents-catalog > .tags .tag { display: flex; align-items: center; justify-content: space-between; border-radius: 6px; padding: 11px 10px; font-size: 12px; text-align: left; background: transparent; color: var(--text-muted); }
+.documents-catalog > .tags .tag--on { color: var(--text); background: var(--surface); box-shadow: inset 2px 0 var(--accent); }
+.documents-catalog__count { font-size: 11px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.documents-catalog__body { grid-column: 2; grid-row: 2; min-height: 0; min-width: 0; display: flex; flex-direction: column; padding: 20px 20px 0; }
+.documents-catalog .drawer__filter { margin: 0 0 10px; height: 42px; border-radius: 6px; border: 1px solid var(--line); }
+.documents-catalog .drawer__filter:focus-within { border-color: var(--accent); }
+.documents-catalog .drawer__filter input { font-size: 13px; font-weight: 400; }
+.documents-catalog__meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; padding: 0 2px 10px; font-size: 11px; color: var(--text-muted); }
+.documents-catalog .drawer__list { min-height: 0; padding: 0 0 20px; }
+.documents-catalog .drawer__sec { padding: 20px 10px 8px; font-size: 12px; text-transform: none; letter-spacing: 0; }
+.documents-catalog .doc-row { padding: 12px 10px; gap: 12px; border-radius: 6px; min-height: 48px; }
+.documents-catalog .doc-row__name { white-space: normal; font-size: 13px; line-height: 1.5; }
+.documents-catalog .doc-row__count { flex: none; min-width: 24px; text-align: right; font-size: 11px; }
+.login__reports { align-items: flex-start; text-align: left; max-width: 580px; margin: 0 auto; }
+.login__reports > span { display: flex; flex-direction: column; gap: 6px; }
+.login__reports > input { flex: none; margin-top: 3px; }
+@media (max-width: 800px) {
+  .drawer.documents-catalog { grid-template-columns: minmax(0, 1fr); grid-template-rows: 54px auto minmax(0, 1fr); }
+  .documents-catalog > .tags { grid-row: 2; flex-direction: row; overflow-x: auto; padding: 8px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .documents-catalog > .tags .tag { flex: none; gap: 8px; padding: 9px 10px; }
+  .documents-catalog__body { grid-column: 1; grid-row: 3; padding: 14px 12px 0; }
+}
+/* Keep document names and their counts within one comfortable reading width. */
+.documents-catalog .drawer__filter { max-width: 1000px; width: 100%; box-sizing: border-box; margin-left: auto; margin-right: auto; }
+.documents-catalog__meta { max-width: 1000px; width: 100%; box-sizing: border-box; margin-left: auto; margin-right: auto; }
+.documents-catalog .drawer__sec, .documents-catalog .doc-row { max-width: 1000px; box-sizing: border-box; margin-left: auto; margin-right: auto; }
