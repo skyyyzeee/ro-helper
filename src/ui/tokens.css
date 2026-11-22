@@ -1,6 +1,6 @@
 /* Visual tokens from the approved mockup (style C: dark grey frosted glass, white text with shadow). */
 :root {
-  --font: 'Segoe UI Variable Text', 'Segoe UI', 'Onest', system-ui, sans-serif;
+  --font: 'Inter', system-ui, sans-serif;
 
   /* Glass. --glass-alpha is the user-adjustable background opacity. */
   --glass-alpha: 0.62;

@@ -6503,3 +6503,17 @@ select option {
 .calc__copy { padding: 14px; }
 .calc__copy-row { gap: 7px; }
 .calc .total, .calc .copy-str, .calc .calc-item, .search-workspace .part-card { border-radius: 6px; }
+/* Typography for the desktop workspace; bundled Inter keeps Cyrillic consistent across PCs. */
+.overlay { text-shadow: none; }
+.overlay .brand { font-size: 15px; font-weight: 600; letter-spacing: -.015em; }
+.overlay :is(h1, h2, h3, h4) { font-weight: 600; }
+.overlay .num { font-size: 13px; font-weight: 600; }
+.overlay .ttl { font-size: 14px; font-weight: 500; }
+.overlay .pen { font-size: 12px; font-weight: 400; }
+.overlay .search input { font-size: 15px; font-weight: 400; }
+.overlay .art__title, .search-workspace__reader .art__title { font-size: 21px; font-weight: 600; letter-spacing: -.025em; line-height: 1.4; }
+.overlay .part-card__text, .overlay .part__point { font-size: 14px; font-weight: 400; line-height: 1.65; }
+.overlay .part-card__pen { font-size: 13px; font-weight: 500; line-height: 1.55; }
+.rail__label { font-size: 10px; font-weight: 400; letter-spacing: 0; }
+.calc { font-family: var(--font); text-shadow: none; }
+.calc__title { font-size: 15px; font-weight: 600; }
