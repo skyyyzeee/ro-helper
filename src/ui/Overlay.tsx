@@ -40,6 +40,7 @@ import { useDocumentWriter } from './documents';
 import { CasesView } from './CasesView';
 import { BackIcon, BookIcon, CalculatorIcon, ChevronDownIcon, CloseIcon, DocumentsIcon, HomeIcon, NewsIcon, MemoIcon, MicIcon, OrganizationIcon, ProfileIcon, SearchIcon, ServerIcon, SettingsIcon, SparkIcon } from './icons';
 import { HomeBoosts } from './HomeBoosts';
+import { HomeDashboard } from './HomeDashboard';
 import { usePopular } from './popular';
 import { SideRail } from './SideRail';
 import { canRecord, startRecording, type Recording } from './voice';
@@ -234,14 +235,13 @@ export function Overlay({
   /** The field is the AI's, not the search's: an article opened from the answer gives it back to the search. */
   const aiMode = aiOpen && !open;
 
-  // An empty search is the home screen: what players open most, the favourites, then the recent articles without
-  // them; ↑↓ go through all three.
+  // The keyboard follows the personal column first, then server-wide suggestions.
   const saved = useSaved(platform, pack);
   const { lookup, favoriteKeys, recentKeys, favorites, recent, toggleFavorite, updateRecent } = saved;
   const popular = usePopular(pack.server.id, lookup);
   const view: 'home' | 'contents' | 'results' = query.trim() ? 'results' : scope ? 'contents' : 'home';
   const home = view === 'home';
-  const listed = home ? [...popular, ...favorites, ...recent] : view === 'contents' ? contents.flatMap((group) => group.hits) : hits;
+  const listed = home ? [...favorites, ...recent, ...popular] : view === 'contents' ? contents.flatMap((group) => group.hits) : hits;
   const current = Math.min(selected, listed.length - 1);
   // A question typed into the search: «Спросить ИИ» stands first and chosen, Enter asks (askFirst.ts); ↓ goes on
   // to the articles, where Enter is the calculator's again.
@@ -1836,7 +1836,7 @@ export function Overlay({
             }}
           />
         ) : home ? (
-          <>
+          <div className="home-page">
             {memos.active[0] && (
               <button className="memo home__memo" type="button" aria-label="Памятка фракции" onClick={() => openSection('memos')}>
                 <b>
@@ -1927,52 +1927,24 @@ export function Overlay({
                 </span>
               </section>
             )}
-            <HomeBoosts
-              onOpen={(id) => {
+            <HomeDashboard
+              favoriteCount={favorites.length}
+              favorites={favorites.map((hit, i) => rowFor(hit, i, false, true))}
+              recentCount={recent.length}
+              recent={recent.map((hit, i) => rowFor(hit, favorites.length + i))}
+              popularCount={popular.length}
+              popular={popular.map((hit, i) => rowFor(hit, favorites.length + recent.length + i))}
+              onClearRecent={() => {
+                updateRecent(() => []);
+                setSelected(0);
+                searchRef.current?.focus();
+              }}
+              boosts={<HomeBoosts onOpen={(id) => {
                 openSection('wiki');
                 setWikiEntry(id);
-              }}
+              }} />}
             />
-            {popular.length > 0 && (
-              <>
-                <div className="sec-t home__title">Популярное у игроков</div>
-                <div className="list" role="list" aria-label="Популярное у игроков">
-                  {popular.map((hit, i) => rowFor(hit, i))}
-                </div>
-              </>
-            )}
-            {favorites.length > 0 && (
-              <>
-                <div className="sec-t home__title">Избранное</div>
-                <div className="list list--tiles" role="list" aria-label="Избранное">
-                  {favorites.map((hit, i) => rowFor(hit, popular.length + i, false, true))}
-                </div>
-              </>
-            )}
-            {recent.length > 0 && (
-              <>
-                <div className="home__head">
-                  <div className="sec-t home__title">Недавние</div>
-                  <button
-                    type="button"
-                    className="link-btn home__clear"
-                    aria-label="Очистить недавние"
-                    onClick={() => {
-                      updateRecent(() => []);
-                      setSelected(0);
-                      searchRef.current?.focus();
-                    }}
-                  >
-                    Очистить
-                  </button>
-                </div>
-                <div className="list" role="list" aria-label="Недавние">
-                  {recent.map((hit, i) => rowFor(hit, popular.length + favorites.length + i))}
-                </div>
-              </>
-            )}
-            {listed.length === 0 && <div className="empty">Здесь появятся избранные и недавние статьи</div>}
-          </>
+          </div>
         ) : view === 'contents' && scope ? (
           <>
             <div className="meta">

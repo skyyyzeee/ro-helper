@@ -230,7 +230,8 @@ describe('searching one document', () => {
 
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('button', { name: /только в КоАП/ })).not.toBeInTheDocument();
-    expect(screen.getByText('Здесь появятся избранные и недавние статьи')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Избранное' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Недавние' })).toBeInTheDocument();
   });
 
   it('takes the document off with Backspace in an empty field or with its cross', async () => {

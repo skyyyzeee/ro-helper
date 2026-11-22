@@ -160,7 +160,8 @@ describe('going back from an article', () => {
 describe('favourites and recent articles', () => {
   it('invites to add some while both lists are empty', async () => {
     await renderApp();
-    expect(screen.getByText('Здесь появятся избранные и недавние статьи')).toBeInTheDocument();
+    expect(screen.getByText(/Добавьте нужные статьи в избранное/)).toBeInTheDocument();
+    expect(screen.getByText(/Здесь будут статьи, которые вы открывали/)).toBeInTheDocument();
   });
 
   it('shows favourites, then the recent articles without them, most recent first, and keeps them', async () => {
