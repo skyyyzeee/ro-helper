@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { act, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { PinGroup } from '../platform/types';
@@ -56,6 +57,7 @@ describe('the detention timer (issue #40)', () => {
   it('has its key in «Клавиши», which the player may turn off', async () => {
     const { platform, user } = await officer();
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Клавиши');
     const block = within(screen.getByRole('group', { name: 'Настройки' })).getByRole('region', { name: 'Горячие клавиши' });
     await user.click(within(block).getByRole('switch', { name: 'Таймер задержания' }));
     expect(platform.settings.get('timer.hotkey')).toBe('');
@@ -67,6 +69,7 @@ describe('the detention timer (issue #40)', () => {
     await vi.waitFor(() => expect(platform.state.quickHotkey).toBe('Alt+S'));
     expect(platform.state.shortcuts.timer).toBeUndefined();
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Клавиши');
     expect(within(screen.getByRole('group', { name: 'Настройки' })).queryByRole('group', { name: 'Таймер задержания' })).not.toBeInTheDocument();
   });
 });

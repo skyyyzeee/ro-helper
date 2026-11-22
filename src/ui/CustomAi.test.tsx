@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { analysisOf, isAnalysis } from '../test/fakeAi';
@@ -27,6 +28,7 @@ describe('the player’s own AI (issue #2)', () => {
   it('is set up in the settings — address, model, key — and kept on this computer', async () => {
     const { platform, user } = await renderApp();
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'ИИ');
     await user.click(screen.getByRole('radio', { name: 'Свой ИИ' }));
     expect(platform.settings.get(AI_PROVIDER_SETTING)).toBe('custom');
 

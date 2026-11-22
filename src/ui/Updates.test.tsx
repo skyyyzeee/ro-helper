@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { act, cleanup, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../test/renderApp';
@@ -89,6 +90,7 @@ describe('updates of the app', () => {
   it('checks from the settings and says what it found, a version put off included', async () => {
     const { platform, user } = await renderApp();
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Законы и обновления');
     await user.click(within(settings()).getByRole('button', { name: 'Проверить обновления' }));
     expect(await within(settings()).findByText('Установлена последняя версия')).toBeInTheDocument();
 
@@ -106,6 +108,8 @@ describe('updates of the app', () => {
   it('names the version and the author, with links to GitHub and Discord', async () => {
     const { platform, user } = await renderApp();
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Законы и обновления');
+    await selectSettingsSection(user, 'О программе');
     expect(settings()).toHaveTextContent(`Кремлёвский Ассистент ${APP_VERSION} · авторы skyze и AidenArokij`);
     await user.click(within(settings()).getByRole('button', { name: 'GitHub' }));
     expect(platform.calls.at(-1)?.args).toEqual(['https://github.com/skyyyzeee/ro-helper']);
@@ -116,6 +120,7 @@ describe('updates of the app', () => {
   it('does not go online by itself when automatic checks are off, but still checks when asked', async () => {
     const { platform, user } = await renderApp({ platform: { update: { version: '1.1.0' } }, settings: { [AUTO_KEY]: false } });
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Законы и обновления');
     const auto = within(settings()).getByRole('checkbox', { name: 'Проверять обновления автоматически' });
     expect(auto).not.toBeChecked();
     expect(platform.calls.some((c) => c.method === 'checkForUpdate')).toBe(false);
@@ -132,6 +137,7 @@ describe('updates of the app', () => {
     const { platform, user } = await renderApp();
     await vi.waitFor(() => expect(platform.calls.some((c) => c.method === 'checkForUpdate')).toBe(true));
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Законы и обновления');
     const auto = within(settings()).getByRole('checkbox', { name: 'Проверять обновления автоматически' });
     expect(auto).toBeChecked();
     await user.click(auto);

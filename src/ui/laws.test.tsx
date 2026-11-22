@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { act, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { PACK_FORMAT, type ServerPack } from '../core';
@@ -94,6 +95,7 @@ describe('laws from GitHub, without a new version of the app', () => {
   it('checks from the settings and says what it found', async () => {
     const { platform, user } = await renderApp({ platform: { remote: 'offline' } });
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Законы и обновления');
     const note = () => screen.getByRole('status', { name: 'Проверка законов' });
     await user.click(screen.getByRole('button', { name: 'Проверить законы' }));
     await vi.waitFor(() => expect(note()).toHaveTextContent('Нет связи с GitHub'));

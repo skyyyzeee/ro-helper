@@ -1699,6 +1699,7 @@ export function Overlay({
             laws={laws}
             onHistory={() => setWhatsNew({ title: 'История версий', sections: CHANGELOG, backLabel: 'Настройки' })}
             focus={settingsFocus}
+            onSectionChange={(section) => setSettingsFocus({ section, at: Date.now() })}
           />
         ) : open ? (
           renderArticle(open)

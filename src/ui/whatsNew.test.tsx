@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../test/renderApp';
@@ -60,6 +61,7 @@ describe('«Что нового» after an update', () => {
   it('keeps the whole history in the settings', async () => {
     const { user } = await renderApp();
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'О программе');
     await user.click(screen.getByRole('button', { name: 'История версий' }));
     expect(screen.getByRole('article', { name: 'История версий' })).toBeInTheDocument();
     expect(versions()).toHaveLength(CHANGELOG.length);

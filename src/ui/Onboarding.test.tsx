@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { renderApp } from '../test/renderApp';
@@ -84,6 +85,7 @@ describe('settings', () => {
   it('reopen the same steps, save the new choice and re-register the hotkey at once', async () => {
     const { platform, user } = await renderApp({ profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'О программе');
     await user.click(screen.getByRole('button', { name: 'Настроить заново' }));
 
     expect(screen.getByText('Настройки')).toBeInTheDocument();
@@ -104,6 +106,7 @@ describe('settings', () => {
   it('change the hotkey right in the settings, without the steps', async () => {
     const { platform, user } = await renderApp({ profile: { hotkey: 'Alt+Q' } });
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Клавиши');
     await user.click(screen.getByRole('button', { name: 'Открыть и скрыть ассистент: Alt + Q' }));
     await user.keyboard('{Control>}{Shift>}L{/Shift}{/Control}');
 
@@ -129,6 +132,7 @@ describe('settings', () => {
   it('leave without saving on «Отмена» or Esc', async () => {
     const { platform, user } = await renderApp({ profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'О программе');
     await user.click(screen.getByRole('button', { name: 'Настроить заново' }));
     await user.click(next());
     await user.click(radio('Организация', 'ОПГ'));
@@ -166,6 +170,7 @@ describe('another server', () => {
   it('keeps an organisation both servers have when the server changes', async () => {
     const { user } = await renderApp({ profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'О программе');
     await user.click(screen.getByRole('button', { name: 'Настроить заново' }));
     await user.click(radio('Сервер', /Арбатский/));
     await user.click(next());

@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -24,6 +25,7 @@ describe('sets of pinned cards', () => {
     await pin(user, 'ук 159');
 
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Закреплённые');
     expect(settings()).toHaveTextContent('2 карточки');
     await user.type(within(settings()).getByRole('textbox', { name: 'Название набора' }), 'Патруль');
     await user.click(within(settings()).getByRole('button', { name: 'Сохранить набор' }));
@@ -49,6 +51,7 @@ describe('sets of pinned cards', () => {
     const { platform, user } = await renderApp();
     await pin(user, 'ук 87 ч 1');
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Закреплённые');
     await user.click(within(settings()).getByRole('button', { name: 'Сохранить набор' }));
     expect(within(settings()).getByRole('list', { name: 'Наборы закреплённых' })).toHaveTextContent('Набор 1');
 
@@ -56,6 +59,7 @@ describe('sets of pinned cards', () => {
     document.body.innerHTML = '';
     const again = await renderApp({ settings: { 'pin-presets:tverskoi': saved } });
     await again.user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(again.user, 'Закреплённые');
     expect(await within(settings()).findByText('Набор 1')).toBeInTheDocument();
   });
 });

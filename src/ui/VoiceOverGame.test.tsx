@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { act, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { analysisOf, fakeGeminiFetch, isAnalysis } from '../test/fakeAi';
@@ -145,6 +146,7 @@ describe('a question over the game', () => {
   it('is turned off, or given another key, in the settings', async () => {
     const { platform, user } = await renderApp();
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'ИИ');
     const settings = screen.getByRole('group', { name: 'Настройки' });
     const toggle = within(settings).getByRole('switch', { name: 'Спрашивать, не открывая окно' });
     expect(toggle).toHaveAttribute('aria-checked', 'true');

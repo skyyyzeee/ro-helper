@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { sendUsage } from '../account/usage';
@@ -84,6 +85,7 @@ describe('the author’s counts, sent', () => {
   it('is turned off in the settings', async () => {
     const { platform, user } = await renderApp();
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'О программе');
     const share = screen.getByRole('checkbox', { name: 'Отправлять автору обезличенную статистику' });
     expect(share).toBeChecked();
     await user.click(share);

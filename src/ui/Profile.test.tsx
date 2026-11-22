@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../test/renderApp';
@@ -44,6 +45,7 @@ describe('the account, in the settings', () => {
     expect(await within(account()).findByRole('status', { name: 'Синхронизация' })).toHaveTextContent('синхронизированы · только что');
 
     // A change here goes to the account a moment later.
+    await selectSettingsSection(user, 'Внешний вид');
     await user.click(within(settings()).getByRole('radio', { name: 'Минимализм' }));
     await vi.waitFor(() => expect(accounts.table.get('appearance.theme')?.value).toBe('minimal'), { timeout: 4000 });
   });

@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { cleanup, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../test/renderApp';
@@ -61,6 +62,7 @@ describe('«Что изменилось»', () => {
     const { user } = await renderApp({ settings: { [SEEN]: '2026-09-01T10:00:00+03:00' } });
     await screen.findByRole('region', { name: 'Что изменилось' });
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Законы и обновления');
     expect(changesScreen()).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Закреплённые' })).toBeInTheDocument();
     // From the settings it still opens, and Esc leads back to them.
@@ -134,6 +136,7 @@ describe('«Что изменилось»', () => {
   it('lists the updates of the last 60 days from the settings', async () => {
     const { user } = await renderApp();
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Законы и обновления');
     await user.click(screen.getByRole('button', { name: 'Что изменилось в законах' }));
     const view = screen.getByRole('region', { name: 'Что изменилось' });
     expect(view).toHaveTextContent('За 60 дней');
