@@ -27,10 +27,13 @@ export function DocumentContents(props: DocumentContentsProps) {
   const article = document.articles.findIndex((item) => item.id === selected?.article.id);
   const unit = document.unit === 'point' ? 'пункт' : 'статью';
   useLayoutEffect(() => {
-    if (outline.current) outline.current.scrollTop = current > 0 && position.current.id === document.id ? position.current.top : 0;
-    // Restore only when this outline opens, not whenever its selected row changes.
+    if (outline.current) {
+      outline.current.scrollTop = current > 0 && position.current.id === document.id ? position.current.top : 0;
+      outline.current.querySelector<HTMLElement>('.row--selected')?.scrollIntoView?.({ block: 'nearest' });
+    }
+    // Restore when opening or changing the layout, not on every selection.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [document.id]);
+  }, [document.id, wide]);
 
   const step = (direction: number) => {
     const target = document.articles[article + direction];
