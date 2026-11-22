@@ -3,7 +3,6 @@ import { asksTheAi } from './askFirst';
 import {
   changedArticles,
   changesSince,
-  chapterHeading,
   documentContents, explainEmpty,
   recentChanges,
   searchUnderstood,
@@ -22,6 +21,7 @@ import { CalculatorPanel, type CopyState } from './CalculatorPanel';
 import { ChangeDiff, ChangesView, type ChangeRef } from './ChangesView';
 import { DepartmentView } from './DepartmentView';
 import { DocumentsMenu } from './DocumentsMenu';
+import { DocumentContents } from './DocumentContents';
 import { memoPlain } from './memoText';
 import { caseText, transcribe, useAiChat } from './ai';
 import { sendMark } from './feedback';
@@ -207,8 +207,6 @@ export function Overlay({
     [hits, pack, query, boostDocuments, scope],
   );
   const contents = useMemo(() => (scope ? documentContents(scope) : []), [scope]);
-  /** Where each chapter's rows start in the list ↑↓ walk through. */
-  const chapterStarts = contents.map((_, g) => contents.slice(0, g).reduce((n, group) => n + group.hits.length, 0));
   const summary = [pack.server.name, isFaction(organization) ? organization.name : null].filter(Boolean).join(' · ');
 
   // The AI analysis: while it is open, the search field takes the situation instead of a query.
@@ -898,7 +896,7 @@ export function Overlay({
       e.preventDefault();
       const selectedHit = listed[current];
       if (!selectedHit) return;
-      const hit = wideWorkspace && previewPart && !home && view !== 'contents' ? { ...selectedHit, part: previewPart } : selectedHit;
+      const hit = wideWorkspace && previewPart && !home ? { ...selectedHit, part: previewPart } : selectedHit;
       if (addable(hit)) toggleCharge(hit);
       else openHit(hit);
     } else if (e.key === 'ArrowRight' && input.selectionStart === input.value.length && input.selectionEnd === input.value.length) {
@@ -1045,6 +1043,7 @@ export function Overlay({
   // what is opened starts at its own top.
   const contentRef = useRef<HTMLDivElement>(null);
   const listScroll = useRef(0);
+  const documentScroll = useRef({ id: '', top: 0 });
   /** The side menu's sections: each closes what is on screen and opens its own. */
   const openSection = (section: 'search' | 'documents' | 'switch' | 'pinned' | 'settings' | 'profile' | 'memos' | 'department' | 'wiki') => {
     setWhatsNew(null);
@@ -1149,8 +1148,8 @@ export function Overlay({
         tile={tile}
         changed={!!changeOf(hit)}
         onOpen={() => {
-          if (!home && view !== 'contents' && !department && !aiOpen && window.innerWidth > 1100) {
-            setSelected(i);
+          if (!home) setSelected(i);
+          if (!home && !department && !aiOpen && wideWorkspace) {
             remember(hit);
             count({ kind: 'open', article: hitKey(hit) });
             searchRef.current?.focus();
@@ -1163,13 +1162,20 @@ export function Overlay({
 
   const [wideWorkspace, setWideWorkspace] = useState(window.innerWidth > 1100);
   useEffect(() => {
-    const resize = () => setWideWorkspace(window.innerWidth > 1100);
+    const content = contentRef.current;
+    const resize = () => setWideWorkspace(window.innerWidth > 1100 && (!content || content.clientWidth === 0 || content.clientWidth >= 640));
     window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(resize);
+    if (content) observer?.observe(content);
+    resize();
+    return () => {
+      window.removeEventListener('resize', resize);
+      observer?.disconnect();
+    };
   }, []);
 
   const [previewPart, setPreviewPart] = useState<Part>();
-  useEffect(() => setPreviewPart(undefined), [query, current]);
+  useEffect(() => setPreviewPart(undefined), [query, current, scope?.id]);
 
   const renderArticle = (articleHit: SearchHit, embedded = false) => (
     <ArticleView
@@ -1198,7 +1204,7 @@ export function Overlay({
       onFavorite={() => toggleFavorite(articleHit)}
       onFocusPart={(part) => {
         if (embedded) {
-          const index = hits.findIndex((hit) => hit.document.id === articleHit.document.id && hit.article.id === articleHit.article.id && hit.part?.number === part.number);
+          const index = listed.findIndex((hit) => hit.document.id === articleHit.document.id && hit.article.id === articleHit.article.id && hit.part?.number === part.number);
           if (index >= 0) setSelected(index);
           setPreviewPart(part);
           searchRef.current?.focus();
@@ -1702,7 +1708,7 @@ export function Overlay({
             onSectionChange={(section) => setSettingsFocus({ section, at: Date.now() })}
           />
         ) : open ? (
-          renderArticle(open)
+          <div className="article-page">{renderArticle(open)}</div>
         ) : department ? (
           <DepartmentView
             pack={pack}
@@ -1947,26 +1953,27 @@ export function Overlay({
             />
           </div>
         ) : view === 'contents' && scope ? (
-          <>
-            <div className="meta">
-              <span>{scope.title}</span>
-              <span>{plural(scope.articles.length, ['статья', 'статьи', 'статей'])}</span>
-            </div>
-            <div className="toc" aria-label={`Оглавление: ${scope.title}`}>
-              {contents.map((group, g) => (
-                <section
-                  key={group.chapter?.number ?? `none-${g}`}
-                  className="toc__chapter"
-                  aria-label={group.chapter ? chapterHeading(group.chapter).replace(/\..*$/, '') : 'Без главы'}
-                >
-                  {group.chapter && <h3 className="toc__title">{chapterHeading(group.chapter)}</h3>}
-                  <div className="list" role="list">
-                    {group.hits.map((hit, i) => rowFor(hit, chapterStarts[g] + i, true))}
-                  </div>
-                </section>
-              ))}
-            </div>
-          </>
+          <DocumentContents
+            document={scope}
+            groups={contents}
+            current={current}
+            wide={wideWorkspace}
+            countLabel={plural(scope.articles.length, ['статья', 'статьи', 'статей'])}
+            position={documentScroll}
+            onSelect={(index) => {
+              const hit = listed[index];
+              if (!hit) return;
+              setSelected(index);
+              if (wideWorkspace) {
+                remember(hit);
+                count({ kind: 'open', article: hitKey(hit) });
+              }
+              searchRef.current?.focus();
+            }}
+            onOpen={() => { if (listed[current]) openHit(listed[current]); }}
+            row={(hit, index) => rowFor(hit, index, true)}
+            reader={listed[current] && renderArticle({ ...listed[current], part: previewPart ?? listed[current].part }, true)}
+          />
         ) : (
           <>
             <div className="search-workspace">
