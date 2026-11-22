@@ -1,0 +1,23 @@
+{
+  "identifier": "com.skyze.rohelper.workspace",
+  "productName": "Кремлёвский Ассистент — Workspace",
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Кремлёвский Ассистент — Workspace",
+        "width": 1180,
+        "height": 760,
+        "minWidth": 720,
+        "minHeight": 500,
+        "resizable": true,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "visible": false
+      }
+    ]
+  }
+}

@@ -43,7 +43,7 @@ describe('criminal calculator', () => {
     await user.click(screen.getByRole('button', { name: 'Добавить ст. 87 ч. 1 в калькулятор' }));
     expect(panel()).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Убрать ст. 87 ч. 1 из калькулятора' })).toHaveAttribute('aria-pressed', 'true');
-    expect(platform.calls.some((c) => c.method === 'extendWindow')).toBe(true);
+    expect(platform.calls.some((c) => c.method === 'extendWindow')).toBe(false);
     expect(total()).toHaveTextContent('30 мес');
     expect(within(total()).getByRole('img', { name: 'Звёзд розыска: 3' })).toBeInTheDocument();
     expect(panel()).toHaveTextContent('Залог(средней тяжести)75 000 ₽');

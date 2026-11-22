@@ -33,6 +33,7 @@ function PunishmentLines({ part }: { part: Part }) {
 }
 
 export interface ArticleViewProps {
+  embedded?: boolean;
   article: Article;
   document: LawDocument;
   /** The part the user opened the article from; it is highlighted and scrolled into view. */
@@ -56,6 +57,7 @@ export interface ArticleViewProps {
 }
 
 export function ArticleView({
+  embedded = false,
   article,
   document,
   focusPart,
@@ -87,10 +89,10 @@ export function ArticleView({
   return (
     <article className="art" aria-label={heading}>
       <div className="art__top">
-        <button className="back" type="button" onClick={onBack}>
+        {!embedded && <button className="back" type="button" onClick={onBack}>
           <BackIcon />
           <span>{backLabel}</span>
-        </button>
+        </button>}
         <span className="art__crumb" title={document.title}>
           <DocBadge document={document} />
           {/* A point with no title of its own (ПДД) is told by its chapter: there the chapter stays whole. */}
@@ -144,7 +146,7 @@ export function ArticleView({
               className={on ? 'part-card part-card--focus' : 'part-card'}
               aria-current={focused ? 'true' : undefined}
               aria-label={part.number ? `Часть ${part.number}` : undefined}
-              onClick={() => part.punishment && part !== chosen && onFocusPart?.(part)}
+              onClick={() => part.punishment && (embedded || part !== chosen) && onFocusPart?.(part)}
             >
               <div className="part-card__row">
                 {part.number && <span className="part-card__num">{part.number}.</span>}

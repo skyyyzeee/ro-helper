@@ -170,11 +170,11 @@ export async function createTauriPlatform(): Promise<PlatformAdapter> {
    */
   const defaultBounds = async (): Promise<WindowBounds> => {
     const monitor = (await currentMonitor()) ?? (await primaryMonitor());
-    if (!monitor) return { x: 100, y: 100, width: 900, height: 620 };
+    if (!monitor) return { x: 100, y: 100, width: 1180, height: 760 };
     const { position, size } = monitor.workArea;
     const scale = monitor.scaleFactor;
     const margin = Math.round(24 * scale);
-    const width = Math.round(Math.min(Math.max(size.width * 0.42, 820 * scale), 1040 * scale, size.width - 2 * margin));
+    const width = Math.round(Math.min(Math.max(size.width * 0.62, 1000 * scale), 1180 * scale, size.width - 2 * margin));
     const height = Math.round(Math.min(Math.max(width * 0.7, 520 * scale), size.height - 2 * margin));
     return { x: position.x + size.width - width - margin, y: position.y + Math.round((size.height - height) / 2), width, height };
   };

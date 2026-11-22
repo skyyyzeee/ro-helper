@@ -117,8 +117,6 @@ const LIST_DAYS = 60;
 /** Where the calculator's card was last left over the game, and how big it was made (issue #22). */
 const CALCULATOR_PLACE_KEY = 'pins.calculator';
 
-/** Width of the calculator panel plus the gap to the overlay, in CSS pixels. */
-const CALCULATOR_WIDTH = 400 + 12;
 
 /**
  * Timings of the push-to-talk key, in milliseconds: a «pressed» sooner than `repeat` after the last event is the key
@@ -558,7 +556,6 @@ export function Overlay({
   // «Очистить» on the calculator's card over the game empties the calculator, and the card goes with it (issue #23).
   useEffect(() => platform.onCalculatorCleared(() => setCharges([])), [platform]);
 
-  const pinnedArticle = open ? hasCard(groups, hitKey(open)) : false;
   const pinnedCalculator = hasCard(groups, CALCULATOR_ID);
   // The calculator comes back where it was last left, even after a restart.
   const calculatorPlace = useRef<Place | undefined>(undefined);
@@ -837,10 +834,10 @@ export function Overlay({
     return true;
   };
 
-  // The window grows towards the centre of the screen for the panel, and shrinks back when it closes.
+  // Keep the calculator inside the current monitor bounds.
   useEffect(() => {
-    if (calculatorOpen) void platform.extendWindow(CALCULATOR_WIDTH).then(setSide);
-    else void platform.retractWindow();
+    setSide('right');
+    void platform.retractWindow();
   }, [calculatorOpen, platform]);
   useEffect(() => () => void platform.retractWindow(), [platform]);
 
@@ -899,8 +896,9 @@ export function Overlay({
     } else if (e.key === 'Enter') {
       // Enter puts a punished article into the calculator; an article without a punishment opens instead.
       e.preventDefault();
-      const hit = listed[current];
-      if (!hit) return;
+      const selectedHit = listed[current];
+      if (!selectedHit) return;
+      const hit = wideWorkspace && previewPart && !home && view !== 'contents' ? { ...selectedHit, part: previewPart } : selectedHit;
       if (addable(hit)) toggleCharge(hit);
       else openHit(hit);
     } else if (e.key === 'ArrowRight' && input.selectionStart === input.value.length && input.selectionEnd === input.value.length) {
@@ -1150,10 +1148,65 @@ export function Overlay({
         inChapter={inChapter}
         tile={tile}
         changed={!!changeOf(hit)}
-        onOpen={() => openHit(hit)}
+        onOpen={() => {
+          if (!home && view !== 'contents' && !department && !aiOpen && window.innerWidth > 1100) {
+            setSelected(i);
+            remember(hit);
+            count({ kind: 'open', article: hitKey(hit) });
+            searchRef.current?.focus();
+          } else openHit(hit);
+        }}
         calculator={addable(hit) ? { added: inCalculator(hit), onToggle: () => toggleCharge(hit) } : undefined}
       />
     </div>
+  );
+
+  const [wideWorkspace, setWideWorkspace] = useState(window.innerWidth > 1100);
+  useEffect(() => {
+    const resize = () => setWideWorkspace(window.innerWidth > 1100);
+    window.addEventListener('resize', resize);
+    return () => window.removeEventListener('resize', resize);
+  }, []);
+
+  const [previewPart, setPreviewPart] = useState<Part>();
+  useEffect(() => setPreviewPart(undefined), [query, current]);
+
+  const renderArticle = (articleHit: SearchHit, embedded = false) => (
+    <ArticleView
+      embedded={embedded}
+      article={articleHit.article}
+      document={articleHit.document}
+      focusPart={articleHit.part}
+      backLabel={aiOpen ? 'ИИ-разбор' : department ? 'Отдел' : changesView ? 'Что изменилось' : home ? 'Избранное и недавние' : view === 'contents' ? 'Оглавление' : 'Результаты'}
+      changed={(() => {
+        const recentChange = changeOf(articleHit);
+        return recentChange && recentChange.change.kind === 'changed'
+          ? { date: recentChange.entry.version, onOpen: () => setDiff(recentChange) }
+          : undefined;
+      })()}
+      onBack={() => {
+        setOpen(null);
+        searchRef.current?.focus();
+      }}
+      monthsPerStar={rules?.stars && articleHit.document.id === rules.criminalCode ? rules.stars.monthsPerStar : undefined}
+      calculator={
+        addable(articleHit)
+          ? { has: (part) => inCalculator(partHit(articleHit, part)), toggle: (part) => toggleCharge(partHit(articleHit, part)) }
+          : undefined
+      }
+      favorite={favoriteKeys.includes(hitKey(articleHit))}
+      onFavorite={() => toggleFavorite(articleHit)}
+      onFocusPart={(part) => {
+        if (embedded) {
+          const index = hits.findIndex((hit) => hit.document.id === articleHit.document.id && hit.article.id === articleHit.article.id && hit.part?.number === part.number);
+          if (index >= 0) setSelected(index);
+          setPreviewPart(part);
+          searchRef.current?.focus();
+        } else setOpen({ ...articleHit, part });
+      }}
+      pinned={hasCard(groups, hitKey(articleHit))}
+      onPin={() => togglePin(articlePinCard(articleHit, rules))}
+    />
   );
 
   // Shown again, the panel fades in: the window is only hidden, so the class replays the animation.
@@ -1648,33 +1701,7 @@ export function Overlay({
             focus={settingsFocus}
           />
         ) : open ? (
-          <ArticleView
-            article={open.article}
-            document={open.document}
-            focusPart={open.part}
-            backLabel={aiOpen ? 'ИИ-разбор' : department ? 'Отдел' : changesView ? 'Что изменилось' : home ? 'Избранное и недавние' : view === 'contents' ? 'Оглавление' : 'Результаты'}
-            changed={(() => {
-              const recentChange = changeOf(open);
-              return recentChange && recentChange.change.kind === 'changed'
-                ? { date: recentChange.entry.version, onOpen: () => setDiff(recentChange) }
-                : undefined;
-            })()}
-            onBack={() => {
-              setOpen(null);
-              searchRef.current?.focus();
-            }}
-            monthsPerStar={rules?.stars && open.document.id === rules.criminalCode ? rules.stars.monthsPerStar : undefined}
-            calculator={
-              addable(open)
-                ? { has: (part) => inCalculator(partHit(open, part)), toggle: (part) => toggleCharge(partHit(open, part)) }
-                : undefined
-            }
-            favorite={favoriteKeys.includes(hitKey(open))}
-            onFavorite={() => toggleFavorite(open)}
-            onFocusPart={(part) => setOpen({ ...open, part })}
-            pinned={pinnedArticle}
-            onPin={() => togglePin(articlePinCard(open, rules))}
-          />
+          renderArticle(open)
         ) : department ? (
           <DepartmentView
             pack={pack}
@@ -1969,50 +1996,55 @@ export function Overlay({
           </>
         ) : (
           <>
-            <div className="meta">
-              <span>{plural(hits.length, ['результат', 'результата', 'результатов'])}</span>
-              <span>{scope ? scope.title : intent ? intentWhere(pack, intent) : 'все документы'}</span>
-            </div>
-            {intent && (
-              <div className="intent" role="note" aria-label="Как понят запрос">
-                <span>
-                  Понял как: <b>{intent.label}</b>
-                </span>
-                <button className="link-btn" type="button" onClick={() => setEverywhereFor(query)}>
-                  Искать везде
-                </button>
+            <div className="search-workspace">
+            <section className="search-workspace__results" aria-label="Поиск по документам">
+              <div className="meta">
+                <span>{plural(hits.length, ['результат', 'результата', 'результатов'])}</span>
+                <span>{scope ? scope.title : intent ? intentWhere(pack, intent) : 'все документы'}</span>
               </div>
-            )}
-            {askFirst && (
-              <button className={offerChosen ? 'ai-offer ai-offer--top ai-offer--chosen' : 'ai-offer ai-offer--top'} type="button" onClick={() => openAi(query)}>
+              {intent && (
+                <div className="intent" role="note" aria-label="Как понят запрос">
+                  <span>
+                    Понял как: <b>{intent.label}</b>
+                  </span>
+                  <button className="link-btn" type="button" onClick={() => setEverywhereFor(query)}>
+                    Искать везде
+                  </button>
+                </div>
+              )}
+              {askFirst && (
+                <button className={offerChosen ? 'ai-offer ai-offer--top ai-offer--chosen' : 'ai-offer ai-offer--top'} type="button" onClick={() => openAi(query)}>
+                  <SparkIcon size={18} />
+                  <span>
+                    Спросить ИИ: <b>«{query.trim()}»</b>
+                  </span>
+                  <span className="kbd">Enter</span>
+                </button>
+              )}
+              <div className="list" role="list" aria-label="Результаты поиска">
+                {hits.map((hit, i) => rowFor(hit, i))}
+              </div>
+              {hits.length === 0 && noResults && (
+                <NoResults
+                  empty={noResults}
+                  onTry={(to) => {
+                    if (to.everywhere) setScopeId(null);
+                    setQuery(to.query);
+                    setSelected(0);
+                    searchRef.current?.focus();
+                  }}
+                />
+              )}
+              {/* A situation typed into the search finds nothing whole: the AI takes it word by word. */}
+              {!askFirst && <button className="ai-offer" type="button" onClick={() => openAi(query)}>
                 <SparkIcon size={18} />
                 <span>
-                  Спросить ИИ: <b>«{query.trim()}»</b>
+                  Разобрать с ИИ: <b>«{query.trim()}»</b>
                 </span>
-                <span className="kbd">Enter</span>
-              </button>
-            )}
-            <div className="list" role="list" aria-label="Результаты поиска">
-              {hits.map((hit, i) => rowFor(hit, i))}
+              </button>}
+            </section>
+            {wideWorkspace && hits.length > 0 && <section className="search-workspace__reader" aria-label="Текст выбранной статьи" key={hitKey(hits[current] ?? hits[0])}>{renderArticle({ ...(hits[current] ?? hits[0]), part: previewPart ?? (hits[current] ?? hits[0]).part }, true)}</section>}
             </div>
-            {hits.length === 0 && noResults && (
-              <NoResults
-                empty={noResults}
-                onTry={(to) => {
-                  if (to.everywhere) setScopeId(null);
-                  setQuery(to.query);
-                  setSelected(0);
-                  searchRef.current?.focus();
-                }}
-              />
-            )}
-            {/* A situation typed into the search finds nothing whole: the AI takes it word by word. */}
-            {!askFirst && <button className="ai-offer" type="button" onClick={() => openAi(query)}>
-              <SparkIcon size={18} />
-              <span>
-                Разобрать с ИИ: <b>«{query.trim()}»</b>
-              </span>
-            </button>}
           </>
         )}
       </div>

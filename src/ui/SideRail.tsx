@@ -54,6 +54,7 @@ export function SideRail({ top, items, current }: { top?: ReactNode; items: Rail
       onClick={item.onSelect}
     >
       {item.icon}
+      <span className="rail__label">{item.label}</span>
     </button>
   );
 
