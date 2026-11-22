@@ -6672,3 +6672,7 @@ select option {
 .calc .copy-str { font-size: 12px; line-height: 1.6; max-height: 82px; overflow-y: auto; margin-top: 7px; }
 .calc .lim { white-space: normal; line-height: 1.5; }
 .calc .amt { grid-column: 1 / -1; justify-self: start; max-width: 150px; }
+
+.calc .sec-row:has(.seg) { display: block; }
+.calc .sec-row:has(.seg) .sec-t { display: block; margin-bottom: 9px; }
+.calc .sec-row .seg { width: 100%; }
