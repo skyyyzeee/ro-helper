@@ -1277,6 +1277,7 @@ export function Overlay({
         rows={aiMode ? 2 : undefined}
         aria-label={aiMode ? aiInputLabel : 'Поиск по законам'}
         aria-describedby={aiMode ? 'ai-composer-help' : undefined}
+        title={aiMode ? 'Enter — отправить · Shift+Enter — новая строка' : undefined}
         placeholder={
           aiMode
             ? aiTab === 'document'
