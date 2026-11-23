@@ -6781,8 +6781,18 @@ select option {
 .ai > .ai__head { background: rgb(17 17 21); backdrop-filter: none; -webkit-backdrop-filter: none; }
 
 /* Keep long wiki catalogs reachable without scrolling the material itself. */
-.overlay__content:has(> .wiki) { container-type: size; min-height: 0; }
+.overlay__content:has(> .wiki) { container-type: size; container-name: wiki-space; min-height: 0; }
 .wiki__navitem { border-radius: 6px; }
 @media (min-width: 701px) {
   .wiki__nav { max-height: calc(100cqh - 16px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .25) transparent; }
+}
+
+@container wiki-space (max-width: 580px) {
+  .wiki { flex-direction: column; }
+  .wiki__nav { position: static; width: 100%; box-sizing: border-box; flex-direction: row; max-height: none; overflow-x: auto; overflow-y: hidden; }
+  .wiki__navitem { flex: none; }
+  .wiki__main { width: 100%; }
+  .wiki__hero { flex-direction: column; }
+  .wiki__zoom { max-width: 100%; }
+  .wiki__big { width: 100%; max-width: none; }
 }
