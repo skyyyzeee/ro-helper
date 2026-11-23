@@ -6779,3 +6779,10 @@ select option {
 
 /* The pinned modes must fully cover the text scrolling underneath. */
 .ai > .ai__head { background: rgb(17 17 21); backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+/* Keep long wiki catalogs reachable without scrolling the material itself. */
+.overlay__content:has(> .wiki) { container-type: size; min-height: 0; }
+.wiki__navitem { border-radius: 6px; }
+@media (min-width: 701px) {
+  .wiki__nav { max-height: calc(100cqh - 16px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+}

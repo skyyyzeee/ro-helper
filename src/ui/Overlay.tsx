@@ -80,7 +80,7 @@ import { useAnnouncements } from './announcements';
 import { useSurvey } from './surveys';
 import { useMemos } from './memos';
 import { MemosView, memoDay } from './MemosView';
-import { WikiView } from './WikiView';
+import { WikiView, type WikiNavigation } from './WikiView';
 import { factionName } from './AdminView';
 import { Avatar } from './ProfileView';
 import { useAccount } from '../account/AccountContext';
@@ -177,6 +177,7 @@ export function Overlay({
   const departmentScroll = useRef(new Map<string, number>());
   // The wiki of Russia Online: a page of its own, like the memos.
   const [wikiOpen, setWikiOpen] = useState(false);
+  const wikiNavigation = useRef<WikiNavigation>(null);
   const memos = useMemos();
   /** The part of the settings the side column asked for: the account from the profile, what is pinned from the pin. */
   const [settingsFocus, setSettingsFocus] = useState<{ section: SettingsSection; at: number }>();
@@ -1013,7 +1014,7 @@ export function Overlay({
     else if (changesView && settingsOpen) setChangesView(null);
     else if (settingsOpen) setSettingsOpen(false);
     else if (memosOpen) setMemosOpen(false);
-    else if (wikiOpen) setWikiOpen(false);
+    else if (wikiOpen) { if (!wikiNavigation.current?.back()) setWikiOpen(false); }
     else if (open) setOpen(null);
     else if (department?.topic) setDepartment({ topic: null });
     else if (department) setDepartment(null);
@@ -1037,7 +1038,7 @@ export function Overlay({
         if (copyShortcut.current()) e.preventDefault();
         return;
       }
-      if (e.key !== 'Escape') return;
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
       e.preventDefault();
       stepBack.current();
     };
@@ -1692,7 +1693,7 @@ export function Overlay({
             }
           />
         ) : wikiOpen ? (
-          <WikiView server={pack.server.id} openId={wikiEntry} />
+          <WikiView ref={wikiNavigation} server={pack.server.id} openId={wikiEntry} />
         ) : memosOpen ? (
           <div className="settings settings--single">
             <MemosView signedIn={!!account} />
