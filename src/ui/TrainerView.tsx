@@ -1,9 +1,9 @@
-import { useState } from 'react';
 import type { SearchHit, ServerPack } from '../core';
 import { Dropdown } from './Dropdown';
 import { AiHead, shortLabel, type AiTab } from './AiView';
 import { CheckIcon, CloseIcon, SchoolIcon, WarnIcon } from './icons';
 import { QuizView } from './QuizView';
+import type { QuickQuiz } from './quickQuiz';
 import { ROUND, type Trainer, type Verdict } from './trainer';
 
 const VERDICTS: Record<Verdict, { title: string; className: string }> = {
@@ -21,11 +21,17 @@ const scoreText = (score: number, of: number) => `${String(score).replace('.', '
  */
 export function TrainerView({
   trainer,
+  quickQuiz,
+  mode,
+  onMode,
   pack,
   onOpen,
   onTab,
 }: {
   trainer: Trainer;
+  quickQuiz: QuickQuiz;
+  mode: 'quick' | 'ai';
+  onMode: (mode: 'quick' | 'ai') => void;
   pack: ServerPack;
   onOpen: (hit: SearchHit) => void;
   onTab: (tab: AiTab) => void;
@@ -33,7 +39,6 @@ export function TrainerView({
   const { phase, question, graded } = trainer;
   const chosen = pack.documents.filter((d) => trainer.documents.includes(d.id));
   const choosing = phase === 'idle' || phase === 'done';
-  const [mode, setMode] = useState<'quick' | 'ai'>('quick');
   // While the AI's exam is under way, its questions stay on screen: the switch waits for its end.
   const busy = !choosing;
   const picker = (
@@ -53,7 +58,7 @@ export function TrainerView({
   );
 
   return (
-    <section className="art ai quiz" aria-label="Практика">
+    <section className="art ai quiz" aria-label="Практика" aria-busy={phase === 'asking' || phase === 'grading'}>
       <AiHead tab="trainer" onTab={onTab} />
 
       {!busy && (
@@ -64,14 +69,14 @@ export function TrainerView({
               ['ai', 'Экзамен с ИИ'],
             ] as const
           ).map(([id, label]) => (
-            <button key={id} type="button" role="radio" aria-checked={mode === id} className={mode === id ? 'tabs__btn tabs__btn--on' : 'tabs__btn'} onClick={() => setMode(id)}>
+            <button key={id} type="button" role="radio" aria-checked={mode === id} className={mode === id ? 'tabs__btn tabs__btn--on' : 'tabs__btn'} onClick={() => onMode(id)}>
               {label}
             </button>
           ))}
         </div>
       )}
 
-      {mode === 'quick' && !busy && <QuizView pack={pack} documents={trainer.documents} picker={picker} onOpen={onOpen} />}
+      {mode === 'quick' && !busy && <QuizView quiz={quickQuiz} picker={picker} onOpen={onOpen} />}
 
       {mode === 'ai' && choosing && (
         <>
@@ -105,7 +110,9 @@ export function TrainerView({
       {mode === 'ai' && trainer.error && (
         <div className="warn" role="alert">
           <WarnIcon />
-          <span>{trainer.error}</span>
+          <span>{trainer.error}
+            {phase === 'answering' && trainer.answer && <><br /><button className="link" type="button" onClick={() => void trainer.reply(trainer.answer)}>Повторить проверку ответа</button></>}
+          </span>
         </div>
       )}
 
@@ -131,7 +138,7 @@ export function TrainerView({
             <>
               <div className="quiz__question">{question.question}</div>
               {trainer.answer && <div className="ai__question quiz__answer">{trainer.answer}</div>}
-              {phase === 'answering' && !trainer.answer && <p className="set__hint">Напишите ответ в поле внизу и нажмите Enter.</p>}
+              {phase === 'answering' && !trainer.answer && <p className="set__hint">Напишите ответ в поле внизу и нажмите «Отправить» или Enter.</p>}
               {phase === 'grading' && (
                 <div className="ai__pending" role="status">
                   <span className="ai__dots" aria-hidden="true" />

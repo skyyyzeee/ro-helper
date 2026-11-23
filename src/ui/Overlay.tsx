@@ -31,6 +31,7 @@ import { useCapabilities, useRoles } from './roles';
 import { cardText } from './AnswerView';
 import { DocumentView } from './DocumentView';
 import { TrainerView } from './TrainerView';
+import { useQuickQuiz } from './quickQuiz';
 import { LawyerView } from './LawyerView';
 import { useLawyerCheck } from './lawyer';
 import { DetentionView } from './DetentionView';
@@ -225,6 +226,8 @@ export function Overlay({
   const quickCan = useMemo(() => [...aiCan, ...memberCan].sort(), [aiCan, memberCan]);
   const writer = useDocumentWriter(platform, pack, boostDocuments, aiCan.has('ai.official_documents'));
   const trainer = useTrainer(platform, pack, boostDocuments, aiCan.has('ai.practice'));
+  const quickQuiz = useQuickQuiz(pack, trainer.documents);
+  const [practiceMode, setPracticeMode] = useState<'quick' | 'ai'>('quick');
   const lawyer = useLawyerCheck(platform, pack, boostDocuments, aiCan.has('ai.check'));
   const detention = useDetentionReview(platform, pack, boostDocuments, aiCan.has('ai.check'));
   // The organisation changed to one without the mode on show: back to the analysis.
@@ -234,6 +237,9 @@ export function Overlay({
   /** The field is the AI's, not the search's: an article opened from the answer gives it back to the search. */
   const aiMode = aiOpen && !open;
   useLayoutEffect(() => { searchRef.current?.focus(); }, [aiMode]);
+  useLayoutEffect(() => {
+    if (aiMode && aiTab === 'trainer' && trainer.phase === 'answering') searchRef.current?.focus();
+  }, [aiMode, aiTab, trainer.phase]);
 
   // The keyboard follows the personal column first, then server-wide suggestions.
   const saved = useSaved(platform, pack);
@@ -1820,6 +1826,9 @@ export function Overlay({
         ) : aiOpen && aiTab === 'trainer' ? (
           <TrainerView
             trainer={trainer}
+            quickQuiz={quickQuiz}
+            mode={practiceMode}
+            onMode={setPracticeMode}
             pack={pack}
             onOpen={openHit}
             onTab={(tab) => {
@@ -2103,7 +2112,7 @@ export function Overlay({
         </>
       )}
 
-      {!inner && aiMode && searchField}
+      {!inner && aiMode && (aiTab !== 'trainer' || (practiceMode === 'ai' && trainer.phase === 'answering')) && searchField}
 
       {showHints && (
         <div className="overlay__foot">
