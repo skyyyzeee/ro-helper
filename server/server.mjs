@@ -2,8 +2,8 @@
 // here, in the environment of this server (see env.example) — never in the app, which anyone can take apart.
 //
 // It asks GigaChat (Sber's free tier) first when its key is set, and any OpenAI-compatible API (ProxyAPI, VseGPT…)
-// when GigaChat refuses, is busy or has used up its free tokens — so the paid API pays only for what GigaChat does
-// not answer. It keeps the spending in check: a few questions a day per computer and per address, and a daily
+// when explicitly enabled and budgeted. GigaChat account billing is configured separately; this server cannot
+// guarantee that its account has no paid token package. It keeps the spending in check: a few questions a day per computer and per address, and a daily
 // budget in rubles for everyone together.
 // Plain Node (18+ — Ubuntu 24.04 ships 18: no global `crypto`, import what is used), no packages: `node server.mjs`, behind Caddy for HTTPS (see README.md).
 import { createHash, createPublicKey, randomUUID, timingSafeEqual, verify } from 'node:crypto';
@@ -18,6 +18,8 @@ const CONFIG = {
   /** The OpenAI-compatible API and its key: ProxyAPI, VseGPT or another. */
   apiBase: env('AI_BASE_URL', 'https://api.proxyapi.ru/openai/v1').replace(/\/$/, ''),
   apiKey: env('AI_API_KEY', ''),
+  /** Paid upstream calls require explicit opt-in, even when a key is already configured. */
+  paidEnabled: env('PAID_API_ENABLED', '0') === '1',
   /**
    * Models to ask, in turn: when one is busy (429 — the provider's limit for that model is taken up), the next
    * is tried. The first is AI_MODEL; AI_MODELS, comma-separated, replaces the whole list.
@@ -37,7 +39,7 @@ const CONFIG = {
    * Everyone together may spend this much a day. Past it the paid API rests until midnight (Moscow): with GigaChat
    * set up, the questions go on to it; without, the AI rests too.
    */
-  budgetPerDay: num('BUDGET_RUB_PER_DAY', 20),
+  budgetPerDay: num('BUDGET_RUB_PER_DAY', 0),
   /** Per computer and per address, a day. */
   questionsPerDevice: num('QUESTIONS_PER_DEVICE', 50),
   /**
@@ -177,7 +179,8 @@ function rollDay() {
  */
 function refusal(device, ip, kind, account, leader = false, admin = false) {
   rollDay();
-  // Past the budget GigaChat, free, goes on answering; only with no GigaChat does the AI rest.
+  if (!CONFIG.gigachat.key && !CONFIG.paidEnabled) return 'Платный ИИ отключён. Поиск по базе и калькулятор продолжают работать.';
+  // The separately configured GigaChat account remains available past the paid API budget.
   if (state.spent >= CONFIG.budgetPerDay && !CONFIG.gigachat.key) return 'На сегодня ИИ Кремлёвского Ассистента исчерпал общий лимит. Он снова заработает после полуночи по Москве.';
   // The admins' exam answers past the computer's, the address's and the account's limits; the day's budget still counts.
   if (admin) return null;
@@ -253,6 +256,9 @@ async function inTurn(models, call) {
 
 /** The paid OpenAI-compatible API, model after model while they are busy. */
 async function paid(request, models = CONFIG.models) {
+  // All routes, including admin trials, pass this gate before any upstream request.
+  if (!CONFIG.paidEnabled) throw new UpstreamError(503, null, 'paid API disabled');
+  if (!(Number.isFinite(CONFIG.budgetPerDay) && CONFIG.budgetPerDay > 0 && state.spent < CONFIG.budgetPerDay)) throw new UpstreamError(429, null, 'paid budget exhausted');
   const started = Date.now();
   try {
     const answer = await paidOnce(request, models);
@@ -422,7 +428,7 @@ async function gigachat({ system, messages, json, think }, model = CONFIG.gigach
  * first, when it is set up; the paid API for what it does not answer, while the budget allows.
  */
 async function chat(request, kind = 'question') {
-  const canPay = !!CONFIG.apiKey && state.spent < CONFIG.budgetPerDay;
+  const canPay = CONFIG.paidEnabled && !!CONFIG.apiKey && Number.isFinite(CONFIG.budgetPerDay) && CONFIG.budgetPerDay > 0 && state.spent < CONFIG.budgetPerDay;
   if (kind === 'question') {
     for (const name of CONFIG.analysisModels) {
       const giga = name.startsWith('gigachat:');
@@ -868,7 +874,7 @@ const server = createServer(async (request, response) => {
   }
   if (request.method === 'GET' && request.url === '/v1/status') {
     rollDay();
-    return send(response, 200, { ok: true, open: state.spent < CONFIG.budgetPerDay || !!CONFIG.gigachat.key, answered: state.answered, spent: Math.round(state.spent * 100) / 100, marks: state.marks ?? 0, cache: cache.size, timing: state.timing ?? {} });
+    return send(response, 200, { ok: true, open: !!CONFIG.gigachat.key || (CONFIG.paidEnabled && !!CONFIG.apiKey && Number.isFinite(CONFIG.budgetPerDay) && CONFIG.budgetPerDay > 0 && state.spent < CONFIG.budgetPerDay), answered: state.answered, spent: Math.round(state.spent * 100) / 100, marks: state.marks ?? 0, cache: cache.size, timing: state.timing ?? {} });
   }
   if (request.method === 'GET' && request.url.startsWith('/v1/feedback')) {
     if (!isAdmin(request)) return send(response, 403, { error: 'Нужен ключ администратора.' });

@@ -63,7 +63,7 @@ async function aiServer(env) {
   const port = 20000 + Math.floor(Math.random() * 20000);
   const dir = mkdtempSync(join(tmpdir(), 'ai-'));
   const child = spawn(process.execPath, [join(import.meta.dirname, 'server.mjs')], {
-    env: { ...process.env, PORT: String(port), STATE_FILE: join(dir, 'state.json'), FEEDBACK_FILE: join(dir, 'feedback.jsonl'), REVIEWS_FILE: join(dir, 'reviews.json'), CACHE_FILE: join(dir, 'cache.json'), SURVEY_FILE: join(dir, 'survey.jsonl'), CRASH_FILE: join(dir, 'crashes.jsonl'), EARNINGS_FILE: join(dir, 'earnings.jsonl'), ...env },
+    env: { ...process.env, PAID_API_ENABLED: '1', BUDGET_RUB_PER_DAY: '20', PORT: String(port), STATE_FILE: join(dir, 'state.json'), FEEDBACK_FILE: join(dir, 'feedback.jsonl'), REVIEWS_FILE: join(dir, 'reviews.json'), CACHE_FILE: join(dir, 'cache.json'), SURVEY_FILE: join(dir, 'survey.jsonl'), CRASH_FILE: join(dir, 'crashes.jsonl'), EARNINGS_FILE: join(dir, 'earnings.jsonl'), ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   await new Promise((resolve, reject) => {
@@ -590,4 +590,41 @@ test('sums up the shifts shared by players: the median a job pays an hour on a s
     ai.stop();
     giga.server.close();
   }
+});
+
+
+test('paid upstream is disabled by default despite configured keys and analysis priority', async () => {
+  const giga = await fakeGigachat();
+  const paid = await fakePaid();
+  const ai = await aiServer({ ...gigaEnv(giga), PAID_API_ENABLED: undefined, BUDGET_RUB_PER_DAY: '20', AI_API_KEY: 'test-key', AI_BASE_URL: paid.url, ANALYSIS_MODEL: 'gpt-4.1-mini' });
+  try {
+    assert.equal(JSON.parse((await ai.ask('украл')).body.text).from, 'gigachat');
+    for (const question of ['травка', 'сломай', 'лимит']) assert.equal((await ai.ask(question)).status, 502);
+    assert.equal(paid.seen.chats, 0);
+    assert.equal((await ai.status()).spent, 0);
+  } finally { ai.stop(); giga.server.close(); paid.server.close(); }
+});
+
+test('paid opt-out also blocks admin trials and reports unavailable without GigaChat', async () => {
+  const paid = await fakePaid();
+  const ai = await aiServer({ PAID_API_ENABLED: '0', GIGACHAT_AUTH_KEY: '', AI_API_KEY: 'test-key', AI_BASE_URL: paid.url, ADMIN_TOKEN: 'admin-token-0123456789', BUDGET_RUB_PER_DAY: '20' });
+  try {
+    assert.equal((await ai.status()).open, false);
+    assert.equal((await ai.ask('украл')).status, 429);
+    const response = await fetch(`${ai.base}/v1/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Device': 'device-0001', Authorization: 'Bearer admin-token-0123456789' }, body: JSON.stringify({ system: 's', messages: [{ role: 'user', content: 'украл' }], model: 'gpt-5-nano', json: true }) });
+    assert.equal(response.status, 502);
+    assert.equal(paid.seen.chats, 0);
+  } finally { ai.stop(); paid.server.close(); }
+});
+
+test('invalid or zero paid budgets cannot reach the paid upstream', async () => {
+  const paid = await fakePaid();
+  try {
+    for (const budget of ['0', '-1', 'NaN', 'Infinity']) {
+      const ai = await aiServer({ PAID_API_ENABLED: '1', GIGACHAT_AUTH_KEY: '', AI_API_KEY: 'test-key', AI_BASE_URL: paid.url, BUDGET_RUB_PER_DAY: budget });
+      try { assert.notEqual((await ai.ask('украл')).status, 200); assert.equal((await ai.status()).open, false); }
+      finally { ai.stop(); }
+    }
+    assert.equal(paid.seen.chats, 0);
+  } finally { paid.server.close(); }
 });
