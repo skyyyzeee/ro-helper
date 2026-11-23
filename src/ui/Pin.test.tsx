@@ -27,6 +27,15 @@ const pinArticle = (user: User) => user.click(within(screen.getByRole('article')
 const pinCalculator = (user: User) => user.click(within(panel()).getByRole('button', { name: 'Закрепить итог поверх игры' }));
 
 describe('pinning an article', () => {
+  it('bounds a long automatic card while keeping the whole article in a keyboard-scrollable region', () => {
+    render(<PinSurface groups={[{ id: 'long', x: 0, y: 0, cards: [{ id: 'long', kind: 'article', heading: 'Long article', lines: Array.from({ length: 80 }, (_, i) => `Line ${i}`) }] }]} live onChange={vi.fn()} />);
+    const card = screen.getByRole('region', { name: 'Закреплено' });
+    expect(card).toHaveStyle({ maxHeight: '300px' });
+    const body = screen.getByRole('region', { name: 'Содержимое: Long article' });
+    expect(body).toHaveAttribute('tabindex', '0');
+    expect(within(body).getByText('Line 79')).toBeInTheDocument();
+  });
+
   it('pins the whole article under the part it was opened on, and the overlay stays open', async () => {
     const { platform, user } = await renderApp();
     await user.type(search(), 'ук 87');

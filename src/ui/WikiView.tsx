@@ -3,6 +3,7 @@ import { usePlatform } from '../platform/PlatformContext';
 import { neighbours, pick, tagsOf, type VehicleFilters, type WikiSort } from '../wiki/catalog';
 import { formatRubles } from '../core';
 import { FRESH, type Gender, type WikiCatalogId, type WikiData, type WikiEntry } from '../wiki/model';
+import { WikiPicture as Picture } from './WikiPicture';
 import { Dropdown } from './Dropdown';
 import { BackIcon, ExternalIcon, SearchIcon } from './icons';
 import { useWiki } from './wiki';
@@ -45,21 +46,6 @@ const SORTS: { id: WikiSort; label: string }[] = [
   { id: 'expensive', label: 'Сначала дорогие' },
   { id: 'name', label: 'По названию' },
 ];
-
-/**
- * A picture from the wiki's CDN; nothing when it does not load (offline) — the card keeps its place. An animation
- * is a video: it plays on its own page, and a card shows that it is one instead of fetching it.
- */
-function Picture({ src, alt, className, play }: { src?: string; alt: string; className: string; play?: boolean }) {
-  const [broken, setBroken] = useState(false);
-  useEffect(() => setBroken(false), [src]);
-  if (src && /.(webm|mp4)$/i.test(src) && !broken) {
-    if (!play) return <span className={`${className} wiki__noimage wiki__video`} aria-hidden="true" />;
-    return <video className={className} src={src} autoPlay loop muted playsInline aria-label={alt} onError={() => setBroken(true)} />;
-  }
-  if (!src || broken) return <span className={`${className} wiki__noimage`} aria-hidden="true" />;
-  return <img className={className} src={src} alt={alt} loading="lazy" decoding="async" onError={() => setBroken(true)} />;
-}
 
 function Card({ entry, onOpen, showCatalog, compact = false }: { entry: WikiEntry; onOpen: () => void; showCatalog?: string; compact?: boolean }) {
   const labels = CARD_FACTS[entry.catalog];
@@ -104,6 +90,7 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel, earn }: { data: Wik
   const platform = usePlatform();
   const [view, setView] = useState(0);
   const [large, setLarge] = useState(false);
+  const [pictureFailed, setPictureFailed] = useState(false);
   const isVehicle = entry.catalog === 'vehicles';
   const kits = isVehicle
     ? data.entries.filter((item) => item.catalog === 'modkits' && item.facts.some(([label, value]) => label === 'Машина' && value === entry.title))
@@ -118,6 +105,7 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel, earn }: { data: Wik
   const views = [...base, ...variants];
   const shown = views[view];
   const picture = shown?.image ?? entry.image;
+  useEffect(() => { setPictureFailed(false); setLarge(false); }, [picture]);
   const canEnlarge = !!picture && !/\.(webm|mp4)$/i.test(picture);
   const more = neighbours(data, entry);
   const speeds = isVehicle
@@ -133,11 +121,11 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel, earn }: { data: Wik
       </button>
       <div className={large ? 'wiki__hero wiki__hero--large' : 'wiki__hero'}>
         {canEnlarge ? (
-          <button className="wiki__zoom" type="button" aria-label={large ? 'Уменьшить фото' : 'Увеличить фото'} aria-expanded={large} onClick={() => setLarge(!large)}>
-            <Picture src={picture} alt={shown?.name || entry.title} className="wiki__big" />
-            <span className="wiki__zoom-label">{large ? 'Уменьшить' : 'Увеличить'}</span>
+          <button className="wiki__zoom" type="button" disabled={pictureFailed} aria-label={pictureFailed ? 'Изображение недоступно' : large ? 'Уменьшить фото' : 'Увеличить фото'} aria-expanded={large} onClick={() => setLarge(!large)}>
+            <Picture src={picture} alt={shown?.name || entry.title} className="wiki__big" onUnavailable={() => { setPictureFailed(true); setLarge(false); }} />
+            {!pictureFailed && <span className="wiki__zoom-label">{large ? 'Уменьшить' : 'Увеличить'}</span>}
           </button>
-        ) : picture && <Picture src={picture} alt={shown?.name || entry.title} className="wiki__big" play />}
+        ) : <Picture src={picture} alt={shown?.name || entry.title} className="wiki__big" play />}
         <div className="wiki__about">
           <h2 className="wiki__title" tabIndex={-1}>{entry.title}</h2>
           {entry.subtitle && <p className="wiki__subtitle">{entry.subtitle}</p>}

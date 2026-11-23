@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PinCard, PinGroup } from '../platform/types';
-import { CALCULATOR_ID, CARD_WIDTH, MIN_HEIGHT, MIN_WIDTH, detachCard, hasCard, joinGroups, keepOnScreen, keepableGroups, moveGroup, nextPlace, pinCard, placeOf, resizeGroup, unpinCard, unpinGroup, updateCard } from './pinLayout';
+import { AUTO_PIN_HEIGHT, CALCULATOR_ID, CARD_WIDTH, MIN_HEIGHT, MIN_WIDTH, detachCard, hasCard, joinGroups, keepOnScreen, keepableGroups, moveGroup, nextPlace, pinCard, placeOf, resizeGroup, unpinCard, unpinGroup, updateCard } from './pinLayout';
 
 const SURFACE = { width: 1920, height: 1080 };
 const card = (id: string, heading = id): PinCard => ({ id, kind: 'article', heading, lines: [] });
@@ -13,6 +13,16 @@ describe('what is pinned', () => {
     expect(groups.map((g) => g.cards[0].id)).toEqual(['a', 'b', 'c']);
     expect(new Set(groups.map((g) => `${g.x},${g.y}`)).size).toBe(3);
     expect(nextPlace(groups, SURFACE)).not.toEqual({ x: groups[0].x, y: groups[0].y });
+  });
+
+  it('reserves the full bounded height and avoids wide resized blocks when placing new cards', () => {
+    let groups: PinGroup[] = [{ id: 'wide', x: 40, y: 300, width: 650, height: 400, cards: [card('wide')] }];
+    for (const id of ['long-a', 'long-b', 'long-c']) groups = pinCard(groups, { ...card(id), lines: Array(80).fill('Long article text') }, SURFACE);
+    const boxes = groups.map((group) => ({ x: group.x, y: group.y, width: group.width ?? CARD_WIDTH, height: group.height ?? AUTO_PIN_HEIGHT }));
+    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i], b = boxes[j];
+      expect(a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y).toBe(true);
+    }
   });
 
   it('pins a card once: the same card again only refreshes it where it is', () => {
