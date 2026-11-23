@@ -28,7 +28,9 @@ describe('the wiki of Russia Online', () => {
     await user.keyboard('{Escape}');
     expect(search).toHaveValue('');
     expect(vehicles).toHaveAttribute('aria-current', 'page');
+    nav.scrollTop = 200;
     await user.keyboard('{Escape}');
+    expect(nav.scrollTop).toBe(0);
     expect(within(nav).getByRole('button', { name: 'Главная' })).toHaveAttribute('aria-current', 'page');
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('region', { name: 'Вики' })).not.toBeInTheDocument();

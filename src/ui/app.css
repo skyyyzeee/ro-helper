@@ -6784,5 +6784,5 @@ select option {
 .overlay__content:has(> .wiki) { container-type: size; min-height: 0; }
 .wiki__navitem { border-radius: 6px; }
 @media (min-width: 701px) {
-  .wiki__nav { max-height: calc(100cqh - 16px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+  .wiki__nav { max-height: calc(100cqh - 16px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .25) transparent; }
 }

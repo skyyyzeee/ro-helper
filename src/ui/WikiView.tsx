@@ -339,7 +339,11 @@ export function WikiView({ server = 'tverskoi', openId, ref }: { server?: string
   const titleOf = (id: WikiCatalogId) => data?.catalogs.find((c) => c.id === id)?.title ?? '';
 
   // The tab lights up at once; the cards of the new one follow as soon as they are ready.
-  const choose = (id: WikiCatalogId | 'home' | 'map') =>
+  const choose = (id: WikiCatalogId | 'home' | 'map') => {
+    if (id === 'home') {
+      const nav = wikiRef.current?.querySelector<HTMLElement>('.wiki__nav');
+      if (nav) nav.scrollTop = 0;
+    }
     startTransition(() => {
       setCatalog(id);
       setGroup(undefined);
@@ -351,6 +355,7 @@ export function WikiView({ server = 'tverskoi', openId, ref }: { server?: string
       setTrail([]);
       setEntry(null);
     });
+  };
 
   const back = () => {
     if (entry) {
