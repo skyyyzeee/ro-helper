@@ -32,6 +32,8 @@ export const SOURCES = 14;
  * often as into the first 14 (recall.test.ts).
  */
 export const QUICK_SOURCES = 8;
+/** Mixed questions need room for both ranked lists: five laws and five rules, not four each. */
+export const QUICK_MIXED_SOURCES = 10;
 /** At most so many of the sources are the side's own law (context.ts PERSPECTIVE_TERMS). */
 const SIDE_SOURCES = 3;
 /** In the quick one, beside its 8 for the case. */
@@ -193,8 +195,8 @@ export function rulesAsNorms(answer: LegalAnswer, sources: Source[]): LegalAnswe
 /** The analysis of a situation in a scope: sources from the base, the AI's answer, the checks, the calculator. */
 export async function analyse(input: AnalyseInput): Promise<Analysis> {
   const { provider, pack, organization, message, previous, perspective, depth } = input;
-  const most = depth === 'quick' ? QUICK_SOURCES : SOURCES;
   const scope = input.scope ?? previous?.scope ?? 'law';
+  const most = depth === 'quick' ? (scope === 'mixed' ? QUICK_MIXED_SOURCES : QUICK_SOURCES) : SOURCES;
   const inScope = packInScope(pack, scope);
   let aiCalls = 0;
   // A follow-up is searched with the facts it changes: «а если без маски» alone finds nothing. A side asked for is
@@ -223,7 +225,7 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
   );
   const own = new Set(found.map((hit) => hit.article.id));
   const extra = side.filter((hit, i) => !own.has(hit.article.id) && side.findIndex((h) => h.article.id === hit.article.id) === i).slice(0, depth === 'quick' ? QUICK_SIDE_SOURCES : SIDE_SOURCES);
-  // The quick analysis keeps its 8 for the case and adds the side's on top: the side's must not crowd the case out.
+  // The quick analysis keeps its evidence budget for the case and adds the side's on top: the side's must not crowd the case out.
   const sources = labelSources([...found.slice(0, depth === 'quick' ? most : most - extra.length), ...extra.map(({ article, document }) => ({ article, document }))]);
   const context = buildContext({ pack, organization, message, sources, perspective, previous });
   // A first question may be answered again to anyone who asks it with the same laws (ADR 0007); a follow-up is its own case.

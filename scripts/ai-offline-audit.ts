@@ -56,7 +56,10 @@ const semanticProbe = { deliberatelyFalseClaim: wrongAnswer.violation.text, vali
   interpretation: 'This probe only demonstrates missing semantic entailment checking. It is not a model output or a measured model hallucination rate.' };
 const report = { semanticProbe, packSha256: Object.fromEntries(Object.entries(PACKS).map(([id, pack]) => [id, createHash('sha256').update(JSON.stringify(pack)).digest('hex')])), date: '2026-11-24', datasetSha256: createHash('sha256').update(raw).digest('hex'),
   limitations: 'No model, network, classifier, generated search phrases, organization, perspective or follow-ups. Explicit scope from case category. Recall is article presence only, not evidence completeness or answer quality. Character counts are not token counts. Existing cases are not a held-out benchmark.',
-  summary, rows };
+  summary, byCategory: ['LAW', 'SERVER_RULE', 'MIXED'].flatMap((category) => ['quick', 'full'].map((depth) => {
+    const selected = rows.filter((row) => row.category === category && row.depth === depth);
+    return { category, depth, cases: selected.length, allExpectedRetrieved: selected.filter((row) => !row.missing.length).length };
+  })), rows };
 const output = process.argv[2];
 if (!output) throw new Error('Pass an output JSON path');
 writeFileSync(output, JSON.stringify(report, null, 2) + '\n');
