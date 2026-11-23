@@ -1,5 +1,7 @@
 # The AI exam (evaluation lab)
 
+> Уточнение 24.11.2026: проверки ссылок/номеров/цифр не доказывают смысловое следование утверждения норме. Автономный контрпример проходит confirmed и текущий hallucination gate. Нулевой показатель этого gate не означает отсутствие всех смысловых ошибок. См. [аудит](AI_ARCHITECTURE_AUDIT_2026-11-24.md) и [воспроизводимый результат](AI_OFFLINE_BASELINE_2026-11-24.json).
+
 Not a player feature: a tool for the developers to see how a model, a prompt, the classifier or the search does on
 the same questions — and to see at once when a change makes things worse.
 

@@ -1,5 +1,7 @@
 # Source grounding
 
+> Уточнение 24.11.2026: проверки ссылок/номеров/цифр не доказывают смысловое следование утверждения норме. Автономный контрпример проходит confirmed и текущий hallucination gate. Нулевой показатель этого gate не означает отсутствие всех смысловых ошибок. См. [аудит](AI_ARCHITECTURE_AUDIT_2026-11-24.md) и [воспроизводимый результат](AI_OFFLINE_BASELINE_2026-11-24.json).
+
 The rule: every norm, part, figure and article the player is shown comes from the server's base, and an answer that
 cannot be traced back to it is never shown as confirmed. «В доступной нормативной базе это не найдено» is a correct,
 successful answer. It is enforced in layers, the prompt only the first:
