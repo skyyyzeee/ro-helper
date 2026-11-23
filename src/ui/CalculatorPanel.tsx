@@ -159,22 +159,24 @@ function PunishmentSummary({ result, fineInput, onDetails }: Pick<CalculatorPane
       <h2>Итог наказания</h2>
       {criminal && (
         <div className="calc__summary-code" role="group" aria-label="Сводка УК">
-          <div className="calc__summary-line">
+          <button type="button" className="calc__summary-details" aria-label="Расчёт УК и ограничения" title="Открыть подробный расчёт УК" onClick={() => onDetails('Итог')}>
+          <span className="calc__summary-line">
             <span>УК · {criminal.mode === 'custody' ? 'КПЗ' : 'штраф'}</span>
             <strong>{criminal.mode === 'custody' ? `${criminal.term} мес` : criminalFine ? (fineDigits ? formatRubles(Number(fineDigits)) : rangeText(criminalFine)) : 'Не предусмотрен'}</strong>
-          </div>
+          </span>
+          </button>
           {invalidCriminalFine && <p className="calc__summary-invalid">Сумма вне предела — проверьте штраф УК</p>}
-          <button type="button" className="calc__summary-link" onClick={() => onDetails('Итог')}>Расчёт УК и ограничения</button>
         </div>
       )}
       {administrative && (
         <div className="calc__summary-code" role="group" aria-label="Сводка КоАП">
           {!counted.length && <p>КоАП · не назначается</p>}
-          {counted.some((r) => r.fine) && <div className="calc__summary-line"><span>КоАП · штраф</span><strong>{formatRubles(administrative.fineTotal)}</strong></div>}
-          {administrative.arrestDays > 0 && <div className="calc__summary-line"><span>КоАП · арест</span><strong>{administrative.arrestDays} сут</strong></div>}
-          {administrative.other.length > 0 && <p className="calc__summary-other">{administrative.other.join(' · ')}</p>}
+          {counted.length > 0 && <button type="button" className="calc__summary-details" aria-label="Расчёт КоАП и ограничения" title="Открыть подробный расчёт КоАП" onClick={() => onDetails('Итог КоАП')}>
+          {counted.some((r) => r.fine) && <span className="calc__summary-line"><span>КоАП · штраф</span><strong>{formatRubles(administrative.fineTotal)}</strong></span>}
+          {administrative.arrestDays > 0 && <span className="calc__summary-line"><span>КоАП · арест</span><strong>{administrative.arrestDays} сут</strong></span>}
+          {administrative.other.length > 0 && <span className="calc__summary-other">{administrative.other.join(' · ')}</span>}
+          </button>}
           {invalidAdministrative && <p className="calc__summary-invalid">Значения вне предела — проверьте КоАП</p>}
-          {counted.length > 0 && <button type="button" className="calc__summary-link" onClick={() => onDetails('Итог КоАП')}>Расчёт КоАП и ограничения</button>}
         </div>
       )}
     </section>

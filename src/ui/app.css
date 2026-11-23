@@ -6679,8 +6679,8 @@ select option {
 
 /* The result and copy actions stay outside the independently scrolling charges. */
 .calc__body { min-height: 0; }
-.calc__copy { min-height: 0; max-height: 55%; overflow-y: auto; gap: 10px; }
-.calc__summary { flex: none; max-height: min(30vh, 190px); overflow-y: auto; padding-right: 3px; }
+.calc__copy { min-height: 0; max-height: 65%; overflow: hidden; gap: 10px; flex: 0 1 auto; }
+.calc__summary { flex: none; max-height: min(44vh, 220px); overflow-y: auto; padding-right: 3px; }
 .calc__summary h2 { margin: 0 0 9px; font-size: 13px; font-weight: 600; }
 .calc__summary-code + .calc__summary-code { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 8px; }
 .calc__summary-line { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; font-size: 12px; line-height: 1.6; }
@@ -6688,9 +6688,29 @@ select option {
 .calc__summary-line strong { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .calc__summary-code p { margin: 5px 0; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .calc__summary-invalid { color: var(--warn-text); }
-.calc__summary-link { text-align: left; font-size: 11px; line-height: 1.5; color: var(--text-muted); padding: 3px 0; text-decoration: underline; text-underline-offset: 3px; }
-.calc__summary-link:hover { color: var(--text); }
+.calc__summary-details { display: block; width: 100%; text-align: left; padding: 2px 0; border-radius: 3px; }
+.calc__summary-details .calc__summary-line > span { text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
+.calc__summary-details:hover { background: var(--surface); }
+.calc__summary-details:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+.calc__summary-other { display: block; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .calc__charge-preview { min-height: 0; flex: 0 1 auto; overflow-y: auto; font-size: 11px; color: var(--text-muted); }
 .calc__charge-preview summary { cursor: pointer; padding: 2px 0; }
 .calc__charge-preview .copy-str { color: var(--text); }
 .calc .total:focus { outline: 1px solid var(--accent); outline-offset: 2px; }
+
+/* Controls wrap according to the actual space beside the calculator, including zoom. */
+.settings__body { container-type: inline-size; min-width: 0; }
+@container (max-width: 300px) {
+  .settings .set { padding: 12px; }
+  .settings .set__row { flex-wrap: wrap; align-items: flex-start; }
+  .settings .set__row > .set__label { flex-basis: 100%; }
+  .settings .seg--four { width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settings .themes { grid-template-columns: minmax(0, 1fr); }
+  .settings .theme { min-width: 0; }
+}
+@media (max-height: 550px) {
+  .calc__head { height: 44px; margin-bottom: 8px; }
+  .calc__copy { padding: 10px 12px; gap: 7px; }
+  .calc__summary h2 { margin-bottom: 5px; }
+  .calc__summary-code + .calc__summary-code { margin-top: 4px; padding-top: 4px; }
+}
