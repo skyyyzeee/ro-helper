@@ -5,6 +5,25 @@ import { renderApp } from '../test/renderApp';
 const DEPARTMENT = 'Отдел: порядок действий по закону';
 
 describe('the department', () => {
+  it('offers section navigation and restores the topic scroll after reading a source', async () => {
+    const { user } = await renderApp({ profile: { organization: 'mvd' } });
+    await user.click(screen.getByRole('button', { name: DEPARTMENT }));
+    const navigation = screen.getByRole('navigation', { name: 'Разделы отдела' });
+    await user.click(within(navigation).getByRole('button', { name: 'Инструменты' }));
+    expect(screen.getByRole('region', { name: 'Инструменты отдела' })).toHaveFocus();
+    await user.click(within(navigation).getByRole('button', { name: 'Порядок действий' }));
+    const topics = screen.getByRole('region', { name: 'Как это делается по закону' });
+    expect(topics).toHaveFocus();
+    await user.click(within(topics).getByRole('button', { name: /^Задержание/ }));
+    const list = screen.getByRole('list', { name: 'Задержание' });
+    const content = list.closest('.overlay__content')!;
+    content.scrollTop = 270;
+    await user.click(within(within(list).getAllByRole('listitem')[0]).getAllByRole('button')[0]);
+    expect(content.scrollTop).toBe(0);
+    await user.keyboard('{Escape}');
+    expect(content.scrollTop).toBe(270);
+  });
+
   it('shows a force its topics of the law: a topic lists the articles, an article opens and Esc steps back', async () => {
     const app = await renderApp({ profile: { organization: 'mvd' } });
     await app.user.click(screen.getByRole('button', { name: DEPARTMENT }));

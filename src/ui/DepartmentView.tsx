@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useRef, type ReactNode } from 'react';
 import type { Organization, SearchHit, ServerPack } from '../core';
 import { CHARTER_TITLES, charterCards, type CharterCard, type CharterDigest } from '../core/charter';
 import { topicArticles, topicsFor } from '../core/topics';
@@ -33,6 +33,13 @@ export interface DepartmentViewProps {
 
 /** «Отдел»: what the player's organisation does by the law of their server. */
 export function DepartmentView({ pack, organization, topic, onTopic, row, onOrganization, onOpen, onCopy, tools }: DepartmentViewProps) {
+  const proceduresRef = useRef<HTMLElement>(null);
+  const charterRef = useRef<HTMLDivElement>(null);
+  const toolsRef = useRef<HTMLElement>(null);
+  const goTo = (target: HTMLElement | null) => {
+    target?.scrollIntoView?.({ block: 'start' });
+    target?.focus({ preventScroll: true });
+  };
   const topics = useMemo(
     () => topicsFor(organization).map((t) => ({ ...t, hits: topicArticles(pack, t.id, organization?.documents) })).filter((t) => t.hits.length),
     [pack, organization],
@@ -67,9 +74,17 @@ export function DepartmentView({ pack, organization, topic, onTopic, row, onOrga
 
   return (
     <div className="dept">
-      {tools}
+      <header className="dept__intro">
+        <div><h2>{organization && organization.id !== 'none' ? organization.name : 'Ваш отдел'}</h2><p>{pack.server.name} · документы и инструменты организации</p></div>
+        <button className="settings__button" type="button" onClick={onOrganization}>Сменить организацию</button>
+      </header>
+      {(topics.length > 0 || cards.length > 0 || tools) && <nav className="dept__nav" aria-label="Разделы отдела">
+        {topics.length > 0 && <button type="button" onClick={() => goTo(proceduresRef.current)}>Порядок действий</button>}
+        {cards.length > 0 && <button type="button" onClick={() => goTo(charterRef.current)}>Устав</button>}
+        {tools && <button type="button" onClick={() => goTo(toolsRef.current)}>Инструменты</button>}
+      </nav>}
       {topics.length > 0 && (
-        <section aria-label="Как это делается по закону">
+        <section ref={proceduresRef} tabIndex={-1} className="dept__section" aria-label="Как это делается по закону">
           <div className="sec-t">
             Как это делается по закону <span className="dept__sub">· статьи сервера {pack.server.name} для «{organization!.name}»</span>
           </div>
@@ -89,7 +104,8 @@ export function DepartmentView({ pack, organization, topic, onTopic, row, onOrga
           </div>
         </section>
       )}
-      {cards.length > 0 && <Charter cards={cards} name={organization!.name} onOpen={onOpen} onCopy={onCopy} />}
+      {cards.length > 0 && <div ref={charterRef} tabIndex={-1} className="dept__section" aria-label="Выжимка устава"><Charter cards={cards} name={organization!.name} onOpen={onOpen} onCopy={onCopy} /></div>}
+      {tools && <section ref={toolsRef} tabIndex={-1} className="dept__section dept__instruments" aria-label="Инструменты отдела"><h2>Инструменты</h2>{tools}</section>}
       {!topics.length && !cards.length && !tools && (
         <div className="empty">
           {organization && organization.id !== 'none' ? (

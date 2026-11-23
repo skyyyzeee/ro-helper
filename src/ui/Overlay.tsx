@@ -173,6 +173,7 @@ export function Overlay({
   const [wikiEntry, setWikiEntry] = useState<string>();
   /** «Отдел»: what the organisation does by the law, a topic of it open or the whole page. */
   const [department, setDepartment] = useState<{ topic: string | null } | null>(null);
+  const departmentScroll = useRef(new Map<string, number>());
   // The wiki of Russia Online: a page of its own, like the memos.
   const [wikiOpen, setWikiOpen] = useState(false);
   const memos = useMemos();
@@ -1034,6 +1035,7 @@ export function Overlay({
   }, []);
 
   const openHit = (hit: SearchHit) => {
+    if (department && !open) departmentScroll.current.set(department.topic ?? '', contentRef.current?.scrollTop ?? 0);
     setOpen(hit);
     remember(hit);
     count({ kind: 'open', article: hitKey(hit) });
@@ -1131,9 +1133,9 @@ export function Overlay({
     wasOnList.current = onList;
   }, [onList]);
 
-  // The department's page, its topic and an article opened from them are screens of their own: each starts at its top.
+  // A source starts at its top; returning restores the department page or topic's place.
   useLayoutEffect(() => {
-    if (department && contentRef.current) contentRef.current.scrollTop = 0;
+    if (department && contentRef.current) contentRef.current.scrollTop = open ? 0 : departmentScroll.current.get(department.topic ?? '') ?? 0;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [department?.topic, open]);
 
@@ -1718,7 +1720,10 @@ export function Overlay({
             pack={pack}
             organization={organization}
             topic={department.topic}
-            onTopic={(topic) => setDepartment({ topic })}
+            onTopic={(topic) => {
+              departmentScroll.current.set(department.topic ?? '', contentRef.current?.scrollTop ?? 0);
+              setDepartment({ topic });
+            }}
             row={(hit) => (
               <ResultRow
                 hit={hit}
