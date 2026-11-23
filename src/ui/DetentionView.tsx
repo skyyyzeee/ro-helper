@@ -99,7 +99,9 @@ export function DetentionView({
       {detention.error && (
         <div className="warn" role="alert">
           <WarnIcon />
-          <span>{detention.error}</span>
+          <span>{detention.error}
+            {detention.lastRequest && <><br /><button type="button" className="link" title="Отредактируйте текст и нажмите «Отправить»" onClick={() => onDraft(detention.lastRequest)}>Вернуть текст в поле</button></>}
+          </span>
         </div>
       )}
 

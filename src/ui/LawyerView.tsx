@@ -82,7 +82,9 @@ export function LawyerView({
       {lawyer.error && (
         <div className="warn" role="alert">
           <WarnIcon />
-          <span>{lawyer.error}</span>
+          <span>{lawyer.error}
+            {lawyer.lastRequest && <><br /><button type="button" className="link" title="Отредактируйте текст и нажмите «Отправить»" onClick={() => onDraft(lawyer.lastRequest)}>Вернуть текст в поле</button></>}
+          </span>
         </div>
       )}
 

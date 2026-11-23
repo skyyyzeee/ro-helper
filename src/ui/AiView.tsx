@@ -301,6 +301,7 @@ export function AiView({
                   поиск по законам
                 </button>
                 , он работает и без ИИ.
+                {chat.messages[index - 1]?.role === 'user' && <><br /><button type="button" className="link" disabled={chat.busy} title="Отредактируйте текст и нажмите «Отправить»" onClick={() => onDraft(chat.messages[index - 1].text)}>Вернуть текст в поле</button></>}
               </span>
             </div>
           ) : (

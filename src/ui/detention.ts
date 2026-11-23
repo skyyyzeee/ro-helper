@@ -16,6 +16,7 @@ export interface DetentionCheck {
   busy: boolean;
   result: DetentionReview | null;
   error: string | null;
+  lastRequest: string;
   review: (said: string) => Promise<void>;
   reset: () => void;
 }
@@ -25,6 +26,7 @@ export function useDetentionReview(platform: PlatformAdapter, pack: ServerPack, 
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<DetentionReview | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastRequest, setLastRequest] = useState('');
 
   const review = useCallback(
     async (said: string) => {
@@ -34,6 +36,7 @@ export function useDetentionReview(platform: PlatformAdapter, pack: ServerPack, 
         setError(NO_CHECK);
         return;
       }
+      setLastRequest(text);
       setBusy(true);
       setError(null);
       try {
@@ -48,9 +51,10 @@ export function useDetentionReview(platform: PlatformAdapter, pack: ServerPack, 
   );
 
   const reset = useCallback(() => {
+    setLastRequest('');
     setResult(null);
     setError(null);
   }, []);
 
-  return { busy, result, error, review, reset };
+  return { busy, result, error, lastRequest, review, reset };
 }

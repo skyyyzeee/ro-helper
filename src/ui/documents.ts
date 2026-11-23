@@ -98,6 +98,7 @@ export interface DocumentWriter {
   busy: boolean;
   result: WrittenDocument | null;
   error: string | null;
+  lastRequest: string;
   write: (situation: string) => Promise<void>;
   /** The player's own corrections to the written text. */
   edit: (text: string) => void;
@@ -113,6 +114,7 @@ export function useDocumentWriter(platform: PlatformAdapter, pack: ServerPack, b
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<WrittenDocument | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastRequest, setLastRequest] = useState('');
 
   useEffect(() => {
     void platform.readSetting<DocumentAuthor>(AUTHOR_KEY).then((saved) => setAuthor({ ...EMPTY_AUTHOR, ...saved }));
@@ -130,6 +132,7 @@ export function useDocumentWriter(platform: PlatformAdapter, pack: ServerPack, b
     async (situation: string) => {
       const text = situation.trim();
       if (!text || busy) return;
+      setLastRequest(text);
       setBusy(true);
       setError(null);
       try {
@@ -155,9 +158,10 @@ export function useDocumentWriter(platform: PlatformAdapter, pack: ServerPack, b
 
   const edit = useCallback((text: string) => setResult((current) => (current ? { ...current, text } : current)), []);
   const reset = useCallback(() => {
+    setLastRequest('');
     setResult(null);
     setError(null);
   }, []);
 
-  return { kind, setKind, author, saveAuthor, busy, result, error, write, edit, reset };
+  return { kind, setKind, author, saveAuthor, busy, result, error, lastRequest, write, edit, reset };
 }

@@ -133,7 +133,9 @@ export function DocumentView({
       {writer.error && (
         <div className="warn" role="alert">
           <WarnIcon />
-          <span>{writer.error}</span>
+          <span>{writer.error}
+            {writer.lastRequest && <><br /><button type="button" className="link" title="Отредактируйте текст и нажмите «Отправить»" onClick={() => onDraft(writer.lastRequest)}>Вернуть текст в поле</button></>}
+          </span>
         </div>
       )}
 
