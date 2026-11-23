@@ -5,6 +5,7 @@
 import { articleLabel, articleText, calculateDetention, leadPart, type Article, type Charge, type DetentionResult, type SearchHit, type ServerPack } from '../core';
 import { cachedStem, words } from '../core/wordIndex';
 import type { AnswerNorm, Claim, GuideItem, LegalAnswer } from './answer';
+import { evidenceText } from './evidence';
 import { SOURCE_TYPE_LABELS, inScope, type Scope, type Source, type SourceType } from './sources';
 import type { ShownVerdict } from './verdict';
 
@@ -91,8 +92,8 @@ export function namedArticles(text: string): string[] {
 
 /** Figures a source vouches for: its text and the stars of its parts. */
 const figuresOf = (source: Source) => [
-  ...figures(articleText(source.hit.article)),
-  ...source.hit.article.parts.flatMap((p) => (p.stars ? [p.stars.min, p.stars.max] : [])),
+  ...figures(evidenceText(source)),
+  ...(source.evidence && !source.evidence.complete ? [] : source.hit.article.parts.flatMap((p) => (p.stars ? [p.stars.min, p.stars.max] : []))),
 ];
 
 function checkNorm(pack: ServerPack, sources: Map<string, Source>, norm: AnswerNorm, scope?: Scope): CheckedNorm {
@@ -174,6 +175,13 @@ export function validateAnswer(pack: ServerPack, sources: Source[], answer: Lega
   const byId = new Map(sources.map((s) => [s.id, s]));
   const norms = answer.norms.map((norm) => checkNorm(pack, byId, norm, scope));
   const issues = norms.flatMap((n) => n.issues);
+
+  const cited = new Set([...answer.norms.map((norm) => norm.source), ...[answer.violation, answer.punishment, answer.verdict, ...answer.procedure, ...(answer.guide ?? [])].flatMap((claim) => claim?.sources ?? [])]);
+  for (const id of cited) {
+    const source = byId.get(id);
+    if (source?.evidence && (!articleText(source.hit.article).startsWith(source.evidence.text) || (source.evidence.complete && articleText(source.hit.article) !== source.evidence.text))) issues.push(`${id}: текст источника изменился после разбора — вывод требует проверки по текущей базе`);
+    if (source?.evidence && !source.evidence.complete) issues.push(`${id}: источник передан не полностью — условия и исключения в окончании статьи требуют проверки`);
+  }
 
   const fallback = answer.legacy ? norms.filter((n) => n.hit).map((n) => n.norm.source) : [];
   if (answer.violation) issues.push(...checkClaim(answer.violation, 'Нарушение', byId, scope, fallback, figures(told)));

@@ -66,3 +66,5 @@ as it is now — an article removed since shows as not found.
 Tests: `src/protocol/grounding.test.ts` (the hard gates with a misbehaving fake AI), `src/protocol/grade.test.ts`
 (the exam's gates), `src/protocol/protocol.test.ts`, `src/ui/AiAnswer.test.tsx`, `src/ui/AiScope.test.tsx`, and the
 modes' tests (`Lawyer`, `Detention`, `Documents`, `Trainer`).
+
+24.11.2026: новые analyse-ответы сохраняют фактически переданный excerpt. Проверка чисел ограничена этим текстом; использование неполного источника исключает confirmed, сохраняется при открытии истории. Старые записи и другие режимы сохраняют прежнее поведение. См. [evidence](AI_EVIDENCE_2026-11-24.md). Это не доказательство смыслового следования.

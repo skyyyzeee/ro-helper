@@ -3,6 +3,7 @@
 // step of a detention) stands only on sources it names, that were given, of the scope's kind.
 import { articleText, type SearchHit } from '../core';
 import { SOURCE_TYPE_LABELS, inScope, type Scope, type Source } from './sources';
+import { evidenceText } from './evidence';
 import { figures, namedArticles } from './validate';
 
 const hitOf = (source: Source | SearchHit): SearchHit => ('hit' in source ? source.hit : source);
@@ -18,7 +19,7 @@ export function strayFigures(text: string, sources: (Source | SearchHit)[], allo
   const known = new Set([
     ...sources.flatMap((s) => {
       const { article } = hitOf(s);
-      return [...figures(articleText(article)), ...article.parts.flatMap((p) => (p.stars ? [p.stars.min, p.stars.max] : []))];
+      return [...figures('hit' in s ? evidenceText(s) : articleText(article)), ...('hit' in s && s.evidence && !s.evidence.complete ? [] : article.parts.flatMap((p) => (p.stars ? [p.stars.min, p.stars.max] : [])))];
     }),
     ...figures(allowed),
   ]);

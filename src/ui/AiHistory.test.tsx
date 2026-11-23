@@ -22,6 +22,21 @@ describe('cases: the analyses kept (ADR 0003)', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
+  it('retains incomplete evidence when a saved case is reopened', async () => {
+    const { platform, user } = await asked();
+    await user.type(screen.getByRole('textbox', { name: 'Сообщение ИИ' }), 'у меня украли телефон{Enter}');
+    expect(await screen.findByText(/Это кража/)).toBeInTheDocument();
+    const record = saved(platform)[0];
+    const cited = record.messages.find((message) => message.answer)?.sources?.find((source) => source.id === 'S1');
+    expect(cited?.evidence?.text).toBeTruthy();
+    cited!.evidence!.complete = false;
+    await user.click(screen.getByRole('button', { name: 'Новый чат' }));
+    await user.click(screen.getByRole('button', { name: 'Дела' }));
+    await user.click(within(cases()).getByRole('button', { name: /^у меня украли телефон/ }));
+    expect(await screen.findByText('Вероятно подходит')).toBeInTheDocument();
+    expect(screen.queryByText('Подтверждено')).not.toBeInTheDocument();
+  });
+
   it('keeps each case with the laws it was worked out by, and opens it again with its articles', async () => {
     const { platform, user } = await asked();
     await user.type(screen.getByRole('textbox', { name: 'Сообщение ИИ' }), 'у меня украли телефон{Enter}');

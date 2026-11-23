@@ -79,6 +79,8 @@ export function confirmedHallucinations(analysis: Analysis, told = ''): string[]
   const found: string[] = [];
   const byId = new Map(analysis.sources.map((s) => [s.id, s]));
   for (const n of analysis.validation.norms) if (!n.hit || n.issues.length) found.push(`норма ${n.norm.ref || n.norm.source} не из источников`);
+  const cited = new Set([...analysis.answer.norms.map((norm) => norm.source), ...[analysis.answer.violation, analysis.answer.punishment, analysis.answer.verdict, ...analysis.answer.procedure, ...(analysis.answer.guide ?? [])].flatMap((claim) => claim?.sources ?? [])]);
+  for (const id of cited) if (byId.get(id)?.evidence?.complete === false) found.push(`неполный источник показан как подтверждённый: ${id}`);
   const { answer } = analysis;
   const claims = [answer.violation, answer.punishment, ...answer.procedure].filter((c) => !!c);
   for (const claim of claims) {

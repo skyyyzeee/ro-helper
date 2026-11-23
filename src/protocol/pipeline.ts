@@ -18,6 +18,7 @@ import { isClosedQuestion, verdictLabel } from './verdict';
 import { AiError, type AiProvider } from './provider';
 import { labelSources, packInScope, type Scope, type ScopeChoice, type Source } from './sources';
 import { calculateCharges, groundedGuide, sortGuide, validateAnswer, type HiddenPoint, type Validation } from './validate';
+import { withEvidence } from './evidence';
 import { readJson } from './json';
 
 /** A message this short that finds nothing tells no situation: the player is asked to describe it. */
@@ -226,7 +227,7 @@ export async function analyse(input: AnalyseInput): Promise<Analysis> {
   const own = new Set(found.map((hit) => hit.article.id));
   const extra = side.filter((hit, i) => !own.has(hit.article.id) && side.findIndex((h) => h.article.id === hit.article.id) === i).slice(0, depth === 'quick' ? QUICK_SIDE_SOURCES : SIDE_SOURCES);
   // The quick analysis keeps its evidence budget for the case and adds the side's on top: the side's must not crowd the case out.
-  const sources = labelSources([...found.slice(0, depth === 'quick' ? most : most - extra.length), ...extra.map(({ article, document }) => ({ article, document }))]);
+  const sources = withEvidence(labelSources([...found.slice(0, depth === 'quick' ? most : most - extra.length), ...extra.map(({ article, document }) => ({ article, document }))]));
   const context = buildContext({ pack, organization, message, sources, perspective, previous });
   // A first question may be answered again to anyone who asks it with the same laws (ADR 0007); a follow-up is its own case.
   const request = { system: analysisPrompt(pack, depth, scope, perspective, isClosedQuestion(message)), turns: [{ role: 'user' as const, parts: [{ text: context }] }], json: true, think: depth === 'full', ...(previous ? {} : { cache: message }) };

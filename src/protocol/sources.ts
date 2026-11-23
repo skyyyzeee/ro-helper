@@ -40,6 +40,8 @@ export interface Source {
   id: string;
   type: SourceType;
   hit: SearchHit;
+  /** Exact article excerpt used for this analysis; absent on older saved answers. */
+  evidence?: { text: string; complete: boolean };
 }
 
 /** The found articles under ids, numbered within each type: S1, S2, R1, C1… */

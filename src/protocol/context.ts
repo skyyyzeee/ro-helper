@@ -2,11 +2,9 @@
 // in a block of its own, so every norm it cites can be traced back to a text it was actually shown — and the
 // player's words come as fenced data, not as instructions.
 import { articleText, chapterHeading, sourceLabel, type Organization, type ServerPack } from '../core';
+import { SOURCE_CHARS } from './evidence';
 import { playerData } from './prompt';
 import { SOURCE_TYPE_LABELS, type Scope, type Source, type SourceType } from './sources';
-
-/** How long one article may be, so a dozen fit and a huge one does not crowd out the rest. */
-const SOURCE_CHARS = 1800;
 
 /** One side of the same sources: what the player wants to know, never other facts or other laws. */
 export type Perspective = 'state' | 'citizen' | 'lawyer' | 'crime';
@@ -109,9 +107,9 @@ export function sourcesBlock(sources: Source[]): string {
   return `НАЙДЕННЫЕ ИСТОЧНИКИ (других нет; ссылайся по id):\n\n${parts.join('\n\n')}`;
 }
 
-function sourceText({ id, type, hit }: Source): string {
+function sourceText({ id, type, hit, evidence }: Source): string {
   const text = articleText(hit.article);
-  const cut = text.length > SOURCE_CHARS ? `${text.slice(0, SOURCE_CHARS)}…` : text;
+  const cut = evidence ? `${evidence.text}${evidence.complete ? '' : '\n[Источник передан не полностью: окончание статьи не включено. Условия и исключения за пределами фрагмента не проверены.]'}` : text.length > SOURCE_CHARS ? `${text.slice(0, SOURCE_CHARS)}…` : text;
   // The label first, as the model copies it into "ref"; the type after the document's name. The chapter's title
   // too: it may name the deed the article's text does not (КоАП Арбатского, гл. 13 «Проезд на запрещающий сигнал»).
   const chapter = hit.article.chapter ? hit.document.chapters.find((c) => c.number === hit.article.chapter) : undefined;

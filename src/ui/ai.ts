@@ -595,7 +595,7 @@ interface StoredMessage {
   perspective?: Perspective;
   failed?: boolean;
   answer?: LegalAnswer;
-  sources?: { id?: string; document: string; article: string; part?: string }[];
+  sources?: { id?: string; document: string; article: string; part?: string; evidence?: { text: string; complete: boolean } }[];
   case?: CaseState;
   /** The side the answer was for (its block «Что делать», «Ваши права»…). */
   side?: Perspective;
@@ -696,10 +696,11 @@ function storeMessage(message: AiMessage): StoredMessage {
           answer: analysis.answer,
           case: analysis.case,
           ...(analysis.perspective ? { side: analysis.perspective } : {}),
-          sources: analysis.sources.map(({ id, hit }) => ({
+          sources: analysis.sources.map(({ id, hit, evidence }) => ({
             id,
             document: hit.document.id,
             article: hit.article.id,
+            ...(evidence ? { evidence } : {}),
             ...(hit.part?.number ? { part: hit.part.number } : {}),
           })),
         }
@@ -713,13 +714,13 @@ function restoreMessage(pack: ServerPack, message: StoredMessage): Omit<AiMessag
   if (!message.answer) return restored;
   // Under the ids the AI cited them by; an article the laws no longer have is missing, and the checks say so.
   // The type of each comes from the document, as it is in the laws now.
-  const sources = (message.sources ?? []).flatMap(({ id, document, article, part }, i) => {
+  const sources = (message.sources ?? []).flatMap(({ id, document, article, part, evidence }, i) => {
     const doc = pack.documents.find((d) => d.id === document);
     const found = doc?.articles.find((a) => a.id === article);
     if (!doc || !found) return [];
     const piece = part ? found.parts.find((p) => p.number === part) : undefined;
     const hit = { document: doc, article: found, ...(piece ? { part: piece } : {}) };
-    return [{ ...labelSources([hit])[0], id: id ?? `S${i + 1}` }];
+    return [{ ...labelSources([hit])[0], id: id ?? `S${i + 1}`, ...(evidence ? { evidence } : {}) }];
   });
   // Saved in either format: an answer from before statements carried sources is read as one.
   const answer = readAnswer(message.answer as unknown as Record<string, unknown>);
