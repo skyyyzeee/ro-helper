@@ -32,7 +32,7 @@ describe('«Проверить мой ответ» (roadmap 6Б)', () => {
     );
     const { user } = await renderApp({ settings: GEMINI });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-    const field = () => screen.getByRole('searchbox', { name: 'Поиск по законам' });
+    const field = () => screen.getByRole('textbox', { name: 'Сообщение ИИ' });
     await user.type(field(), 'у меня украли телефон{Enter}');
     await screen.findByText('Применимые нормы');
 

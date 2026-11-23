@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ChangeEvent } from 'react';
 import { asksTheAi } from './askFirst';
 import {
   changedArticles,
@@ -162,7 +162,7 @@ export function Overlay({
   newUser?: boolean;
 }) {
   const platform = usePlatform();
-  const searchRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState<SearchHit | null>(null);
   const [selected, setSelected] = useState(0);
@@ -233,6 +233,7 @@ export function Overlay({
   }, [aiTab, aiCan]);
   /** The field is the AI's, not the search's: an article opened from the answer gives it back to the search. */
   const aiMode = aiOpen && !open;
+  useLayoutEffect(() => { searchRef.current?.focus(); }, [aiMode]);
 
   // The keyboard follows the personal column first, then server-wide suggestions.
   const saved = useSaved(platform, pack);
@@ -851,8 +852,8 @@ export function Overlay({
     setAiDraft('');
   };
 
-  const onSearchKey = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !query && scope) {
+  const onSearchKey = (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (!aiMode && e.key === 'Backspace' && !query && scope) {
       // Backspace in an empty field takes the document off, as if it were the first word.
       e.preventDefault();
       clearScope();
@@ -860,7 +861,7 @@ export function Overlay({
     }
     // In the AI analysis Enter sends the situation; the list keys have no list to walk.
     if (aiMode) {
-      if (e.key === 'Enter' && !e.shiftKey && aiDraft.trim() && !aiBusy) {
+      if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
         e.preventDefault();
         submitAiDraft();
       }
@@ -1258,20 +1259,24 @@ export function Overlay({
   };
 
   /** The field: the search's on top; in the AI section it is the chat's composer at the bottom. */
+  const SearchField = aiMode ? 'textarea' : 'input';
+  const aiInputLabel = aiTab === 'document' ? 'Описание для документа' : aiTab === 'lawyer' ? 'Требования адвоката' : aiTab === 'detention' ? 'Ход задержания' : aiTab === 'trainer' ? 'Ответ на вопрос экзамена' : 'Сообщение ИИ';
   const searchField = (
     <div className={aiMode ? 'search search--ai search--composer' : 'search'}>
-      {aiMode ? <SparkIcon /> : <SearchIcon />}
+      {!aiMode && <SearchIcon />}
       {scope && !aiMode && (
         <button className="scope" type="button" aria-label={`Искать во всех документах, а не только в ${scope.short}`} title="Искать во всех документах" onClick={clearScope}>
           <span>{scope.short}</span>
           <CloseIcon size={12} />
         </button>
       )}
-      <input
-        ref={searchRef}
+      <SearchField
+        ref={(node: HTMLInputElement | HTMLTextAreaElement | null) => { searchRef.current = node; }}
         className="search__input"
-        type="search"
-        aria-label="Поиск по законам"
+        type={aiMode ? undefined : 'search'}
+        rows={aiMode ? 2 : undefined}
+        aria-label={aiMode ? aiInputLabel : 'Поиск по законам'}
+        aria-describedby={aiMode ? 'ai-composer-help' : undefined}
         placeholder={
           aiMode
             ? aiTab === 'document'
@@ -1297,7 +1302,7 @@ export function Overlay({
         autoComplete="off"
         spellCheck={aiMode}
         value={aiMode ? aiDraft : query}
-        onChange={(e) => {
+        onChange={(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
           if (aiMode) {
             setAiDraft(e.target.value);
             setSettingsOpen(false);
@@ -1347,6 +1352,7 @@ export function Overlay({
           ]}
         />
       )}
+      {aiMode && <span id="ai-composer-help" className="ai__composer-help">Enter — отправить · Shift+Enter — новая строка</span>}
       {aiMode ? <button type="button" className="btn btn--primary ai__send" aria-label="Отправить запрос ИИ" disabled={!aiDraft.trim() || aiBusy} onClick={submitAiDraft}>Отправить</button> : <span className="kbd">Esc</span>}
     </div>
   );

@@ -26,7 +26,7 @@ function fakeExaminer(verdict: 'right' | 'partly' | 'wrong') {
   return bodies;
 }
 
-const search = () => screen.getByRole('searchbox', { name: 'Поиск по законам' });
+const search = () => screen.getByRole('textbox', { name: 'Ответ на вопрос экзамена' });
 
 async function openTrainer() {
   const app = await renderApp({ settings: GEMINI, profile: { organization: 'mvd' } });

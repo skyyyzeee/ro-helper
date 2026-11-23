@@ -24,7 +24,7 @@ describe('cases: the analyses kept (ADR 0003)', () => {
 
   it('keeps each case with the laws it was worked out by, and opens it again with its articles', async () => {
     const { platform, user } = await asked();
-    await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'у меня украли телефон{Enter}');
+    await user.type(screen.getByRole('textbox', { name: 'Сообщение ИИ' }), 'у меня украли телефон{Enter}');
     expect(await screen.findByText(/Это кража/)).toBeInTheDocument();
 
     const [record] = saved(platform);
@@ -50,7 +50,7 @@ describe('cases: the analyses kept (ADR 0003)', () => {
   it('says what changed in the laws since the case was made, and checks it against them', async () => {
     // A case made, then its article «edited» in the laws: its print in the snapshot is not today's.
     const first = await asked();
-    await first.user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'у меня украли телефон{Enter}');
+    await first.user.type(screen.getByRole('textbox', { name: 'Сообщение ИИ' }), 'у меня украли телефон{Enter}');
     await screen.findByText(/Это кража/);
     const [record] = saved(first.platform);
     cleanup();
@@ -84,11 +84,11 @@ describe('cases: the analyses kept (ADR 0003)', () => {
       }),
     );
     const { user } = await asked();
-    await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'у меня украли телефон{Enter}');
+    await user.type(screen.getByRole('textbox', { name: 'Сообщение ИИ' }), 'у меня украли телефон{Enter}');
     await screen.findByText(/Это кража/);
     expect(screen.queryByRole('note', { name: 'Было → стало' })).not.toBeInTheDocument();
 
-    await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'Поправка: он сотрудник МВД{Enter}');
+    await user.type(screen.getByRole('textbox', { name: 'Сообщение ИИ' }), 'Поправка: он сотрудник МВД{Enter}');
     const change = await screen.findByRole('note', { name: 'Было → стало' });
     expect(change).toHaveTextContent('Изменён факт — связанные выводы пересчитаны');
     expect(change).toHaveTextContent('он не сотрудник → он сотрудник МВД');
@@ -109,7 +109,7 @@ describe('a plain history for the others: no cases', () => {
 
   it('a citizen keeps their analyses as a history to open or delete — no names, pins, archive, laws of then', async () => {
     const { platform, user } = await asked({}, 'none');
-    await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'у меня украли телефон{Enter}');
+    await user.type(screen.getByRole('textbox', { name: 'Сообщение ИИ' }), 'у меня украли телефон{Enter}');
     await screen.findByText(/Это кража/);
     await user.click(screen.getByRole('button', { name: 'Новый чат' }));
     await user.click(screen.getByRole('button', { name: 'История' }));

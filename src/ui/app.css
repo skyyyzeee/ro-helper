@@ -6767,3 +6767,9 @@ select option {
 .search--composer .search__scope { flex: none; }
 
 .search--composer .ai__send:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Keep a bounded multiline draft visible without taking over a short window. */
+.search--composer textarea.search__input { box-sizing: border-box; width: 100%; flex: 1 0 100%; min-height: 48px; max-height: 120px; resize: vertical; line-height: 1.5; font-family: inherit; padding: 2px 0; overflow-y: auto; }
+.ai__composer-help { flex: 1 1 180px; font-size: 10px; color: var(--text-faint); line-height: 1.4; }
+.search--composer .ai__send { order: 2; margin-left: auto; }
+@media (max-height: 560px) { .search--composer textarea.search__input { min-height: 42px; max-height: 84px; } }

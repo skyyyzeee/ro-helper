@@ -53,7 +53,7 @@ describe('the review of a detention (issue #4)', () => {
   it('checks each step the officer tells against the laws, with what was missed and a summary to copy', async () => {
     const bodies = fakeServer(REVIEW);
     const { platform, user, view } = await openDetention();
-    await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'представился, обыскал без понятых, надел наручники{Enter}');
+    await user.type(screen.getByRole('textbox', { name: 'Ход задержания' }), 'представился, обыскал без понятых, надел наручники{Enter}');
 
     const steps = await within(view).findAllByRole('listitem');
     const list = within(view).getByRole('list', { name: 'Шаги задержания' });
@@ -96,7 +96,7 @@ describe('the review of a detention (issue #4)', () => {
   it('says so when the AI makes nothing of the story', async () => {
     fakeServer({ steps: [], missed: [], summary: '' });
     const { user, view } = await openDetention();
-    await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'задержал человека{Enter}');
+    await user.type(screen.getByRole('textbox', { name: 'Ход задержания' }), 'задержал человека{Enter}');
     expect(await within(view).findByRole('alert')).toHaveTextContent('ИИ не разобрал шаги');
   });
 });

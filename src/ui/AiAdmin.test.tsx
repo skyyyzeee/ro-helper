@@ -72,7 +72,7 @@ describe('the admin\'s debug view', () => {
     vi.stubGlobal('fetch', vi.fn(fakeGeminiFetch()));
     const app = await renderApp({ ...options, settings: GEMINI });
     await app.user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-    await app.user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'у меня украли телефон{Enter}');
+    await app.user.type(screen.getByRole('textbox', { name: 'Сообщение ИИ' }), 'у меня украли телефон{Enter}');
     await screen.findByText('Применимые нормы');
     return app;
   };

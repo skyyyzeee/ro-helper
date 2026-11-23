@@ -42,7 +42,7 @@ describe('the lawyer\'s demands', () => {
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
     await user.click(screen.getByRole('radio', { name: 'Проверка' }));
     const view = screen.getByRole('region', { name: 'Требования адвоката' });
-    await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'свидание наедине и отпустить через 30 минут{Enter}');
+    await user.type(screen.getByRole('textbox', { name: 'Требования адвоката' }), 'свидание наедине и отпустить через 30 минут{Enter}');
 
     const demands = await within(view).findAllByRole('listitem');
     expect(demands).toHaveLength(2);
@@ -85,7 +85,7 @@ describe('the lawyer\'s demands', () => {
     await renderApp({ settings: SERVER, profile: { organization: 'mvd' } }).then(async ({ user }) => {
       await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
       await user.click(screen.getByRole('radio', { name: 'Проверка' }));
-      await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'свидание наедине{Enter}');
+      await user.type(screen.getByRole('textbox', { name: 'Требования адвоката' }), 'свидание наедине{Enter}');
     });
     const view = screen.getByRole('region', { name: 'Требования адвоката' });
     const [demand] = await within(view).findAllByRole('listitem');
@@ -101,7 +101,7 @@ describe('the lawyer\'s demands', () => {
     const { user } = await renderApp({ settings: SERVER, profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
     await user.click(screen.getByRole('radio', { name: 'Проверка' }));
-    const input = screen.getByRole('searchbox', { name: 'Поиск по законам' });
+    const input = screen.getByRole('textbox', { name: 'Требования адвоката' });
     const description = 'Адвокат просит показать протокол задержания';
     await user.type(input, description + '{Enter}');
     const view = screen.getByRole('region', { name: 'Требования адвоката' });
@@ -126,7 +126,7 @@ describe('the lawyer\'s demands', () => {
     const view = screen.getByRole('region', { name: 'Требования адвоката' });
     await user.click(within(within(view).getByLabelText('Пример')).getByRole('button'));
     expect(within(view).queryAllByRole('listitem')).toHaveLength(0);
-    expect((screen.getByRole('searchbox', { name: 'Поиск по законам' }) as HTMLInputElement).value).toContain('Адвокат требует');
+    expect((screen.getByRole('textbox', { name: 'Требования адвоката' }) as HTMLInputElement).value).toContain('Адвокат требует');
     await user.click(screen.getByRole('button', { name: 'Отправить запрос ИИ' }));
     expect(await within(view).findAllByRole('listitem')).toHaveLength(2);
   });

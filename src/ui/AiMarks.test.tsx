@@ -23,7 +23,7 @@ async function answered(feedback: { status: number; body: unknown } = { status: 
   );
   const app = await renderApp({ settings: GEMINI });
   await app.user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-  await app.user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'у меня украли телефон{Enter}');
+  await app.user.type(screen.getByRole('textbox', { name: 'Сообщение ИИ' }), 'у меня украли телефон{Enter}');
   await screen.findByText('Применимые нормы');
   return { ...app, marks, bar: () => screen.getByLabelText('Оценить ответ') };
 }
@@ -71,7 +71,7 @@ describe('the one hint to mark answers', () => {
     if (Object.keys(settings).length) for (const [k, v] of Object.entries(settings)) platform.settings.set(k, v);
     expect(screen.queryByText(HINT)).not.toBeInTheDocument();
     for (const question of ['а если он сотрудник?', 'а если он украл ещё и кошелёк?']) {
-      await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), `${question}{Enter}`);
+      await user.type(screen.getByRole('textbox', { name: 'Сообщение ИИ' }), `${question}{Enter}`);
       await vi.waitFor(() => expect(screen.getAllByLabelText('Оценить ответ').length).toBeGreaterThanOrEqual(question.includes('кошел') ? 3 : 2), { timeout: 5000 });
     }
     return { user, platform };
