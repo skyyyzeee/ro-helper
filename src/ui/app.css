@@ -6680,7 +6680,7 @@ select option {
 /* The result and copy actions stay outside the independently scrolling charges. */
 .calc__body { min-height: 0; }
 .calc__copy { min-height: 0; max-height: 55%; overflow-y: auto; gap: 10px; }
-.calc__summary { flex: none; max-height: min(23vh, 190px); overflow-y: auto; padding-right: 3px; }
+.calc__summary { flex: none; max-height: min(30vh, 190px); overflow-y: auto; padding-right: 3px; }
 .calc__summary h2 { margin: 0 0 9px; font-size: 13px; font-weight: 600; }
 .calc__summary-code + .calc__summary-code { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 8px; }
 .calc__summary-line { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; font-size: 12px; line-height: 1.6; }
