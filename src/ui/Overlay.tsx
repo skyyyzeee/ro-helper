@@ -840,6 +840,17 @@ export function Overlay({
   }, [calculatorOpen, platform]);
   useEffect(() => () => void platform.retractWindow(), [platform]);
 
+  const aiBusy = aiTab === 'document' ? writer.busy : aiTab === 'trainer' ? trainer.phase !== 'answering' : aiTab === 'lawyer' ? lawyer.busy : aiTab === 'detention' ? detention.busy : chat.busy;
+  const submitAiDraft = () => {
+    if (!aiDraft.trim() || aiBusy) return;
+    if (aiTab === 'document') void writer.write(aiDraft);
+    else if (aiTab === 'trainer') void trainer.reply(aiDraft);
+    else if (aiTab === 'lawyer') void lawyer.check(aiDraft);
+    else if (aiTab === 'detention') void detention.review(aiDraft);
+    else void chat.send(aiDraft);
+    setAiDraft('');
+  };
+
   const onSearchKey = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Backspace' && !query && scope) {
       // Backspace in an empty field takes the document off, as if it were the first word.
@@ -849,16 +860,9 @@ export function Overlay({
     }
     // In the AI analysis Enter sends the situation; the list keys have no list to walk.
     if (aiMode) {
-      const busy =
-        aiTab === 'document' ? writer.busy : aiTab === 'trainer' ? trainer.phase !== 'answering' : aiTab === 'lawyer' ? lawyer.busy : aiTab === 'detention' ? detention.busy : chat.busy;
-      if (e.key === 'Enter' && !e.shiftKey && aiDraft.trim() && !busy) {
+      if (e.key === 'Enter' && !e.shiftKey && aiDraft.trim() && !aiBusy) {
         e.preventDefault();
-        if (aiTab === 'document') void writer.write(aiDraft);
-        else if (aiTab === 'trainer') void trainer.reply(aiDraft);
-        else if (aiTab === 'lawyer') void lawyer.check(aiDraft);
-        else if (aiTab === 'detention') void detention.review(aiDraft);
-        else void chat.send(aiDraft);
-        setAiDraft('');
+        submitAiDraft();
       }
       return;
     }
@@ -1343,7 +1347,7 @@ export function Overlay({
           ]}
         />
       )}
-      <span className="kbd">{aiMode ? 'Enter' : 'Esc'}</span>
+      {aiMode ? <button type="button" className="btn btn--primary ai__send" aria-label="Отправить запрос ИИ" disabled={!aiDraft.trim() || aiBusy} onClick={submitAiDraft}>Отправить</button> : <span className="kbd">Esc</span>}
     </div>
   );
 
@@ -1780,6 +1784,7 @@ export function Overlay({
         ) : aiOpen && aiTab === 'detention' ? (
           <DetentionView
             detention={detention}
+            onDraft={(text) => { setAiDraft(text); searchRef.current?.focus(); }}
             onOpen={openHit}
             onTab={(tab) => {
               setAiTab(tab);
@@ -1799,6 +1804,7 @@ export function Overlay({
         ) : aiOpen && aiTab === 'document' ? (
           <DocumentView
             writer={writer}
+            onDraft={(text) => { setAiDraft(text); searchRef.current?.focus(); }}
             onOpen={openHit}
             onTab={(tab) => {
               setAiTab(tab);

@@ -125,6 +125,9 @@ describe('the lawyer\'s demands', () => {
     await user.click(screen.getByRole('radio', { name: 'Проверка' }));
     const view = screen.getByRole('region', { name: 'Требования адвоката' });
     await user.click(within(within(view).getByLabelText('Пример')).getByRole('button'));
+    expect(within(view).queryAllByRole('listitem')).toHaveLength(0);
+    expect((screen.getByRole('searchbox', { name: 'Поиск по законам' }) as HTMLInputElement).value).toContain('Адвокат требует');
+    await user.click(screen.getByRole('button', { name: 'Отправить запрос ИИ' }));
     expect(await within(view).findAllByRole('listitem')).toHaveLength(2);
   });
 });

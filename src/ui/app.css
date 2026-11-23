@@ -6743,3 +6743,25 @@ select option {
 .dept .list .row { border-radius: 6px; }
 .dept .list .row__line { flex-wrap: wrap; }
 .dept .list .ttl { white-space: normal; line-height: 1.5; }
+
+/* AI modes explain their task; examples are editable drafts before sending. */
+.ai { max-width: 880px; margin-inline: auto; width: 100%; min-width: 0; }
+.ai__head { flex-wrap: wrap; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--line); gap: 8px; }
+.ai__mode-heading { flex: 1 0 100%; min-width: 0; margin-bottom: 6px; }
+.ai__mode-heading h2 { margin: 0 0 5px; font-size: 19px; line-height: 1.4; font-weight: 600; }
+.ai__mode-heading p { margin: 0; font-size: 12px; line-height: 1.6; color: var(--text-muted); }
+.ai__head .ai__tabs { flex-wrap: wrap; }
+.ai .ai__new, .ai .ai__chip, .ai .tabs__btn { border-radius: 5px; font-size: 12px; font-weight: 500; }
+.ai__intro { align-items: flex-start; text-align: left; padding: 18px 0; gap: 12px; }
+.ai__hello-icon { width: 30px; height: 30px; border-radius: 5px; background: var(--surface); color: var(--text-muted); }
+.ai__hello-icon svg { width: 20px; height: 20px; }
+.ai__hello { font-size: 21px; font-weight: 600; line-height: 1.4; }
+.ai__intro .set__hint { max-width: 680px; font-size: 13px; line-height: 1.65; }
+.ai__example-hint { margin: 0; font-size: 12px; line-height: 1.6; color: var(--text-muted); }
+.ai__intro .ai__examples { max-width: none; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.ai__intro .ai__example { border-radius: 6px; text-align: left; padding: 13px; font-size: 13px; line-height: 1.6; border: 1px solid var(--line); background: rgb(255 255 255 / .025); }
+.ai__question { border-radius: 6px; padding: 14px; line-height: 1.65; }
+.search--composer { border-radius: 6px; height: auto; min-height: 54px; flex-wrap: wrap; padding-block: 7px; gap: 8px; }
+.search--composer .search__input { min-width: 100px; flex: 1 1 160px; font-size: 14px; }
+.search--composer .ai__send { min-height: 34px; height: auto; padding: 7px 12px; border-radius: 5px; font-size: 12px; flex: none; }
+.search--composer .search__scope { flex: none; }

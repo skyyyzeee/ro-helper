@@ -18,6 +18,25 @@ async function ask(question: string, patch: Partial<LegalAnswer> = {}) {
 }
 
 describe('the analysis on screen', () => {
+  it('fills an editable example without calling the model until the send button is pressed', async () => {
+    const bodies: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(fakeGeminiFetch({}, bodies)));
+    const { user } = await renderApp({ settings: GEMINI, profile: { organization: 'none' } });
+    await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
+    const send = screen.getByRole('button', { name: 'Отправить запрос ИИ' });
+    expect(send).toBeDisabled();
+    await user.click(within(screen.getByLabelText('Примеры вопросов')).getByRole('button', { name: /У меня украли телефон из кармана/ }));
+    expect(bodies).toHaveLength(0);
+    const input = screen.getByRole('searchbox', { name: 'Поиск по законам' });
+    expect(input).toHaveValue('У меня украли телефон из кармана — что будет вору?');
+    await user.clear(input);
+    await user.type(input, 'У меня украли телефон');
+    await user.click(send);
+    await screen.findByText('Применимые нормы');
+    expect(bodies.length).toBeGreaterThan(0);
+    expect(input).toHaveValue('');
+  });
+
   afterEach(() => vi.unstubAllGlobals());
 
   it('lays the answer out in blocks, with the article as a card and the punishment from the laws and the calculator', async () => {

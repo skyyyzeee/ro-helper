@@ -50,6 +50,14 @@ export const EXAMPLES: Record<Perspective, string[]> = {
 /** What the AI does for the player: analyses a situation, or writes a document about it. */
 export type AiTab = 'chat' | 'document' | 'lawyer' | 'detention' | 'trainer';
 
+const MODE_INFO: Record<AiTab, { title: string; hint: string }> = {
+  chat: { title: 'Разбор ситуации', hint: 'Опишите факты — ответ можно сверить с источниками.' },
+  document: { title: 'Подготовка документа', hint: 'Выберите документ и опишите обстоятельства.' },
+  lawyer: { title: 'Проверка требований', hint: 'Перечислите требования адвоката и важные обстоятельства.' },
+  detention: { title: 'Разбор задержания', hint: 'Опишите действия сотрудника по порядку.' },
+  trainer: { title: 'Практика по базе', hint: 'Выберите тему и ответьте на вопрос.' },
+};
+
 /** What the AI may do for the player (`aiCapabilitiesOf`); none given — everything, as in the tests of one mode. */
 export const AiAccess = createContext<ReadonlySet<Capability> | null>(null);
 
@@ -85,6 +93,7 @@ export function AiHead({
   const history = useContext(AiAccess)?.has('ai.cases') === false ? 'История' : 'Дела';
   return (
     <div className="ai__head">
+      <div className="ai__mode-heading"><h2>{MODE_INFO[tab].title}</h2><p>{MODE_INFO[tab].hint}</p></div>
       {back ? (
         <button className="ai__back" type="button" onClick={back.onClick}>
           <BackIcon />
@@ -222,9 +231,10 @@ export function AiView({
             Опишите ситуацию своими словами в поле внизу — ассистент найдёт нормы в законах и правилах вашего сервера и объяснит,
             что к чему. Отвечает только по базе: каждую норму можно открыть и проверить.
           </p>
+          <p className="ai__example-hint">Выберите пример, дополните его в поле внизу и нажмите «Отправить».</p>
           <div className="ai__examples" aria-label="Примеры вопросов">
             {EXAMPLES[chat.perspectives[0] ?? 'citizen'].map((example) => (
-              <button key={example} type="button" className="ai__example" disabled={chat.busy} onClick={() => void chat.send(example)}>
+              <button key={example} type="button" className="ai__example" disabled={chat.busy} onClick={() => onDraft(example)}>
                 {example}
               </button>
             ))}
