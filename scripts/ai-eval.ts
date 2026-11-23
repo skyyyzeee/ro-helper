@@ -142,7 +142,7 @@ let attempts = 0;
 const provider: AiProvider = {
   async complete(request) {
     attempts += 1;
-    const text = await service.complete(request);
+    const text = await service.complete(args.includes('--no-cache') ? { ...request, cache: undefined } : request);
     said.push(text);
     return text;
   },

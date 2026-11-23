@@ -60,3 +60,5 @@ The hard gates also run **without a live model** on every pull request: `src/pro
 
 `npm run eval -- --approved` (with `AI_ADMIN_TOKEN`) adds the players' questions the admins approved with their right
 articles (category `APPROVED`) and asks every question with the approved dictionary — see `docs/AI_DATASET.md`.
+
+`--no-cache` отключает кеш чтения и записи для всех вызовов eval, включая поисковые фразы и повтор формата. Использовать при сравнении живых моделей/версий, чтобы старые ответы не подменяли измерение. Это не отключает лимиты или тариф провайдера.
