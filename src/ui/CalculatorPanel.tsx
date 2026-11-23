@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import {
   OFFENDER_DATIVE,
   articleTitle,
@@ -81,6 +82,12 @@ export interface CalculatorPanelProps {
 /** The side panel: criminal and administrative charges, their totals by law, and the charges to copy. */
 export function CalculatorPanel(props: CalculatorPanelProps) {
   const { result, onClear, onCopy, copyState, pinned, onPin, onReport, reportState } = props;
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const showCalculation = (label: string) => {
+    const target = bodyRef.current?.querySelector<HTMLElement>(`[aria-label="${label}"]`);
+    target?.scrollIntoView?.({ block: 'nearest' });
+    target?.focus({ preventScroll: true });
+  };
   const count = (result.criminal?.items.length ?? 0) + (result.administrative?.items.length ?? 0);
 
   return (
@@ -94,14 +101,17 @@ export function CalculatorPanel(props: CalculatorPanelProps) {
         </button>
       </div>
 
-      <div className="calc__body">
+      <div className="calc__body" ref={bodyRef}>
         {result.criminal && <CriminalSection {...props} criminal={result.criminal} />}
         {result.administrative && <AdministrativeSection {...props} administrative={result.administrative} />}
       </div>
 
       <div className="calc__copy">
-        <span className="calc__copy-label">Обвинение для копирования</span>
-        {result.charge ? <div className="copy-str">{result.charge}</div> : <div className="copy-str copy-str--empty">Обвинять не в чем</div>}
+        <PunishmentSummary result={result} fineInput={props.fineInput} onDetails={showCalculation} />
+        <details className="calc__charge-preview">
+          <summary>Обвинение для копирования</summary>
+          {result.charge ? <div className="copy-str">{result.charge}</div> : <div className="copy-str copy-str--empty">Обвинять не в чем</div>}
+        </details>
         <div className="calc__copy-row">
           <button className="btn btn--primary calc__copy-btn" type="button" disabled={!result.charge} onClick={onCopy}>
             <span>{copyState === 'copied' ? 'Скопировано' : copyState === 'failed' ? 'Не удалось скопировать' : 'Скопировать'}</span>
@@ -133,6 +143,41 @@ export function CalculatorPanel(props: CalculatorPanelProps) {
         </div>
       </div>
     </aside>
+  );
+}
+
+/** A persistent view of the calculated result; each code keeps its own units and limits. */
+function PunishmentSummary({ result, fineInput, onDetails }: Pick<CalculatorPanelProps, 'result' | 'fineInput'> & { onDetails: (label: string) => void }) {
+  const { criminal, administrative } = result;
+  const fineDigits = fineInput.replace(/\D/g, '');
+  const criminalFine = criminal?.fineLimit;
+  const invalidCriminalFine = !!fineDigits && !!criminalFine && !fineFits(Number(fineDigits), criminalFine);
+  const counted = administrative?.items.filter((r) => r.applicable) ?? [];
+  const invalidAdministrative = counted.some((r) => r.fine?.fits === false || r.arrest?.fits === false);
+  return (
+    <section className="calc__summary" aria-label="Сводка наказания">
+      <h2>Итог наказания</h2>
+      {criminal && (
+        <div className="calc__summary-code" role="group" aria-label="Сводка УК">
+          <div className="calc__summary-line">
+            <span>УК · {criminal.mode === 'custody' ? 'КПЗ' : 'штраф'}</span>
+            <strong>{criminal.mode === 'custody' ? `${criminal.term} мес` : criminalFine ? (fineDigits ? formatRubles(Number(fineDigits)) : rangeText(criminalFine)) : 'Не предусмотрен'}</strong>
+          </div>
+          {invalidCriminalFine && <p className="calc__summary-invalid">Сумма вне предела — проверьте штраф УК</p>}
+          <button type="button" className="calc__summary-link" onClick={() => onDetails('Итог')}>Расчёт УК и ограничения</button>
+        </div>
+      )}
+      {administrative && (
+        <div className="calc__summary-code" role="group" aria-label="Сводка КоАП">
+          {!counted.length && <p>КоАП · не назначается</p>}
+          {counted.some((r) => r.fine) && <div className="calc__summary-line"><span>КоАП · штраф</span><strong>{formatRubles(administrative.fineTotal)}</strong></div>}
+          {administrative.arrestDays > 0 && <div className="calc__summary-line"><span>КоАП · арест</span><strong>{administrative.arrestDays} сут</strong></div>}
+          {administrative.other.length > 0 && <p className="calc__summary-other">{administrative.other.join(' · ')}</p>}
+          {invalidAdministrative && <p className="calc__summary-invalid">Значения вне предела — проверьте КоАП</p>}
+          {counted.length > 0 && <button type="button" className="calc__summary-link" onClick={() => onDetails('Итог КоАП')}>Расчёт КоАП и ограничения</button>}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -222,7 +267,7 @@ function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, onOpenS
       </ul>
 
       {mode === 'custody' ? (
-        <div className="total" aria-label="Итог">
+        <div className="total" aria-label="Итог" tabIndex={-1}>
           <div>
             <div className="t-big">{criminal.term} мес</div>
             <div className="t-sub">{criminal.capped ? 'потолок по закону' : 'итог по УК'}</div>
@@ -241,7 +286,7 @@ function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, onOpenS
         </div>
       ) : (
         criminal.fineLimit && (
-          <div className="total total--fine" aria-label="Итог">
+          <div className="total total--fine" aria-label="Итог" tabIndex={-1}>
             <label className="fine">
               <span className="muted">Сумма штрафа</span>
               <span className="fine__field">
@@ -433,7 +478,7 @@ function AdministrativeSection(props: CalculatorPanelProps & { administrative: A
       </ul>
 
       {counted && (
-        <div className="total total--admin" aria-label="Итог КоАП">
+        <div className="total total--admin" aria-label="Итог КоАП" tabIndex={-1}>
           {hasFine && (
             <div className="tot-row">
               <span>Штраф</span>

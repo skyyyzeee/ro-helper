@@ -276,3 +276,58 @@ describe('copying the charges', () => {
     expect(copyButton()).toHaveTextContent('Не удалось скопировать');
   });
 });
+
+
+describe('persistent punishment summary', () => {
+  const summary = () => within(panel()).getByRole('region', { name: 'Сводка наказания' });
+  const criminal = () => within(summary()).getByRole('group', { name: 'Сводка УК' });
+  const administrative = () => within(summary()).getByRole('group', { name: 'Сводка КоАП' });
+
+  it('keeps both codes separate while editing, copying a report and removing a charge', async () => {
+    const { user, platform } = await renderApp({ profile: { organization: 'mvd' } });
+    await add(user, 'ук 87 ч 1');
+    await add(user, 'коап 9.3 ч 2');
+    expect(criminal()).toHaveTextContent('30 мес');
+    expect(administrative()).toHaveTextContent('18 000 ₽');
+    await user.type(within(adminPanel()).getByRole('textbox', { name: 'Сумма штрафа по ст. 9.3 ч. 2' }), '6000');
+    expect(administrative()).toHaveTextContent('6 000 ₽');
+    expect(criminal()).toHaveTextContent('30 мес');
+    await user.click(within(panel()).getByRole('button', { name: 'Рапорт' }));
+    expect(platform.state.clipboard).toContain('Наказание: лишение свободы на 30 мес');
+    expect(platform.state.clipboard).toContain('По КоАП: штраф 6 000 ₽');
+    await user.click(copyButton());
+    expect(platform.state.clipboard).toBe('ст. 87 ч. 1 УК; ст. 9.3 ч. 2 КоАП');
+    await user.click(within(summary()).getByRole('button', { name: 'Расчёт КоАП и ограничения' }));
+    expect(adminTotal()).toHaveFocus();
+    await user.click(within(panel()).getByRole('button', { name: 'Убрать ст. 87 ч. 1' }));
+    expect(within(summary()).queryByRole('group', { name: 'Сводка УК' })).not.toBeInTheDocument();
+    expect(administrative()).toHaveTextContent('6 000 ₽');
+  });
+
+  it('shows a fine range until typed and marks an invalid criminal fine', async () => {
+    const { user } = await renderApp();
+    await add(user, 'ук 76');
+    await user.click(within(panel()).getByRole('radio', { name: 'Штраф' }));
+    expect(criminal()).toHaveTextContent('от 25 000 до 100 000 ₽');
+    const input = within(panel()).getByRole('textbox', { name: 'Сумма штрафа' });
+    await user.type(input, '150000');
+    expect(criminal()).toHaveTextContent('Сумма вне предела');
+    await user.clear(input);
+    await user.type(input, '50000');
+    expect(criminal()).toHaveTextContent('50 000 ₽');
+    expect(criminal()).not.toHaveTextContent('Сумма вне предела');
+  });
+
+  it('shows administrative arrest in days and flags invalid amounts without inventing a punishment', async () => {
+    const { user } = await renderApp();
+    await add(user, 'коап 5.5 ч 1');
+    await user.click(within(adminPanel()).getByRole('radio', { name: 'арест' }));
+    expect(administrative()).toHaveTextContent('КоАП · арест20 сут');
+    await user.type(within(adminPanel()).getByRole('textbox', { name: 'Срок ареста по ст. 5.5 ч. 1' }), '999');
+    expect(administrative()).toHaveTextContent('Значения вне предела');
+    await user.click(within(panel()).getByRole('button', { name: 'Очистить' }));
+    await add(user, 'коап 10.3 ч 2');
+    expect(administrative()).toHaveTextContent('не назначается');
+    expect(copyButton()).toBeDisabled();
+  });
+});

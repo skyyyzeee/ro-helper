@@ -6676,3 +6676,21 @@ select option {
 .calc .sec-row:has(.seg) { display: block; }
 .calc .sec-row:has(.seg) .sec-t { display: block; margin-bottom: 9px; }
 .calc .sec-row .seg { width: 100%; }
+
+/* The result and copy actions stay outside the independently scrolling charges. */
+.calc__body { min-height: 0; }
+.calc__copy { min-height: 0; max-height: 55%; overflow-y: auto; gap: 10px; }
+.calc__summary { flex: none; max-height: min(23vh, 190px); overflow-y: auto; padding-right: 3px; }
+.calc__summary h2 { margin: 0 0 9px; font-size: 13px; font-weight: 600; }
+.calc__summary-code + .calc__summary-code { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 8px; }
+.calc__summary-line { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; font-size: 12px; line-height: 1.6; }
+.calc__summary-line > span { color: var(--text-muted); }
+.calc__summary-line strong { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.calc__summary-code p { margin: 5px 0; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.calc__summary-invalid { color: var(--warn-text); }
+.calc__summary-link { text-align: left; font-size: 11px; line-height: 1.5; color: var(--text-muted); padding: 3px 0; text-decoration: underline; text-underline-offset: 3px; }
+.calc__summary-link:hover { color: var(--text); }
+.calc__charge-preview { min-height: 0; flex: 0 1 auto; overflow-y: auto; font-size: 11px; color: var(--text-muted); }
+.calc__charge-preview summary { cursor: pointer; padding: 2px 0; }
+.calc__charge-preview .copy-str { color: var(--text); }
+.calc .total:focus { outline: 1px solid var(--accent); outline-offset: 2px; }
