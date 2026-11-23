@@ -6745,7 +6745,7 @@ select option {
 .dept .list .ttl { white-space: normal; line-height: 1.5; }
 
 /* AI modes explain their task; examples are editable drafts before sending. */
-.ai { max-width: 880px; margin-inline: auto; width: 100%; min-width: 0; }
+.ai { box-sizing: border-box; max-width: 880px; margin-inline: auto; width: 100%; min-width: 0; }
 .ai__head { flex-wrap: wrap; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--line); gap: 8px; }
 .ai__mode-heading { flex: 1 0 100%; min-width: 0; margin-bottom: 6px; }
 .ai__mode-heading h2 { margin: 0 0 5px; font-size: 19px; line-height: 1.4; font-weight: 600; }
@@ -6765,3 +6765,5 @@ select option {
 .search--composer .search__input { min-width: 100px; flex: 1 1 160px; font-size: 14px; }
 .search--composer .ai__send { min-height: 34px; height: auto; padding: 7px 12px; border-radius: 5px; font-size: 12px; flex: none; }
 .search--composer .search__scope { flex: none; }
+
+.search--composer .ai__send:disabled { opacity: .45; cursor: not-allowed; }
