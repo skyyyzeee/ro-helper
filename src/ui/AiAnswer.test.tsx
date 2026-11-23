@@ -56,6 +56,38 @@ describe('the analysis on screen', () => {
     expect(input).toHaveValue('');
   });
 
+  it('returns from a source to the same reading position, expanded answer and unsent draft', async () => {
+    const { user } = await ask('у меня украли телефон');
+    const log = screen.getByRole('log');
+    const content = log.closest('.overlay__content')!;
+    const more = log.querySelector<HTMLDetailsElement>('details.answer__more')!;
+    await user.click(within(more).getByText('Подробный разбор'));
+    expect(more.open).toBe(true);
+    const draft = screen.getByRole('textbox', { name: 'Сообщение ИИ' });
+    await user.type(draft, 'Ещё не отправленное уточнение');
+    content.scrollTop = 320;
+    await user.click(within(log).getAllByRole('button', { name: /^УК ст\. 87/ })[0]);
+    expect(content.scrollTop).toBe(0);
+    await user.keyboard('{Escape}');
+    expect(content.scrollTop).toBe(320);
+    expect(screen.getByRole('log').querySelector<HTMLDetailsElement>('details.answer__more')!.open).toBe(true);
+    expect(screen.getByRole('textbox', { name: 'Сообщение ИИ' })).toHaveValue('Ещё не отправленное уточнение');
+    expect(screen.getByRole('textbox', { name: 'Сообщение ИИ' })).toHaveFocus();
+  });
+
+  it('shows the beginning of a completed answer instead of scrolling past it', async () => {
+    const original = HTMLElement.prototype.scrollIntoView;
+    const scroll = vi.fn(function (this: HTMLElement) { return this; });
+    HTMLElement.prototype.scrollIntoView = scroll;
+    try {
+      await ask('у меня украли телефон');
+      expect(scroll.mock.contexts.at(-1)).toHaveClass('ai__reply');
+      expect(scroll).toHaveBeenLastCalledWith({ block: 'start' });
+    } finally {
+      HTMLElement.prototype.scrollIntoView = original;
+    }
+  });
+
   afterEach(() => vi.unstubAllGlobals());
 
   it('lays the answer out in blocks, with the article as a card and the punishment from the laws and the calculator', async () => {

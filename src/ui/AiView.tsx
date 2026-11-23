@@ -186,15 +186,26 @@ export function AiView({
   /** Switches between the analysis and writing a document. */
   onTab: (tab: AiTab) => void;
 }) {
-  const endRef = useRef<HTMLDivElement>(null);
+  const latestRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLElement>(null);
   const last = chat.messages.at(-1);
-  // Braces: newer browsers return a promise from scrolling, and an effect may return only its clean-up.
-  // An empty chat stays at its top, with the modes in sight; a conversation follows its last message.
+  const readingRevision = `${chat.caseId}:${last?.id}:${last?.pending}`;
+  const previousRevision = useRef(readingRevision);
+  const previousCase = useRef(chat.caseId);
+  // Mounting after reading a source leaves the restored position alone.
+  // A new answer starts at its beginning, below the sticky modes.
   useEffect(() => {
-    if (chat.messages.length) void endRef.current?.scrollIntoView?.({ block: 'end' });
-    else void topRef.current?.scrollIntoView?.({ block: 'start' });
-  }, [chat.messages.length, last?.pending]);
+    if (previousRevision.current === readingRevision) return;
+    const changedCase = previousCase.current !== chat.caseId;
+    previousRevision.current = readingRevision;
+    previousCase.current = chat.caseId;
+    const target = !chat.messages.length || changedCase ? topRef.current : latestRef.current;
+    if (target && target !== topRef.current) {
+      const head = topRef.current?.querySelector<HTMLElement>('.ai__head');
+      target.style.scrollMarginTop = `${(head?.offsetHeight ?? 0) + 12}px`;
+    }
+    void target?.scrollIntoView?.({ block: 'start' });
+  }, [readingRevision, chat.caseId, chat.messages.length]);
   const lastQuestion = [...chat.messages].reverse().find((m) => m.role === 'user')?.text;
   // Few players mark the answers: once a conversation has had a few, the latest says, once ever, that a mark helps.
   const markHint = useMarkHint();
@@ -271,18 +282,18 @@ export function AiView({
       <div className="ai__messages" role="log" aria-live="polite">
         {chat.messages.map((message, index) =>
           message.role === 'user' ? (
-            <div key={message.id} className="ai__question">
+            <div key={message.id} ref={index === chat.messages.length - 1 ? latestRef : undefined} className="ai__question">
               {message.tag && <span className="ai__side">{message.tag}</span>}
               {message.perspective && <span className="ai__side">{PERSPECTIVES.find((p) => p.id === message.perspective)?.label}</span>}
               {message.text}
             </div>
           ) : message.pending ? (
-            <div key={message.id} className="ai__pending" role="status">
+            <div key={message.id} ref={index === chat.messages.length - 1 ? latestRef : undefined} className="ai__pending" role="status">
               <span className="ai__dots" aria-hidden="true" />
               Ищу статьи и разбираю ситуацию…
             </div>
           ) : message.failed ? (
-            <div key={message.id} className="warn" role="alert">
+            <div key={message.id} ref={index === chat.messages.length - 1 ? latestRef : undefined} className="warn" role="alert">
               <WarnIcon />
               <span>
                 {message.text} ИИ сейчас недоступен — вы можете продолжить{' '}
@@ -293,7 +304,7 @@ export function AiView({
               </span>
             </div>
           ) : (
-            <div key={message.id} className="ai__reply">
+            <div key={message.id} ref={index === chat.messages.length - 1 ? latestRef : undefined} className="ai__reply">
               {message.answerCheck ? (
                 <AnswerCheckView check={message.answerCheck} onOpen={onOpen} />
               ) : message.analysis ? (
@@ -427,7 +438,7 @@ export function AiView({
             </button>
           </p>
         )}
-        <div ref={endRef} />
+
       </div>
     </section>
   );

@@ -6776,3 +6776,6 @@ select option {
   .search--composer textarea.search__input { min-height: 42px; max-height: 84px; }
   .ai__composer-help { display: none; }
 }
+
+/* The pinned modes must fully cover the text scrolling underneath. */
+.ai > .ai__head { background: rgb(17 17 21); backdrop-filter: none; -webkit-backdrop-filter: none; }

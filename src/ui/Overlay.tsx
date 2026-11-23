@@ -1039,7 +1039,14 @@ export function Overlay({
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  const aiSourceReturn = useRef<{ top: number; details: boolean[] } | null>(null);
   const openHit = (hit: SearchHit) => {
+    if (aiOpen && !open && contentRef.current) {
+      aiSourceReturn.current = {
+        top: contentRef.current.scrollTop,
+        details: [...contentRef.current.querySelectorAll<HTMLDetailsElement>('.ai details')].map((detail) => detail.open),
+      };
+    }
     if (department && !open) departmentScroll.current.set(department.topic ?? '', contentRef.current?.scrollTop ?? 0);
     setOpen(hit);
     remember(hit);
@@ -1143,6 +1150,18 @@ export function Overlay({
     if (department && contentRef.current) contentRef.current.scrollTop = open ? 0 : departmentScroll.current.get(department.topic ?? '') ?? 0;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [department?.topic, open]);
+
+  // Restore native disclosure controls before restoring the source's reading position.
+  useLayoutEffect(() => {
+    const content = contentRef.current;
+    if (!aiOpen || !content) { aiSourceReturn.current = null; return; }
+    if (open) { content.scrollTop = 0; return; }
+    const saved = aiSourceReturn.current;
+    if (!saved) return;
+    content.querySelectorAll<HTMLDetailsElement>('.ai details').forEach((detail, index) => { detail.open = saved.details[index] ?? false; });
+    content.scrollTop = saved.top;
+    aiSourceReturn.current = null;
+  }, [aiOpen, open]);
 
   /** The article's part as a hit of its own, for the calculator. */
   const partHit = (hit: SearchHit, part?: Part): SearchHit => ({ article: hit.article, document: hit.document, part: part ?? entryPart(hit.article) });
