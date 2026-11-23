@@ -1732,7 +1732,8 @@ export function Overlay({
             opacity={opacity}
             onOpacity={changeOpacity}
             appearance={appearance}
-            pinned={cardCount(groups)}
+            pinnedCards={groups.flatMap((group) => group.cards)}
+            onUnpinCard={(id) => setGroups((list) => unpinCard(list, id))}
             onUnpinAll={() => setGroups([])}
             presets={presets.map((preset) => ({ id: preset.id, name: preset.name, count: cardCount(preset.groups) }))}
             nextPresetName={nextPresetName(presets)}

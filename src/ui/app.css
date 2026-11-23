@@ -6796,3 +6796,13 @@ select option {
   .wiki__zoom { max-width: 100%; }
   .wiki__big { width: 100%; max-width: none; }
 }
+
+/* Current pins are managed separately from the saved sets below them. */
+.pins-manager { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 0; }
+.pins-manager__row { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.pins-manager__row > div { min-width: 0; flex: 1; }
+.pins-manager__row p { margin: 4px 0 0; color: var(--text); font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+.pins-manager__kind { color: var(--text-muted); font-size: 11px; }
+.pins-manager__row > button { flex: none; }
+.pins-manager__empty { margin-block: 12px; }
+@container (max-width: 380px) { .pins-manager__row { align-items: flex-start; flex-wrap: wrap; } }

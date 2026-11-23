@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type K
 import { packLabel, type Organization, type ServerPack } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
 import { USAGE_SHARE_KEY } from '../account/usage';
+import { PinnedCardsList, type PinnedCardSummary } from './PinnedCardsList';
 import { AccountCard, AccountSection } from './ProfileView';
 import { AdminSection } from './AdminView';
 import { AiMarksAdmin } from './AiMarksAdmin';
@@ -668,7 +669,8 @@ export interface SettingsViewProps {
   /** The theme and the accent; without it (a bare overlay in tests) the choice is not shown. */
   appearance?: AppearanceControl;
   /** Cards pinned over the game: how many, and unpinning them all at once. */
-  pinned: number;
+  pinnedCards: PinnedCardSummary[];
+  onUnpinCard: (id: string) => void;
   onUnpinAll: () => void;
   /** Saved sets of pinned cards, what the next one is called unless named, and saving, showing, deleting one. */
   presets: { id: string; name: string; count: number }[];
@@ -712,7 +714,8 @@ export function SettingsView({
   opacity,
   onOpacity,
   appearance,
-  pinned,
+  pinnedCards,
+  onUnpinCard,
   onUnpinAll,
   presets,
   nextPresetName,
@@ -727,6 +730,7 @@ export function SettingsView({
   focus,
   onSectionChange,
 }: SettingsViewProps) {
+  const pinned = pinnedCards.length;
   const platform = usePlatform();
   const [active, setActive] = useState<SettingsSection>(focus?.section ?? 'main');
   const page = useRef<HTMLDivElement>(null);
@@ -877,7 +881,8 @@ export function SettingsView({
             </button>
           )}
         </Row>
-        <p className="set__hint">Карточки перетаскиваются за шапку; брошенная на другую встаёт к ней с той стороны, куда её бросили.</p>
+        <PinnedCardsList cards={pinnedCards} onUnpin={onUnpinCard} />
+        {pinned > 0 && <p className="set__hint">Карточки перетаскиваются за шапку; брошенная на другую встаёт к ней с той стороны, куда её бросили.</p>}
         {note && <NotesField note={note} />}
 
         <h4 className="set__sub">Наборы</h4>
