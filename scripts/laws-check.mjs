@@ -108,21 +108,24 @@ createServer((request, response) => {
   if (request.method === 'GET' && url.pathname === '/check') {
     const docs = snapshots();
     const job = JSON.stringify({ kind: 'laws-check', back: `${BASE}/result`, docs });
+    const code = readFileSync(join(import.meta.dirname, 'laws-check-page.js'), 'utf8').replace('/* LAWS_CHECK_JOB */ null', job);
+    const bookmark = 'javascript:' + encodeURIComponent(code);
     return html(
       page(
         'Проверить законы',
         `<h1>Проверить законы на форуме</h1>
         <p>Документов: <b>${docs.length}</b>, тем на форуме: <b>${new Set(docs.map((d) => d.thread)).size}</b>.</p>
         <ol>
-          <li>Нажмите <button id="copy">Скопировать скрипт проверки</button>. <span id="copied"></span></li>
+          <li>Перетащите эту новую кнопку на панель закладок Chrome: <a class="bm" href="${bookmark}">Проверить все законы · 24.11</a></li>
           <li>Откройте <a href="${FORUM}" target="_blank" rel="noopener">форум в новой вкладке</a>.</li>
-          <li>На форуме откройте F12 → Console, вставьте скопированный скрипт и нажмите Enter. Дождитесь скачивания <code>laws-result.json</code>.</li>
+          <li>На форуме нажмите новую закладку «Проверить все законы · 24.11». Дождитесь скачивания <code>laws-result.json</code>. Консоль не нужна.</li>
           <li>Вернитесь сюда и выберите результат: <input id="result" type="file" accept=".json,application/json"></li>
         </ol>
+        <details><summary>Скрипт для ручной проверки</summary><button id="copy">Скопировать скрипт проверки</button> <span id="copied"></span></details>
         <p>Скрипт читает публичные темы форума и скачивает итог. Данные сохраняются в репозитории только после выбора файла здесь. Старые закладки могут не работать: Chrome очищает window.name при смене сайта.</p>
         <pre id="out"></pre>
         <script>
-        const code = ${JSON.stringify(readFileSync(join(import.meta.dirname, 'laws-check-page.js'), 'utf8').replace('/* LAWS_CHECK_JOB */ null', job)).replace(/</g, '\\u003c')};
+        const code = ${JSON.stringify(code).replace(/</g, '\\u003c')};
         document.getElementById('copy').onclick = async () => {
           try { await navigator.clipboard.writeText(code); document.getElementById('copied').textContent = 'Скопировано'; }
           catch { document.getElementById('out').textContent = 'Не удалось скопировать. Разрешите копирование для локальной страницы и повторите.'; }
