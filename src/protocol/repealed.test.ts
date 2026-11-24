@@ -42,4 +42,32 @@ describe('repealed laws are not AI authorities', () => {
     expect(checked.issues.join(' ')).toContain('утратила силу');
     expect(calculateCharges(pack, checked)).toBeNull();
   });
+  it('excludes the newly repealed KoAP articles and part while retaining active parts', () => {
+    const original = pack.documents.find((d) => d.id === 'koap')!;
+    const scoped = packInScope(pack, 'law').documents.find((d) => d.id === 'koap')!;
+    for (const number of ['9.23', '10.1', '10.4']) {
+      expect(original.articles.find((a) => a.number === number)?.title).toBe('Утратила силу');
+      expect(scoped.articles.some((a) => a.number === number)).toBe(false);
+    }
+    const whole = original.articles.find((a) => a.number === '12.5')!;
+    expect(scoped.articles.find((a) => a.number === '12.5')?.parts.map((p) => p.number)).toEqual(['1', '2']);
+    expect(whole.parts.map((p) => p.number)).toEqual(['1', '2', '3']);
+    const given = labelSources([{ document: original, article: whole }]);
+    const answer = parseAnswer(JSON.stringify({ situation: 'Документы', norms: [{ source: 'S1', ref: 'КоАП ст. 12.5', part: '1, 3', charge: true, fit: 'direct', why: 'отказ предъявить документы' }] }));
+    const checked = validateAnswer(pack, given, answer, 'law');
+    expect(checked.norms[0].hit).toBeUndefined();
+    expect(checked.issues.join(' ')).toContain('утратила силу');
+    expect(calculateCharges(pack, checked)).toBeNull();
+    const legacyPart = labelSources([{ document: original, article: whole, part: whole.parts[2] }]);
+    expect(sourcesBlock(legacyPart)).not.toContain('12.5');
+    expect(groundItems([{ text: 'Основание', sources: ['S1'] }], legacyPart, 'law')[0].sources).toEqual([]);
+  });
+
+  it('rejects claims that cite a repealed source without listing a norm', () => {
+    const answer = parseAnswer(JSON.stringify({ situation: 'Задержание', norms: [], verdict: { answer: 'yes', text: 'Задержание законно', sources: ['S1'] } }));
+    const checked = validateAnswer(pack, legacy, answer, 'law');
+    expect(checked.status).not.toBe('confirmed');
+    expect(checked.issues.join(' ')).toContain('утратил силу');
+  });
+
 });

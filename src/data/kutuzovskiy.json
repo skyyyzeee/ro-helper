@@ -246,8 +246,99 @@
       "documents": []
     }
   ],
-  "version": "2026-11-14T23:19:49+03:00",
+  "version": "2026-11-24T04:32:13.002Z",
   "changes": [
+    {
+      "version": "2026-11-24T04:32:13.002Z",
+      "documents": [
+        {
+          "documentId": "rules-main",
+          "short": "Правила",
+          "title": "Основные правила проекта",
+          "kind": "changed",
+          "articles": [
+            {
+              "kind": "changed",
+              "articleId": "rules-main-6.17",
+              "before": {
+                "id": "rules-main-6.17",
+                "number": "6.17",
+                "title": "",
+                "chapter": "6",
+                "parts": [
+                  {
+                    "text": "Использование файлов/утилит для получения игрового преимущества.",
+                    "points": []
+                  }
+                ],
+                "notes": [
+                  {
+                    "label": "Наказание",
+                    "text": "HardBan 30 дней / PermBan.[/SIZE][/FONT]"
+                  }
+                ]
+              },
+              "after": {
+                "id": "rules-main-6.17",
+                "number": "6.17",
+                "title": "",
+                "chapter": "6",
+                "parts": [
+                  {
+                    "text": "Использование файлов/утилит для получения игрового преимущества.",
+                    "points": []
+                  }
+                ],
+                "notes": [
+                  {
+                    "label": "Наказание",
+                    "text": "HardBan 30 дней / PermBan."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "documentId": "rules-war",
+          "short": "Правила",
+          "title": "Правила войны за территорию",
+          "kind": "changed",
+          "articles": [
+            {
+              "kind": "changed",
+              "articleId": "rules-war-1.2",
+              "before": {
+                "id": "rules-war-1.2",
+                "number": "1.2",
+                "title": "",
+                "chapter": "1",
+                "parts": [
+                  {
+                    "text": "Капты разрешено проводить только во вторник / четверг / воскресенье с 15:00 до 21:00.",
+                    "points": []
+                  }
+                ],
+                "notes": []
+              },
+              "after": {
+                "id": "rules-war-1.2",
+                "number": "1.2",
+                "title": "",
+                "chapter": "1",
+                "parts": [
+                  {
+                    "text": "Капты разрешено проводить только в понедельник / среда / пятница / воскресенье с 15:00 до 21:00.",
+                    "points": []
+                  }
+                ],
+                "notes": []
+              }
+            }
+          ]
+        }
+      ]
+    },
     {
       "version": "2026-11-14T23:19:49+03:00",
       "documents": [
@@ -120951,7 +121042,7 @@
         "url": "https://forum.russia.online/threads/tsa-sk-ro-polozheniye-o-sledstvennom-komitete-ro.26268/",
         "posted": "2026-09-20T22:45:21+03:00",
         "lastEdited": "2026-11-09T19:49:29+03:00",
-        "snapshotAt": "2026-11-16"
+        "snapshotAt": "2026-11-24"
       },
       "chapters": [
         {
@@ -130972,8 +131063,8 @@
         "thread": 1,
         "url": "https://forum.russia.online/threads/osnovnyye-pravila-proyekta.1/",
         "posted": "2026-07-25T16:09:34+03:00",
-        "lastEdited": "2026-11-14T23:04:36+03:00",
-        "snapshotAt": "2026-11-16"
+        "lastEdited": "2026-11-17T18:36:33+03:00",
+        "snapshotAt": "2026-11-24"
       },
       "chapters": [
         {
@@ -132578,7 +132669,7 @@
           "notes": [
             {
               "label": "Наказание",
-              "text": "HardBan 30 дней / PermBan.[/SIZE][/FONT]"
+              "text": "HardBan 30 дней / PermBan."
             }
           ]
         },
@@ -141412,8 +141503,8 @@
         "thread": 20184,
         "url": "https://forum.russia.online/threads/pravila-voiny-za-territoriyu.20184/",
         "posted": "2026-09-10T17:21:58+03:00",
-        "lastEdited": "2026-10-08T03:59:49+03:00",
-        "snapshotAt": "2026-10-08"
+        "lastEdited": "2026-11-17T18:25:35+03:00",
+        "snapshotAt": "2026-11-24"
       },
       "chapters": [
         {
@@ -141465,7 +141556,7 @@
           "chapter": "1",
           "parts": [
             {
-              "text": "Капты разрешено проводить только во вторник / четверг / воскресенье с 15:00 до 21:00.",
+              "text": "Капты разрешено проводить только в понедельник / среда / пятница / воскресенье с 15:00 до 21:00.",
               "points": []
             }
           ],
@@ -144589,5 +144680,5 @@
       "гражданина"
     ]
   },
-  "built": "2026-11-16T01:24:09.315Z"
+  "built": "2026-11-24T04:32:15.067Z"
 }

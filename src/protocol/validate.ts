@@ -6,7 +6,7 @@ import { articleLabel, articleText, calculateDetention, leadPart, type Article, 
 import { cachedStem, words } from '../core/wordIndex';
 import type { AnswerNorm, Claim, GuideItem, LegalAnswer } from './answer';
 import { evidenceText } from './evidence';
-import { isRepealedArticle, SOURCE_TYPE_LABELS, inScope, type Scope, type Source, type SourceType } from './sources';
+import { isRepealedArticle, isRepealedHit, isRepealedPart, SOURCE_TYPE_LABELS, inScope, type Scope, type Source, type SourceType } from './sources';
 import type { ShownVerdict } from './verdict';
 
 /**
@@ -104,11 +104,16 @@ function checkNorm(pack: ServerPack, sources: Map<string, Source>, norm: AnswerN
       : `${norm.ref || norm.source}: такой нормы нет в базе сервера «${pack.server.name}»`;
     return { norm, issues: [issue] };
   }
-  if (isRepealedArticle(source.hit.article)) return { norm, issues: [`${norm.ref || norm.source}: статья утратила силу и не может служить действующим основанием`] };
+  if (isRepealedHit(source.hit)) return { norm, issues: [`${norm.ref || norm.source}: статья утратила силу и не может служить действующим основанием`] };
   const issues: string[] = [];
   const named = parseRef(norm.ref);
   const namedTarget = named ? namedArticle(pack, norm.ref) : undefined;
   if (namedTarget && isRepealedArticle(namedTarget)) return { norm, issues: [`${norm.ref}: статья утратила силу и не может служить действующим основанием`] };
+  const requestedParts = norm.part?.match(/\d+(?:\.\d+)*/g) ?? [];
+  const requestedArticle = namedTarget ?? source.hit.article;
+  if (requestedParts.some((number) => requestedArticle.parts.some((part) => part.number === number && isRepealedPart(part)))) {
+    return { norm, issues: [`${norm.ref}: указанная часть утратила силу и не может служить действующим основанием`] };
+  }
   const namedIs = (hit: SearchHit) =>
     !!named && named.number === hit.article.number && (hit.document.short.toLowerCase() === named.short || hit.document.aliases.includes(named.short));
   if (named && !namedIs(source.hit)) {
@@ -127,6 +132,7 @@ function checkNorm(pack: ServerPack, sources: Map<string, Source>, norm: AnswerN
       } else norm = { ...norm, ref: `${source.hit.document.short} ${articleLabel(source.hit.article, undefined, source.hit.document.unit)}` };
     }
   }
+  if (isRepealedHit(source.hit)) return { norm, issues: [`${norm.ref}: указанная часть утратила силу и не может служить действующим основанием`] };
   const { article, document } = source.hit;
   if (scope && !inScope(source.type, scope)) {
     issues.push(`${norm.ref || norm.source}: это ${SOURCE_TYPE_LABELS[source.type].toLowerCase()}, а вопрос — о другом`);
@@ -159,6 +165,7 @@ function checkClaim(claim: Claim, what: string, sources: Map<string, Source>, sc
     return source ? [source] : [];
   });
   for (const source of given) {
+    if (isRepealedHit(source.hit)) issues.push(`${what}: источник утратил силу и не может служить действующим основанием`);
     if (scope && !inScope(source.type, scope)) issues.push(`${what}: опирается на ${SOURCE_TYPE_LABELS[source.type].toLowerCase()}, а вопрос — о другом`);
   }
   const known = new Set([...given.flatMap(figuresOf), ...told]);

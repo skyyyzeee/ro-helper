@@ -40,7 +40,7 @@ const COUNTS: [string, LawFormat, number][] = [
   ['ch-mvd', 'points', 233], ['ch-gibdd', 'points', 84], ['ch-fso', 'points', 97], ['ch-hospital', 'points', 225], ['ch-news', 'points', 90],
   ['sk-structure', 'points', 69], ['sk-service', 'points', 21], ['sk-ranks', 'points', 12],
   ['rules-main', 'points', 99], ['rules-gov', 'points', 118], ['rules-crime', 'points', 51],
-  ['ch-army', 'law', 65], ['ch-army-discipline', 'law', 48], ['ch-army-guard', 'law', 45],
+  ['ch-army', 'law', 65], ['ch-army-discipline', 'law', 49], ['ch-army-guard', 'law', 45],
   ['sk-ethics', 'law', 10], ['sk-appeals', 'law', 17],
 ];
 
@@ -245,24 +245,25 @@ describe('sections that hold chapters (Положение о структуре 
     expect(structure.chapters.slice(0, 3).map((c) => [c.number, c.title, c.section])).toEqual([
       ['I', 'ОБЩИЕ ПОЛОЖЕНИЯ', 'Раздел I. ОБЩИЕ ПОЛОЖЕНИЯ И ШТАБ'],
       ['II', 'ШТАБ АРМИИ', 'Раздел I. ОБЩИЕ ПОЛОЖЕНИЯ И ШТАБ'],
-      ['III', 'ГАРНИЗОННАЯ КОМЕНДАТУРА', 'Раздел II. ПОДРАЗДЕЛЕНИЯ ВООРУЖЁННЫХ СИЛ'],
+      ['III', 'ГАРНИЗОННАЯ КОМЕНДАТУРА МОСКОВСКОЙ ОБЛАСТИ', 'Раздел I. ОБЩИЕ ПОЛОЖЕНИЯ И ШТАБ'],
     ]);
   });
 
   it('keeps a chapter of text alone, with no points, in its place', () => {
     expect(structure.chapters[0].preface.length).toBeGreaterThan(0);
-    expect(structure.chapters.map((c) => c.number)).toEqual(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI']);
+    expect(structure.chapters.map((c) => c.number)).toEqual(['I', 'II', 'III', '7', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI']);
   });
 
   it('reads the bare «1.» points of every chapter beside the «2.1» ones of chapter III', () => {
-    expect(structure.articles).toHaveLength(60);
+    expect(structure.articles).toHaveLength(495);
+    expect(new Set(structure.articles.map((a) => a.id)).size).toBe(495);
     expect(structure.issues).toEqual([]);
     const staff = structure.articles.find((a) => a.chapter === 'II' && a.number === '2')!;
     expect(staff.parts[0].text).toBe('Состав и подчинённость');
     expect(staff.parts.map((p) => p.text).join(' ')).toMatch(/генерал армии \(ГА\)/);
-    expect(structure.articles.filter((a) => a.chapter === 'III').map((a) => a.number)).toEqual([
-      '1', '2', '2.1', '2.2', '2.3', '3', '4', '4.1', '4.2', '4.3', '5', '6', '7', '8', '9',
-    ]);
+    expect(structure.articles.filter((a) => a.chapter === 'III').slice(0, 3).map((a) => a.number)).toEqual(['2.1', '2.2', '2.3']);
+    // The forum's new edition uses repeated numbering in named parts; none may overwrite another.
+    expect(structure.articles.filter((a) => a.chapter === 'III' && a.number === '3.3').length).toBeGreaterThan(1);
   });
 });
 

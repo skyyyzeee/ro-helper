@@ -2,7 +2,9 @@
   "id": "rules-war",
   "short": "Правила",
   "title": "Правила войны за территорию",
-  "aliases": ["пвзт"],
+  "aliases": [
+    "пвзт"
+  ],
   "kind": "rules",
   "category": "rules",
   "format": "points",
@@ -10,6 +12,6 @@
   "thread": 20184,
   "url": "https://forum.russia.online/threads/pravila-voiny-za-territoriyu.20184/",
   "posted": "2026-09-10T17:21:58+03:00",
-  "lastEdited": "2026-10-08T03:59:49+03:00",
-  "snapshotAt": "2026-10-08"
+  "lastEdited": "2026-11-17T18:25:35+03:00",
+  "snapshotAt": "2026-11-24"
 }

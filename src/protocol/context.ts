@@ -4,7 +4,7 @@
 import { articleText, chapterHeading, sourceLabel, type Organization, type ServerPack } from '../core';
 import { SOURCE_CHARS } from './evidence';
 import { playerData } from './prompt';
-import { isRepealedArticle, SOURCE_TYPE_LABELS, type Scope, type Source, type SourceType } from './sources';
+import { isRepealedHit, SOURCE_TYPE_LABELS, type Scope, type Source, type SourceType } from './sources';
 
 /** One side of the same sources: what the player wants to know, never other facts or other laws. */
 export type Perspective = 'state' | 'citizen' | 'lawyer' | 'crime';
@@ -99,7 +99,7 @@ export function buildContext(input: ContextInput): string {
 
 /** The found sources, each type apart: the model sees which is a law and which a rule of the server. */
 export function sourcesBlock(sources: Source[]): string {
-  sources = sources.filter((source) => !isRepealedArticle(source.hit.article));
+  sources = sources.filter((source) => !isRepealedHit(source.hit));
   if (!sources.length) return 'НАЙДЕННЫЕ ИСТОЧНИКИ: поиск по базе сервера ничего не нашёл.';
   const parts = BLOCK_ORDER.flatMap((type) => {
     const ofType = sources.filter((s) => s.type === type);

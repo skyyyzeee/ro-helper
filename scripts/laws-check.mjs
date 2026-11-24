@@ -105,6 +105,11 @@ createServer((request, response) => {
   const url = new URL(request.url ?? '/', BASE);
   const html = (body) => response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(body);
 
+  if (request.method === 'GET' && url.pathname === '/discover') {
+    const bookmark = 'javascript:' + encodeURIComponent(readFileSync(join(import.meta.dirname, 'laws-discover-page.js'), 'utf8'));
+    return html(page('Найти перенесённые уставы', `<h1>Найти перенесённые уставы</h1><p>Перетащите кнопку на панель закладок Chrome:</p><a class="bm" href="${bookmark}">Найти перенесённые уставы</a><p>Затем откройте форум и нажмите новую закладку. Она прочитает указатели разделов организаций всех трёх серверов и скачает laws-discovery.json со ссылками. Тексты базы не изменяются.</p>`));
+  }
+
   if (request.method === 'GET' && url.pathname === '/check') {
     const docs = snapshots();
     const job = JSON.stringify({ kind: 'laws-check', back: `${BASE}/result`, docs });

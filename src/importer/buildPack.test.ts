@@ -71,10 +71,11 @@ describe('bundled Тверской pack', () => {
     // The laws and charters checked on 27 September were edited from 21 to 26 September — before the version already
     // out (the project rules, dated by the check at 21:58) — so their entry, and the version, are the time of the import;
     // so are the documents of the organisations added after them, posted long before.
-    expect(TVERSKOI_PACK.version).toBe('2026-11-23T21:33:42.568Z');
-    expect(TVERSKOI_PACK.changes[0].documents.map((d) => d.documentId)).toEqual(['upk']);
-    expect(TVERSKOI_PACK.changes[0].documents[0].articles.map((a) => (a.after ?? a.before)!.number)).toEqual(['52', '78', '80.8', '85']);
-    const history = TVERSKOI_PACK.changes.slice(1);
+    expect(TVERSKOI_PACK.version).toBe('2026-11-24T04:32:13.002Z');
+    expect(TVERSKOI_PACK.changes[0].documents.map((d) => d.documentId)).toEqual(['uk', 'koap', 'fz7', 'ch-army', 'ch-army-discipline', 'ch-army-structure', 'rules-main', 'rules-war']);
+    expect(TVERSKOI_PACK.changes[1].documents.map((d) => d.documentId)).toEqual(['upk']);
+    expect(TVERSKOI_PACK.changes[1].documents[0].articles.map((a) => (a.after ?? a.before)!.number)).toEqual(['52', '78', '80.8', '85']);
+    const history = TVERSKOI_PACK.changes.slice(2);
     expect(TVERSKOI_PACK.documents.find((d) => d.id === 'ch-mvd')?.source).toMatchObject({ thread: 27660 });
     expect(history.map((c) => c.version)).toEqual([
       '2026-11-16T04:23:24+03:00', '2026-11-08T13:54:26+03:00', '2026-11-06T17:00:00+03:00', '2026-11-05T20:28:38+03:00', '2026-11-05T18:37:46+03:00', '2026-11-02T07:07:02+03:00', '2026-10-24T09:57:39+03:00', '2026-10-24T07:05:08+03:00', '2026-10-20T06:27:48+03:00', '2026-10-12T17:39:07+03:00', '2026-10-08T03:59:49+03:00', '2026-09-27T23:04:03+03:00', '2026-09-27T22:38:20+03:00', '2026-09-27T21:58:06+03:00', '2026-09-24T15:52:15+03:00', '2026-09-11T12:14:23+03:00',
