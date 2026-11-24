@@ -1,16 +1,16 @@
 // Runs on a page of forum.russia.online — from the bookmark «Проверить законы» or pasted into the browser's
-// console — after http://127.0.0.1:8788/check (npm run laws:check) has put the list of threads into window.name.
+// console. The helper embeds the current job; legacy bookmarks may still read window.name.
 //
 // The forum lets a person's browser in and not a server, so the threads are read here, in the person's own
 // session: each is fetched like a page they open (one at a time, with a pause), its text taken the way a snapshot
 // takes it — the longest post of the thread's author, as the browser lays it out — and compared with ours by its
-// checksum. Only the changed texts go back to 127.0.0.1:8788, in window.name, which survives the navigation (the
-// forum forbids its pages to call another address).
-(async () => {
+// checksum. Results are downloaded as JSON and selected on the local helper page. Cross-site navigation
+// may clear window.name, so it is not used to transport the current job or its result.
+(async (providedJob) => {
   const PAUSE_MS = 400;
-  let job;
+  let job = providedJob;
   try {
-    job = JSON.parse(window.name || 'null');
+    job ??= JSON.parse(window.name || 'null');
   } catch {
     job = null;
   }
@@ -127,7 +127,13 @@
     await new Promise((resolve) => setTimeout(resolve, PAUSE_MS));
   }
   box.remove();
-  say(`Готово: проверено ${threads.length}, изменилось ${changed.length}${unsure.length + failed.length ? `, проверить вручную ${unsure.length + failed.length}` : ''}. Отправляю в программу…`);
-  window.name = JSON.stringify({ kind: 'laws-result', checked: threads.length, changed, failed, unsure });
-  location.href = job.back;
-})();
+  const result = JSON.stringify({ kind: 'laws-result', checked: threads.length, changed, failed, unsure });
+  const download = document.createElement('a');
+  download.href = URL.createObjectURL(new Blob([result], { type: 'application/json' }));
+  download.download = 'laws-result.json';
+  document.body.appendChild(download);
+  download.click();
+  download.remove();
+  setTimeout(() => URL.revokeObjectURL(download.href), 1000);
+  say(`Готово: проверено ${threads.length}, изменилось ${changed.length}, проверить вручную ${unsure.length + failed.length}. Скачан laws-result.json. Вернитесь на страницу проверки и выберите этот файл.`);
+})(/* LAWS_CHECK_JOB */ null);

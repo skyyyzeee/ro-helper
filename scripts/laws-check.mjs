@@ -100,7 +100,6 @@ const page = (title, body) =>
   button{padding:10px 16px;border-radius:10px;border:0;background:#8fb3ff;color:#111;font-weight:700;cursor:pointer;font:inherit}
   li{margin:4px 0} code{background:#222;padding:1px 5px;border-radius:5px} .bad{color:#f6a}</style><body>${body}</body></html>`;
 
-const bookmarklet = () => `javascript:${encodeURIComponent(readFileSync(join(import.meta.dirname, 'laws-check-page.js'), 'utf8'))}`;
 
 createServer((request, response) => {
   const url = new URL(request.url ?? '/', BASE);
@@ -115,12 +114,26 @@ createServer((request, response) => {
         `<h1>Проверить законы на форуме</h1>
         <p>Документов: <b>${docs.length}</b>, тем на форуме: <b>${new Set(docs.map((d) => d.thread)).size}</b>.</p>
         <ol>
-          <li>Один раз перетащите эту кнопку на панель закладок: <a class="bm" href="${bookmarklet()}">Проверить законы</a></li>
-          <li>Нажмите <button id="go">Перейти на форум</button> — откроется форум (если он попросит подтвердить, что вы не робот, подтвердите).</li>
-          <li>На форуме нажмите закладку «Проверить законы». Внизу справа появится счётчик; через несколько минут браузер сам вернётся сюда с итогом.</li>
+          <li>Нажмите <button id="copy">Скопировать скрипт проверки</button>. <span id="copied"></span></li>
+          <li>Откройте <a href="${FORUM}" target="_blank" rel="noopener">форум в новой вкладке</a>.</li>
+          <li>На форуме откройте F12 → Console, вставьте скопированный скрипт и нажмите Enter. Дождитесь скачивания <code>laws-result.json</code>.</li>
+          <li>Вернитесь сюда и выберите результат: <input id="result" type="file" accept=".json,application/json"></li>
         </ol>
-        <p>Если закладка не срабатывает: на форуме нажмите F12 → «Console», вставьте содержимое <code>scripts/laws-check-page.js</code> и Enter.</p>
-        <script>document.getElementById('go').onclick = () => { window.name = ${JSON.stringify(job).replace(/</g, '\\u003c')}; location.href = ${JSON.stringify(FORUM)}; };</script>`,
+        <p>Скрипт читает публичные темы форума и скачивает итог. Данные сохраняются в репозитории только после выбора файла здесь. Старые закладки могут не работать: Chrome очищает window.name при смене сайта.</p>
+        <pre id="out"></pre>
+        <script>
+        const code = ${JSON.stringify(readFileSync(join(import.meta.dirname, 'laws-check-page.js'), 'utf8').replace('/* LAWS_CHECK_JOB */ null', job)).replace(/</g, '\\u003c')};
+        document.getElementById('copy').onclick = async () => {
+          try { await navigator.clipboard.writeText(code); document.getElementById('copied').textContent = 'Скопировано'; }
+          catch { document.getElementById('out').textContent = 'Не удалось скопировать. Разрешите копирование для локальной страницы и повторите.'; }
+        };
+        document.getElementById('result').onchange = async (event) => {
+          const file = event.target.files[0]; if (!file) return;
+          const out = document.getElementById('out'); out.textContent = 'Сохраняю…';
+          try { const response = await fetch('/save', { method: 'POST', body: await file.text() }); out.innerHTML = await response.text(); }
+          catch { out.textContent = 'Не удалось сохранить. Проверьте, что npm run laws:check ещё работает.'; }
+        };
+        </script>`,
       ),
     );
   }
