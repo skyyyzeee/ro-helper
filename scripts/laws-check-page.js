@@ -102,6 +102,8 @@
     return { post: best.post, score: best.score };
   }
 
+  const review = [];
+  const indexes = [];
   const changed = [];
   const failed = [];
   const unsure = [];
@@ -120,20 +122,32 @@
         failed.push({ server: doc.server, doc: doc.doc, error });
         continue;
       }
+      if (job.capture) { review.push({ server: doc.server, doc: doc.doc, thread, posts: posts.map(({ text, fnv, edited }) => ({ text, fnv, edited })) }); continue; }
       const verdict = judge(doc, posts);
       if (verdict.unsure) unsure.push({ server: doc.server, doc: doc.doc, why: verdict.unsure });
       else if (verdict.post) changed.push({ server: doc.server, doc: doc.doc, text: verdict.post.text, fnv: verdict.post.fnv, edited: verdict.post.edited, kept: Math.round(verdict.score * 100) });
     }
     await new Promise((resolve) => setTimeout(resolve, PAUSE_MS));
   }
+  for (const url of job.indexPages ?? []) {
+    const target = new URL(url);
+    if (target.origin !== location.origin) continue;
+    try {
+      const response = await fetch(target.href, { credentials: 'include' });
+      if (!response.ok) throw new Error(`код ${response.status}`);
+      const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+      indexes.push({ url, title: page.querySelector('h1')?.textContent.trim(), threads: [...page.querySelectorAll('.structItem-title a')].map(a => ({ title: a.textContent.trim(), url: new URL(a.getAttribute('href'), target).href })).filter(a => /\/threads\//.test(a.url)) });
+    } catch (error) { indexes.push({ url, error: String(error.message ?? error) }); }
+    await new Promise(resolve => setTimeout(resolve, PAUSE_MS));
+  }
   box.remove();
-  const result = JSON.stringify({ kind: 'laws-result', checked: threads.length, changed, failed, unsure });
+  const result = JSON.stringify({ kind: job.capture ? 'laws-review' : 'laws-result', checked: threads.length, changed, failed, unsure, ...(job.capture ? { review, indexes } : {}) });
   const download = document.createElement('a');
   download.href = URL.createObjectURL(new Blob([result], { type: 'application/json' }));
-  download.download = 'laws-result.json';
+  download.download = job.capture ? 'laws-review.json' : 'laws-result.json';
   document.body.appendChild(download);
   download.click();
   download.remove();
   setTimeout(() => URL.revokeObjectURL(download.href), 1000);
-  say(`Готово: проверено ${threads.length}, изменилось ${changed.length}, проверить вручную ${unsure.length + failed.length}. Скачан laws-result.json. Вернитесь на страницу проверки и выберите этот файл.`);
+  say(`Готово: проверено ${threads.length}, изменилось ${changed.length}, проверить вручную ${unsure.length + failed.length}. Скачан ${download.download}. ${job.capture ? 'Передайте файл для проверки новых редакций; база не изменена.' : 'Вернитесь на страницу проверки и выберите этот файл.'}`);
 })(/* LAWS_CHECK_JOB */ null);
