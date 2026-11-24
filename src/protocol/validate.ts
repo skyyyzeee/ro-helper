@@ -6,7 +6,7 @@ import { articleLabel, articleText, calculateDetention, leadPart, type Article, 
 import { cachedStem, words } from '../core/wordIndex';
 import type { AnswerNorm, Claim, GuideItem, LegalAnswer } from './answer';
 import { evidenceText } from './evidence';
-import { SOURCE_TYPE_LABELS, inScope, type Scope, type Source, type SourceType } from './sources';
+import { isRepealedArticle, SOURCE_TYPE_LABELS, inScope, type Scope, type Source, type SourceType } from './sources';
 import type { ShownVerdict } from './verdict';
 
 /**
@@ -104,6 +104,7 @@ function checkNorm(pack: ServerPack, sources: Map<string, Source>, norm: AnswerN
       : `${norm.ref || norm.source}: такой нормы нет в базе сервера «${pack.server.name}»`;
     return { norm, issues: [issue] };
   }
+  if (isRepealedArticle(source.hit.article)) return { norm, issues: [`${norm.ref || norm.source}: статья утратила силу и не может служить действующим основанием`] };
   const issues: string[] = [];
   const named = parseRef(norm.ref);
   const namedIs = (hit: SearchHit) =>

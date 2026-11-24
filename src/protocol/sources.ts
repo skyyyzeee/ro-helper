@@ -1,7 +1,10 @@
 // What kind of norm a source is, and which kinds a question may draw on. The kind comes from the document in the
 // server pack — never from the model — and the scope narrows the pack *before* the search, so a source outside it
 // cannot reach the AI at all, whatever the question asks for.
-import type { DocumentKind, LawDocument, SearchHit, ServerPack } from '../core';
+import type { Article, DocumentKind, LawDocument, SearchHit, ServerPack } from '../core';
+
+/** Repealed entries remain readable in the catalog but cannot ground an AI answer. */
+export const isRepealedArticle = (article: Pick<Article, 'title'>): boolean => /^утратил(?:а|о|и)?\s+силу[.!]?$/i.test(article.title.trim());
 
 /**
  * A source as the player is told it is: a law (the codes, the constitution, the federal laws), a rule of the
@@ -81,7 +84,7 @@ export function packInScope(pack: ServerPack, scope: Scope): ServerPack {
   let narrowed = byScope.get(scope);
   if (!narrowed) {
     const types = SCOPE_TYPES[scope];
-    narrowed = { ...pack, documents: pack.documents.filter((document) => types.includes(sourceTypeOf(document))) };
+    narrowed = { ...pack, documents: pack.documents.filter((document) => types.includes(sourceTypeOf(document))).map((document) => document.articles.some(isRepealedArticle) ? { ...document, articles: document.articles.filter((article) => !isRepealedArticle(article)) } : document) };
     byScope.set(scope, narrowed);
   }
   return narrowed;

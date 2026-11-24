@@ -2,7 +2,7 @@
 // a text may name only articles it was given and only figures they hold; an item of a list (a lawyer's demand, a
 // step of a detention) stands only on sources it names, that were given, of the scope's kind.
 import { articleText, type SearchHit } from '../core';
-import { SOURCE_TYPE_LABELS, inScope, type Scope, type Source } from './sources';
+import { isRepealedArticle, SOURCE_TYPE_LABELS, inScope, type Scope, type Source } from './sources';
 import { evidenceText } from './evidence';
 import { figures, namedArticles } from './validate';
 
@@ -56,8 +56,9 @@ export function groundItems<T extends { sources: string[] }>(items: T[], given: 
     const sources = item.sources.flatMap((id) => {
       const source = byId.get(id);
       if (!source) issues.push(`ссылка на источник ${id}, которого не передавали`);
+      else if (isRepealedArticle(source.hit.article)) issues.push('статья утратила силу');
       else if (!inScope(source.type, scope)) issues.push(`${SOURCE_TYPE_LABELS[source.type].toLowerCase()} — не по теме вопроса`);
-      return source && inScope(source.type, scope) ? [source] : [];
+      return source && !isRepealedArticle(source.hit.article) && inScope(source.type, scope) ? [source] : [];
     });
     if (!item.sources.length) issues.push('нет источника');
     return { item, sources, issues };
