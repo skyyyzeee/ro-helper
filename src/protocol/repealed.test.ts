@@ -27,6 +27,13 @@ describe('repealed laws are not AI authorities', () => {
     expect(result.issues).toContain('статья утратила силу');
   });
 
+  it('does not silently repair an explicit repealed reference to a different active source', () => {
+    const active = document.articles.find((a) => a.number === '52')!;
+    const given = labelSources([{ document, article: active }]);
+    const answer = parseAnswer(JSON.stringify({ situation: 'Задержание', norms: [{ source: 'S1', ref: 'УПК ст. 81.4', fit: 'direct', why: 'порядок задержания' }] }));
+    expect(validateAnswer(pack, given, answer, 'law').norms[0].issues.join(' ')).toContain('утратила силу');
+  });
+
   it('rejects a repealed norm in a restored or misbehaving answer, even with a real source id', () => {
     const answer = parseAnswer(JSON.stringify({ situation: 'Задержание', norms: [{ source: 'S1', ref: 'УПК ст. 81.4', fit: 'direct', charge: true, why: 'основание' }] }));
     const checked = validateAnswer(pack, legacy, answer, 'law');

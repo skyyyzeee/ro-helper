@@ -107,6 +107,8 @@ function checkNorm(pack: ServerPack, sources: Map<string, Source>, norm: AnswerN
   if (isRepealedArticle(source.hit.article)) return { norm, issues: [`${norm.ref || norm.source}: статья утратила силу и не может служить действующим основанием`] };
   const issues: string[] = [];
   const named = parseRef(norm.ref);
+  const namedTarget = named ? namedArticle(pack, norm.ref) : undefined;
+  if (namedTarget && isRepealedArticle(namedTarget)) return { norm, issues: [`${norm.ref}: статья утратила силу и не может служить действующим основанием`] };
   const namedIs = (hit: SearchHit) =>
     !!named && named.number === hit.article.number && (hit.document.short.toLowerCase() === named.short || hit.document.aliases.includes(named.short));
   if (named && !namedIs(source.hit)) {
