@@ -6,8 +6,8 @@ import { PACKS } from '../data/bundled';
 import { matchesRef } from './grade';
 import { hintTerms } from './hints';
 import { detentionSources, lawyerSources } from './officerChecks';
-import { QUICK_SOURCES, SOURCES } from './pipeline';
-import { packInScope } from './sources';
+import { analyse, QUICK_SOURCES, SOURCES } from './pipeline';
+import { inScope, packInScope } from './sources';
 
 interface Case {
   server?: string;
@@ -123,5 +123,36 @@ describe('the hints: the law\'s words for everyday ones', () => {
     expect(hintTerms('Игрок незаметно вытащил у прохожего телефон')).toEqual([]);
     // «документ» holds «мент», «копия» holds «коп»: no officer in them.
     expect(hintTerms('Он показал документ и ударил по столу')).toEqual([]);
+  });
+});
+
+
+describe('mixed evidence through the actual analysis pipeline', () => {
+  it.each(['quick', 'full'] as const)('%s includes both expected laws and rules without generated search phrases', async (depth) => {
+    const mixed = cases.filter((c) => c.category === 'MIXED' && c.expect?.length && !c.followUp && !c.mode);
+    expect(mixed.length).toBeGreaterThan(0);
+    const misses: string[] = [];
+    for (const c of mixed) {
+      const result = await analyse({ pack: PACKS[c.server ?? 'tverskoi'], message: c.situation, depth, scope: 'mixed', terms: [],
+        provider: { complete: async () => JSON.stringify({ situation: 'Retrieval test', norms: [], notFound: true }) } });
+      for (const ref of c.expect ?? []) if (!matchesRef(ref, result.sources.map((s) => s.hit))) misses.push(`${c.server}: ${c.situation}: ${ref}`);
+    }
+    expect(misses).toEqual([]);
+  });
+});
+
+
+describe.each([['law', 'LAW'], ['server_rule', 'SERVER_RULE']] as const)('%s evidence through the actual analysis pipeline', (scope, category) => {
+  it.each(['quick', 'full'] as const)('%s retrieves expected norms and keeps sources within the selected scope', async (depth) => {
+    const selected = cases.filter((c) => c.category === category && c.expect?.length && !c.followUp && !c.mode);
+    expect(selected.length).toBeGreaterThan(0);
+    const misses: string[] = [];
+    for (const c of selected) {
+      const result = await analyse({ pack: PACKS[c.server ?? 'tverskoi'], message: c.situation, depth, scope, terms: [],
+        provider: { complete: async () => JSON.stringify({ situation: 'Retrieval test', norms: [], notFound: true }) } });
+      expect(result.sources.every((source) => inScope(source.type, scope)), c.situation).toBe(true);
+      for (const ref of c.expect ?? []) if (!matchesRef(ref, result.sources.map((source) => source.hit))) misses.push(`${c.server}: ${c.situation}: ${ref}`);
+    }
+    expect(misses).toEqual([]);
   });
 });

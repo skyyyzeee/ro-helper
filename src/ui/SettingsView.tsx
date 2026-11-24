@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type K
 import { packLabel, type Organization, type ServerPack } from '../core';
 import { usePlatform } from '../platform/PlatformContext';
 import { USAGE_SHARE_KEY } from '../account/usage';
+import { PinnedCardsList, type PinnedCardSummary } from './PinnedCardsList';
 import { AccountCard, AccountSection } from './ProfileView';
 import { AdminSection } from './AdminView';
 import { AiMarksAdmin } from './AiMarksAdmin';
@@ -71,6 +72,18 @@ const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
 /** The admin's part, after the rest — shown to the admin only. */
 const ADMIN_SECTION = { id: 'admin' as const, label: 'Администратор', icon: <AdminIcon /> };
 const sectionId = (id: SettingsSection) => `settings-${id}`;
+const SECTION_HINTS: Record<SettingsSection, string> = {
+  account: 'Профиль, вход и синхронизация.',
+  main: 'Сервер, организация и поведение приложения.',
+  ai: 'Источник ответов и голосовой ввод.',
+  look: 'Тема, цвет и читаемость интерфейса.',
+  pinned: 'Карточки, заметки и сохранённые наборы.',
+  laws: 'Актуальность базы и обновления приложения.',
+  keys: 'Сочетания клавиш и заготовки для чата.',
+  faq: 'Ответы на частые вопросы.',
+  about: 'Версия, авторы и обратная связь.',
+  admin: 'Управление доступом и обратной связью.',
+};
 
 /** One block of the settings, with its heading. */
 function Block({ title, children }: { title: string; children: ReactNode }) {
@@ -656,7 +669,8 @@ export interface SettingsViewProps {
   /** The theme and the accent; without it (a bare overlay in tests) the choice is not shown. */
   appearance?: AppearanceControl;
   /** Cards pinned over the game: how many, and unpinning them all at once. */
-  pinned: number;
+  pinnedCards: PinnedCardSummary[];
+  onUnpinCard: (id: string) => void;
   onUnpinAll: () => void;
   /** Saved sets of pinned cards, what the next one is called unless named, and saving, showing, deleting one. */
   presets: { id: string; name: string; count: number }[];
@@ -674,6 +688,8 @@ export interface SettingsViewProps {
   onHistory: () => void;
   /** A part to bring into view — the account from the side column's profile, what is pinned from its pin — asked for at `at`. */
   focus?: { section: SettingsSection; at: number };
+  /** Keeps the current page when a child screen temporarily replaces the settings. */
+  onSectionChange?: (section: SettingsSection) => void;
 }
 
 /** The settings screen: what the helper works with, how it looks, the laws, updates and the app itself. */
@@ -698,7 +714,8 @@ export function SettingsView({
   opacity,
   onOpacity,
   appearance,
-  pinned,
+  pinnedCards,
+  onUnpinCard,
   onUnpinAll,
   presets,
   nextPresetName,
@@ -711,47 +728,28 @@ export function SettingsView({
   laws,
   onHistory,
   focus,
+  onSectionChange,
 }: SettingsViewProps) {
+  const pinned = pinnedCards.length;
   const platform = usePlatform();
-  const root = useRef<HTMLDivElement>(null);
-  const [active, setActive] = useState<SettingsSection>(focus?.section ?? 'account');
-  /** While a part picked in the column scrolls into view, the scrolling doesn't move the mark. */
-  const picked = useRef(0);
-
-  const show = (section: SettingsSection, smooth: boolean) => {
+  const [active, setActive] = useState<SettingsSection>(focus?.section ?? 'main');
+  const page = useRef<HTMLDivElement>(null);
+  const show = (section: SettingsSection) => {
     setActive(section);
-    picked.current = Date.now();
-    document.getElementById(sectionId(section))?.scrollIntoView?.({ block: 'start', behavior: smooth ? 'smooth' : 'auto' });
+    onSectionChange?.(section);
   };
   useEffect(() => {
-    if (focus) show(focus.section, false);
-    // Only when asked again, not on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focus?.at]);
-
+    if (focus) setActive(focus.section);
+  }, [focus?.section, focus?.at]);
+  useEffect(() => {
+    if (page.current) page.current.scrollTop = 0;
+  }, [active, focus?.at]);
   const can = useCapabilities();
   const sections = can.has('admin') ? [...SECTIONS, ADMIN_SECTION] : SECTIONS;
-  const sectionsNow = useRef(sections);
-  sectionsNow.current = sections;
-
-  // The column marks the part being read: the last one whose top has come up to the top.
   useEffect(() => {
-    const scroller = root.current?.closest('.overlay__content');
-    if (!scroller) return;
-    const onScroll = () => {
-      if (Date.now() - picked.current < 800) return;
-      const top = scroller.getBoundingClientRect().top + 48;
-      let current: SettingsSection = 'account';
-      for (const id of sectionsNow.current.map((section) => section.id)) {
-        const element = document.getElementById(sectionId(id));
-        if (element && element.getBoundingClientRect().top <= top) current = id;
-      }
-      if (scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2) current = sectionsNow.current[sectionsNow.current.length - 1].id;
-      setActive(current);
-    };
-    scroller.addEventListener('scroll', onScroll, { passive: true });
-    return () => scroller.removeEventListener('scroll', onScroll);
-  }, []);
+    if (active === 'admin' && !can.has('admin')) setActive('main');
+  }, [active, can]);
+  const title = active === 'account' ? 'Аккаунт' : sections.find((section) => section.id === active)?.label ?? 'Основное';
   // The author's anonymous counts: on unless turned off.
   const [share, setShare] = useState(true);
   // The app's error reports: on unless turned off (reports.ts).
@@ -763,16 +761,16 @@ export function SettingsView({
   const checking = updates.status.kind === 'checking' || updates.status.kind === 'installing';
 
   return (
-    <div className="settings" role="group" aria-label="Настройки" ref={root}>
+    <div className="settings" role="group" aria-label="Настройки">
       <nav className="setnav" aria-label="Разделы настроек">
-        <AccountCard current={active === 'account'} onSelect={() => show('account', true)} />
+        <AccountCard current={active === 'account'} onSelect={() => show('account')} />
         {sections.map((section) => (
           <button
             key={section.id}
             className="setnav__item"
             type="button"
             aria-current={active === section.id ? 'true' : undefined}
-            onClick={() => show(section.id, true)}
+            onClick={() => show(section.id)}
           >
             {section.icon}
             <span>{section.label}</span>
@@ -780,14 +778,18 @@ export function SettingsView({
         ))}
       </nav>
 
-      <div className="settings__body">
-      <div className="settings__part" id={sectionId('account')}>
+      <div className="settings__body" ref={page}>
+      <header className="settings__page-head">
+        <h2>{title}</h2>
+        <p>{SECTION_HINTS[active]}</p>
+      </header>
+      <div className="settings__part" id={sectionId('account')} hidden={active !== 'account'}>
         <Block title="Аккаунт">
           <AccountSection pack={pack} organization={organization} onMemos={onMemos} />
         </Block>
       </div>
 
-      <div className="settings__part" id={sectionId('main')}>
+      <div className="settings__part" id={sectionId('main')} hidden={active !== 'main'}>
       <Block title="Сервер и организация">
         <Row label="Сервер" value={pack.server.name}>
           <button className="settings__button" type="button" aria-label="Сменить сервер" onClick={onServer}>
@@ -822,7 +824,7 @@ export function SettingsView({
       </Block>
       </div>
 
-      <div className="settings__part" id={sectionId('ai')}>
+      <div className="settings__part" id={sectionId('ai')} hidden={active !== 'ai'}>
       <Block title="ИИ-разбор">
         <AiProviderField />
       </Block>
@@ -844,7 +846,7 @@ export function SettingsView({
       </Block>
       </div>
 
-      <div className="settings__part" id={sectionId('look')}>
+      <div className="settings__part" id={sectionId('look')} hidden={active !== 'look'}>
       <Block title="Внешний вид">
         {appearance && <AppearancePicker appearance={appearance} organization={organization?.id ?? 'none'} />}
         <label className="set__row">
@@ -870,7 +872,7 @@ export function SettingsView({
       </Block>
       </div>
 
-      <div className="settings__part" id={sectionId('pinned')}>
+      <div className="settings__part" id={sectionId('pinned')} hidden={active !== 'pinned'}>
       <Block title="Закреплено поверх игры">
         <Row label={cardsLabel(pinned)}>
           {pinned > 0 && (
@@ -879,7 +881,8 @@ export function SettingsView({
             </button>
           )}
         </Row>
-        <p className="set__hint">Карточки перетаскиваются за шапку; брошенная на другую встаёт к ней с той стороны, куда её бросили.</p>
+        <PinnedCardsList cards={pinnedCards} onUnpin={onUnpinCard} />
+        {pinned > 0 && <p className="set__hint">Карточки перетаскиваются за шапку; брошенная на другую встаёт к ней с той стороны, куда её бросили.</p>}
         {note && <NotesField note={note} />}
 
         <h4 className="set__sub">Наборы</h4>
@@ -906,7 +909,7 @@ export function SettingsView({
       </Block>
       </div>
 
-      <div className="settings__part" id={sectionId('laws')}>
+      <div className="settings__part" id={sectionId('laws')} hidden={active !== 'laws'}>
       <Block title="Законы">
         <Row label="Актуально на" value={formatDate(pack.version)} />
         <Row label="Версия законов" value={packLabel(pack)} />
@@ -942,7 +945,7 @@ export function SettingsView({
       </Block>
       </div>
 
-      <div className="settings__part" id={sectionId('keys')}>
+      <div className="settings__part" id={sectionId('keys')} hidden={active !== 'keys'}>
       <Block title="Горячие клавиши">
         <KeysBlock
           hotkey={hotkey}
@@ -960,7 +963,7 @@ export function SettingsView({
       </Block>
       </div>
 
-      <div className="settings__part" id={sectionId('faq')}>
+      <div className="settings__part" id={sectionId('faq')} hidden={active !== 'faq'}>
         <Block title="Частые вопросы">
           <FaqSection />
           <p className="set__hint">Не нашли ответа, нашли ошибку в статье или есть идея — напишите нам в Discord.</p>
@@ -971,7 +974,7 @@ export function SettingsView({
         </Block>
       </div>
 
-      <div className="settings__part" id={sectionId('about')}>
+      <div className="settings__part" id={sectionId('about')} hidden={active !== 'about'}>
       <Block title="О программе">
         <div className="set__row settings__about">
           <span>
@@ -1027,7 +1030,7 @@ export function SettingsView({
       </div>
 
       {can.has('admin') && (
-        <div className="settings__part" id={sectionId('admin')}>
+        <div className="settings__part" id={sectionId('admin')} hidden={active !== 'admin'}>
           <Block title="Администратор">
             <AdminSection />
           </Block>

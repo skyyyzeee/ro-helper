@@ -2,8 +2,8 @@
 // here, in the environment of this server (see env.example) — never in the app, which anyone can take apart.
 //
 // It asks GigaChat (Sber's free tier) first when its key is set, and any OpenAI-compatible API (ProxyAPI, VseGPT…)
-// when GigaChat refuses, is busy or has used up its free tokens — so the paid API pays only for what GigaChat does
-// not answer. It keeps the spending in check: a few questions a day per computer and per address, and a daily
+// when explicitly enabled and budgeted. GigaChat account billing is configured separately; this server cannot
+// guarantee that its account has no paid token package. It keeps the spending in check: a few questions a day per computer and per address, and a daily
 // budget in rubles for everyone together.
 // Plain Node (18+ — Ubuntu 24.04 ships 18: no global `crypto`, import what is used), no packages: `node server.mjs`, behind Caddy for HTTPS (see README.md).
 import { createHash, createPublicKey, randomUUID, timingSafeEqual, verify } from 'node:crypto';
@@ -18,6 +18,8 @@ const CONFIG = {
   /** The OpenAI-compatible API and its key: ProxyAPI, VseGPT or another. */
   apiBase: env('AI_BASE_URL', 'https://api.proxyapi.ru/openai/v1').replace(/\/$/, ''),
   apiKey: env('AI_API_KEY', ''),
+  /** Paid upstream calls require explicit opt-in, even when a key is already configured. */
+  paidEnabled: env('PAID_API_ENABLED', '0') === '1',
   /**
    * Models to ask, in turn: when one is busy (429 — the provider's limit for that model is taken up), the next
    * is tried. The first is AI_MODEL; AI_MODELS, comma-separated, replaces the whole list.
@@ -37,7 +39,7 @@ const CONFIG = {
    * Everyone together may spend this much a day. Past it the paid API rests until midnight (Moscow): with GigaChat
    * set up, the questions go on to it; without, the AI rests too.
    */
-  budgetPerDay: num('BUDGET_RUB_PER_DAY', 20),
+  budgetPerDay: num('BUDGET_RUB_PER_DAY', 0),
   /** Per computer and per address, a day. */
   questionsPerDevice: num('QUESTIONS_PER_DEVICE', 50),
   /**
@@ -177,7 +179,8 @@ function rollDay() {
  */
 function refusal(device, ip, kind, account, leader = false, admin = false) {
   rollDay();
-  // Past the budget GigaChat, free, goes on answering; only with no GigaChat does the AI rest.
+  if (!CONFIG.gigachat.key && !CONFIG.paidEnabled) return 'Платный ИИ отключён. Поиск по базе и калькулятор продолжают работать.';
+  // The separately configured GigaChat account remains available past the paid API budget.
   if (state.spent >= CONFIG.budgetPerDay && !CONFIG.gigachat.key) return 'На сегодня ИИ Кремлёвского Ассистента исчерпал общий лимит. Он снова заработает после полуночи по Москве.';
   // The admins' exam answers past the computer's, the address's and the account's limits; the day's budget still counts.
   if (admin) return null;
@@ -253,6 +256,9 @@ async function inTurn(models, call) {
 
 /** The paid OpenAI-compatible API, model after model while they are busy. */
 async function paid(request, models = CONFIG.models) {
+  // All routes, including admin trials, pass this gate before any upstream request.
+  if (!CONFIG.paidEnabled) throw new UpstreamError(503, null, 'paid API disabled');
+  if (!(Number.isFinite(CONFIG.budgetPerDay) && CONFIG.budgetPerDay > 0 && state.spent < CONFIG.budgetPerDay)) throw new UpstreamError(429, null, 'paid budget exhausted');
   const started = Date.now();
   try {
     const answer = await paidOnce(request, models);
@@ -313,13 +319,34 @@ class Declined extends Error {
 
 /** The access token: its authorization key is exchanged for one that lasts 30 minutes, renewed a minute early. */
 let token = { value: '', until: 0 };
-async function gigachatToken() {
+/** A bounded transport retry; refusals, quota exhaustion and invalid requests are not retried. */
+async function gigaFetch(url, init, deadline) {
+  for (let attempt = 0; ; attempt++) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) throw new Declined('timeout');
+    let response;
+    try {
+      response = await fetch(url, { ...init, signal: AbortSignal.timeout(Math.max(1, remaining)) });
+    } catch {
+      if (attempt || Date.now() >= deadline) throw new Declined('network');
+    }
+    const retryable = !response || [429, 500, 502, 503, 504].includes(response.status);
+    if (!retryable || attempt) return response;
+    const seconds = Number(response?.headers.get('retry-after'));
+    const pause = Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds * 1000, 3000) : 500;
+    await response?.body?.cancel();
+    if (Date.now() + pause >= deadline) throw new Declined('timeout');
+    await new Promise((resolve) => setTimeout(resolve, pause));
+  }
+}
+
+async function gigachatToken(deadline) {
   if (token.value && Date.now() < token.until - 60_000) return token.value;
-  const response = await fetch(CONFIG.gigachat.oauth, {
+  const response = await gigaFetch(CONFIG.gigachat.oauth, {
     method: 'POST',
     headers: { Authorization: `Basic ${CONFIG.gigachat.key}`, RqUID: randomUUID(), 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
     body: new URLSearchParams({ scope: CONFIG.gigachat.scope }),
-  });
+  }, deadline);
   const body = await response.json().catch(() => null);
   if (!response.ok || !body?.access_token) throw new Declined(`token ${response.status}: ${body?.message ?? ''}`);
   token = { value: body.access_token, until: Number(body.expires_at) || Date.now() + 30 * 60_000 };
@@ -337,6 +364,7 @@ function inGigachatTurn(call, model) {
     const started = Date.now();
     let ok = false;
     try {
+      if (started - queued > 20000) throw new Declined('queue-timeout');
       const result = await call();
       ok = true;
       return result;
@@ -386,22 +414,29 @@ function jsonOf(text) {
   return null;
 }
 
-async function gigachat({ system, messages, json, think }, model = CONFIG.gigachat.model) {
+async function gigachat({ system, messages, json, think }, model = CONFIG.gigachat.model, deadline = Date.now() + 45000) {
   return inGigachatTurn(async () => {
-    const response = await fetch(`${CONFIG.gigachat.api}/chat/completions`, {
+    const send = async () => gigaFetch(`${CONFIG.gigachat.api}/chat/completions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await gigachatToken()}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await gigachatToken(deadline)}` },
       // Weighing a lawyer's demands or a detention step by step asks for the longer answer: cut at the limit, its JSON
       // breaks and the whole answer is lost.
       body: JSON.stringify({ model, messages: [{ role: 'system', content: system }, ...messages], max_tokens: think ? CONFIG.maxOutputTokens * 2 : CONFIG.maxOutputTokens }),
-    });
+    }, deadline);
+    let response = await send();
+    if (response.status === 401) {
+      await response.body?.cancel();
+      token = { value: '', until: 0 };
+      response = await send();
+    }
     const body = await response.json().catch(() => null);
-    // 401: the token went stale early — the next request takes a new one. 402/429: the free tokens are used up, or too fast.
+    // A second 401 invalidates the replacement token too. Quota failures are not retried.
     if (response.status === 401) token = { value: '', until: 0 };
     if (!response.ok) throw new Declined(`http ${response.status}`);
     const choice = body?.choices?.[0];
     const said = choice?.message?.content ?? '';
     // Sber's filter answers some topics (drugs, say) with a stock text and this reason — whatever the prompt says.
+    if (choice?.finish_reason === 'length') throw new Declined('truncated');
     if (choice?.finish_reason === 'blacklist') throw new Declined('blacklist');
     if (!said.trim()) throw new Declined('empty');
     const text = json ? jsonOf(said) : said;
@@ -416,43 +451,31 @@ async function gigachat({ system, messages, json, think }, model = CONFIG.gigach
   }, model);
 }
 
-/**
- * Who answers. The player's question itself goes to the ANALYSIS_MODEL ones in turn — a GigaChat model on its
- * free tokens, a paid one while the day's budget allows. Everything else, and what none of them answered: GigaChat
- * first, when it is set up; the paid API for what it does not answer, while the budget allows.
- */
+/** GigaChat first, including explicit GigaChat analysis preferences; the paid API is the last opt-in reserve. */
 async function chat(request, kind = 'question') {
-  const canPay = !!CONFIG.apiKey && state.spent < CONFIG.budgetPerDay;
-  if (kind === 'question') {
-    for (const name of CONFIG.analysisModels) {
-      const giga = name.startsWith('gigachat:');
-      if (giga ? !CONFIG.gigachat.key : !canPay) continue;
+  const canPay = CONFIG.paidEnabled && !!CONFIG.apiKey && Number.isFinite(CONFIG.budgetPerDay) && CONFIG.budgetPerDay > 0 && state.spent < CONFIG.budgetPerDay;
+  const gigaDeadline = Date.now() + 45000;
+  const preferred = kind === 'question' ? CONFIG.analysisModels : [];
+  const gigaModels = [...new Set([...preferred.filter((name) => name.startsWith('gigachat:')).map((name) => name.slice('gigachat:'.length)), CONFIG.gigachat.model])];
+  if (CONFIG.gigachat.key) {
+    for (const model of gigaModels) {
       try {
-        const answer = giga ? await gigachat(request, name.slice('gigachat:'.length)) : await paid(request, [name]);
-        state.answered[giga ? 'gigachat' : 'paid'] += 1;
+        const answer = await gigachat(request, model, gigaDeadline);
+        state.answered.gigachat += 1;
         dirty = true;
         return answer;
       } catch (error) {
-        // Its free tokens used up (402), busy, or the answer unreadable: the next one answers.
-        console.error(new Date().toISOString(), `${name}:`, error.message ?? error);
+        const why = error instanceof Declined ? error.message.split(' ')[0] : 'network';
+        state.answered.why[why] = (state.answered.why[why] ?? 0) + 1;
+        dirty = true;
+        // A shared queue or account quota will not improve by asking another model immediately.
+        if (['queue', 'queue-timeout', 'timeout', 'network', 'http', 'token', 'blacklist'].includes(why)) break;
       }
     }
+    if (!canPay) throw new UpstreamError(502, null, 'GigaChat unavailable; paid reserve disabled or exhausted');
   }
-  if (CONFIG.gigachat.key) {
-    try {
-      const answer = await gigachat(request);
-      state.answered.gigachat += 1;
-      dirty = true;
-      return answer;
-    } catch (error) {
-      const why = error instanceof Declined ? error.message.split(' ')[0] : 'network';
-      state.answered.why[why] = (state.answered.why[why] ?? 0) + 1;
-      if (!(error instanceof Declined) || why === 'token') console.error(new Date().toISOString(), 'GigaChat:', error.message ?? error);
-      // Past the budget, or with no paid API, what GigaChat declines is told as the AI not answering.
-      if (!canPay) throw new UpstreamError(502, null, `GigaChat: ${why}`);
-    }
-  }
-  const answer = await paid(request);
+  const paidModels = preferred.filter((name) => !name.startsWith('gigachat:'));
+  const answer = await paid(request, paidModels.length ? paidModels : CONFIG.models);
   state.answered.paid += 1;
   dirty = true;
   return answer;
@@ -868,7 +891,7 @@ const server = createServer(async (request, response) => {
   }
   if (request.method === 'GET' && request.url === '/v1/status') {
     rollDay();
-    return send(response, 200, { ok: true, open: state.spent < CONFIG.budgetPerDay || !!CONFIG.gigachat.key, answered: state.answered, spent: Math.round(state.spent * 100) / 100, marks: state.marks ?? 0, cache: cache.size, timing: state.timing ?? {} });
+    return send(response, 200, { ok: true, open: !!CONFIG.gigachat.key || (CONFIG.paidEnabled && !!CONFIG.apiKey && Number.isFinite(CONFIG.budgetPerDay) && CONFIG.budgetPerDay > 0 && state.spent < CONFIG.budgetPerDay), answered: state.answered, spent: Math.round(state.spent * 100) / 100, marks: state.marks ?? 0, cache: cache.size, timing: state.timing ?? {} });
   }
   if (request.method === 'GET' && request.url.startsWith('/v1/feedback')) {
     if (!isAdmin(request)) return send(response, 403, { error: 'Нужен ключ администратора.' });

@@ -100,27 +100,61 @@ const page = (title, body) =>
   button{padding:10px 16px;border-radius:10px;border:0;background:#8fb3ff;color:#111;font-weight:700;cursor:pointer;font:inherit}
   li{margin:4px 0} code{background:#222;padding:1px 5px;border-radius:5px} .bad{color:#f6a}</style><body>${body}</body></html>`;
 
-const bookmarklet = () => `javascript:${encodeURIComponent(readFileSync(join(import.meta.dirname, 'laws-check-page.js'), 'utf8'))}`;
 
 createServer((request, response) => {
   const url = new URL(request.url ?? '/', BASE);
   const html = (body) => response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(body);
 
+  if (request.method === 'GET' && url.pathname === '/recover') {
+    const candidates = JSON.parse(readFileSync(join(root, 'docs/FORUM_REPLACEMENTS_2026-11-24.json'), 'utf8'));
+    const docs = candidates.map((candidate) => ({ ...snapshots().find((doc) => doc.server === candidate.server && doc.doc === candidate.doc), thread: candidate.thread }));
+    const job = { kind: 'laws-check', back: `${BASE}/result`, docs, capture: true, indexPages: [
+      'https://forum.russia.online/forums/pravitel-stvo.1544/',
+      'https://forum.russia.online/forums/fsb.1525/',
+      'https://forum.russia.online/forums/mvd.1597/',
+      'https://forum.russia.online/forums/vesti-moskvy.1600/',
+    ] };
+    const code = readFileSync(join(import.meta.dirname, 'laws-check-page.js'), 'utf8').replace('/* LAWS_CHECK_JOB */ null', JSON.stringify(job));
+    return html(page('Проверить новые темы', `<h1>Проверить новые темы</h1><p>Найдены12кандидатов взамен недоступных тем. Перетащите кнопку на панель закладок:</p><a class="bm" href="javascript:${encodeURIComponent(code)}">Прочитать новые уставы · 12</a><p>На форуме нажмите новую закладку. Скачанный laws-review.json передайте для проверки текстов. База не изменяется. Дополнительно читаются указатели4разделов для поиска остальных тем.</p>`));
+  }
+
+  if (request.method === 'GET' && url.pathname === '/discover') {
+    const bookmark = 'javascript:' + encodeURIComponent(readFileSync(join(import.meta.dirname, 'laws-discover-page.js'), 'utf8'));
+    return html(page('Найти перенесённые уставы', `<h1>Найти перенесённые уставы</h1><p>Перетащите кнопку на панель закладок Chrome:</p><a class="bm" href="${bookmark}">Найти перенесённые уставы</a><p>Затем откройте форум и нажмите новую закладку. Она прочитает указатели разделов организаций всех трёх серверов и скачает laws-discovery.json со ссылками. Тексты базы не изменяются.</p>`));
+  }
+
   if (request.method === 'GET' && url.pathname === '/check') {
     const docs = snapshots();
     const job = JSON.stringify({ kind: 'laws-check', back: `${BASE}/result`, docs });
+    const code = readFileSync(join(import.meta.dirname, 'laws-check-page.js'), 'utf8').replace('/* LAWS_CHECK_JOB */ null', job);
+    const bookmark = 'javascript:' + encodeURIComponent(code);
     return html(
       page(
         'Проверить законы',
         `<h1>Проверить законы на форуме</h1>
         <p>Документов: <b>${docs.length}</b>, тем на форуме: <b>${new Set(docs.map((d) => d.thread)).size}</b>.</p>
         <ol>
-          <li>Один раз перетащите эту кнопку на панель закладок: <a class="bm" href="${bookmarklet()}">Проверить законы</a></li>
-          <li>Нажмите <button id="go">Перейти на форум</button> — откроется форум (если он попросит подтвердить, что вы не робот, подтвердите).</li>
-          <li>На форуме нажмите закладку «Проверить законы». Внизу справа появится счётчик; через несколько минут браузер сам вернётся сюда с итогом.</li>
+          <li>Перетащите эту новую кнопку на панель закладок Chrome: <a class="bm" href="${bookmark}">Проверить все законы · 24.11</a></li>
+          <li>Откройте <a href="${FORUM}" target="_blank" rel="noopener">форум в новой вкладке</a>.</li>
+          <li>На форуме нажмите новую закладку «Проверить все законы · 24.11». Дождитесь скачивания <code>laws-result.json</code>. Консоль не нужна.</li>
+          <li>Вернитесь сюда и выберите результат: <input id="result" type="file" accept=".json,application/json"></li>
         </ol>
-        <p>Если закладка не срабатывает: на форуме нажмите F12 → «Console», вставьте содержимое <code>scripts/laws-check-page.js</code> и Enter.</p>
-        <script>document.getElementById('go').onclick = () => { window.name = ${JSON.stringify(job).replace(/</g, '\\u003c')}; location.href = ${JSON.stringify(FORUM)}; };</script>`,
+        <details><summary>Скрипт для ручной проверки</summary><button id="copy">Скопировать скрипт проверки</button> <span id="copied"></span></details>
+        <p>Скрипт читает публичные темы форума и скачивает итог. Данные сохраняются в репозитории только после выбора файла здесь. Старые закладки могут не работать: Chrome очищает window.name при смене сайта.</p>
+        <pre id="out"></pre>
+        <script>
+        const code = ${JSON.stringify(code).replace(/</g, '\\u003c')};
+        document.getElementById('copy').onclick = async () => {
+          try { await navigator.clipboard.writeText(code); document.getElementById('copied').textContent = 'Скопировано'; }
+          catch { document.getElementById('out').textContent = 'Не удалось скопировать. Разрешите копирование для локальной страницы и повторите.'; }
+        };
+        document.getElementById('result').onchange = async (event) => {
+          const file = event.target.files[0]; if (!file) return;
+          const out = document.getElementById('out'); out.textContent = 'Сохраняю…';
+          try { const response = await fetch('/save', { method: 'POST', body: await file.text() }); out.innerHTML = await response.text(); }
+          catch { out.textContent = 'Не удалось сохранить. Проверьте, что npm run laws:check ещё работает.'; }
+        };
+        </script>`,
       ),
     );
   }

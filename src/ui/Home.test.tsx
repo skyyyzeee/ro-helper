@@ -68,3 +68,35 @@ describe('the article counts, sent', () => {
     expect(platform.settings.get('usage.articles')).toEqual({});
   });
 });
+
+describe('personal home workspace', () => {
+  it('keeps useful empty states for a fresh profile', async () => {
+    await renderApp();
+    expect(screen.getByRole('heading', { name: 'Избранное' })).toBeInTheDocument();
+    expect(screen.getByText(/Добавьте нужные статьи в избранное/)).toBeInTheDocument();
+    expect(screen.getByText(/Здесь будут статьи, которые вы открывали/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Очистить недавние' })).not.toBeInTheDocument();
+  });
+
+  it('walks personal articles before server suggestions and keeps favourites when clearing history', async () => {
+    const { user } = await renderApp({ settings: {
+      'favorites:tverskoi': ['uk-87#1'],
+      'recent:tverskoi': ['koap-9.8#1'],
+      'popular:tverskoi': { at: Date.now(), keys: ['uk-136#1'] },
+    } });
+    await screen.findByRole('list', { name: 'Популярное у игроков' });
+    const selected = () => document.querySelector('.row--selected');
+    expect(selected()).toHaveTextContent('ст. 87 ч. 1');
+    await user.keyboard('{ArrowDown}');
+    expect(selected()).toHaveTextContent('ст. 9.8 ч. 1');
+    await user.keyboard('{ArrowDown}');
+    expect(selected()).toHaveTextContent('ст. 136 ч. 1');
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('article')).toHaveAccessibleName('Статья 136. Халатность');
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: 'Очистить недавние' }));
+    expect(screen.queryByRole('list', { name: 'Недавние' })).not.toBeInTheDocument();
+    expect(screen.getByText(/Здесь будут статьи, которые вы открывали/)).toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'Избранное' })).getAllByRole('listitem')).toHaveLength(1);
+  });
+});

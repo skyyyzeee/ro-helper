@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -204,6 +205,7 @@ describe('the overlay, for the quick search', () => {
     const { platform, user } = await renderApp();
     await vi.waitFor(() => expect(platform.state.quickHotkey).toBe('Alt+S'));
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Клавиши');
     const block = within(screen.getByRole('group', { name: 'Настройки' })).getByRole('region', { name: 'Горячие клавиши' });
     await user.click(within(block).getByRole('switch', { name: 'Быстрый поиск' }));
     expect(platform.settings.get('quick.hotkey')).toBe('');

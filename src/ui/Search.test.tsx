@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { packLabel } from '../core';
@@ -107,6 +108,7 @@ describe('finding an article by number', () => {
   it('shows the version of the laws in the settings (roadmap 1Б)', async () => {
     const { user } = await renderApp();
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Законы и обновления');
     const laws = screen.getByRole('region', { name: 'Законы' });
     expect(laws).toHaveTextContent('Версия законов');
     expect(laws).toHaveTextContent(packLabel(TVERSKOI_PACK));

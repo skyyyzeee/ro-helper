@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { screen, within } from '@testing-library/react';
@@ -12,6 +13,7 @@ describe('the privacy policy', () => {
   it('opens from the settings, from the same file as on GitHub, and Esc closes it', async () => {
     const { platform, user } = await renderApp();
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'О программе');
     await user.click(within(screen.getByRole('group', { name: 'Настройки' })).getByRole('button', { name: 'Политика конфиденциальности' }));
 
     const policy = screen.getByRole('article', { name: 'Политика конфиденциальности' });

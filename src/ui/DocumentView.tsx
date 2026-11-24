@@ -80,8 +80,10 @@ export function DocumentView({
   writer,
   onOpen,
   onTab,
+  onDraft,
 }: {
   writer: DocumentWriter;
+  onDraft: (text: string) => void;
   onOpen: (hit: SearchHit) => void;
   onTab: (tab: AiTab) => void;
 }) {
@@ -116,7 +118,7 @@ export function DocumentView({
       <AuthorForm key={JSON.stringify(writer.author)} author={writer.author} onSave={writer.saveAuthor} />
 
       {!result && !writer.busy && !writer.error && (
-        <AiIntro icon={<DocumentsIcon size={24} />} title={kind.label} examples={[DOCUMENT_EXAMPLES[writer.kind]]} onExample={(text) => void writer.write(text)}>
+        <AiIntro icon={<DocumentsIcon size={24} />} title={kind.label} examples={[DOCUMENT_EXAMPLES[writer.kind]]} onExample={onDraft}>
           Опишите в поле внизу, что произошло, — ИИ составит {kind.label.toLowerCase()} со ссылками на статьи законов сервера.
         </AiIntro>
       )}
@@ -131,7 +133,9 @@ export function DocumentView({
       {writer.error && (
         <div className="warn" role="alert">
           <WarnIcon />
-          <span>{writer.error}</span>
+          <span>{writer.error}
+            {writer.lastRequest && <><br /><button type="button" className="link" title="Отредактируйте текст и нажмите «Отправить»" onClick={() => onDraft(writer.lastRequest)}>Вернуть текст в поле</button></>}
+          </span>
         </div>
       )}
 

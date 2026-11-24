@@ -2,7 +2,8 @@
 // a text may name only articles it was given and only figures they hold; an item of a list (a lawyer's demand, a
 // step of a detention) stands only on sources it names, that were given, of the scope's kind.
 import { articleText, type SearchHit } from '../core';
-import { SOURCE_TYPE_LABELS, inScope, type Scope, type Source } from './sources';
+import { isRepealedHit, SOURCE_TYPE_LABELS, inScope, type Scope, type Source } from './sources';
+import { evidenceText } from './evidence';
 import { figures, namedArticles } from './validate';
 
 const hitOf = (source: Source | SearchHit): SearchHit => ('hit' in source ? source.hit : source);
@@ -18,7 +19,7 @@ export function strayFigures(text: string, sources: (Source | SearchHit)[], allo
   const known = new Set([
     ...sources.flatMap((s) => {
       const { article } = hitOf(s);
-      return [...figures(articleText(article)), ...article.parts.flatMap((p) => (p.stars ? [p.stars.min, p.stars.max] : []))];
+      return [...figures('hit' in s ? evidenceText(s) : articleText(article)), ...('hit' in s && s.evidence && !s.evidence.complete ? [] : article.parts.flatMap((p) => (p.stars ? [p.stars.min, p.stars.max] : [])))];
     }),
     ...figures(allowed),
   ]);
@@ -55,8 +56,9 @@ export function groundItems<T extends { sources: string[] }>(items: T[], given: 
     const sources = item.sources.flatMap((id) => {
       const source = byId.get(id);
       if (!source) issues.push(`ссылка на источник ${id}, которого не передавали`);
+      else if (isRepealedHit(source.hit)) issues.push('статья утратила силу');
       else if (!inScope(source.type, scope)) issues.push(`${SOURCE_TYPE_LABELS[source.type].toLowerCase()} — не по теме вопроса`);
-      return source && inScope(source.type, scope) ? [source] : [];
+      return source && !isRepealedHit(source.hit) && inScope(source.type, scope) ? [source] : [];
     });
     if (!item.sources.length) issues.push('нет источника');
     return { item, sources, issues };

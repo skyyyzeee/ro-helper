@@ -1,10 +1,10 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { quizRound, type QuizQuestion, type SearchHit, type ServerPack } from '../core';
+import { useEffect, type ReactNode } from 'react';
+import type { SearchHit } from '../core';
+import { QUIZ_ROUND, type QuickQuiz } from './quickQuiz';
 import { shortLabel } from './AiView';
 import { CheckIcon, CloseIcon, SchoolIcon } from './icons';
 
-/** Questions in a round of the quick tasks. */
-export const QUIZ_ROUND = 10;
+export { QUIZ_ROUND } from './quickQuiz';
 
 /**
  * «Быстрые задания» (roadmap 6А, ADR 0009): questions made from the server's laws themselves — the number of an
@@ -12,40 +12,8 @@ export const QUIZ_ROUND = 10;
  * nothing off the day's questions; a key 1–4 or a click answers. `picker` is the choice of documents, the AI's
  * practice's own.
  */
-export function QuizView({ pack, documents, picker, onOpen }: { pack: ServerPack; documents: string[]; picker: ReactNode; onOpen: (hit: SearchHit) => void }) {
-  const [round, setRound] = useState<QuizQuestion[] | null>(null);
-  const [at, setAt] = useState(0);
-  const [picked, setPicked] = useState<number | null>(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  // Another server's laws or other documents: the round on show is of them no more.
-  useEffect(() => {
-    setRound(null);
-    setDone(false);
-  }, [pack, documents]);
-
-  const start = () => {
-    setRound(quizRound(pack, documents, QUIZ_ROUND));
-    setAt(0);
-    setPicked(null);
-    setScore(0);
-    setDone(false);
-  };
-  const question = round && !done ? round[at] : undefined;
-  const pick = (option: number) => {
-    if (!question || picked !== null) return;
-    setPicked(option);
-    if (option === question.answer) setScore((s) => s + 1);
-  };
-  const next = () => {
-    if (!round) return;
-    if (at + 1 >= round.length) setDone(true);
-    else {
-      setAt(at + 1);
-      setPicked(null);
-    }
-  };
+export function QuizView({ quiz, picker, onOpen }: { quiz: QuickQuiz; picker: ReactNode; onOpen: (hit: SearchHit) => void }) {
+  const { round, at, picked, score, done, question, start, pick, next } = quiz;
 
   // 1–4 answer, Enter goes on — over the game the hand stays on the keys.
   useEffect(() => {

@@ -41,7 +41,7 @@ describe('documents menu', () => {
       'КоАПКодекс об административных правонарушениях150',
     ]);
     const tags = within(menu()).getByRole('group', { name: 'Виды документов' });
-    expect(within(tags).getAllByRole('button').map((b) => b.textContent)).toEqual(['Все', 'Кодексы', 'ФКЗ', 'ФЗ', 'Москва', 'Уставы', 'Правила']);
+    expect(within(tags).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Все', 'Кодексы', 'ФКЗ', 'ФЗ', 'Москва', 'Уставы', 'Правила']);
   });
 
   it('lists the project rules under their tag', async () => {
@@ -147,7 +147,7 @@ describe('documents menu', () => {
     expect(documentRows()).toHaveLength(3);
   });
 
-  it('closes with Esc, the cross or the dimmed background, handing the cursor back to the search', async () => {
+  it('closes with Esc, the cross or the documents navigation button, handing the cursor back to the search', async () => {
     const { user } = await renderApp();
     await openMenu(user);
     await user.keyboard('{Escape}');
@@ -159,7 +159,7 @@ describe('documents menu', () => {
     expect(queryMenu()).not.toBeInTheDocument();
 
     await openMenu(user);
-    await user.click(document.querySelector('.scrim')!);
+    await user.click(screen.getByRole('button', { name: 'Все документы' }));
     expect(queryMenu()).not.toBeInTheDocument();
   });
 
@@ -230,7 +230,8 @@ describe('searching one document', () => {
 
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('button', { name: /только в КоАП/ })).not.toBeInTheDocument();
-    expect(screen.getByText('Здесь появятся избранные и недавние статьи')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Избранное' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Недавние' })).toBeInTheDocument();
   });
 
   it('takes the document off with Backspace in an empty field or with its cross', async () => {
@@ -242,5 +243,32 @@ describe('searching one document', () => {
     await pick(user, /^ПДД/);
     await user.click(screen.getByRole('button', { name: /только в ПДД/ }));
     expect(search()).toHaveAttribute('placeholder', 'Номер или слова: 65, коап 9.8, кража');
+  });
+});
+
+describe('document catalogue search', () => {
+  it('counts distinct documents and restores the full catalogue when clearing the filter', async () => {
+    const { user } = await renderApp({ profile: { organization: 'gibdd' } });
+    await openMenu(user);
+    const count = () => within(menu()).getByRole('status', { name: 'Результат фильтра документов' });
+    expect(documentRows().length).toBeGreaterThan(65);
+    expect(count()).toHaveTextContent('Документов: 65');
+    await user.type(filter(), 'коап');
+    expect(count()).toHaveTextContent('Документов: 1');
+    await user.click(within(menu()).getByRole('button', { name: 'Очистить фильтр документов' }));
+    expect(filter()).toHaveValue('');
+    expect(filter()).toHaveFocus();
+    expect(count()).toHaveTextContent('Документов: 65');
+  });
+
+  it('finds words in any order and a law number without a hyphen, then opens it with Enter', async () => {
+    const { user } = await renderApp();
+    await openMenu(user);
+    await user.type(filter(), 'полиции 6ФЗ');
+    expect(documentRows()).toHaveLength(1);
+    expect(documentRows()[0]).toHaveTextContent('6-ФЗО полиции');
+    await user.keyboard('{Enter}');
+    expect(queryMenu()).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /только в 6-ФЗ/ })).toBeInTheDocument();
   });
 });

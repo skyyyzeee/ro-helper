@@ -12,12 +12,82 @@ async function ask(question: string, patch: Partial<LegalAnswer> = {}) {
   vi.stubGlobal('fetch', vi.fn(fakeGeminiFetch(patch, bodies)));
   const app = await renderApp({ settings: GEMINI });
   await app.user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-  await app.user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), `${question}{Enter}`);
+  await app.user.type(screen.getByRole('textbox', { name: 'Сообщение ИИ' }), `${question}{Enter}`);
   await screen.findByText('Применимые нормы');
   return { ...app, bodies };
 }
 
 describe('the analysis on screen', () => {
+  it('fills an editable example without calling the model until the send button is pressed', async () => {
+    const bodies: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(fakeGeminiFetch({}, bodies)));
+    const { user } = await renderApp({ settings: GEMINI, profile: { organization: 'none' } });
+    await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
+    const send = screen.getByRole('button', { name: 'Отправить запрос ИИ' });
+    expect(send).toBeDisabled();
+    await user.click(within(screen.getByLabelText('Примеры вопросов')).getByRole('button', { name: /У меня украли телефон из кармана/ }));
+    expect(bodies).toHaveLength(0);
+    const input = screen.getByRole('textbox', { name: 'Сообщение ИИ' });
+    expect(input).toHaveValue('У меня украли телефон из кармана — что будет вору?');
+    await user.clear(input);
+    await user.type(input, 'У меня украли телефон');
+    await user.click(send);
+    await screen.findByText('Применимые нормы');
+    expect(bodies.length).toBeGreaterThan(0);
+    expect(input).toHaveValue('');
+  });
+
+  it('keeps Shift+Enter in the draft and sends the full multiline message with Enter', async () => {
+    const bodies: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(fakeGeminiFetch({}, bodies)));
+    const { user } = await renderApp({ settings: GEMINI });
+    await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
+    const input = screen.getByRole('textbox', { name: 'Сообщение ИИ' });
+    expect(input.tagName).toBe('TEXTAREA');
+    expect(input).toHaveAccessibleDescription('Enter — отправить · Shift+Enter — новая строка');
+    await user.type(input, 'Украли телефон');
+    await user.keyboard('{Shift>}{Enter}{/Shift}');
+    await user.type(input, 'Видел свидетеля');
+    expect(input).toHaveValue('Украли телефон\nВидел свидетеля');
+    expect(bodies).toHaveLength(0);
+    await user.keyboard('{Enter}');
+    await screen.findByText('Применимые нормы');
+    expect(bodies.some((body) => body.includes('Видел свидетеля'))).toBe(true);
+    expect(input).toHaveValue('');
+  });
+
+  it('returns from a source to the same reading position, expanded answer and unsent draft', async () => {
+    const { user } = await ask('у меня украли телефон');
+    const log = screen.getByRole('log');
+    const content = log.closest('.overlay__content')!;
+    const more = log.querySelector<HTMLDetailsElement>('details.answer__more')!;
+    await user.click(within(more).getByText('Подробный разбор'));
+    expect(more.open).toBe(true);
+    const draft = screen.getByRole('textbox', { name: 'Сообщение ИИ' });
+    await user.type(draft, 'Ещё не отправленное уточнение');
+    content.scrollTop = 320;
+    await user.click(within(log).getAllByRole('button', { name: /^УК ст\. 87/ })[0]);
+    expect(content.scrollTop).toBe(0);
+    await user.keyboard('{Escape}');
+    expect(content.scrollTop).toBe(320);
+    expect(screen.getByRole('log').querySelector<HTMLDetailsElement>('details.answer__more')!.open).toBe(true);
+    expect(screen.getByRole('textbox', { name: 'Сообщение ИИ' })).toHaveValue('Ещё не отправленное уточнение');
+    expect(screen.getByRole('textbox', { name: 'Сообщение ИИ' })).toHaveFocus();
+  });
+
+  it('shows the beginning of a completed answer instead of scrolling past it', async () => {
+    const original = HTMLElement.prototype.scrollIntoView;
+    const scroll = vi.fn(function (this: HTMLElement) { return this; });
+    HTMLElement.prototype.scrollIntoView = scroll;
+    try {
+      await ask('у меня украли телефон');
+      expect(scroll.mock.contexts.at(-1)).toHaveClass('ai__reply');
+      expect(scroll).toHaveBeenLastCalledWith({ block: 'start' });
+    } finally {
+      HTMLElement.prototype.scrollIntoView = original;
+    }
+  });
+
   afterEach(() => vi.unstubAllGlobals());
 
   it('lays the answer out in blocks, with the article as a card and the punishment from the laws and the calculator', async () => {
@@ -99,7 +169,7 @@ describe('the analysis on screen', () => {
     await user.click(screen.getByText(/Факты дела: 1/));
     expect(screen.getByText(/украли телефон/, { selector: 'li' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^Исправить факт: у игрока украли телефон/ }));
-    const field = screen.getByRole('searchbox', { name: 'Поиск по законам' });
+    const field = screen.getByRole('textbox', { name: 'Сообщение ИИ' });
     expect(field).toHaveValue('Поправка: не «у игрока украли телефон», а ');
     expect(field).toHaveFocus();
 
@@ -135,7 +205,7 @@ describe('the analysis on screen', () => {
     const { user } = await ask('у меня украли телефон');
     await user.click(screen.getByRole('button', { name: 'Составить документ' }));
     expect(screen.getByRole('region', { name: 'Составить документ' })).toBeInTheDocument();
-    expect((screen.getByRole('searchbox', { name: 'Поиск по законам' }) as HTMLInputElement).value).toMatch(/^у меня украли телефон/);
+    expect((screen.getByRole('textbox', { name: 'Описание для документа' }) as HTMLTextAreaElement).value).toMatch(/^у меня украли телефон/);
     await user.click(screen.getByRole('button', { name: 'К разбору' }));
     expect(screen.getByText('Применимые нормы')).toBeInTheDocument();
   });
@@ -144,7 +214,7 @@ describe('the analysis on screen', () => {
     vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))));
     const { user } = await renderApp({ settings: GEMINI });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-    await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'украли телефон{Enter}');
+    await user.type(screen.getByRole('textbox', { name: 'Сообщение ИИ' }), 'украли телефон{Enter}');
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Нет связи с Gemini');
     expect(within(alert).getByRole('button', { name: 'поиск по законам' })).toBeInTheDocument();
@@ -156,7 +226,7 @@ describe('the analysis on screen', () => {
     vi.stubGlobal('fetch', fetch);
     const app = await renderApp({ settings: GEMINI, profile: { organization: 'mvd' } });
     await app.user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-    await app.user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'у меня украли телефон{Enter}');
+    await app.user.type(screen.getByRole('textbox', { name: 'Сообщение ИИ' }), 'у меня украли телефон{Enter}');
     // The quick answer stays short: the gist and the cards at hand, the officer's steps folded away.
     await screen.findByText('Применимые нормы');
     const more = screen.getByRole('log').querySelector<HTMLDetailsElement>('details.answer__more')!;

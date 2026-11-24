@@ -15,6 +15,7 @@ export interface LawyerCheck {
   busy: boolean;
   result: LawyerAnswer | null;
   error: string | null;
+  lastRequest: string;
   check: (said: string) => Promise<void>;
   reset: () => void;
 }
@@ -27,6 +28,7 @@ export function useLawyerCheck(platform: PlatformAdapter, pack: ServerPack, boos
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<LawyerAnswer | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastRequest, setLastRequest] = useState('');
 
   const check = useCallback(
     async (said: string) => {
@@ -36,6 +38,7 @@ export function useLawyerCheck(platform: PlatformAdapter, pack: ServerPack, boos
         setError(NO_CHECK);
         return;
       }
+      setLastRequest(text);
       setBusy(true);
       setError(null);
       try {
@@ -50,9 +53,10 @@ export function useLawyerCheck(platform: PlatformAdapter, pack: ServerPack, boos
   );
 
   const reset = useCallback(() => {
+    setLastRequest('');
     setResult(null);
     setError(null);
   }, []);
 
-  return { busy, result, error, check, reset };
+  return { busy, result, error, lastRequest, check, reset };
 }

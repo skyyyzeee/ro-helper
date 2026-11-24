@@ -12,6 +12,7 @@ export function AiIntro({ icon, title, children, examples, onExample, disabled }
       </span>
       <h2 className="ai__hello">{title}</h2>
       <p className="set__hint">{children}</p>
+      <p className="ai__example-hint">Пример заполнит поле — дополните его перед отправкой.</p>
       <div className="ai__examples" aria-label={examples.length > 1 ? 'Примеры' : 'Пример'}>
         {examples.map((example) => (
           <button key={example} type="button" className="ai__example" disabled={disabled} onClick={() => onExample(example)}>

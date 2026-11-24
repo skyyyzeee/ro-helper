@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { analysisOf, isAnalysis } from '../test/fakeAi';
@@ -27,6 +28,7 @@ describe('the player’s own AI (issue #2)', () => {
   it('is set up in the settings — address, model, key — and kept on this computer', async () => {
     const { platform, user } = await renderApp();
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'ИИ');
     await user.click(screen.getByRole('radio', { name: 'Свой ИИ' }));
     expect(platform.settings.get(AI_PROVIDER_SETTING)).toBe('custom');
 
@@ -50,7 +52,7 @@ describe('the player’s own AI (issue #2)', () => {
       settings: { [AI_PROVIDER_SETTING]: 'custom', [AI_CUSTOM_SETTING]: { url: 'https://my-ai.example/v1', model: 'my-model', key: 'sk-own' } },
     });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-    await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'у меня украли телефон{Enter}');
+    await user.type(screen.getByRole('textbox', { name: 'Сообщение ИИ' }), 'у меня украли телефон{Enter}');
 
     expect(await screen.findByText('Это кража телефона.')).toBeInTheDocument();
     expect(calls.length).toBeGreaterThanOrEqual(1);
@@ -65,7 +67,7 @@ describe('the player’s own AI (issue #2)', () => {
     const calls = fakeOwnAi();
     const { user } = await renderApp({ settings: { [AI_PROVIDER_SETTING]: 'custom' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-    await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'у меня украли телефон{Enter}');
+    await user.type(screen.getByRole('textbox', { name: 'Сообщение ИИ' }), 'у меня украли телефон{Enter}');
     expect(await screen.findByText(NO_CUSTOM, { exact: false })).toBeInTheDocument();
     expect(calls).toHaveLength(0);
   });

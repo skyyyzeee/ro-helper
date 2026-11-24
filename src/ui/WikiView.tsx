@@ -1,8 +1,9 @@
-import { startTransition, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { startTransition, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type Ref } from 'react';
 import { usePlatform } from '../platform/PlatformContext';
 import { neighbours, pick, tagsOf, type VehicleFilters, type WikiSort } from '../wiki/catalog';
 import { formatRubles } from '../core';
 import { FRESH, type Gender, type WikiCatalogId, type WikiData, type WikiEntry } from '../wiki/model';
+import { WikiPicture as Picture } from './WikiPicture';
 import { Dropdown } from './Dropdown';
 import { BackIcon, ExternalIcon, SearchIcon } from './icons';
 import { useWiki } from './wiki';
@@ -46,28 +47,13 @@ const SORTS: { id: WikiSort; label: string }[] = [
   { id: 'name', label: 'По названию' },
 ];
 
-/**
- * A picture from the wiki's CDN; nothing when it does not load (offline) — the card keeps its place. An animation
- * is a video: it plays on its own page, and a card shows that it is one instead of fetching it.
- */
-function Picture({ src, alt, className, play }: { src?: string; alt: string; className: string; play?: boolean }) {
-  const [broken, setBroken] = useState(false);
-  useEffect(() => setBroken(false), [src]);
-  if (src && /.(webm|mp4)$/i.test(src) && !broken) {
-    if (!play) return <span className={`${className} wiki__noimage wiki__video`} aria-hidden="true" />;
-    return <video className={className} src={src} autoPlay loop muted playsInline aria-label={alt} onError={() => setBroken(true)} />;
-  }
-  if (!src || broken) return <span className={`${className} wiki__noimage`} aria-hidden="true" />;
-  return <img className={className} src={src} alt={alt} loading="lazy" decoding="async" onError={() => setBroken(true)} />;
-}
-
 function Card({ entry, onOpen, showCatalog, compact = false }: { entry: WikiEntry; onOpen: () => void; showCatalog?: string; compact?: boolean }) {
   const labels = CARD_FACTS[entry.catalog];
   const facts = compact && labels ? entry.facts.filter(([label]) => labels.includes(label)) : [];
   const tags = compact ? entry.tags.filter((tag) => CARD_TAGS.includes(tag)) : [];
   const subtitle = [showCatalog, entry.subtitle].filter((value, index, values) => value && values.indexOf(value) === index).join(' · ');
   return (
-    <button type="button" className="wiki__card" onClick={onOpen} aria-label={entry.title}>
+    <button type="button" className="wiki__card" data-wiki-entry={entry.id} onClick={onOpen} aria-label={entry.title}>
       <span className="wiki__thumb">
         <Picture src={entry.image} alt="" className="wiki__img" />
         {entry.tags.includes(FRESH) && <span className="wiki__fresh">{FRESH}</span>}
@@ -104,6 +90,7 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel, earn }: { data: Wik
   const platform = usePlatform();
   const [view, setView] = useState(0);
   const [large, setLarge] = useState(false);
+  const [pictureFailed, setPictureFailed] = useState(false);
   const isVehicle = entry.catalog === 'vehicles';
   const kits = isVehicle
     ? data.entries.filter((item) => item.catalog === 'modkits' && item.facts.some(([label, value]) => label === 'Машина' && value === entry.title))
@@ -118,6 +105,7 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel, earn }: { data: Wik
   const views = [...base, ...variants];
   const shown = views[view];
   const picture = shown?.image ?? entry.image;
+  useEffect(() => { setPictureFailed(false); setLarge(false); }, [picture]);
   const canEnlarge = !!picture && !/\.(webm|mp4)$/i.test(picture);
   const more = neighbours(data, entry);
   const speeds = isVehicle
@@ -133,13 +121,13 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel, earn }: { data: Wik
       </button>
       <div className={large ? 'wiki__hero wiki__hero--large' : 'wiki__hero'}>
         {canEnlarge ? (
-          <button className="wiki__zoom" type="button" aria-label={large ? 'Уменьшить фото' : 'Увеличить фото'} aria-expanded={large} onClick={() => setLarge(!large)}>
-            <Picture src={picture} alt={shown?.name || entry.title} className="wiki__big" />
-            <span className="wiki__zoom-label">{large ? 'Уменьшить' : 'Увеличить'}</span>
+          <button className="wiki__zoom" type="button" disabled={pictureFailed} aria-label={pictureFailed ? 'Изображение недоступно' : large ? 'Уменьшить фото' : 'Увеличить фото'} aria-expanded={large} onClick={() => setLarge(!large)}>
+            <Picture src={picture} alt={shown?.name || entry.title} className="wiki__big" onUnavailable={() => { setPictureFailed(true); setLarge(false); }} />
+            {!pictureFailed && <span className="wiki__zoom-label">{large ? 'Уменьшить' : 'Увеличить'}</span>}
           </button>
-        ) : picture && <Picture src={picture} alt={shown?.name || entry.title} className="wiki__big" play />}
+        ) : <Picture src={picture} alt={shown?.name || entry.title} className="wiki__big" play />}
         <div className="wiki__about">
-          <h2 className="wiki__title">{entry.title}</h2>
+          <h2 className="wiki__title" tabIndex={-1}>{entry.title}</h2>
           {entry.subtitle && <p className="wiki__subtitle">{entry.subtitle}</p>}
           {entry.catalog === 'posts' && <p className="wiki__subtitle">{readingTime(entry)}</p>}
           {entry.tags.length > 0 && (
@@ -254,7 +242,9 @@ function EntryPage({ data, entry, onOpen, onBack, backLabel, earn }: { data: Wik
  */
 /** `server`: the game's server the player is on, for the shifts and what the jobs pay there. */
 /** `openId`: a page to open at once — a job pressed among the home screen's boosts. */
-export function WikiView({ server = 'tverskoi', openId }: { server?: string; openId?: string }) {
+export interface WikiNavigation { back: () => boolean }
+
+export function WikiView({ server = 'tverskoi', openId, ref }: { server?: string; openId?: string; ref?: Ref<WikiNavigation> }) {
   const platform = usePlatform();
   const { data, failed } = useWiki();
   const shifts = useShifts();
@@ -275,11 +265,21 @@ export function WikiView({ server = 'tverskoi', openId }: { server?: string; ope
   const [entry, setEntry] = useState<WikiEntry | null>(null);
   const wikiRef = useRef<HTMLElement>(null);
   const listScroll = useRef(0);
+  const listEntry = useRef('');
+  const nextFocus = useRef<string | null>(null);
   const nextScroll = useRef(0);
   const scrollContainer = () => wikiRef.current?.closest('.overlay__content');
 
   useLayoutEffect(() => {
     const container = wikiRef.current?.closest('.overlay__content');
+    if (nextFocus.current) {
+      const target = nextFocus.current === 'entry'
+        ? wikiRef.current?.querySelector<HTMLElement>('.wiki__title')
+        : [...(wikiRef.current?.querySelectorAll<HTMLElement>('[data-wiki-entry]') ?? [])].find((node) => node.dataset.wikiEntry === nextFocus.current)
+          ?? wikiRef.current?.querySelector<HTMLElement>('.wiki__search input');
+      target?.focus({ preventScroll: true });
+      nextFocus.current = null;
+    }
     if (container) container.scrollTop = nextScroll.current;
     nextScroll.current = 0;
   }, [catalog, entry]);
@@ -288,6 +288,8 @@ export function WikiView({ server = 'tverskoi', openId }: { server?: string; ope
   // A page opened is one the player looked at: it goes to «Вы смотрели».
   const open = (e: WikiEntry) => {
     remember(e);
+    listEntry.current = e.id;
+    nextFocus.current = 'entry';
     listScroll.current = scrollContainer()?.scrollTop ?? 0;
     setTrail([]);
     setEntry(e);
@@ -297,7 +299,7 @@ export function WikiView({ server = 'tverskoi', openId }: { server?: string; ope
   // A page asked for from outside the wiki: opened once the wiki is read.
   useEffect(() => {
     const asked = openId && data?.entries.find((e) => e.id === openId);
-    if (asked) { listScroll.current = 0; setTrail([]); setEntry(asked); }
+    if (asked) { nextFocus.current = 'entry'; listScroll.current = 0; setTrail([]); setEntry(asked); }
   }, [openId, data]);
 
   // Another catalog, tab or filter: from the top.
@@ -324,11 +326,12 @@ export function WikiView({ server = 'tverskoi', openId }: { server?: string; ope
   const resultsClass = layout === 'grid' ? 'wiki__grid' : 'wiki__grid wiki__grid--list';
   const titleOf = (id: WikiCatalogId) => data?.catalogs.find((c) => c.id === id)?.title ?? '';
 
-  if (failed) return <p className="empty">Не удалось открыть вики.</p>;
-  if (!data) return <p className="empty">Загружаю вики…</p>;
-
   // The tab lights up at once; the cards of the new one follow as soon as they are ready.
-  const choose = (id: WikiCatalogId | 'home' | 'map') =>
+  const choose = (id: WikiCatalogId | 'home' | 'map') => {
+    if (id === 'home') {
+      const nav = wikiRef.current?.querySelector<HTMLElement>('.wiki__nav');
+      if (nav) nav.scrollTop = 0;
+    }
     startTransition(() => {
       setCatalog(id);
       setGroup(undefined);
@@ -340,6 +343,32 @@ export function WikiView({ server = 'tverskoi', openId }: { server?: string; ope
       setTrail([]);
       setEntry(null);
     });
+  };
+
+  const back = () => {
+    if (entry) {
+      const previous = trail.at(-1);
+      nextScroll.current = previous?.scrollTop ?? listScroll.current;
+      nextFocus.current = previous ? 'entry' : listEntry.current;
+      setEntry(previous?.entry ?? null);
+      setTrail(trail.slice(0, -1));
+      return true;
+    }
+    if (everywhere) { setEverywhere(''); return true; }
+    if (words) { setWords(''); return true; }
+    if (catalog !== 'home') { choose('home'); return true; }
+    return false;
+  };
+  useImperativeHandle(ref, () => ({ back }));
+
+  // Changing the result set starts at its beginning; returning from a page keeps its place.
+  useLayoutEffect(() => {
+    const container = scrollContainer();
+    if (container) container.scrollTop = 0;
+  }, [catalog, group, gender, tags, words, everywhere, sort, vehicle]);
+
+  if (failed) return <p className="empty" role="alert">Не удалось открыть вики.</p>;
+  if (!data) return <p className="empty" role="status">Загружаю вики…</p>;
 
   return (
     <section ref={wikiRef} className="wiki" aria-label="Вики">
@@ -370,15 +399,11 @@ export function WikiView({ server = 'tverskoi', openId }: { server?: string; ope
         {entry ? (
           <EntryPage key={entry.id} data={data} entry={entry} onOpen={(next) => {
             remember(next);
+            nextFocus.current = 'entry';
             const scrollTop = scrollContainer()?.scrollTop ?? 0;
             setTrail((previous) => [...previous, { entry, scrollTop }]);
             setEntry(next);
-          }} onBack={() => {
-            const previous = trail.at(-1);
-            nextScroll.current = previous?.scrollTop ?? listScroll.current;
-            setEntry(previous?.entry ?? null);
-            setTrail(trail.slice(0, -1));
-          }} backLabel={trail.at(-1)?.entry.title ?? (searching ? 'Результаты' : current?.title ?? 'Главная')} earn={earn} />
+          }} onBack={back} backLabel={trail.at(-1)?.entry.title ?? (searching ? 'Результаты' : current?.title ?? 'Главная')} earn={earn} />
         ) : searching ? (
           <>
             <div className="wiki__head wiki__section-head">

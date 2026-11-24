@@ -6,6 +6,57 @@ import { AUTO_KEY } from './updates';
 import { WIKI_MANIFEST_URL, WIKI_URL, readWiki } from './wiki';
 
 describe('the wiki of Russia Online', () => {
+  it('uses Escape to return through the page, results, catalog and home, restoring focus and position', async () => {
+    const { user } = await renderApp();
+    await user.click(screen.getByRole('button', { name: 'Вики Russia Online' }));
+    const wiki = await screen.findByRole('region', { name: 'Вики' }, { timeout: 5000 });
+    const nav = within(wiki).getByRole('navigation', { name: 'Разделы вики' });
+    const vehicles = within(nav).getByRole('button', { name: /^Транспорт/ });
+    await user.click(vehicles);
+    const search = within(wiki).getByRole('searchbox', { name: 'Поиск по вики' });
+    await user.type(search, 'samara');
+    const card = await within(wiki).findByRole('button', { name: 'TAZ 2114' });
+    const content = wiki.closest('.overlay__content')!;
+    content.scrollTop = 210;
+    await user.click(card);
+    expect(within(wiki).getByRole('heading', { name: 'TAZ 2114' })).toHaveFocus();
+    expect(content.scrollTop).toBe(0);
+    await user.keyboard('{Escape}');
+    expect(content.scrollTop).toBe(210);
+    expect(within(wiki).getByRole('button', { name: 'TAZ 2114' })).toHaveFocus();
+    expect(search).toHaveValue('samara');
+    await user.keyboard('{Escape}');
+    expect(search).toHaveValue('');
+    expect(vehicles).toHaveAttribute('aria-current', 'page');
+    nav.scrollTop = 200;
+    await user.keyboard('{Escape}');
+    expect(nav.scrollTop).toBe(0);
+    expect(within(nav).getByRole('button', { name: 'Главная' })).toHaveAttribute('aria-current', 'page');
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('region', { name: 'Вики' })).not.toBeInTheDocument();
+  });
+
+  it('starts changed filters at the top and lets Escape close a sort menu before navigating away', async () => {
+    const { user } = await renderApp();
+    await user.click(screen.getByRole('button', { name: 'Вики Russia Online' }));
+    const wiki = await screen.findByRole('region', { name: 'Вики' }, { timeout: 5000 });
+    const vehicles = within(within(wiki).getByRole('navigation', { name: 'Разделы вики' })).getByRole('button', { name: /^Транспорт/ });
+    await user.click(vehicles);
+    const content = wiki.closest('.overlay__content')!;
+    const filter = within(wiki).getByRole('searchbox', { name: 'Поиск в разделе' });
+    content.scrollTop = 250;
+    await user.type(filter, 'samara');
+    expect(content.scrollTop).toBe(0);
+    await user.click(within(wiki).getByRole('combobox', { name: 'Порядок' }));
+    await user.keyboard('{Escape}');
+    expect(within(wiki).queryByRole('listbox')).not.toBeInTheDocument();
+    expect(vehicles).toHaveAttribute('aria-current', 'page');
+    expect(filter).toHaveValue('samara');
+    await user.keyboard('{Escape}');
+    expect(filter).toHaveValue('');
+    expect(vehicles).toHaveAttribute('aria-current', 'page');
+  });
+
   it('loads the official map only while its section is open', async () => {
     const { platform, user } = await renderApp();
     await user.click(screen.getByRole('button', { name: 'Вики Russia Online' }));

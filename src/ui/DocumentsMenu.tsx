@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { DocumentCategory, LawDocument, Organization, ServerPack } from '../core';
 import { CloseIcon, SearchIcon } from './icons';
-import { DocBadge } from './lawBits';
+import { DocBadge, formatDate } from './lawBits';
 
 /** Menu groups, in order. */
 const CATEGORIES: Record<DocumentCategory, { group: string; tag: string }> = {
@@ -13,7 +13,11 @@ const CATEGORIES: Record<DocumentCategory, { group: string; tag: string }> = {
   rules: { group: 'Правила проекта', tag: 'Правила' },
 };
 
-const normalize = (text: string) => text.toLowerCase().replace(/ё/g, 'е');
+const normalize = (text: string) => text.toLowerCase().replace(/ё/g, 'е').replace(/[-–—]/g, '');
+const matchesName = (document: LawDocument, filter: string) => {
+  const name = normalize(`${document.short} ${document.title}`);
+  return normalize(filter.trim()).split(/\s+/).every((word) => name.includes(word));
+};
 
 interface Group {
   title: string;
@@ -29,7 +33,7 @@ export interface DocumentsMenuProps {
   onClose: () => void;
 }
 
-/** Side menu with every document of the server: a filter, tags by kind, the user's organisation first. */
+/** Server catalogue: categories, name search and the organisation's documents first. */
 export function DocumentsMenu({ pack, organization, current, onPick, onClose }: DocumentsMenuProps) {
   const filterRef = useRef<HTMLInputElement>(null);
   const [filter, setFilter] = useState('');
@@ -43,7 +47,7 @@ export function DocumentsMenu({ pack, organization, current, onPick, onClose }: 
   const categories = (Object.keys(CATEGORIES) as DocumentCategory[]).filter((c) => pack.documents.some((d) => d.category === c));
   const groups = useMemo(() => {
     const words = normalize(filter.trim());
-    const matches = (d: LawDocument) => (tag === 'all' || d.category === tag) && (!words || normalize(`${d.short} ${d.title}`).includes(words));
+    const matches = (d: LawDocument) => (tag === 'all' || d.category === tag) && matchesName(d, filter);
     const result: Group[] = [];
     const own = organization?.documents.map((id) => pack.documents.find((d) => d.id === id)).filter((d) => d !== undefined) ?? [];
     if (own.length && tag === 'all' && !words) result.push({ title: `${organization!.name} · ваша организация`, documents: own });
@@ -55,7 +59,8 @@ export function DocumentsMenu({ pack, organization, current, onPick, onClose }: 
   }, [pack, organization, filter, tag]);
   const rows = groups.flatMap((g) => g.documents);
   // Nothing of this kind by that name: how many there are among all kinds (roadmap 1В).
-  const elsewhere = rows.length || tag === 'all' ? 0 : pack.documents.filter((d) => normalize(`${d.short} ${d.title}`).includes(normalize(filter.trim()))).length;
+  const elsewhere = rows.length || tag === 'all' ? 0 : pack.documents.filter((d) => matchesName(d, filter)).length;
+  const foundCount = new Set(rows.map((document) => document.id)).size;
   const active = Math.min(selected ?? Math.max(rows.findIndex((d) => d.id === current), 0), rows.length - 1);
   const listRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -80,37 +85,23 @@ export function DocumentsMenu({ pack, organization, current, onPick, onClose }: 
   const currentRow = rows.findIndex((d) => d.id === current);
   return (
     <>
-      <div className="scrim" onClick={onClose} />
-      <div className="drawer" role="dialog" aria-label="Все документы">
-        <div className="drawer__head">
-          <span className="drawer__title">Все документы</span>
+      <div className="drawer documents-catalog" role="dialog" aria-label="Все документы">
+        <div className="drawer__head" data-tauri-drag-region>
+          <span className="drawer__title" data-tauri-drag-region>Документы</span>
+          <span className="documents-catalog__server" data-tauri-drag-region>{pack.server.name}</span>
           <span className="sp" />
           <button className="icon-btn" type="button" aria-label="Закрыть меню" title="Закрыть" onClick={onClose}>
             <CloseIcon />
           </button>
         </div>
-        <label className="drawer__filter">
-          <SearchIcon />
-          <input
-            ref={filterRef}
-            aria-label="Фильтр документов"
-            placeholder="Фильтр документов"
-            autoComplete="off"
-            spellCheck={false}
-            value={filter}
-            onChange={(e) => {
-              setFilter(e.target.value);
-              setSelected(null);
-            }}
-            onKeyDown={onKey}
-          />
-        </label>
         <div className="tags" role="group" aria-label="Виды документов">
           {(['all', ...categories] as const).map((c) => (
             <button
               key={c}
               type="button"
               className={tag === c ? 'tag tag--on' : 'tag'}
+              aria-label={c === 'all' ? 'Все' : CATEGORIES[c].tag}
+              title={c === 'all' ? 'Все документы сервера' : CATEGORIES[c].group}
               aria-pressed={tag === c}
               onClick={() => {
                 setTag(c);
@@ -118,58 +109,88 @@ export function DocumentsMenu({ pack, organization, current, onPick, onClose }: 
                 filterRef.current?.focus();
               }}
             >
-              {c === 'all' ? 'Все' : CATEGORIES[c].tag}
+              <span>{c === 'all' ? 'Все' : CATEGORIES[c].tag}</span>
+              <span className="documents-catalog__count" aria-hidden="true">{c === 'all' ? pack.documents.length : pack.documents.filter((document) => document.category === c).length}</span>
             </button>
           ))}
         </div>
-        <div className="drawer__list" ref={listRef}>
-          {groups.map((group) => (
-            <div key={group.title} role="group" aria-label={group.title}>
-              <div className="drawer__sec">{group.title}</div>
-              {group.documents.map((document) => {
-                const row = ++index;
-                const className = ['doc-row', row === active && 'doc-row--selected', row === currentRow && 'doc-row--on'].filter(Boolean).join(' ');
-                return (
-                  <button
-                    key={document.id}
-                    type="button"
-                    className={className}
-                    aria-current={row === currentRow ? 'true' : undefined}
-                    onMouseEnter={() => setSelected(row)}
-                    onClick={() => onPick(document)}
-                  >
-                    <DocBadge document={document} />
-                    <span className="doc-row__name">{document.title}</span>
-                    <span className="doc-row__count">{document.articles.length}</span>
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-          {rows.length === 0 && (
-            <div className="why" role="status" aria-label="Ничего не найдено">
-              <div className="why__title">
-                Нет документа «{filter.trim()}»{tag !== 'all' && ` среди «${CATEGORIES[tag].tag}»`}
+        <div className="documents-catalog__body">
+          <div className="drawer__filter">
+            <SearchIcon />
+            <input
+              ref={filterRef}
+              aria-label="Фильтр документов"
+              placeholder="Название или сокращение документа"
+              autoComplete="off"
+              spellCheck={false}
+              value={filter}
+              onChange={(e) => {
+                setFilter(e.target.value);
+                setSelected(null);
+              }}
+              onKeyDown={onKey}
+            />
+            {filter && <button className="icon-btn icon-btn--sm" type="button" aria-label="Очистить фильтр документов" onClick={() => {
+              setFilter('');
+              setSelected(null);
+              filterRef.current?.focus();
+            }}><CloseIcon size={16} /></button>}
+          </div>
+          <div className="documents-catalog__meta">
+            <span role="status" aria-label="Результат фильтра документов">Документов: {foundCount}</span>
+            <span>База от {formatDate(pack.version)}</span>
+          </div>
+          <div className="drawer__list" ref={listRef}>
+            {groups.map((group) => (
+              <div key={group.title} role="group" aria-label={group.title}>
+                <div className="drawer__sec">{group.title}</div>
+                {group.documents.map((document) => {
+                  const row = ++index;
+                  const className = ['doc-row', row === active && 'doc-row--selected', row === currentRow && 'doc-row--on'].filter(Boolean).join(' ');
+                  return (
+                    <button
+                      key={document.id}
+                      type="button"
+                      className={className}
+                      aria-current={row === currentRow ? 'true' : undefined}
+                      title={`${document.title} · актуально на ${formatDate(document.source.lastEdited)}`}
+                      onMouseEnter={() => setSelected(row)}
+                      onClick={() => onPick(document)}
+                    >
+                      <DocBadge document={document} />
+                      <span className="doc-row__name">{document.title}</span>
+                      <span className="doc-row__count">{document.articles.length}</span>
+                    </button>
+                  );
+                })}
               </div>
-              {elsewhere > 0 && (
-                <div className="why__tries" role="group" aria-label="Попробуйте">
-                  <span className="why__label">Попробуйте:</span>
-                  <button
-                    className="tag"
-                    type="button"
-                    onClick={() => {
-                      setTag('all');
-                      setSelected(null);
-                      filterRef.current?.focus();
-                    }}
-                  >
-                    во всех видах · {elsewhere}
-                  </button>
+            ))}
+            {rows.length === 0 && (
+              <div className="why" role="status" aria-label="Ничего не найдено">
+                <div className="why__title">
+                  Нет документа «{filter.trim()}»{tag !== 'all' && ` среди «${CATEGORIES[tag].tag}»`}
                 </div>
-              )}
-            </div>
-          )}
+                {elsewhere > 0 && (
+                  <div className="why__tries" role="group" aria-label="Попробуйте">
+                    <span className="why__label">Попробуйте:</span>
+                    <button
+                      className="tag"
+                      type="button"
+                      onClick={() => {
+                        setTag('all');
+                        setSelected(null);
+                        filterRef.current?.focus();
+                      }}
+                    >
+                      во всех видах · {elsewhere}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
+
       </div>
     </>
   );

@@ -19,8 +19,7 @@ const CARD_HEIGHT = 150;
 const FIRST_X = 40;
 const FIRST_Y = 1 / 3;
 /** Blocks are put one under another, then in the next column, so none covers the one before. */
-const GAP_Y = 200;
-const GAP_X = CARD_WIDTH + 24;
+export const AUTO_PIN_HEIGHT = 300;
 
 /** A block is never dragged smaller than this: the heading and a line or two stay readable. */
 export const MIN_WIDTH = 240;
@@ -70,15 +69,25 @@ export function keepOnScreen(groups: PinGroup[], surface: Surface): PinGroup[] {
 
 /** A free spot for a new block: under the ones already there, then beside them. */
 export function nextPlace(groups: PinGroup[], surface: Surface): { x: number; y: number } {
-  const first = { x: FIRST_X, y: Math.round(surface.height * FIRST_Y) };
-  const rows = Math.max(1, Math.floor((surface.height - first.y) / GAP_Y));
-  for (let column = 0; column < 4; column++) {
-    for (let row = 0; row < rows; row++) {
-      const place = clampTo(first.x + column * GAP_X, first.y + row * GAP_Y, surface);
-      if (!groups.some((g) => Math.abs(g.x - place.x) < 24 && Math.abs(g.y - place.y) < 24)) return place;
-    }
+  const first = { x: FIRST_X, y: Math.min(Math.round(surface.height * FIRST_Y), Math.max(8, surface.height - AUTO_PIN_HEIGHT * 2 - 32)) };
+  const box = { width: Math.min(CARD_WIDTH, surface.width), height: Math.min(AUTO_PIN_HEIGHT, surface.height - 8) };
+  const occupied = groups.map((group) => ({
+    x: group.x, y: group.y,
+    width: Math.min(size(group).width, Math.max(CARD_WIDTH, surface.width - group.x - 8)),
+    height: group.height ?? Math.min(AUTO_PIN_HEIGHT, Math.max(MIN_HEIGHT, surface.height - group.y - 8)),
+  }));
+  const xs = [...new Set([first.x, ...occupied.map((rect) => rect.x + rect.width + 16), 8])];
+  const ys = [...new Set([first.y, ...occupied.map((rect) => rect.y + rect.height + 16), 8])];
+  for (const x of xs) for (const y of ys) {
+    const place = clampTo(x, y, surface, box);
+    if (!occupied.some((rect) => place.x < rect.x + rect.width + 8 && place.x + box.width + 8 > rect.x && place.y < rect.y + rect.height + 8 && place.y + box.height + 8 > rect.y)) return place;
   }
-  return clampTo(first.x, first.y, surface);
+  // A crowded screen cascades distinct handles rather than hiding one under an identical position.
+  for (let step = 1; step <= 32; step++) {
+    const place = clampTo(first.x + step * 24, first.y + step * 24, surface, box);
+    if (!groups.some((group) => group.x === place.x && group.y === place.y)) return place;
+  }
+  return clampTo(first.x, first.y, surface, box);
 }
 
 /** An id no block has yet: a card's own id, or that id with a number after it. */

@@ -39,7 +39,7 @@ describe('writing a document with the AI', () => {
     await user.click(within(view).getByRole('button', { name: 'Сохранить' }));
     expect(platform.settings.get(AUTHOR_KEY)).toEqual({ name: 'Иван Петров', rank: 'лейтенант полиции', position: '' });
 
-    await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'украл телефон у прохожего{Enter}');
+    await user.type(screen.getByRole('textbox', { name: 'Описание для документа' }), 'украл телефон у прохожего{Enter}');
     expect(await within(view).findByText(/задержал гражданина/)).toBeInTheDocument();
     // The author and the found articles went to the AI; the gap it could not fill is marked.
     expect(bodies.at(-1)).toContain('лейтенант полиции');
@@ -60,7 +60,7 @@ describe('writing a document with the AI', () => {
     await user.click(screen.getByRole('button', { name: 'Составить документ' }));
     const view = screen.getByRole('region', { name: 'Составить документ' });
     await user.click(within(view).getByRole('radio', { name: 'Жалоба' }));
-    await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'сотрудник обыскал без причины{Enter}');
+    await user.type(screen.getByRole('textbox', { name: 'Описание для документа' }), 'сотрудник обыскал без причины{Enter}');
     await within(view).findByText(/задержал гражданина/);
 
     await user.click(within(view).getByRole('button', { name: 'Исправить' }));
@@ -76,7 +76,7 @@ describe('writing a document with the AI', () => {
     const { user } = await renderApp({ settings: { [AI_PROVIDER_SETTING]: 'gemini' }, profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
     await user.click(screen.getByRole('button', { name: 'Составить документ' }));
-    await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'что-то случилось{Enter}');
+    await user.type(screen.getByRole('textbox', { name: 'Описание для документа' }), 'что-то случилось{Enter}');
     expect(await screen.findByRole('alert')).toHaveTextContent('Сначала вставьте ключ Gemini');
   });
 });
@@ -96,7 +96,7 @@ describe('a document is checked against the laws it was given', () => {
     const { user } = await renderApp({ settings: GEMINI, profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
     await user.click(screen.getByRole('button', { name: 'Составить документ' }));
-    await user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), 'у прохожего украли телефон{Enter}');
+    await user.type(screen.getByRole('textbox', { name: 'Описание для документа' }), 'у прохожего украли телефон{Enter}');
     const view = screen.getByRole('region', { name: 'Составить документ' });
     expect(await within(view).findByRole('alert')).toHaveTextContent(/Упомянута статья 777, которой нет среди найденных источников/);
   });

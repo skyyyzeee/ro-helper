@@ -1,5 +1,96 @@
 [
   {
+    "version": "2026-11-24T04:32:13.002Z",
+    "documents": [
+      {
+        "documentId": "rules-main",
+        "short": "Правила",
+        "title": "Основные правила проекта",
+        "kind": "changed",
+        "articles": [
+          {
+            "kind": "changed",
+            "articleId": "rules-main-6.17",
+            "before": {
+              "id": "rules-main-6.17",
+              "number": "6.17",
+              "title": "",
+              "chapter": "6",
+              "parts": [
+                {
+                  "text": "Использование файлов/утилит для получения игрового преимущества.",
+                  "points": []
+                }
+              ],
+              "notes": [
+                {
+                  "label": "Наказание",
+                  "text": "HardBan 30 дней / PermBan.[/SIZE][/FONT]"
+                }
+              ]
+            },
+            "after": {
+              "id": "rules-main-6.17",
+              "number": "6.17",
+              "title": "",
+              "chapter": "6",
+              "parts": [
+                {
+                  "text": "Использование файлов/утилит для получения игрового преимущества.",
+                  "points": []
+                }
+              ],
+              "notes": [
+                {
+                  "label": "Наказание",
+                  "text": "HardBan 30 дней / PermBan."
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "documentId": "rules-war",
+        "short": "Правила",
+        "title": "Правила войны за территорию",
+        "kind": "changed",
+        "articles": [
+          {
+            "kind": "changed",
+            "articleId": "rules-war-1.2",
+            "before": {
+              "id": "rules-war-1.2",
+              "number": "1.2",
+              "title": "",
+              "chapter": "1",
+              "parts": [
+                {
+                  "text": "Капты разрешено проводить только во вторник / четверг / воскресенье с 15:00 до 21:00.",
+                  "points": []
+                }
+              ],
+              "notes": []
+            },
+            "after": {
+              "id": "rules-war-1.2",
+              "number": "1.2",
+              "title": "",
+              "chapter": "1",
+              "parts": [
+                {
+                  "text": "Капты разрешено проводить только в понедельник / среда / пятница / воскресенье с 15:00 до 21:00.",
+                  "points": []
+                }
+              ],
+              "notes": []
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
     "version": "2026-11-14T23:19:49+03:00",
     "documents": [
       {

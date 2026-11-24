@@ -12,7 +12,7 @@ async function openAi(settings: Record<string, unknown> = {}) {
   vi.stubGlobal('fetch', fetch);
   const app = await renderApp({ settings: { ...GEMINI, ...settings } });
   await app.user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-  const ask = (text: string) => app.user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), `${text}{Enter}`);
+  const ask = (text: string) => app.user.type(screen.getByRole('textbox', { name: 'Сообщение ИИ' }), `${text}{Enter}`);
   return { ...app, ask, fetch, bodies };
 }
 

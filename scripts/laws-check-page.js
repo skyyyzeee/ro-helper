@@ -1,16 +1,16 @@
 // Runs on a page of forum.russia.online — from the bookmark «Проверить законы» or pasted into the browser's
-// console — after http://127.0.0.1:8788/check (npm run laws:check) has put the list of threads into window.name.
+// console. The helper embeds the current job; legacy bookmarks may still read window.name.
 //
 // The forum lets a person's browser in and not a server, so the threads are read here, in the person's own
 // session: each is fetched like a page they open (one at a time, with a pause), its text taken the way a snapshot
 // takes it — the longest post of the thread's author, as the browser lays it out — and compared with ours by its
-// checksum. Only the changed texts go back to 127.0.0.1:8788, in window.name, which survives the navigation (the
-// forum forbids its pages to call another address).
-(async () => {
+// checksum. Results are downloaded as JSON and selected on the local helper page. Cross-site navigation
+// may clear window.name, so it is not used to transport the current job or its result.
+(async (providedJob) => {
   const PAUSE_MS = 400;
-  let job;
+  let job = providedJob;
   try {
-    job = JSON.parse(window.name || 'null');
+    job ??= JSON.parse(window.name || 'null');
   } catch {
     job = null;
   }
@@ -102,6 +102,8 @@
     return { post: best.post, score: best.score };
   }
 
+  const review = [];
+  const indexes = [];
   const changed = [];
   const failed = [];
   const unsure = [];
@@ -120,14 +122,32 @@
         failed.push({ server: doc.server, doc: doc.doc, error });
         continue;
       }
+      if (job.capture) { review.push({ server: doc.server, doc: doc.doc, thread, posts: posts.map(({ text, fnv, edited }) => ({ text, fnv, edited })) }); continue; }
       const verdict = judge(doc, posts);
       if (verdict.unsure) unsure.push({ server: doc.server, doc: doc.doc, why: verdict.unsure });
       else if (verdict.post) changed.push({ server: doc.server, doc: doc.doc, text: verdict.post.text, fnv: verdict.post.fnv, edited: verdict.post.edited, kept: Math.round(verdict.score * 100) });
     }
     await new Promise((resolve) => setTimeout(resolve, PAUSE_MS));
   }
+  for (const url of job.indexPages ?? []) {
+    const target = new URL(url);
+    if (target.origin !== location.origin) continue;
+    try {
+      const response = await fetch(target.href, { credentials: 'include' });
+      if (!response.ok) throw new Error(`код ${response.status}`);
+      const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+      indexes.push({ url, title: page.querySelector('h1')?.textContent.trim(), threads: [...page.querySelectorAll('.structItem-title a')].map(a => ({ title: a.textContent.trim(), url: new URL(a.getAttribute('href'), target).href })).filter(a => /\/threads\//.test(a.url)) });
+    } catch (error) { indexes.push({ url, error: String(error.message ?? error) }); }
+    await new Promise(resolve => setTimeout(resolve, PAUSE_MS));
+  }
   box.remove();
-  say(`Готово: проверено ${threads.length}, изменилось ${changed.length}${unsure.length + failed.length ? `, проверить вручную ${unsure.length + failed.length}` : ''}. Отправляю в программу…`);
-  window.name = JSON.stringify({ kind: 'laws-result', checked: threads.length, changed, failed, unsure });
-  location.href = job.back;
-})();
+  const result = JSON.stringify({ kind: job.capture ? 'laws-review' : 'laws-result', checked: threads.length, changed, failed, unsure, ...(job.capture ? { review, indexes } : {}) });
+  const download = document.createElement('a');
+  download.href = URL.createObjectURL(new Blob([result], { type: 'application/json' }));
+  download.download = job.capture ? 'laws-review.json' : 'laws-result.json';
+  document.body.appendChild(download);
+  download.click();
+  download.remove();
+  setTimeout(() => URL.revokeObjectURL(download.href), 1000);
+  say(`Готово: проверено ${threads.length}, изменилось ${changed.length}, проверить вручную ${unsure.length + failed.length}. Скачан ${download.download}. ${job.capture ? 'Передайте файл для проверки новых редакций; база не изменена.' : 'Вернитесь на страницу проверки и выберите этот файл.'}`);
+})(/* LAWS_CHECK_JOB */ null);

@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -18,12 +19,38 @@ async function pin(user: User, query: string) {
 }
 
 describe('sets of pinned cards', () => {
+  it('manages individual pins without changing saved sets, and keeps keyboard focus after removal', async () => {
+    const { platform, user } = await renderApp();
+    await pin(user, 'ук 87 ч 1');
+    await pin(user, 'ук 159');
+    const [first, second] = pinnedCards(platform);
+    await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Закреплённые');
+    const current = () => within(settings()).getByRole('list', { name: 'Закреплённые карточки' });
+    expect(within(current()).getAllByRole('listitem')).toHaveLength(2);
+    await user.type(within(settings()).getByRole('textbox', { name: 'Название набора' }), 'Проверка списка');
+    await user.click(within(settings()).getByRole('button', { name: 'Сохранить набор' }));
+    const saved = platform.settings.get('pin-presets:tverskoi');
+    await user.click(within(current()).getByRole('button', { name: `Открепить «${first.heading}»` }));
+    expect(pinnedCards(platform).map((card) => card.id)).toEqual([second.id]);
+    expect(within(current()).getByRole('button', { name: `Открепить «${second.heading}»` })).toHaveFocus();
+    expect(platform.settings.get('pin-presets:tverskoi')).toEqual(saved);
+    await user.click(within(current()).getByRole('button', { name: `Открепить «${second.heading}»` }));
+    expect(pinnedCards(platform)).toEqual([]);
+    expect(within(settings()).getByText(/Карточек пока нет/)).toHaveFocus();
+    expect(within(settings()).getByRole('button', { name: 'Сохранить набор' })).toBeDisabled();
+    await user.click(within(settings()).getByRole('button', { name: 'Показать набор «Проверка списка»' }));
+    expect(pinnedCards(platform).map((card) => card.id)).toEqual([first.id, second.id]);
+    expect(within(current()).getAllByRole('listitem')).toHaveLength(2);
+  });
+
   it('saves what is pinned as a set, and puts it back over the game with one button', async () => {
     const { platform, user } = await renderApp();
     await pin(user, 'ук 87 ч 1');
     await pin(user, 'ук 159');
 
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Закреплённые');
     expect(settings()).toHaveTextContent('2 карточки');
     await user.type(within(settings()).getByRole('textbox', { name: 'Название набора' }), 'Патруль');
     await user.click(within(settings()).getByRole('button', { name: 'Сохранить набор' }));
@@ -49,6 +76,7 @@ describe('sets of pinned cards', () => {
     const { platform, user } = await renderApp();
     await pin(user, 'ук 87 ч 1');
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Закреплённые');
     await user.click(within(settings()).getByRole('button', { name: 'Сохранить набор' }));
     expect(within(settings()).getByRole('list', { name: 'Наборы закреплённых' })).toHaveTextContent('Набор 1');
 
@@ -56,6 +84,7 @@ describe('sets of pinned cards', () => {
     document.body.innerHTML = '';
     const again = await renderApp({ settings: { 'pin-presets:tverskoi': saved } });
     await again.user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(again.user, 'Закреплённые');
     expect(await within(settings()).findByText('Набор 1')).toBeInTheDocument();
   });
 });

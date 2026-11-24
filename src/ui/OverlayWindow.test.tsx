@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { act, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { renderApp } from '../test/renderApp';
@@ -44,6 +45,7 @@ describe('overlay window', () => {
   it('adjusts the background transparency, saves it and closes the settings on Esc', async () => {
     const { platform, user } = await renderApp();
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Внешний вид');
     const settings = screen.getByRole('group', { name: 'Настройки' });
     const slider = within(settings).getByRole('slider', { name: 'Прозрачность фона' });
     expect(slider).toHaveValue('38');
@@ -67,6 +69,7 @@ describe('overlay window', () => {
   it('in the app, offers to reset the window position and resizes the frameless window from its edges', async () => {
     const { platform, user } = await renderApp({ platform: { kind: 'tauri' } });
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Внешний вид');
     await user.click(screen.getByRole('button', { name: 'Сбросить положение окна' }));
     expect(platform.calls.some((call) => call.method === 'resetWindowBounds')).toBe(true);
 
@@ -78,6 +81,7 @@ describe('overlay window', () => {
   it('in the browser preview, has no window to reset or resize', async () => {
     const { user } = await renderApp({ platform: { kind: 'browser' } });
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Внешний вид');
     expect(screen.queryByRole('button', { name: 'Сбросить положение окна' })).not.toBeInTheDocument();
     expect(document.querySelector('.resize')).toBeNull();
   });

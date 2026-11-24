@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import {
   OFFENDER_DATIVE,
   articleTitle,
@@ -62,6 +63,8 @@ export interface CalculatorPanelProps {
   fieldsOf: (item: ChargeItem) => ChargeFields;
   onUpdate: (item: ChargeItem, patch: ChargePatch) => void;
   onRemove: (item: ChargeItem) => void;
+  /** Opens the exact source part without removing the charge. */
+  onOpenSource: (item: ChargeItem) => void;
   onClear: () => void;
   fineInput: string;
   onFineInput: (value: string) => void;
@@ -79,6 +82,12 @@ export interface CalculatorPanelProps {
 /** The side panel: criminal and administrative charges, their totals by law, and the charges to copy. */
 export function CalculatorPanel(props: CalculatorPanelProps) {
   const { result, onClear, onCopy, copyState, pinned, onPin, onReport, reportState } = props;
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const showCalculation = (label: string) => {
+    const target = bodyRef.current?.querySelector<HTMLElement>(`[aria-label="${label}"]`);
+    target?.scrollIntoView?.({ block: 'nearest' });
+    target?.focus({ preventScroll: true });
+  };
   const count = (result.criminal?.items.length ?? 0) + (result.administrative?.items.length ?? 0);
 
   return (
@@ -92,13 +101,17 @@ export function CalculatorPanel(props: CalculatorPanelProps) {
         </button>
       </div>
 
-      <div className="calc__body">
+      <div className="calc__body" ref={bodyRef}>
         {result.criminal && <CriminalSection {...props} criminal={result.criminal} />}
         {result.administrative && <AdministrativeSection {...props} administrative={result.administrative} />}
       </div>
 
       <div className="calc__copy">
-        {result.charge ? <div className="copy-str">{result.charge}</div> : <div className="copy-str copy-str--empty">Обвинять не в чем</div>}
+        <PunishmentSummary result={result} fineInput={props.fineInput} onDetails={showCalculation} />
+        <details className="calc__charge-preview">
+          <summary>Обвинение для копирования</summary>
+          {result.charge ? <div className="copy-str">{result.charge}</div> : <div className="copy-str copy-str--empty">Обвинять не в чем</div>}
+        </details>
         <div className="calc__copy-row">
           <button className="btn btn--primary calc__copy-btn" type="button" disabled={!result.charge} onClick={onCopy}>
             <span>{copyState === 'copied' ? 'Скопировано' : copyState === 'failed' ? 'Не удалось скопировать' : 'Скопировать'}</span>
@@ -133,7 +146,44 @@ export function CalculatorPanel(props: CalculatorPanelProps) {
   );
 }
 
-function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, fineInput, onFineInput, priority }: CalculatorPanelProps & { criminal: CriminalResult }) {
+/** A persistent view of the calculated result; each code keeps its own units and limits. */
+function PunishmentSummary({ result, fineInput, onDetails }: Pick<CalculatorPanelProps, 'result' | 'fineInput'> & { onDetails: (label: string) => void }) {
+  const { criminal, administrative } = result;
+  const fineDigits = fineInput.replace(/\D/g, '');
+  const criminalFine = criminal?.fineLimit;
+  const invalidCriminalFine = !!fineDigits && !!criminalFine && !fineFits(Number(fineDigits), criminalFine);
+  const counted = administrative?.items.filter((r) => r.applicable) ?? [];
+  const invalidAdministrative = counted.some((r) => r.fine?.fits === false || r.arrest?.fits === false);
+  return (
+    <section className="calc__summary" aria-label="Сводка наказания">
+      <h2>Итог наказания</h2>
+      {criminal && (
+        <div className="calc__summary-code" role="group" aria-label="Сводка УК">
+          <button type="button" className="calc__summary-details" aria-label="Расчёт УК и ограничения" title="Открыть подробный расчёт УК" onClick={() => onDetails('Итог')}>
+          <span className="calc__summary-line">
+            <span>УК · {criminal.mode === 'custody' ? 'КПЗ' : 'штраф'}</span>
+            <strong>{criminal.mode === 'custody' ? `${criminal.term} мес` : criminalFine ? (fineDigits ? formatRubles(Number(fineDigits)) : rangeText(criminalFine)) : 'Не предусмотрен'}</strong>
+          </span>
+          </button>
+          {invalidCriminalFine && <p className="calc__summary-invalid">Сумма вне предела — проверьте штраф УК</p>}
+        </div>
+      )}
+      {administrative && (
+        <div className="calc__summary-code" role="group" aria-label="Сводка КоАП">
+          {!counted.length && <p>КоАП · не назначается</p>}
+          {counted.length > 0 && <button type="button" className="calc__summary-details" aria-label="Расчёт КоАП и ограничения" title="Открыть подробный расчёт КоАП" onClick={() => onDetails('Итог КоАП')}>
+          {counted.some((r) => r.fine) && <span className="calc__summary-line"><span>КоАП · штраф</span><strong>{formatRubles(administrative.fineTotal)}</strong></span>}
+          {administrative.arrestDays > 0 && <span className="calc__summary-line"><span>КоАП · арест</span><strong>{administrative.arrestDays} сут</strong></span>}
+          {administrative.other.length > 0 && <span className="calc__summary-other">{administrative.other.join(' · ')}</span>}
+          </button>}
+          {invalidAdministrative && <p className="calc__summary-invalid">Значения вне предела — проверьте КоАП</p>}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, onOpenSource, fineInput, onFineInput, priority }: CalculatorPanelProps & { criminal: CriminalResult }) {
   const { items, mode } = criminal;
   const noFine = criminal.fineUnavailable;
   const noCustody = criminal.custodyUnavailable.length === items.length;
@@ -168,20 +218,22 @@ function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, fineInp
           const byStars = r.item.part.punishment?.alternatives.some((s) => s.kind === 'imprisonment-by-stars');
           const partStars = r.item.part.stars;
           const ownJurisdiction = !shared && r.item.part.jurisdiction;
-          // Nothing chosen and nothing to tell in the second line: it shows on pointing at the charge or tabbing into it.
-          const quiet = r.item.stage === 'done' && !(byStars && partStars) && !ownJurisdiction;
           return (
             <li key={`${r.item.article.id}#${r.item.part.number ?? ''}`} className={r.absorbed ? 'ci ci--absorbed' : r.stacked ? 'ci ci--stacked' : 'ci'}>
               <div className="ci__row">
-                <span className="num">{label}</span>
-                <span className="ttl">{articleTitle(r.item.article)}</span>
+                <button className="ci__source" type="button" aria-label={`Открыть ${label} УК`} onClick={() => onOpenSource(r.item)}>
+                  <span className="num">{label}</span>
+                  <span className="ttl">{articleTitle(r.item.article)}</span>
+                </button>
                 <span className="sp" />
                 <span className="val">{valueText(r, mode)}</span>
                 <button className="x" type="button" aria-label={`Убрать ${label}`} title="Убрать" onClick={() => onRemove(r.item)}>
                   <CloseIcon size={14} />
                 </button>
               </div>
-              <div className={quiet ? 'ci__mods ci__mods--quiet' : 'ci__mods'}>
+              {r.absorbed && <span className="ci__status">Поглощено более строгим наказанием</span>}
+              {r.stacked && <span className="ci__status">Добавляется к основному наказанию</span>}
+              <div className="ci__mods">
                 {(['attempt', 'preparation'] as const).map((stage) => (
                   <button
                     key={stage}
@@ -217,7 +269,7 @@ function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, fineInp
       </ul>
 
       {mode === 'custody' ? (
-        <div className="total" aria-label="Итог">
+        <div className="total" aria-label="Итог" tabIndex={-1}>
           <div>
             <div className="t-big">{criminal.term} мес</div>
             <div className="t-sub">{criminal.capped ? 'потолок по закону' : 'итог по УК'}</div>
@@ -236,7 +288,7 @@ function CriminalSection({ result, criminal, onMode, onUpdate, onRemove, fineInp
         </div>
       ) : (
         criminal.fineLimit && (
-          <div className="total total--fine" aria-label="Итог">
+          <div className="total total--fine" aria-label="Итог" tabIndex={-1}>
             <label className="fine">
               <span className="muted">Сумма штрафа</span>
               <span className="fine__field">
@@ -322,7 +374,7 @@ function AmountField({ label, unit, value, placeholder, onChange }: { label: str
   );
 }
 
-function AdministrativeRow({ r, offender, fieldsOf, onUpdate, onRemove }: CalculatorPanelProps & { r: AdministrativeItemResult<Charge>; offender: Offender }) {
+function AdministrativeRow({ r, offender, fieldsOf, onUpdate, onRemove, onOpenSource }: CalculatorPanelProps & { r: AdministrativeItemResult<Charge>; offender: Offender }) {
   const label = chargeLabel(r.item);
   const fields = fieldsOf(r.item);
   const { fine, arrest } = r;
@@ -368,8 +420,10 @@ function AdministrativeRow({ r, offender, fieldsOf, onUpdate, onRemove }: Calcul
   return (
     <li className={r.applicable ? 'ci' : 'ci ci--off'}>
       <div className="ci__row">
-        <span className="num">{label}</span>
-        <span className="ttl">{articleTitle(r.item.article)}</span>
+        <button className="ci__source" type="button" aria-label={`Открыть ${label} КоАП`} onClick={() => onOpenSource(r.item)}>
+          <span className="num">{label}</span>
+          <span className="ttl">{articleTitle(r.item.article)}</span>
+        </button>
         <span className="sp" />
         {value}
         <button className="x" type="button" aria-label={`Убрать ${label}`} title="Убрать" onClick={() => onRemove(r.item)}>
@@ -426,7 +480,7 @@ function AdministrativeSection(props: CalculatorPanelProps & { administrative: A
       </ul>
 
       {counted && (
-        <div className="total total--admin" aria-label="Итог КоАП">
+        <div className="total total--admin" aria-label="Итог КоАП" tabIndex={-1}>
           {hasFine && (
             <div className="tot-row">
               <span>Штраф</span>

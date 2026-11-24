@@ -75,3 +75,5 @@ OpenAI-compatible API behind it; the keys on the server), `openaiProvider` (the 
 ## The exam
 
 `npm run eval` / `npm run eval:ai` — see `AI_EVALUATION.md`.
+
+24.11.2026: quick mixed получает до10 основных источников вместо8, чтобы двум отдельным спискам законов/правил хватало места. Quick law/server_rule остаются8, full14; источники точки зрения добавляются отдельно как прежде. См. [раздельную проверку](AI_RETRIEVAL_CHECK_2026-11-24.md).

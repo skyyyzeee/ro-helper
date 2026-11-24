@@ -1,5 +1,7 @@
 # The AI exam (evaluation lab)
 
+> Уточнение 24.11.2026: проверки ссылок/номеров/цифр не доказывают смысловое следование утверждения норме. Автономный контрпример проходит confirmed и текущий hallucination gate. Нулевой показатель этого gate не означает отсутствие всех смысловых ошибок. См. [аудит](AI_ARCHITECTURE_AUDIT_2026-11-24.md) и [воспроизводимый результат](AI_OFFLINE_BASELINE_2026-11-24.json).
+
 Not a player feature: a tool for the developers to see how a model, a prompt, the classifier or the search does on
 the same questions — and to see at once when a change makes things worse.
 
@@ -58,3 +60,5 @@ The hard gates also run **without a live model** on every pull request: `src/pro
 
 `npm run eval -- --approved` (with `AI_ADMIN_TOKEN`) adds the players' questions the admins approved with their right
 articles (category `APPROVED`) and asks every question with the approved dictionary — see `docs/AI_DATASET.md`.
+
+`--no-cache` отключает кеш чтения и записи для всех вызовов eval, включая поисковые фразы и повтор формата. Использовать при сравнении живых моделей/версий, чтобы старые ответы не подменяли измерение. Это не отключает лимиты или тариф провайдера.

@@ -46,10 +46,12 @@ export function reviewText(review: DetentionReview): string {
  */
 export function DetentionView({
   detention,
+  onDraft,
   onOpen,
   onTab,
 }: {
   detention: DetentionCheck;
+  onDraft: (text: string) => void;
   onOpen: (hit: SearchHit) => void;
   onTab: (tab: AiTab) => void;
 }) {
@@ -80,7 +82,7 @@ export function DetentionView({
           icon={<TopicIcon id="detention" size={24} />}
           title="Как прошло задержание?"
           examples={['Остановил подозреваемого в краже, представился, надел наручники, обыскал без понятых, отвёз в отдел, адвоката дал через 40 минут, протокол составил в конце']}
-          onExample={(text) => void detention.review(text)}
+          onExample={onDraft}
         >
           Расскажите в поле внизу или голосом, что вы делали и в каком порядке. ИИ проверит каждый шаг по законам сервера: что по
           закону, где нарушение и как надо было, — и что вы пропустили. Разбор видите только вы.
@@ -97,7 +99,9 @@ export function DetentionView({
       {detention.error && (
         <div className="warn" role="alert">
           <WarnIcon />
-          <span>{detention.error}</span>
+          <span>{detention.error}
+            {detention.lastRequest && <><br /><button type="button" className="link" title="Отредактируйте текст и нажмите «Отправить»" onClick={() => onDraft(detention.lastRequest)}>Вернуть текст в поле</button></>}
+          </span>
         </div>
       )}
 

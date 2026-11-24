@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { cleanup, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../test/renderApp';
@@ -15,6 +16,7 @@ afterEach(() => {
 
 async function openLook(user: Awaited<ReturnType<typeof renderApp>>['user']) {
   await user.click(screen.getByRole('button', { name: 'Настройки' }));
+  await selectSettingsSection(user, 'Внешний вид');
   return {
     themes: screen.getByRole('radiogroup', { name: 'Тема' }),
     accents: screen.getByRole('radiogroup', { name: 'Акцент' }),

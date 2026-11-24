@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../test/renderApp';
@@ -13,6 +14,7 @@ describe('a key another program holds (issue #40)', () => {
     expect(platform.state.quickHotkey).toBeNull();
 
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Клавиши');
     const quick = keys().getByRole('group', { name: 'Быстрый поиск' });
     expect(within(quick).getByRole('alert')).toHaveTextContent('Сочетание занято другой программой');
     expect(within(keys().getByRole('group', { name: 'Открыть и скрыть ассистент' })).queryByRole('alert')).not.toBeInTheDocument();
@@ -23,6 +25,7 @@ describe('a key another program holds (issue #40)', () => {
     await vi.waitFor(() => expect(platform.state.quickHotkey).toBe('Alt+S'));
     expect(platform.state.toast).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Клавиши');
     expect(within(keys().getByRole('group', { name: 'Быстрый поиск' })).queryByRole('alert')).not.toBeInTheDocument();
   });
 });

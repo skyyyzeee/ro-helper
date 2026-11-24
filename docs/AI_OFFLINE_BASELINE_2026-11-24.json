@@ -1,0 +1,3735 @@
+{
+  "semanticProbe": {
+    "deliberatelyFalseClaim": "Кража чужого имущества разрешена.",
+    "validatorStatus": "confirmed",
+    "issues": [],
+    "existingHallucinationGateFindings": [],
+    "interpretation": "This probe only demonstrates missing semantic entailment checking. It is not a model output or a measured model hallucination rate."
+  },
+  "packSha256": {
+    "tverskoi": "5df65883b7ed079dacef8b2e6963a2970d1a1a0f0e31ea3752bc96919c06a923",
+    "arbatskiy": "9b153a64ce41f5f2f4f12c759a5b3245a23231f1bb2609e28d4fb844a7b9944e",
+    "kutuzovskiy": "7cc37f837edae7093c8ed268813ae0f82dbece4ab65a3c552efdb859de0140e5"
+  },
+  "date": "2026-11-24",
+  "datasetSha256": "5c780317bac99b8053d042db15e44fbd2ccb9ea3b1e9c4190c4664a7620a82a6",
+  "limitations": "No model, network, classifier, generated search phrases, organization, perspective or follow-ups. Explicit scope from case category. Recall is article presence only, not evidence completeness or answer quality. Character counts are not token counts. Existing cases are not a held-out benchmark.",
+  "summary": [
+    {
+      "depth": "quick",
+      "cases": 100,
+      "allExpectedRetrieved": 99,
+      "casesWithClippedArticle": 48,
+      "sourceOccurrences": 794,
+      "clippedSourceOccurrences": 90,
+      "requestCharsP50": 13220,
+      "requestCharsP95": 17794
+    },
+    {
+      "depth": "full",
+      "cases": 100,
+      "allExpectedRetrieved": 100,
+      "casesWithClippedArticle": 56,
+      "sourceOccurrences": 1384,
+      "clippedSourceOccurrences": 153,
+      "requestCharsP50": 17691,
+      "requestCharsP95": 24989
+    }
+  ],
+  "rows": [
+    {
+      "case": 1,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 87"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "ch-army-10.5",
+          "fullChars": 4856
+        }
+      ],
+      "requestChars": 14866
+    },
+    {
+      "case": 1,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 87"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "ch-army-10.5",
+          "fullChars": 4856
+        },
+        {
+          "id": "ch-army-guard-30",
+          "fullChars": 2127
+        },
+        {
+          "id": "fz16-6",
+          "fullChars": 3974
+        },
+        {
+          "id": "upk-19",
+          "fullChars": 1823
+        }
+      ],
+      "requestChars": 24161
+    },
+    {
+      "case": 2,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 90"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "fz7-15",
+          "fullChars": 12255
+        },
+        {
+          "id": "fz6-12",
+          "fullChars": 15222
+        }
+      ],
+      "requestChars": 17494
+    },
+    {
+      "case": 2,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 90"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "fz7-15",
+          "fullChars": 12255
+        },
+        {
+          "id": "fz6-12",
+          "fullChars": 15222
+        },
+        {
+          "id": "fz16-fsvng-11",
+          "fullChars": 3221
+        },
+        {
+          "id": "upk-22.2",
+          "fullChars": 7484
+        }
+      ],
+      "requestChars": 24385
+    },
+    {
+      "case": 3,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "КоАП 9.8"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "fz10-II-1",
+          "fullChars": 2400
+        }
+      ],
+      "requestChars": 13221
+    },
+    {
+      "case": 3,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "КоАП 9.8"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "fz10-II-1",
+          "fullChars": 2400
+        },
+        {
+          "id": "pdd-I-1.2",
+          "fullChars": 3910
+        }
+      ],
+      "requestChars": 18897
+    },
+    {
+      "case": 4,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 159"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 15723
+    },
+    {
+      "case": 4,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 159"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "uk-154",
+          "fullChars": 1833
+        }
+      ],
+      "requestChars": 20847
+    },
+    {
+      "case": 5,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 93"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "fz6-13",
+          "fullChars": 23586
+        }
+      ],
+      "requestChars": 14532
+    },
+    {
+      "case": 5,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 93"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "fz6-13",
+          "fullChars": 23586
+        },
+        {
+          "id": "upk-23",
+          "fullChars": 5070
+        },
+        {
+          "id": "upk-24",
+          "fullChars": 3303
+        },
+        {
+          "id": "upk-32",
+          "fullChars": 2511
+        }
+      ],
+      "requestChars": 22165
+    },
+    {
+      "case": 6,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 10.2"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "ch-news-ads-4.6",
+          "fullChars": 1977
+        }
+      ],
+      "requestChars": 13070
+    },
+    {
+      "case": 6,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 10.2"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "ch-news-ads-4.6",
+          "fullChars": 1977
+        },
+        {
+          "id": "fkz-court-26",
+          "fullChars": 1878
+        }
+      ],
+      "requestChars": 18410
+    },
+    {
+      "case": 7,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "КоАП 23.1.4"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "pdd-2.4",
+          "fullChars": 2557
+        }
+      ],
+      "requestChars": 12767
+    },
+    {
+      "case": 7,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "КоАП 23.1.4"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "pdd-2.4",
+          "fullChars": 2557
+        },
+        {
+          "id": "pdd-1.8",
+          "fullChars": 11320
+        }
+      ],
+      "requestChars": 18232
+    },
+    {
+      "case": 8,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "КоАП 13.1"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "pdd-1.8",
+          "fullChars": 11320
+        },
+        {
+          "id": "pdd-22.6",
+          "fullChars": 3498
+        }
+      ],
+      "requestChars": 14745
+    },
+    {
+      "case": 8,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "КоАП 13.1"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "pdd-1.8",
+          "fullChars": 11320
+        },
+        {
+          "id": "pdd-22.6",
+          "fullChars": 3498
+        }
+      ],
+      "requestChars": 18755
+    },
+    {
+      "case": 9,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 15.5"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "ch-mvd-16",
+          "fullChars": 2011
+        },
+        {
+          "id": "ch-mvd-10",
+          "fullChars": 3271
+        }
+      ],
+      "requestChars": 14087
+    },
+    {
+      "case": 9,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 15.5"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "ch-mvd-16",
+          "fullChars": 2011
+        },
+        {
+          "id": "ch-mvd-10",
+          "fullChars": 3271
+        },
+        {
+          "id": "pdd-1.8",
+          "fullChars": 11320
+        }
+      ],
+      "requestChars": 18985
+    },
+    {
+      "case": 10,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "КоАП 7.1"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "ch-mvd-17",
+          "fullChars": 2144
+        },
+        {
+          "id": "ch-mvd-36",
+          "fullChars": 2051
+        },
+        {
+          "id": "pdd-1.8",
+          "fullChars": 11320
+        },
+        {
+          "id": "pdd-2.4",
+          "fullChars": 2557
+        }
+      ],
+      "requestChars": 17253
+    },
+    {
+      "case": 10,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "КоАП 7.1"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "ch-mvd-17",
+          "fullChars": 2144
+        },
+        {
+          "id": "ch-mvd-36",
+          "fullChars": 2051
+        },
+        {
+          "id": "pdd-1.8",
+          "fullChars": 11320
+        },
+        {
+          "id": "pdd-2.4",
+          "fullChars": 2557
+        }
+      ],
+      "requestChars": 21352
+    },
+    {
+      "case": 11,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 10.1|УК 10.2|УК 10.3"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 9234
+    },
+    {
+      "case": 11,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 10.1|УК 10.2|УК 10.3"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 13100
+    },
+    {
+      "case": 12,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 6.2"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "pdd-1.4",
+          "fullChars": 2760
+        }
+      ],
+      "requestChars": 12793
+    },
+    {
+      "case": 12,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 6.2"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "pdd-1.4",
+          "fullChars": 2760
+        }
+      ],
+      "requestChars": 14990
+    },
+    {
+      "case": 13,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "КоАП 14.8"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 11513
+    },
+    {
+      "case": 13,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "КоАП 14.8"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 15326
+    },
+    {
+      "case": 14,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 12.8"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "fz-weapons-3",
+          "fullChars": 2279
+        }
+      ],
+      "requestChars": 13767
+    },
+    {
+      "case": 14,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 12.8"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "fz-weapons-3",
+          "fullChars": 2279
+        }
+      ],
+      "requestChars": 17759
+    },
+    {
+      "case": 15,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 17.6"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "upk-XI-6",
+          "fullChars": 4599
+        },
+        {
+          "id": "koap-5.5",
+          "fullChars": 3025
+        },
+        {
+          "id": "upk-XI-2",
+          "fullChars": 2244
+        },
+        {
+          "id": "upk-XII-1",
+          "fullChars": 1883
+        }
+      ],
+      "requestChars": 16400
+    },
+    {
+      "case": 15,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 17.6"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "upk-XI-6",
+          "fullChars": 4599
+        },
+        {
+          "id": "koap-5.5",
+          "fullChars": 3025
+        },
+        {
+          "id": "upk-XI-2",
+          "fullChars": 2244
+        },
+        {
+          "id": "upk-XII-1",
+          "fullChars": 1883
+        },
+        {
+          "id": "uk-V-5.11",
+          "fullChars": 2972
+        }
+      ],
+      "requestChars": 20448
+    },
+    {
+      "case": 16,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 79"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 12560
+    },
+    {
+      "case": 16,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 79"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 17134
+    },
+    {
+      "case": 17,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 76"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "ch-army-10.5",
+          "fullChars": 4856
+        }
+      ],
+      "requestChars": 13691
+    },
+    {
+      "case": 17,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 76"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "ch-army-10.5",
+          "fullChars": 4856
+        },
+        {
+          "id": "ch-army-guard-30",
+          "fullChars": 2127
+        },
+        {
+          "id": "fkz1-44",
+          "fullChars": 1827
+        }
+      ],
+      "requestChars": 21843
+    },
+    {
+      "case": 18,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 152"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "ch-mvd-4.3",
+          "fullChars": 6173
+        },
+        {
+          "id": "uk-111",
+          "fullChars": 2320
+        },
+        {
+          "id": "fz2-17",
+          "fullChars": 4075
+        },
+        {
+          "id": "fz6-12",
+          "fullChars": 15222
+        },
+        {
+          "id": "fz6-14",
+          "fullChars": 3219
+        },
+        {
+          "id": "fz5-15",
+          "fullChars": 3230
+        }
+      ],
+      "requestChars": 19804
+    },
+    {
+      "case": 18,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 152"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "ch-mvd-4.3",
+          "fullChars": 6173
+        },
+        {
+          "id": "uk-111",
+          "fullChars": 2320
+        },
+        {
+          "id": "fz2-17",
+          "fullChars": 4075
+        },
+        {
+          "id": "fz6-12",
+          "fullChars": 15222
+        },
+        {
+          "id": "fz6-14",
+          "fullChars": 3219
+        },
+        {
+          "id": "fz5-15",
+          "fullChars": 3230
+        },
+        {
+          "id": "fz6-16",
+          "fullChars": 2892
+        },
+        {
+          "id": "fz6-20",
+          "fullChars": 2486
+        },
+        {
+          "id": "fz6-21",
+          "fullChars": 2920
+        },
+        {
+          "id": "fz16-fsvng-17",
+          "fullChars": 2176
+        }
+      ],
+      "requestChars": 30084
+    },
+    {
+      "case": 19,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 158"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 14558
+    },
+    {
+      "case": 19,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 158"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 20231
+    },
+    {
+      "case": 20,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 111"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "fz6-13",
+          "fullChars": 23586
+        },
+        {
+          "id": "uk-111",
+          "fullChars": 2320
+        },
+        {
+          "id": "ch-army-10.5",
+          "fullChars": 4856
+        }
+      ],
+      "requestChars": 17938
+    },
+    {
+      "case": 20,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 111"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "fz6-13",
+          "fullChars": 23586
+        },
+        {
+          "id": "uk-111",
+          "fullChars": 2320
+        },
+        {
+          "id": "ch-army-10.5",
+          "fullChars": 4856
+        },
+        {
+          "id": "ch-army-guard-30",
+          "fullChars": 2127
+        }
+      ],
+      "requestChars": 23322
+    },
+    {
+      "case": 21,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 132"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "upk-23",
+          "fullChars": 5070
+        },
+        {
+          "id": "upk-27",
+          "fullChars": 3045
+        }
+      ],
+      "requestChars": 16948
+    },
+    {
+      "case": 21,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 132"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "upk-23",
+          "fullChars": 5070
+        },
+        {
+          "id": "upk-27",
+          "fullChars": 3045
+        },
+        {
+          "id": "ch-army-structure-III-5",
+          "fullChars": 4919
+        },
+        {
+          "id": "sk-ranks-12",
+          "fullChars": 3727
+        }
+      ],
+      "requestChars": 25323
+    },
+    {
+      "case": 22,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "КоАП 12.7"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "fz6-12",
+          "fullChars": 15222
+        },
+        {
+          "id": "fz16-6",
+          "fullChars": 3974
+        },
+        {
+          "id": "fz16-fsvng-11",
+          "fullChars": 3221
+        },
+        {
+          "id": "upk-15",
+          "fullChars": 2083
+        }
+      ],
+      "requestChars": 17794
+    },
+    {
+      "case": 22,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "КоАП 12.7"
+      ],
+      "missing": [],
+      "sourceCount": 10,
+      "clippedArticles": [
+        {
+          "id": "fz6-12",
+          "fullChars": 15222
+        },
+        {
+          "id": "fz16-6",
+          "fullChars": 3974
+        },
+        {
+          "id": "fz16-fsvng-11",
+          "fullChars": 3221
+        },
+        {
+          "id": "upk-15",
+          "fullChars": 2083
+        }
+      ],
+      "requestChars": 19388
+    },
+    {
+      "case": 23,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "КоАП 9.6"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "koap-8.1",
+          "fullChars": 2660
+        }
+      ],
+      "requestChars": 15707
+    },
+    {
+      "case": 23,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "КоАП 9.6"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "koap-8.1",
+          "fullChars": 2660
+        }
+      ],
+      "requestChars": 20411
+    },
+    {
+      "case": 24,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "КоАП 11.4|УК 98"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "upk-34",
+          "fullChars": 2615
+        },
+        {
+          "id": "fz2-17",
+          "fullChars": 4075
+        },
+        {
+          "id": "fz6-13",
+          "fullChars": 23586
+        }
+      ],
+      "requestChars": 16924
+    },
+    {
+      "case": 24,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "КоАП 11.4|УК 98"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "upk-34",
+          "fullChars": 2615
+        },
+        {
+          "id": "fz2-17",
+          "fullChars": 4075
+        },
+        {
+          "id": "fz6-13",
+          "fullChars": 23586
+        },
+        {
+          "id": "koap-8.1",
+          "fullChars": 2660
+        },
+        {
+          "id": "fz5-15",
+          "fullChars": 3230
+        }
+      ],
+      "requestChars": 24989
+    },
+    {
+      "case": 25,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 85"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "upk-144",
+          "fullChars": 11077
+        },
+        {
+          "id": "fz6-15",
+          "fullChars": 2764
+        }
+      ],
+      "requestChars": 14005
+    },
+    {
+      "case": 25,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 85"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "upk-144",
+          "fullChars": 11077
+        },
+        {
+          "id": "fz6-15",
+          "fullChars": 2764
+        }
+      ],
+      "requestChars": 18090
+    },
+    {
+      "case": 26,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 10.1"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "fz-police-3.4",
+          "fullChars": 3663
+        }
+      ],
+      "requestChars": 13082
+    },
+    {
+      "case": 26,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 10.1"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "fz-police-3.4",
+          "fullChars": 3663
+        }
+      ],
+      "requestChars": 15935
+    },
+    {
+      "case": 27,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 6.7"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 10926
+    },
+    {
+      "case": 27,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 6.7"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 14347
+    },
+    {
+      "case": 28,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 16.11"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "fz-fsb-10",
+          "fullChars": 5680
+        },
+        {
+          "id": "fz-fsb-13",
+          "fullChars": 2721
+        }
+      ],
+      "requestChars": 16005
+    },
+    {
+      "case": 28,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 16.11"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "fz-fsb-10",
+          "fullChars": 5680
+        },
+        {
+          "id": "fz-fsb-13",
+          "fullChars": 2721
+        },
+        {
+          "id": "ch-mvd-36",
+          "fullChars": 2051
+        },
+        {
+          "id": "fkz-court-2",
+          "fullChars": 6105
+        }
+      ],
+      "requestChars": 24230
+    },
+    {
+      "case": 29,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 13.1"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 11386
+    },
+    {
+      "case": 29,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 13.1"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "pdd-2.4",
+          "fullChars": 2557
+        },
+        {
+          "id": "fz-fsb-10",
+          "fullChars": 5680
+        },
+        {
+          "id": "ch-mvd-17",
+          "fullChars": 2144
+        }
+      ],
+      "requestChars": 19904
+    },
+    {
+      "case": 30,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 15.4"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 13846
+    },
+    {
+      "case": 30,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 15.4"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "ch-mvd-10",
+          "fullChars": 3271
+        },
+        {
+          "id": "fkz-court-2",
+          "fullChars": 6105
+        }
+      ],
+      "requestChars": 22256
+    },
+    {
+      "case": 31,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 15.1"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "fz-weapons-1.9",
+          "fullChars": 3784
+        },
+        {
+          "id": "ch-mvd-36",
+          "fullChars": 2051
+        },
+        {
+          "id": "ch-mvd-38",
+          "fullChars": 5038
+        },
+        {
+          "id": "fz-fsb-4",
+          "fullChars": 2204
+        }
+      ],
+      "requestChars": 18793
+    },
+    {
+      "case": 31,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 15.1"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "fz-weapons-1.9",
+          "fullChars": 3784
+        },
+        {
+          "id": "ch-mvd-36",
+          "fullChars": 2051
+        },
+        {
+          "id": "ch-mvd-38",
+          "fullChars": 5038
+        },
+        {
+          "id": "fz-fsb-4",
+          "fullChars": 2204
+        },
+        {
+          "id": "ch-mvd-10",
+          "fullChars": 3271
+        },
+        {
+          "id": "fz-fsb-13",
+          "fullChars": 2721
+        }
+      ],
+      "requestChars": 25426
+    },
+    {
+      "case": 32,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "КоАП 5.2"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "pdd-1.8",
+          "fullChars": 11320
+        }
+      ],
+      "requestChars": 13442
+    },
+    {
+      "case": 32,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "КоАП 5.2"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "pdd-1.8",
+          "fullChars": 11320
+        }
+      ],
+      "requestChars": 16538
+    },
+    {
+      "case": 33,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "КоАП 5.1"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "ch-mvd-14",
+          "fullChars": 2560
+        },
+        {
+          "id": "pdd-1.8",
+          "fullChars": 11320
+        },
+        {
+          "id": "pdd-2.4",
+          "fullChars": 2557
+        }
+      ],
+      "requestChars": 15640
+    },
+    {
+      "case": 33,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "КоАП 5.1"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "ch-mvd-14",
+          "fullChars": 2560
+        },
+        {
+          "id": "pdd-1.8",
+          "fullChars": 11320
+        },
+        {
+          "id": "pdd-2.4",
+          "fullChars": 2557
+        }
+      ],
+      "requestChars": 18000
+    },
+    {
+      "case": 34,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "КоАП 17.1|КоАП 17.4|КоАП 17.5"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "pdd-1.8",
+          "fullChars": 11320
+        }
+      ],
+      "requestChars": 11506
+    },
+    {
+      "case": 34,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "КоАП 17.1|КоАП 17.4|КоАП 17.5"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "pdd-1.8",
+          "fullChars": 11320
+        }
+      ],
+      "requestChars": 13939
+    },
+    {
+      "case": 35,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 10.4"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "fz-police-3.4",
+          "fullChars": 3663
+        }
+      ],
+      "requestChars": 11458
+    },
+    {
+      "case": 35,
+      "server": "arbatskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 10.4"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "fz-police-3.4",
+          "fullChars": 3663
+        },
+        {
+          "id": "pdd-1.8",
+          "fullChars": 11320
+        },
+        {
+          "id": "fkz-court-51",
+          "fullChars": 2142
+        }
+      ],
+      "requestChars": 17702
+    },
+    {
+      "case": 36,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 10.10"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 11656
+    },
+    {
+      "case": 36,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 10.10"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 16588
+    },
+    {
+      "case": 37,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 10.4"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 11210
+    },
+    {
+      "case": 37,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 10.4"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 14968
+    },
+    {
+      "case": 38,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 7.1"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "fz-business-3-9",
+          "fullChars": 2879
+        },
+        {
+          "id": "fz-business-5-12",
+          "fullChars": 1895
+        },
+        {
+          "id": "uk-III-3.6",
+          "fullChars": 2075
+        }
+      ],
+      "requestChars": 17758
+    },
+    {
+      "case": 38,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 7.1"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "fz-business-3-9",
+          "fullChars": 2879
+        },
+        {
+          "id": "fz-business-5-12",
+          "fullChars": 1895
+        },
+        {
+          "id": "uk-III-3.6",
+          "fullChars": 2075
+        },
+        {
+          "id": "pdd-1.4",
+          "fullChars": 2760
+        }
+      ],
+      "requestChars": 21957
+    },
+    {
+      "case": 39,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 17.13"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "upk-II-2.7.1",
+          "fullChars": 2543
+        },
+        {
+          "id": "uk-V-5.11",
+          "fullChars": 2972
+        }
+      ],
+      "requestChars": 15233
+    },
+    {
+      "case": 39,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 17.13"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "upk-II-2.7.1",
+          "fullChars": 2543
+        },
+        {
+          "id": "uk-V-5.11",
+          "fullChars": 2972
+        }
+      ],
+      "requestChars": 20567
+    },
+    {
+      "case": 40,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 13.7"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 10023
+    },
+    {
+      "case": 40,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 13.7"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 12449
+    },
+    {
+      "case": 41,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 15.4"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 10247
+    },
+    {
+      "case": 41,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 15.4"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 14726
+    },
+    {
+      "case": 42,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "КоАП 8.1"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "upk-II-2.9",
+          "fullChars": 3202
+        },
+        {
+          "id": "uk-V-5.2",
+          "fullChars": 1832
+        }
+      ],
+      "requestChars": 14785
+    },
+    {
+      "case": 42,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "КоАП 8.1"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "upk-II-2.9",
+          "fullChars": 3202
+        },
+        {
+          "id": "uk-V-5.2",
+          "fullChars": 1832
+        }
+      ],
+      "requestChars": 17205
+    },
+    {
+      "case": 43,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "КоАП 14.9"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "pdd-1.4",
+          "fullChars": 2760
+        }
+      ],
+      "requestChars": 14385
+    },
+    {
+      "case": 43,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "КоАП 14.9"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "pdd-1.4",
+          "fullChars": 2760
+        }
+      ],
+      "requestChars": 16874
+    },
+    {
+      "case": 44,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 10.9|УК 10.8"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "pdd-1.4",
+          "fullChars": 2760
+        }
+      ],
+      "requestChars": 10802
+    },
+    {
+      "case": 44,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 10.9|УК 10.8"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "pdd-1.4",
+          "fullChars": 2760
+        }
+      ],
+      "requestChars": 13310
+    },
+    {
+      "case": 45,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 9.2"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 11620
+    },
+    {
+      "case": 45,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 9.2"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 14052
+    },
+    {
+      "case": 46,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "rules-main-4.3|rules-main-4.2"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 12380
+    },
+    {
+      "case": 46,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "rules-main-4.3|rules-main-4.2"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 15120
+    },
+    {
+      "case": 47,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "rules-main-5.1"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 12095
+    },
+    {
+      "case": 47,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "rules-main-5.1"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 15086
+    },
+    {
+      "case": 48,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "Правила 5.8|rules-main-4.9"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 11390
+    },
+    {
+      "case": 48,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "Правила 5.8|rules-main-4.9"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 13974
+    },
+    {
+      "case": 49,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "rules-main-2.9"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 10928
+    },
+    {
+      "case": 49,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "rules-main-2.9"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 14342
+    },
+    {
+      "case": 50,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "rules-main-4.8|rules-main-4.7"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 12721
+    },
+    {
+      "case": 50,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "rules-main-4.8|rules-main-4.7"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 15281
+    },
+    {
+      "case": 51,
+      "server": "tverskoi",
+      "category": "MIXED",
+      "depth": "quick",
+      "expected": [
+        "УК 159|КоАП 5.6",
+        "rules-main-4.8|rules-main-4.7"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 15017
+    },
+    {
+      "case": 51,
+      "server": "tverskoi",
+      "category": "MIXED",
+      "depth": "full",
+      "expected": [
+        "УК 159|КоАП 5.6",
+        "rules-main-4.8|rules-main-4.7"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 20837
+    },
+    {
+      "case": 74,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 13.1"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "ch-fsb-11",
+          "fullChars": 3350
+        }
+      ],
+      "requestChars": 11805
+    },
+    {
+      "case": 74,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 13.1"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "ch-fsb-11",
+          "fullChars": 3350
+        }
+      ],
+      "requestChars": 14015
+    },
+    {
+      "case": 75,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 15.4|УК 15.5"
+      ],
+      "missing": [],
+      "sourceCount": 2,
+      "clippedArticles": [],
+      "requestChars": 7541
+    },
+    {
+      "case": 75,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 15.4|УК 15.5"
+      ],
+      "missing": [],
+      "sourceCount": 2,
+      "clippedArticles": [],
+      "requestChars": 7760
+    },
+    {
+      "case": 76,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "fz-weapons-11"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "upk-XI-2",
+          "fullChars": 2244
+        }
+      ],
+      "requestChars": 12644
+    },
+    {
+      "case": 76,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "fz-weapons-11"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "upk-XI-2",
+          "fullChars": 2244
+        }
+      ],
+      "requestChars": 16209
+    },
+    {
+      "case": 77,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "1-ФЗ 41"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "fz6-13",
+          "fullChars": 23586
+        }
+      ],
+      "requestChars": 16338
+    },
+    {
+      "case": 77,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "1-ФЗ 41"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "fz6-13",
+          "fullChars": 23586
+        },
+        {
+          "id": "fkz4-59",
+          "fullChars": 3664
+        },
+        {
+          "id": "upk-52",
+          "fullChars": 2281
+        }
+      ],
+      "requestChars": 24173
+    },
+    {
+      "case": 78,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "КоАП 12.6"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "fz8-I-2",
+          "fullChars": 2822
+        },
+        {
+          "id": "fz7-22",
+          "fullChars": 3274
+        },
+        {
+          "id": "fz6-12",
+          "fullChars": 15222
+        }
+      ],
+      "requestChars": 17169
+    },
+    {
+      "case": 78,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "КоАП 12.6"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "fz8-I-2",
+          "fullChars": 2822
+        },
+        {
+          "id": "fz7-22",
+          "fullChars": 3274
+        },
+        {
+          "id": "fz6-12",
+          "fullChars": 15222
+        },
+        {
+          "id": "fz3-15.1",
+          "fullChars": 2324
+        }
+      ],
+      "requestChars": 23418
+    },
+    {
+      "case": 79,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "КоАП 9.8"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "fz10-II-1",
+          "fullChars": 2400
+        }
+      ],
+      "requestChars": 14013
+    },
+    {
+      "case": 79,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "КоАП 9.8"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "fz10-II-1",
+          "fullChars": 2400
+        },
+        {
+          "id": "fz3-13.3",
+          "fullChars": 1890
+        },
+        {
+          "id": "pdd-I-1.2",
+          "fullChars": 3910
+        }
+      ],
+      "requestChars": 20316
+    },
+    {
+      "case": 80,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 157|УК 70"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 12125
+    },
+    {
+      "case": 80,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 157|УК 70"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "fz6-23",
+          "fullChars": 2156
+        },
+        {
+          "id": "fz6-24",
+          "fullChars": 2227
+        }
+      ],
+      "requestChars": 19437
+    },
+    {
+      "case": 81,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "ch-army-2.2|ch-army-2.4"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 10254
+    },
+    {
+      "case": 81,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "ch-army-2.2|ch-army-2.4"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 15817
+    },
+    {
+      "case": 83,
+      "server": "tverskoi",
+      "category": "MIXED",
+      "depth": "quick",
+      "expected": [
+        "rules-main-5.1"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 12727
+    },
+    {
+      "case": 83,
+      "server": "tverskoi",
+      "category": "MIXED",
+      "depth": "full",
+      "expected": [
+        "rules-main-5.1"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 17004
+    },
+    {
+      "case": 84,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "Правила 5.9"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 11722
+    },
+    {
+      "case": 84,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "Правила 5.9"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 15724
+    },
+    {
+      "case": 85,
+      "server": "tverskoi",
+      "category": "MIXED",
+      "depth": "quick",
+      "expected": [
+        "rules-gov-1.1.1",
+        "УК 91|УК 90"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 12982
+    },
+    {
+      "case": 85,
+      "server": "tverskoi",
+      "category": "MIXED",
+      "depth": "full",
+      "expected": [
+        "rules-gov-1.1.1",
+        "УК 91|УК 90"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 17219
+    },
+    {
+      "case": 86,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "Правила 6.16|Правила 6.17"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 11432
+    },
+    {
+      "case": 86,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "Правила 6.16|Правила 6.17"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 14081
+    },
+    {
+      "case": 88,
+      "server": "tverskoi",
+      "category": "MIXED",
+      "depth": "quick",
+      "expected": [
+        "rules-main-5.1"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "pdd-I-1.2",
+          "fullChars": 3910
+        }
+      ],
+      "requestChars": 14572
+    },
+    {
+      "case": 88,
+      "server": "tverskoi",
+      "category": "MIXED",
+      "depth": "full",
+      "expected": [
+        "rules-main-5.1"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "pdd-I-1.2",
+          "fullChars": 3910
+        },
+        {
+          "id": "fkz4-39",
+          "fullChars": 2700
+        }
+      ],
+      "requestChars": 19423
+    },
+    {
+      "case": 89,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "rules-main-5.2"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 14282
+    },
+    {
+      "case": 89,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "rules-main-5.2"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 17559
+    },
+    {
+      "case": 90,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "rules-main-5.3"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 13164
+    },
+    {
+      "case": 90,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "rules-main-5.3"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 16222
+    },
+    {
+      "case": 91,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "rules-main-5.4"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 13220
+    },
+    {
+      "case": 91,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "rules-main-5.4"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 15976
+    },
+    {
+      "case": 92,
+      "server": "tverskoi",
+      "category": "MIXED",
+      "depth": "quick",
+      "expected": [
+        "Правила 5.9|rules-main-5.5",
+        "УК 152"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "fz6-12",
+          "fullChars": 15222
+        },
+        {
+          "id": "fz6-14",
+          "fullChars": 3219
+        },
+        {
+          "id": "fz6-20",
+          "fullChars": 2486
+        }
+      ],
+      "requestChars": 16492
+    },
+    {
+      "case": 92,
+      "server": "tverskoi",
+      "category": "MIXED",
+      "depth": "full",
+      "expected": [
+        "Правила 5.9|rules-main-5.5",
+        "УК 152"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "fz6-12",
+          "fullChars": 15222
+        },
+        {
+          "id": "fz6-14",
+          "fullChars": 3219
+        },
+        {
+          "id": "fz6-20",
+          "fullChars": 2486
+        },
+        {
+          "id": "fz6-16",
+          "fullChars": 2892
+        },
+        {
+          "id": "fz6-21",
+          "fullChars": 2920
+        }
+      ],
+      "requestChars": 23180
+    },
+    {
+      "case": 93,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "Правила 5.18"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 11515
+    },
+    {
+      "case": 93,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "Правила 5.18"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 14756
+    },
+    {
+      "case": 94,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "Правила 5.13"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 11906
+    },
+    {
+      "case": 94,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "Правила 5.13"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 14938
+    },
+    {
+      "case": 95,
+      "server": "tverskoi",
+      "category": "MIXED",
+      "depth": "quick",
+      "expected": [
+        "rules-gov-1.8"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 14681
+    },
+    {
+      "case": 95,
+      "server": "tverskoi",
+      "category": "MIXED",
+      "depth": "full",
+      "expected": [
+        "rules-gov-1.8"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 20052
+    },
+    {
+      "case": 96,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "rules-gov-1.20"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 11613
+    },
+    {
+      "case": 96,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "rules-gov-1.20"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 15993
+    },
+    {
+      "case": 97,
+      "server": "tverskoi",
+      "category": "MIXED",
+      "depth": "quick",
+      "expected": [
+        "rules-gov-1.20"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 15992
+    },
+    {
+      "case": 97,
+      "server": "tverskoi",
+      "category": "MIXED",
+      "depth": "full",
+      "expected": [
+        "rules-gov-1.20"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 20916
+    },
+    {
+      "case": 98,
+      "server": "tverskoi",
+      "category": "MIXED",
+      "depth": "quick",
+      "expected": [
+        "rules-gov-1.20",
+        "КоАП 9.26"
+      ],
+      "missing": [
+        "КоАП 9.26"
+      ],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "pdd-I-1.2",
+          "fullChars": 3910
+        }
+      ],
+      "requestChars": 17014
+    },
+    {
+      "case": 98,
+      "server": "tverskoi",
+      "category": "MIXED",
+      "depth": "full",
+      "expected": [
+        "rules-gov-1.20",
+        "КоАП 9.26"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "pdd-I-1.2",
+          "fullChars": 3910
+        }
+      ],
+      "requestChars": 19741
+    },
+    {
+      "case": 99,
+      "server": "tverskoi",
+      "category": "MIXED",
+      "depth": "quick",
+      "expected": [
+        "Правила 6.9",
+        "rules-main-5.1"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "fkz1-44",
+          "fullChars": 1827
+        }
+      ],
+      "requestChars": 17018
+    },
+    {
+      "case": 99,
+      "server": "tverskoi",
+      "category": "MIXED",
+      "depth": "full",
+      "expected": [
+        "Правила 6.9",
+        "rules-main-5.1"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "fkz1-44",
+          "fullChars": 1827
+        }
+      ],
+      "requestChars": 22908
+    },
+    {
+      "case": 100,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "rules-main-2.1"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 12289
+    },
+    {
+      "case": 100,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "rules-main-2.1"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 14036
+    },
+    {
+      "case": 101,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "rules-main-2.4"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 11275
+    },
+    {
+      "case": 101,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "rules-main-2.4"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 15101
+    },
+    {
+      "case": 102,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "Правила 6.8"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 10512
+    },
+    {
+      "case": 102,
+      "server": "tverskoi",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "Правила 6.8"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 15349
+    },
+    {
+      "case": 117,
+      "server": "arbatskiy",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "rules-main-5.1"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 13142
+    },
+    {
+      "case": 117,
+      "server": "arbatskiy",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "rules-main-5.1"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 15573
+    },
+    {
+      "case": 118,
+      "server": "arbatskiy",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "rules-main-5.2"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 11281
+    },
+    {
+      "case": 118,
+      "server": "arbatskiy",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "rules-main-5.2"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 14928
+    },
+    {
+      "case": 119,
+      "server": "arbatskiy",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "rules-main-5.4"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 12965
+    },
+    {
+      "case": 119,
+      "server": "arbatskiy",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "rules-main-5.4"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 15177
+    },
+    {
+      "case": 120,
+      "server": "arbatskiy",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "Правила 6.9"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 11143
+    },
+    {
+      "case": 120,
+      "server": "arbatskiy",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "Правила 6.9"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 14142
+    },
+    {
+      "case": 121,
+      "server": "arbatskiy",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "Правила 5.13"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 12792
+    },
+    {
+      "case": 121,
+      "server": "arbatskiy",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "Правила 5.13"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 15683
+    },
+    {
+      "case": 122,
+      "server": "arbatskiy",
+      "category": "MIXED",
+      "depth": "quick",
+      "expected": [
+        "rules-gov-1.20"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 14492
+    },
+    {
+      "case": 122,
+      "server": "arbatskiy",
+      "category": "MIXED",
+      "depth": "full",
+      "expected": [
+        "rules-gov-1.20"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 17643
+    },
+    {
+      "case": 123,
+      "server": "arbatskiy",
+      "category": "MIXED",
+      "depth": "quick",
+      "expected": [
+        "rules-gov-1.7"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "pdd-1.8",
+          "fullChars": 11320
+        },
+        {
+          "id": "fz-advocacy-2-1",
+          "fullChars": 3535
+        }
+      ],
+      "requestChars": 15817
+    },
+    {
+      "case": 123,
+      "server": "arbatskiy",
+      "category": "MIXED",
+      "depth": "full",
+      "expected": [
+        "rules-gov-1.7"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "pdd-1.8",
+          "fullChars": 11320
+        },
+        {
+          "id": "fz-advocacy-2-1",
+          "fullChars": 3535
+        }
+      ],
+      "requestChars": 19205
+    },
+    {
+      "case": 124,
+      "server": "arbatskiy",
+      "category": "MIXED",
+      "depth": "quick",
+      "expected": [
+        "УК 17.3",
+        "rules-main-4.8|rules-main-4.7"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 13295
+    },
+    {
+      "case": 124,
+      "server": "arbatskiy",
+      "category": "MIXED",
+      "depth": "full",
+      "expected": [
+        "УК 17.3",
+        "rules-main-4.8|rules-main-4.7"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "fkz-court-2",
+          "fullChars": 6105
+        }
+      ],
+      "requestChars": 19427
+    },
+    {
+      "case": 126,
+      "server": "kutuzovskiy",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "rules-main-5.1"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 13146
+    },
+    {
+      "case": 126,
+      "server": "kutuzovskiy",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "rules-main-5.1"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 15577
+    },
+    {
+      "case": 127,
+      "server": "kutuzovskiy",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "rules-main-5.2"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 11285
+    },
+    {
+      "case": 127,
+      "server": "kutuzovskiy",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "rules-main-5.2"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 14932
+    },
+    {
+      "case": 128,
+      "server": "kutuzovskiy",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "rules-main-5.4"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 12969
+    },
+    {
+      "case": 128,
+      "server": "kutuzovskiy",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "rules-main-5.4"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 15181
+    },
+    {
+      "case": 129,
+      "server": "kutuzovskiy",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "Правила 6.9"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 11147
+    },
+    {
+      "case": 129,
+      "server": "kutuzovskiy",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "Правила 6.9"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 14146
+    },
+    {
+      "case": 130,
+      "server": "kutuzovskiy",
+      "category": "SERVER_RULE",
+      "depth": "quick",
+      "expected": [
+        "Правила 5.13"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 12796
+    },
+    {
+      "case": 130,
+      "server": "kutuzovskiy",
+      "category": "SERVER_RULE",
+      "depth": "full",
+      "expected": [
+        "Правила 5.13"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [],
+      "requestChars": 15687
+    },
+    {
+      "case": 131,
+      "server": "kutuzovskiy",
+      "category": "MIXED",
+      "depth": "quick",
+      "expected": [
+        "rules-gov-1.20"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 13682
+    },
+    {
+      "case": 131,
+      "server": "kutuzovskiy",
+      "category": "MIXED",
+      "depth": "full",
+      "expected": [
+        "rules-gov-1.20"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "upk-XII-1",
+          "fullChars": 1883
+        }
+      ],
+      "requestChars": 18138
+    },
+    {
+      "case": 132,
+      "server": "kutuzovskiy",
+      "category": "MIXED",
+      "depth": "quick",
+      "expected": [
+        "rules-gov-1.7"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "pdd-1.4",
+          "fullChars": 2760
+        },
+        {
+          "id": "upk-XI-6",
+          "fullChars": 4599
+        }
+      ],
+      "requestChars": 16281
+    },
+    {
+      "case": 132,
+      "server": "kutuzovskiy",
+      "category": "MIXED",
+      "depth": "full",
+      "expected": [
+        "rules-gov-1.7"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "pdd-1.4",
+          "fullChars": 2760
+        },
+        {
+          "id": "upk-XI-6",
+          "fullChars": 4599
+        },
+        {
+          "id": "uk-V-5",
+          "fullChars": 1893
+        }
+      ],
+      "requestChars": 21546
+    },
+    {
+      "case": 133,
+      "server": "kutuzovskiy",
+      "category": "MIXED",
+      "depth": "quick",
+      "expected": [
+        "УК 17.3",
+        "rules-main-4.8|rules-main-4.7"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "uk-V-5.11",
+          "fullChars": 2972
+        }
+      ],
+      "requestChars": 14255
+    },
+    {
+      "case": 133,
+      "server": "kutuzovskiy",
+      "category": "MIXED",
+      "depth": "full",
+      "expected": [
+        "УК 17.3",
+        "rules-main-4.8|rules-main-4.7"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "uk-V-5.11",
+          "fullChars": 2972
+        },
+        {
+          "id": "upk-II-2.9",
+          "fullChars": 3202
+        }
+      ],
+      "requestChars": 20094
+    },
+    {
+      "case": 139,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "6-ФЗ 18|6-ФЗ 17|6-ФЗ 19"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "pdd-I-1.2",
+          "fullChars": 3910
+        },
+        {
+          "id": "fz2-17",
+          "fullChars": 4075
+        }
+      ],
+      "requestChars": 18217
+    },
+    {
+      "case": 139,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "6-ФЗ 18|6-ФЗ 17|6-ФЗ 19"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "pdd-I-1.2",
+          "fullChars": 3910
+        },
+        {
+          "id": "fz2-17",
+          "fullChars": 4075
+        },
+        {
+          "id": "fz6-18",
+          "fullChars": 1844
+        },
+        {
+          "id": "fkz4-67",
+          "fullChars": 2291
+        },
+        {
+          "id": "fkz4-75",
+          "fullChars": 2112
+        },
+        {
+          "id": "fz7-22",
+          "fullChars": 3274
+        }
+      ],
+      "requestChars": 28197
+    },
+    {
+      "case": 140,
+      "server": "kutuzovskiy",
+      "category": "MIXED",
+      "depth": "quick",
+      "expected": [
+        "upk-II-6|Конституция 15|upk-II-2|fz-sk-52",
+        "rules-gov-1.8"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "uk-V-5.11",
+          "fullChars": 2972
+        }
+      ],
+      "requestChars": 17631
+    },
+    {
+      "case": 140,
+      "server": "kutuzovskiy",
+      "category": "MIXED",
+      "depth": "full",
+      "expected": [
+        "upk-II-6|Конституция 15|upk-II-2|fz-sk-52",
+        "rules-gov-1.8"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "uk-V-5.11",
+          "fullChars": 2972
+        },
+        {
+          "id": "upk-XI-6",
+          "fullChars": 4599
+        }
+      ],
+      "requestChars": 23003
+    },
+    {
+      "case": 142,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 12.7.1"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 13010
+    },
+    {
+      "case": 142,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 12.7.1"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "upk-XI-6",
+          "fullChars": 4599
+        }
+      ],
+      "requestChars": 19327
+    },
+    {
+      "case": 143,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 3.1|УК 6.2"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "uk-I-1.8",
+          "fullChars": 1933
+        }
+      ],
+      "requestChars": 13697
+    },
+    {
+      "case": 143,
+      "server": "kutuzovskiy",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 3.1|УК 6.2"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "uk-I-1.8",
+          "fullChars": 1933
+        }
+      ],
+      "requestChars": 17691
+    },
+    {
+      "case": 144,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "ПДД 2.1"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [],
+      "requestChars": 15516
+    },
+    {
+      "case": 144,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "ПДД 2.1"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "fz6-13",
+          "fullChars": 23586
+        }
+      ],
+      "requestChars": 21660
+    },
+    {
+      "case": 145,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "quick",
+      "expected": [
+        "УК 107|КоАП 12.6|fz8-II-2|fz8-V-2|fz8-VI-2|6-ФЗ 12"
+      ],
+      "missing": [],
+      "sourceCount": 8,
+      "clippedArticles": [
+        {
+          "id": "fz7-22",
+          "fullChars": 3274
+        },
+        {
+          "id": "fz2-17",
+          "fullChars": 4075
+        },
+        {
+          "id": "fz8-I-2",
+          "fullChars": 2822
+        }
+      ],
+      "requestChars": 18381
+    },
+    {
+      "case": 145,
+      "server": "tverskoi",
+      "category": "LAW",
+      "depth": "full",
+      "expected": [
+        "УК 107|КоАП 12.6|fz8-II-2|fz8-V-2|fz8-VI-2|6-ФЗ 12"
+      ],
+      "missing": [],
+      "sourceCount": 14,
+      "clippedArticles": [
+        {
+          "id": "fz7-22",
+          "fullChars": 3274
+        },
+        {
+          "id": "fz2-17",
+          "fullChars": 4075
+        },
+        {
+          "id": "fz8-I-2",
+          "fullChars": 2822
+        },
+        {
+          "id": "fz6-13",
+          "fullChars": 23586
+        },
+        {
+          "id": "koap-8.1",
+          "fullChars": 2660
+        },
+        {
+          "id": "fz6-20",
+          "fullChars": 2486
+        },
+        {
+          "id": "fkz4-59",
+          "fullChars": 3664
+        },
+        {
+          "id": "uk-111",
+          "fullChars": 2320
+        }
+      ],
+      "requestChars": 30544
+    }
+  ]
+}

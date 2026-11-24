@@ -24,16 +24,20 @@ const json = (response, status, body) => {
 };
 
 /** GigaChat: a token that lasts `life` ms; answers by what the question says. */
-async function fakeGigachat({ life = 30 * 60_000, delay = 0 } = {}) {
+async function fakeGigachat({ life = 30 * 60_000, delay = 0, statuses = [], oauthStatuses = [], finish = 'stop' } = {}) {
   const seen = { tokens: 0, chats: 0 };
   const server = await listen(async (request, response) => {
     const body = await read(request);
     if (request.url === '/oauth') {
       seen.tokens += 1;
+      const status = oauthStatuses[seen.tokens - 1];
+      if (status) return json(response, status, { message: 'test OAuth failure' });
       assert.equal(request.headers.authorization, 'Basic Z2lnYTprZXk=');
       return json(response, 200, { access_token: `t${seen.tokens}`, expires_at: Date.now() + life });
     }
     seen.chats += 1;
+    const status = statuses[seen.chats - 1];
+    if (status) return json(response, status, { message: 'test upstream failure' });
     const question = JSON.parse(body).messages.at(-1).content;
     seen.models = [...(seen.models ?? []), JSON.parse(body).model];
     seen.maxTokens = [...(seen.maxTokens ?? []), JSON.parse(body).max_tokens];
@@ -43,7 +47,7 @@ async function fakeGigachat({ life = 30 * 60_000, delay = 0 } = {}) {
     if (question.includes('со словами')) return json(response, 200, { choices: [{ message: { content: 'Вот разбор: {"from": "gigachat"} Надеюсь, помог.' }, finish_reason: 'stop' }] });
     if (question.includes('закрыл рано')) return json(response, 200, { choices: [{ message: { content: '{"from": "gigachat", "steps": [1]}","summary": "хвост"}' }, finish_reason: 'stop' }] });
     if (question.includes('лимит')) return json(response, 402, { message: 'Payment Required' });
-    return json(response, 200, { choices: [{ message: { content: '{"from": "gigachat"}' }, finish_reason: 'stop' }] });
+    return json(response, 200, { choices: [{ message: { content: '{"from": "gigachat"}' }, finish_reason: finish }] });
   });
   return { url: `http://127.0.0.1:${server.address().port}`, seen, server };
 }
@@ -63,7 +67,7 @@ async function aiServer(env) {
   const port = 20000 + Math.floor(Math.random() * 20000);
   const dir = mkdtempSync(join(tmpdir(), 'ai-'));
   const child = spawn(process.execPath, [join(import.meta.dirname, 'server.mjs')], {
-    env: { ...process.env, PORT: String(port), STATE_FILE: join(dir, 'state.json'), FEEDBACK_FILE: join(dir, 'feedback.jsonl'), REVIEWS_FILE: join(dir, 'reviews.json'), CACHE_FILE: join(dir, 'cache.json'), SURVEY_FILE: join(dir, 'survey.jsonl'), CRASH_FILE: join(dir, 'crashes.jsonl'), EARNINGS_FILE: join(dir, 'earnings.jsonl'), ...env },
+    env: { ...process.env, PAID_API_ENABLED: '1', BUDGET_RUB_PER_DAY: '20', PORT: String(port), STATE_FILE: join(dir, 'state.json'), FEEDBACK_FILE: join(dir, 'feedback.jsonl'), REVIEWS_FILE: join(dir, 'reviews.json'), CACHE_FILE: join(dir, 'cache.json'), SURVEY_FILE: join(dir, 'survey.jsonl'), CRASH_FILE: join(dir, 'crashes.jsonl'), EARNINGS_FILE: join(dir, 'earnings.jsonl'), ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   await new Promise((resolve, reject) => {
@@ -354,7 +358,7 @@ test('an admin may try one model for a request: that model, off the computer\'s 
   }
 });
 
-test('the question itself goes to ANALYSIS_MODEL, its steps to GigaChat; past the budget GigaChat answers all', async () => {
+test('paid analysis preference remains a last reserve after GigaChat; exhausted budget keeps GigaChat', async () => {
   const giga = await fakeGigachat();
   const models = [];
   const paidServer = await listen(async (request, response) => {
@@ -377,7 +381,9 @@ test('the question itself goes to ANALYSIS_MODEL, its steps to GigaChat; past th
     }).then((r) => r.json());
   try {
     assert.equal((await step('украл')).text, '{"from": "gigachat"}');
-    assert.equal((await ai.ask('украл телефон')).body.text, '{"from": "paid"}');
+    assert.equal((await ai.ask('украл телефон')).body.text, '{"from": "gigachat"}');
+    assert.deepEqual(models, []);
+    assert.equal((await ai.ask('лимит кончился')).body.text, '{"from": "paid"}');
     assert.deepEqual(models, ['gpt-4.1-mini']);
     const after = await ai.status();
     assert.ok(after.spent > 10);
@@ -589,5 +595,80 @@ test('sums up the shifts shared by players: the median a job pays an hour on a s
   } finally {
     ai.stop();
     giga.server.close();
+  }
+});
+
+
+test('paid upstream is disabled by default despite configured keys and analysis priority', async () => {
+  const giga = await fakeGigachat();
+  const paid = await fakePaid();
+  const ai = await aiServer({ ...gigaEnv(giga), PAID_API_ENABLED: undefined, BUDGET_RUB_PER_DAY: '20', AI_API_KEY: 'test-key', AI_BASE_URL: paid.url, ANALYSIS_MODEL: 'gpt-4.1-mini' });
+  try {
+    assert.equal(JSON.parse((await ai.ask('украл')).body.text).from, 'gigachat');
+    for (const question of ['травка', 'сломай', 'лимит']) assert.equal((await ai.ask(question)).status, 502);
+    assert.equal(paid.seen.chats, 0);
+    assert.equal((await ai.status()).spent, 0);
+  } finally { ai.stop(); giga.server.close(); paid.server.close(); }
+});
+
+test('paid opt-out also blocks admin trials and reports unavailable without GigaChat', async () => {
+  const paid = await fakePaid();
+  const ai = await aiServer({ PAID_API_ENABLED: '0', GIGACHAT_AUTH_KEY: '', AI_API_KEY: 'test-key', AI_BASE_URL: paid.url, ADMIN_TOKEN: 'admin-token-0123456789', BUDGET_RUB_PER_DAY: '20' });
+  try {
+    assert.equal((await ai.status()).open, false);
+    assert.equal((await ai.ask('украл')).status, 429);
+    const response = await fetch(`${ai.base}/v1/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Device': 'device-0001', Authorization: 'Bearer admin-token-0123456789' }, body: JSON.stringify({ system: 's', messages: [{ role: 'user', content: 'украл' }], model: 'gpt-5-nano', json: true }) });
+    assert.equal(response.status, 502);
+    assert.equal(paid.seen.chats, 0);
+  } finally { ai.stop(); paid.server.close(); }
+});
+
+test('invalid or zero paid budgets cannot reach the paid upstream', async () => {
+  const paid = await fakePaid();
+  try {
+    for (const budget of ['0', '-1', 'NaN', 'Infinity']) {
+      const ai = await aiServer({ PAID_API_ENABLED: '1', GIGACHAT_AUTH_KEY: '', AI_API_KEY: 'test-key', AI_BASE_URL: paid.url, BUDGET_RUB_PER_DAY: budget });
+      try { assert.notEqual((await ai.ask('украл')).status, 200); assert.equal((await ai.status()).open, false); }
+      finally { ai.stop(); }
+    }
+    assert.equal(paid.seen.chats, 0);
+  } finally { paid.server.close(); }
+});
+
+
+test('GigaChat recovers transient chat and OAuth errors without paid fallback', async () => {
+  for (const options of [{ statuses: [503] }, { statuses: [429] }, { oauthStatuses: [503] }, { statuses: [401] }]) {
+    const giga = await fakeGigachat(options);
+    const paid = await fakePaid();
+    const ai = await aiServer({ ...gigaEnv(giga), AI_BASE_URL: paid.url, AI_API_KEY: 'test-key' });
+    try {
+      assert.equal(JSON.parse((await ai.ask('украл')).body.text).from, 'gigachat');
+      assert.equal(paid.seen.chats, 0);
+      if (options.statuses?.[0] === 401) assert.equal(giga.seen.tokens, 2);
+    } finally { ai.stop(); giga.server.close(); paid.server.close(); }
+  }
+});
+
+test('persistent transient failure is bounded then uses the explicitly enabled last reserve', async () => {
+  const giga = await fakeGigachat({ statuses: [503, 503] });
+  const paid = await fakePaid();
+  const ai = await aiServer({ ...gigaEnv(giga), AI_BASE_URL: paid.url, AI_API_KEY: 'test-key' });
+  try {
+    assert.equal(JSON.parse((await ai.ask('украл')).body.text).from, 'paid');
+    assert.equal(giga.seen.chats, 2);
+    assert.equal(paid.seen.chats, 1);
+  } finally { ai.stop(); giga.server.close(); paid.server.close(); }
+});
+
+test('quota exhaustion is not retried and a truncated valid JSON is never accepted', async () => {
+  for (const options of [{ statuses: [402] }, { finish: 'length' }]) {
+    const giga = await fakeGigachat(options);
+    const paid = await fakePaid();
+    const ai = await aiServer({ ...gigaEnv(giga), PAID_API_ENABLED: '0', AI_BASE_URL: paid.url, AI_API_KEY: 'test-key' });
+    try {
+      assert.equal((await ai.ask('украл')).status, 502);
+      assert.equal(giga.seen.chats, 1);
+      assert.equal(paid.seen.chats, 0);
+    } finally { ai.stop(); giga.server.close(); paid.server.close(); }
   }
 });

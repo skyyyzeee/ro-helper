@@ -4,7 +4,7 @@ import type { PinBridge, ShownToast } from '../platform/tauri';
 import type { PinArea, PinCard, PinGroup, PinLook } from '../platform/types';
 import { applyAppearance, isTheme } from './appearance';
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, CompactIcon, DownloadIcon, GripIcon, PagesIcon, PinIcon, ResizeIcon, StarIcon } from './icons';
-import { CARD_WIDTH, MIN_HEIGHT, compactGroup, detachCard, dropSide, joinGroups, keepOnScreen, moveGroup, pageGroup, pageOf, resizeGroup, turnPage, unpinCard, unpinGroup, type DropSide } from './pinLayout';
+import { AUTO_PIN_HEIGHT, CARD_WIDTH, MIN_HEIGHT, compactGroup, detachCard, dropSide, joinGroups, keepOnScreen, moveGroup, pageGroup, pageOf, resizeGroup, turnPage, unpinCard, unpinGroup, type DropSide } from './pinLayout';
 
 /**
  * What a card pinned over the game shows: an article's part, or the calculator's total. Compact, only the
@@ -417,7 +417,7 @@ export function PinSurface({ groups: incoming, live, onChange, onClearCalculator
               ...(group.width ? { width: group.width } : wide ? { width: wide } : {}),
               ...(group.height ? { height: group.height } : {}),
               // Never past the bottom of the screen: what does not fit is scrolled to.
-              maxHeight: Math.max(MIN_HEIGHT, size.height - group.y - 8),
+              maxHeight: Math.min(group.height ?? AUTO_PIN_HEIGHT, Math.max(MIN_HEIGHT, size.height - group.y - 8)),
             }}
             aria-label={stacked ? `Закреплено: ${group.cards.length}` : 'Закреплено'}
           >
@@ -473,7 +473,7 @@ export function PinSurface({ groups: incoming, live, onChange, onClearCalculator
                 </button>
               </div>
             )}
-            <div className={group.flow === 'row' && !paged ? 'pin__cards pin__cards--row' : 'pin__cards'}>
+            <div tabIndex={0} role="region" aria-label={`Содержимое: ${stacked ? 'набор карточек' : group.cards[0].heading}`} className={group.flow === 'row' && !paged ? 'pin__cards pin__cards--row' : 'pin__cards'}>
               {shown.map((card) => (
                 <div
                   key={card.id}

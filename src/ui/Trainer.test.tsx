@@ -26,7 +26,7 @@ function fakeExaminer(verdict: 'right' | 'partly' | 'wrong') {
   return bodies;
 }
 
-const search = () => screen.getByRole('searchbox', { name: 'Поиск по законам' });
+const search = () => screen.getByRole('textbox', { name: 'Ответ на вопрос экзамена' });
 
 async function openTrainer() {
   const app = await renderApp({ settings: GEMINI, profile: { organization: 'mvd' } });
@@ -100,6 +100,38 @@ describe('the exam trainer', () => {
     }
   });
 
+  it('hides the composer while grading and retries the same answer after a failed check', async () => {
+    fakeExaminer('right');
+    const examiner = globalThis.fetch;
+    let fail!: (reason: Error) => void;
+    const waiting = new Promise<Response>((_resolve, reject) => { fail = reject; });
+    let grades = 0;
+    vi.stubGlobal('fetch', vi.fn((url: string, init: RequestInit) => {
+      if (String(init.body).includes('Ответ игрока') && grades++ === 0) return waiting;
+      return examiner(url, init);
+    }));
+    const { user, view } = await openTrainer();
+    expect(screen.queryByRole('textbox', { name: 'Ответ на вопрос экзамена' })).not.toBeInTheDocument();
+    await user.click(within(view).getByRole('button', { name: 'Начать' }));
+    await within(view).findByText('Что считается кражей?');
+    await user.type(search(), 'Тайное хищение чужого имущества{Enter}');
+    await within(view).findByText('Сверяю ответ со статьёй…');
+    expect(view).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByRole('textbox', { name: 'Ответ на вопрос экзамена' })).not.toBeInTheDocument();
+    fail(new TypeError('Failed to fetch'));
+    const alert = await within(view).findByRole('alert');
+    expect(view).toHaveAttribute('aria-busy', 'false');
+    expect(within(view).getByText('Тайное хищение чужого имущества')).toBeInTheDocument();
+    await user.click(within(alert).getByRole('button', { name: 'Повторить проверку ответа' }));
+    await within(view).findByText('Верно.');
+    expect(grades).toBe(2);
+    expect(within(view).getByLabelText('Вопрос 1 из 10')).toHaveTextContent('верно 1');
+    await user.click(within(within(view).getByRole('status')).getByRole('button'));
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('region', { name: 'Практика' })).toHaveTextContent('Верно.');
+    expect(screen.getByRole('button', { name: 'Следующий вопрос' })).toBeInTheDocument();
+  });
+
   it('asks for the key before the first question', async () => {
     const { user } = await renderApp({ settings: { [AI_PROVIDER_SETTING]: 'gemini' }, profile: { organization: 'mvd' } });
     await user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
@@ -119,6 +151,8 @@ describe('the quick tasks, with no AI (roadmap 6А)', () => {
     await user.click(screen.getByRole('radio', { name: 'Практика' }));
     const view = screen.getByRole('region', { name: 'Практика' });
     expect(within(view).getByRole('radio', { name: 'Быстрые задания' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByRole('textbox', { name: 'Ответ на вопрос экзамена' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Отправить запрос ИИ' })).not.toBeInTheDocument();
     await user.click(within(view).getByRole('button', { name: 'Начать' }));
 
     for (let n = 1; n <= 10; n++) {
@@ -149,5 +183,11 @@ describe('the quick tasks, with no AI (roadmap 6А)', () => {
     const name = cite.textContent ?? '';
     await user.click(cite);
     expect(await screen.findByRole('article')).toHaveAccessibleName(expect.stringContaining(name.split(' «')[0].split(' ').slice(-1)[0]));
+    await user.keyboard('{Escape}');
+    const returned = screen.getByRole('region', { name: 'Практика' });
+    expect(within(returned).getByLabelText('Задание 1 из 10')).toBeInTheDocument();
+    expect(within(returned).getByRole('status')).toBeInTheDocument();
+    await user.click(within(returned).getByRole('button', { name: 'Следующее задание' }));
+    expect(within(returned).getByLabelText('Задание 2 из 10')).toBeInTheDocument();
   });
 });

@@ -2,7 +2,9 @@
   "id": "rules-main",
   "short": "Правила",
   "title": "Основные правила проекта",
-  "aliases": ["опп"],
+  "aliases": [
+    "опп"
+  ],
   "kind": "rules",
   "category": "rules",
   "format": "points",
@@ -10,6 +12,6 @@
   "thread": 1,
   "url": "https://forum.russia.online/threads/osnovnyye-pravila-proyekta.1/",
   "posted": "2026-07-25T16:09:34+03:00",
-  "lastEdited": "2026-11-14T23:04:36+03:00",
-  "snapshotAt": "2026-11-16"
+  "lastEdited": "2026-11-17T18:36:33+03:00",
+  "snapshotAt": "2026-11-24"
 }

@@ -1,3 +1,4 @@
+import { selectSettingsSection } from '../test/settings';
 import { act, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { pinnedCards, renderApp } from '../test/renderApp';
@@ -12,6 +13,7 @@ const notesBlock = () => within(settings().getByRole('region', { name: 'Заме
 /** What is pinned is in the settings: the side column no longer has it (skyze). */
 async function openPinned(user: Awaited<ReturnType<typeof renderApp>>['user']) {
   await user.click(screen.getByRole('button', { name: 'Настройки' }));
+  await selectSettingsSection(user, 'Закреплённые');
   await user.click(settings().getByRole('button', { name: 'Закреплённые' }));
 }
 
@@ -86,6 +88,7 @@ describe('the notes over the game (issue #40; a player asked for several, on a k
     expect(platform.state.shortcuts.note).toBeUndefined();
 
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Клавиши');
     const block = settings().getByRole('region', { name: 'Горячие клавиши' });
     await user.click(within(block).getByRole('switch', { name: 'Заметки: показать и спрятать' }));
     expect(platform.settings.get('note.hotkey')).toBe('Alt+E');
@@ -167,6 +170,7 @@ describe('turning the notes over the game with the assistant shut (a player aske
   it('are set in «Клавиши»: a note’s key on its switch is Alt and its number; one the assistant holds is told and not registered', async () => {
     const { platform, user } = await renderApp({ settings: { 'notes.list': [{ id: 'a', title: 'Права', text: 'т' }, { id: 'b', title: 'План', text: 'т', hotkey: 'Alt+Q' }] } });
     await user.click(screen.getByRole('button', { name: 'Настройки' }));
+    await selectSettingsSection(user, 'Клавиши');
     const keys = within(settings().getByRole('region', { name: 'Горячие клавиши' }));
 
     await user.click(keys.getByRole('switch', { name: 'Заметка «Права»' }));

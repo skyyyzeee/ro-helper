@@ -30,7 +30,7 @@ function fakeServer(refuse?: string) {
 async function ask(question: string) {
   const app = await renderApp();
   await app.user.click(screen.getByRole('button', { name: 'ИИ-разбор ситуации' }));
-  await app.user.type(screen.getByRole('searchbox', { name: 'Поиск по законам' }), `${question}{Enter}`);
+  await app.user.type(screen.getByRole('textbox', { name: 'Сообщение ИИ' }), `${question}{Enter}`);
   return app;
 }
 

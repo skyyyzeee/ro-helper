@@ -1,5 +1,7 @@
 # Source grounding
 
+> Уточнение 24.11.2026: проверки ссылок/номеров/цифр не доказывают смысловое следование утверждения норме. Автономный контрпример проходит confirmed и текущий hallucination gate. Нулевой показатель этого gate не означает отсутствие всех смысловых ошибок. См. [аудит](AI_ARCHITECTURE_AUDIT_2026-11-24.md) и [воспроизводимый результат](AI_OFFLINE_BASELINE_2026-11-24.json).
+
 The rule: every norm, part, figure and article the player is shown comes from the server's base, and an answer that
 cannot be traced back to it is never shown as confirmed. «В доступной нормативной базе это не найдено» is a correct,
 successful answer. It is enforced in layers, the prompt only the first:
@@ -64,3 +66,5 @@ as it is now — an article removed since shows as not found.
 Tests: `src/protocol/grounding.test.ts` (the hard gates with a misbehaving fake AI), `src/protocol/grade.test.ts`
 (the exam's gates), `src/protocol/protocol.test.ts`, `src/ui/AiAnswer.test.tsx`, `src/ui/AiScope.test.tsx`, and the
 modes' tests (`Lawyer`, `Detention`, `Documents`, `Trainer`).
+
+24.11.2026: новые analyse-ответы сохраняют фактически переданный excerpt. Проверка чисел ограничена этим текстом; использование неполного источника исключает confirmed, сохраняется при открытии истории. Старые записи и другие режимы сохраняют прежнее поведение. См. [evidence](AI_EVIDENCE_2026-11-24.md). Это не доказательство смыслового следования.

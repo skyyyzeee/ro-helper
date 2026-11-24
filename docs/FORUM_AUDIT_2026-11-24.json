@@ -1,0 +1,196 @@
+{
+  "checkedAt": "2026-11-24",
+  "attemptedThreads": 149,
+  "readThreads": 133,
+  "unchangedSnapshots": 123,
+  "differentSnapshots": 10,
+  "ambiguous": [],
+  "unavailable": [
+    {
+      "server": "tverskoi",
+      "document": "ch-fso",
+      "title": "Внутренний регламент сотрудников ФСО",
+      "url": "https://forum.russia.online/threads/fso-vnutrennii-reglament-sotrudnikov.451/",
+      "error": "код 404"
+    },
+    {
+      "server": "tverskoi",
+      "document": "ch-gibdd",
+      "title": "Устав ГИБДД",
+      "url": "https://forum.russia.online/threads/gibdd-vnutrennii-ustav.41824/",
+      "error": "код 404"
+    },
+    {
+      "server": "tverskoi",
+      "document": "ch-hospital",
+      "title": "Устав больницы",
+      "url": "https://forum.russia.online/threads/bol-nitsa-ustav.501/",
+      "error": "код 404"
+    },
+    {
+      "server": "tverskoi",
+      "document": "sk-structure",
+      "title": "Об организационной структуре и компетенции подразделений СК",
+      "url": "https://forum.russia.online/threads/gsu-sk-polozheniye-ob-organizatsionnoi-strukture-i-razgranichenii-kompetentsii-podrazdelenii-sledstvennogo-komiteta-rossiiskogo-okruga.41479/",
+      "error": "код 404"
+    },
+    {
+      "server": "arbatskiy",
+      "document": "ch-fsb-usb",
+      "title": "Об управлениях собственной безопасности ФСБ",
+      "url": "https://forum.russia.online/threads/polozheniye-ob-upravleniyakh-sobstvennoi-bezopastnosti-fsb.2135/",
+      "error": "код 404"
+    },
+    {
+      "server": "arbatskiy",
+      "document": "ch-fsb",
+      "title": "Устав ФСБ",
+      "url": "https://forum.russia.online/threads/ustav-fsb.27443/",
+      "error": "код 404"
+    },
+    {
+      "server": "arbatskiy",
+      "document": "ch-gibdd-discipline",
+      "title": "Дисциплинарный устав ГИБДД",
+      "url": "https://forum.russia.online/threads/distsiplinarnyi-ustav-gibdd.1614/",
+      "error": "код 404"
+    },
+    {
+      "server": "arbatskiy",
+      "document": "ch-gibdd-osb",
+      "title": "О работе отдела собственной безопасности ГИБДД",
+      "url": "https://forum.russia.online/threads/polozheniye-o-rabote-otdela-sobstvennoi-bezopasnosti.21670/",
+      "error": "код 404"
+    },
+    {
+      "server": "arbatskiy",
+      "document": "ch-gibdd",
+      "title": "Устав ГИБДД",
+      "url": "https://forum.russia.online/threads/vnutrennii-ustav-gibdd.1613/",
+      "error": "код 404"
+    },
+    {
+      "server": "arbatskiy",
+      "document": "ch-mvd",
+      "title": "Внутренний устав МВД",
+      "url": "https://forum.russia.online/threads/mvd-vnutrennii-ustav.583/",
+      "error": "код 404"
+    },
+    {
+      "server": "arbatskiy",
+      "document": "sk-charter",
+      "title": "Устав Следственного комитета",
+      "url": "https://forum.russia.online/threads/ustav-sk-ro.32116/",
+      "error": "код 404"
+    },
+    {
+      "server": "kutuzovskiy",
+      "document": "ch-gibdd",
+      "title": "Устав ГИБДД",
+      "url": "https://forum.russia.online/threads/vnutrennii-ustav-gibdd.5291/",
+      "error": "код 404"
+    },
+    {
+      "server": "kutuzovskiy",
+      "document": "ch-mvd-units",
+      "title": "О подразделениях МВД",
+      "url": "https://forum.russia.online/threads/mvd-polozheniye-o-podrazdeleniyakh.32723/",
+      "error": "код 404"
+    },
+    {
+      "server": "kutuzovskiy",
+      "document": "ch-mvd",
+      "title": "Устав МВД",
+      "url": "https://forum.russia.online/threads/mvd-vnutrennii-ustav-fraktsii.32830/",
+      "error": "код 404"
+    },
+    {
+      "server": "kutuzovskiy",
+      "document": "ch-news-edit",
+      "title": "Правила редактирования объявлений «Вести Москвы»",
+      "url": "https://forum.russia.online/threads/ppo-i-pro.29980/",
+      "error": "код 404"
+    },
+    {
+      "server": "kutuzovskiy",
+      "document": "ch-news",
+      "title": "Устав «Вести Москвы»",
+      "url": "https://forum.russia.online/threads/ustav-vesti-moskvy.29965/",
+      "error": "код 404"
+    }
+  ],
+  "changed": [
+    {
+      "server": "tverskoi",
+      "doc": "ch-army-discipline",
+      "fnv": "n1959714141",
+      "edited": "2026-11-20T13:19:22+0700",
+      "kept": 100
+    },
+    {
+      "server": "tverskoi",
+      "doc": "ch-army-structure",
+      "fnv": "n3940707940",
+      "edited": "2026-11-19T03:48:47+0700",
+      "kept": 69
+    },
+    {
+      "server": "tverskoi",
+      "doc": "ch-army",
+      "fnv": "n3718428485",
+      "edited": "2026-11-20T13:16:38+0700",
+      "kept": 100
+    },
+    {
+      "server": "tverskoi",
+      "doc": "fz7",
+      "fnv": "n3590753364",
+      "edited": null,
+      "kept": 98
+    },
+    {
+      "server": "tverskoi",
+      "doc": "koap",
+      "fnv": "n81364234",
+      "edited": null,
+      "kept": 98
+    },
+    {
+      "server": "tverskoi",
+      "doc": "uk",
+      "fnv": "n4070321251",
+      "edited": null,
+      "kept": 100
+    },
+    {
+      "server": "arbatskiy",
+      "doc": "ch-hospital",
+      "fnv": "n3596268278",
+      "edited": "2026-11-17T22:40:11+0700",
+      "kept": 97
+    },
+    {
+      "server": "kutuzovskiy",
+      "doc": "sk-main",
+      "fnv": "n2884870129",
+      "edited": "2026-11-09T23:49:29+0700",
+      "kept": 100
+    },
+    {
+      "server": "_shared",
+      "doc": "rules-main",
+      "fnv": "n192549753",
+      "edited": "2026-11-17T22:36:33+0700",
+      "kept": 100
+    },
+    {
+      "server": "_shared",
+      "doc": "rules-war",
+      "fnv": "n535652238",
+      "edited": "2026-11-17T22:25:35+0700",
+      "kept": 99
+    }
+  ],
+  "scope": "all three servers and shared project rules",
+  "complete": false
+}

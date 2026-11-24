@@ -65,7 +65,7 @@ export function LawyerView({
           icon={<TopicIcon id="rights" size={24} />}
           title="Что требует адвокат?"
           examples={['Адвокат требует свидание с задержанным наедине, копию протокола задержания и отпустить его, потому что прошло 30 минут']}
-          onExample={(text) => void lawyer.check(text)}
+          onExample={onDraft}
         >
           Перескажите требования в поле внизу или голосом. ИИ проверит каждое по законам сервера: законно ли оно, что вы обязаны
           сделать и на каком основании можете отказать, — и подскажет, как ответить. Если адвокат прав, так и скажет.
@@ -82,7 +82,9 @@ export function LawyerView({
       {lawyer.error && (
         <div className="warn" role="alert">
           <WarnIcon />
-          <span>{lawyer.error}</span>
+          <span>{lawyer.error}
+            {lawyer.lastRequest && <><br /><button type="button" className="link" title="Отредактируйте текст и нажмите «Отправить»" onClick={() => onDraft(lawyer.lastRequest)}>Вернуть текст в поле</button></>}
+          </span>
         </div>
       )}
 
